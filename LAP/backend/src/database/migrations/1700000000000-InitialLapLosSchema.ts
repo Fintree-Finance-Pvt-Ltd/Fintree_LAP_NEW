@@ -1,0 +1,28 @@
+import { MigrationInterface, QueryRunner } from 'typeorm';
+
+export class InitialLapLosSchema1700000000000 implements MigrationInterface {
+  name = 'InitialLapLosSchema1700000000000';
+
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`CREATE TABLE organizations (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, name VARCHAR(160) NOT NULL, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), created_by BIGINT UNSIGNED NULL, updated_by BIGINT UNSIGNED NULL)`);
+    await queryRunner.query(`CREATE TABLE hubs (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, organization_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), created_by BIGINT UNSIGNED NULL, updated_by BIGINT UNSIGNED NULL)`);
+    await queryRunner.query(`CREATE TABLE spokes (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, hub_id BIGINT UNSIGNED NOT NULL, name VARCHAR(160) NOT NULL, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), created_by BIGINT UNSIGNED NULL, updated_by BIGINT UNSIGNED NULL)`);
+    await queryRunner.query(`CREATE TABLE roles (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, code VARCHAR(60) NOT NULL UNIQUE, name VARCHAR(120) NOT NULL, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))`);
+    await queryRunner.query(`CREATE TABLE permissions (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, code VARCHAR(120) NOT NULL UNIQUE, name VARCHAR(160) NOT NULL, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))`);
+    await queryRunner.query(`CREATE TABLE role_permissions (rolesId BIGINT UNSIGNED NOT NULL, permissionsId BIGINT UNSIGNED NOT NULL, PRIMARY KEY (rolesId, permissionsId))`);
+    await queryRunner.query(`CREATE TABLE users (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, name VARCHAR(120) NOT NULL, email VARCHAR(180) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, isActive TINYINT NOT NULL DEFAULT 1, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), created_by BIGINT UNSIGNED NULL, updated_by BIGINT UNSIGNED NULL)`);
+    await queryRunner.query(`CREATE TABLE user_roles (usersId BIGINT UNSIGNED NOT NULL, rolesId BIGINT UNSIGNED NOT NULL, PRIMARY KEY (usersId, rolesId))`);
+    await queryRunner.query(`CREATE TABLE refresh_tokens (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, user_id BIGINT UNSIGNED NOT NULL, token_hash VARCHAR(255) NOT NULL, expires_at DATETIME(6) NOT NULL, revoked_at DATETIME(6) NULL, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6))`);
+    await queryRunner.query(`CREATE TABLE applications (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, application_number VARCHAR(40) NOT NULL UNIQUE, customer_name VARCHAR(160) NOT NULL, mobile VARCHAR(20) NOT NULL, pan VARCHAR(10) NULL, requested_amount DECIMAL(15,2) NOT NULL DEFAULT 0, stage VARCHAR(60) NOT NULL DEFAULT 'LEAD', status VARCHAR(60) NOT NULL DEFAULT 'DRAFT', version INT NOT NULL DEFAULT 1, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), created_by BIGINT UNSIGNED NULL, updated_by BIGINT UNSIGNED NULL)`);
+    await queryRunner.query(`CREATE TABLE visits (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, application_id BIGINT UNSIGNED NOT NULL, visit_type VARCHAR(40) NOT NULL, latitude DECIMAL(10,7) NULL, longitude DECIMAL(10,7) NULL, remarks TEXT NULL, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), created_by BIGINT UNSIGNED NULL, updated_by BIGINT UNSIGNED NULL)`);
+    await queryRunner.query(`CREATE TABLE documents (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, application_id BIGINT UNSIGNED NOT NULL, document_type VARCHAR(80) NOT NULL, file_name VARCHAR(255) NOT NULL, file_path VARCHAR(500) NOT NULL, status VARCHAR(40) NOT NULL DEFAULT 'UPLOADED', created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6), updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), created_by BIGINT UNSIGNED NULL, updated_by BIGINT UNSIGNED NULL)`);
+    await queryRunner.query(`CREATE TABLE workflow_history (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, application_id BIGINT UNSIGNED NOT NULL, from_stage VARCHAR(60) NOT NULL, to_stage VARCHAR(60) NOT NULL, action VARCHAR(80) NOT NULL, remarks TEXT NOT NULL, created_by BIGINT UNSIGNED NULL, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6))`);
+    await queryRunner.query(`CREATE TABLE audit_logs (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, action VARCHAR(80) NOT NULL, entity_name VARCHAR(80) NOT NULL, entity_id BIGINT UNSIGNED NULL, snapshot JSON NULL, created_by BIGINT UNSIGNED NULL, created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6))`);
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    for (const table of ['audit_logs', 'workflow_history', 'documents', 'visits', 'applications', 'refresh_tokens', 'user_roles', 'users', 'role_permissions', 'permissions', 'roles', 'spokes', 'hubs', 'organizations']) {
+      await queryRunner.query(`DROP TABLE IF EXISTS ${table}`);
+    }
+  }
+}
