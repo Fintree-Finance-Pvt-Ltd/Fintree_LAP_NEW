@@ -1,0 +1,8 @@
+node_modules/
+npm-cache/
+dist/
+coverage/
+.env
+*.log
+uploads/*
+!uploads/.gitkeep
