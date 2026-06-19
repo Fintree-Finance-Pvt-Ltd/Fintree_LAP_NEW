@@ -1,4 +1,4 @@
-import dataSource from '../Lap-Database';
+import dataSource from '../database';
 import { Permission } from '../../modules/permissions/entities/permission.entity';
 import { Role } from '../../modules/roles/entities/role.entity';
 import { seedOrganization } from './organization.seed';

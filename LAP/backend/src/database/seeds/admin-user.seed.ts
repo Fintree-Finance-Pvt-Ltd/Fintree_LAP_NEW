@@ -22,6 +22,7 @@ const users: Array<[string, string, RoleCode]> = [
 ];
 
 export async function seedUsers(dataSource: DataSource) {
+  console.log('Seeding users...');
   const userRepo = dataSource.getRepository(User);
   const roleRepo = dataSource.getRepository(Role);
   const permissions = await dataSource.getRepository(Permission).find();
