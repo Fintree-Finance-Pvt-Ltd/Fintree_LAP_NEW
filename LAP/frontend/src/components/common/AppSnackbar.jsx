@@ -1,5 +1,18 @@
-import { Alert, Snackbar } from '@mui/material';
+import { toast } from "react-toastify";
 
-export default function AppSnackbar({ message, severity = 'info', ...props }) {
-  return <Snackbar {...props}><Alert severity={severity}>{message}</Alert></Snackbar>;
+export default function AppSnackbar({ message, severity = "info" }) {
+  if (message) {
+    const fn =
+      severity === "success"
+        ? toast.success
+        : severity === "error"
+          ? toast.error
+          : severity === "warning"
+            ? toast.warning
+            : toast.info;
+    fn(message);
+  }
+
+  return null;
 }
+
