@@ -1,7 +1,22 @@
-import { Step, StepLabel, Stepper } from '@mui/material';
-import { APPLICATION_STAGES } from '../../constants/applicationStages.js';
+import { Steps, StepItem } from "../../components/ui/steps.jsx";
+import { APPLICATION_STAGES } from "../../constants/applicationStages.js";
 
 export default function WorkflowStepper({ activeStage = 'LEAD' }) {
-  const activeStep = APPLICATION_STAGES.indexOf(activeStage);
-  return <Stepper activeStep={activeStep} alternativeLabel>{APPLICATION_STAGES.slice(0, 8).map((stage) => <Step key={stage}><StepLabel>{stage.replaceAll('_', ' ')}</StepLabel></Step>)}</Stepper>;
+  const activeIndex = APPLICATION_STAGES.indexOf(activeStage);
+  const steps = APPLICATION_STAGES.slice(0, 8);
+
+  return (
+    <Steps>
+      {steps.map((stage, idx) => (
+        <li key={stage}>
+          <StepItem
+            label={stage}
+            isActive={idx === activeIndex}
+            isCompleted={idx < activeIndex}
+          />
+        </li>
+      ))}
+    </Steps>
+  );
 }
+

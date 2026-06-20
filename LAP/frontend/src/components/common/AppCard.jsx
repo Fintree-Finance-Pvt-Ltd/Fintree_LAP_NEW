@@ -1,5 +1,8 @@
-import { Paper } from '@mui/material';
+import { Card } from '../../components/ui/card.jsx';
 
 export default function AppCard({ children, className = '' }) {
-  return <Paper className={`p-5 ${className}`} elevation={0}>{children}</Paper>;
+  return (
+    <Card className={`p-5 ${className}`}>{children}</Card>
+  );
 }
+
