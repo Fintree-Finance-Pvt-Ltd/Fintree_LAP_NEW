@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { Request, Response } from 'express';
-import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 
@@ -15,6 +15,13 @@ export class AuthController {
   login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
     return this.auth.login(dto, response);
   }
+
+  @Public()
+  @Get('spokes')
+  getSpokes() {
+    return this.auth.getSpokes();
+  }
+
 
   @Public() @Post('refresh')
   async refresh(@Req() request: Request) {
