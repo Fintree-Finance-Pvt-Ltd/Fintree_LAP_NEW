@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -18,6 +18,12 @@ export class ApplicationsController {
   @Get() @Permissions(PERMISSIONS.APPLICATION_READ)
   findAll(@Query() query: ApplicationFilterDto) { return this.service.findAll(query); }
 
+  @Get('search') @Permissions(PERMISSIONS.APPLICATION_READ)
+  search(@Query('q') q = '') { return this.service.search(q); }
+
+  @Get('paginated') @Permissions(PERMISSIONS.APPLICATION_READ)
+  paginated(@Query() query: ApplicationFilterDto) { return this.service.findAll(query); }
+
   @Post() @Permissions(PERMISSIONS.APPLICATION_CREATE)
   create(@Body() dto: CreateApplicationDto, @CurrentUser() user: Actor) { return this.service.create(dto, user); }
 
@@ -26,6 +32,12 @@ export class ApplicationsController {
 
   @Patch(':applicationId') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
   update(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: UpdateApplicationDto, @CurrentUser() user: Actor) { return this.service.update(id, dto, user); }
+
+  @Put(':applicationId') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
+  replace(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: UpdateApplicationDto, @CurrentUser() user: Actor) { return this.service.update(id, dto, user); }
+
+  @Delete(':applicationId') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
+  remove(@Param('applicationId', ParseIntPipe) id: number) { return this.service.remove(id); }
 
   @Post(':applicationId/visits') @Permissions(PERMISSIONS.VISIT_CREATE)
   addVisit(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: CreateVisitDto, @CurrentUser() user: Actor) { return this.service.addVisit(id, dto, user); }

@@ -1,0 +1,7 @@
+export enum WorkflowAction {
+  SAVE_DRAFT = 'SAVE_DRAFT',
+  SUBMIT_TO_BM = 'SUBMIT_TO_BM',
+  SEND_BACK = 'SEND_BACK',
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT'
+}

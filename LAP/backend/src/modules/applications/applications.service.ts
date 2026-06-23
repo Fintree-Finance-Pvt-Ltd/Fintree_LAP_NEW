@@ -1,9 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Like, Repository } from 'typeorm';
 import { PERMISSIONS } from '../../common/constants/permissions.constant';
-import { ApplicationStage } from '../../common/enums/application-stage.enum';
 import { ApplicationStatus } from '../../common/enums/application-status.enum';
+import { ApplicationStage } from '../../common/enums/application-stage.enum';
+import { DocumentType } from '../../common/enums/document-type.enum';
+import { WorkflowAction } from '../../common/enums/workflow-action.enum';
 import { createReferenceNumber } from '../../common/utils/reference-number.util';
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { Document } from '../documents/entities/document.entity';
@@ -33,6 +35,13 @@ export class ApplicationsService {
     return { data, meta: { total, page: query.page, limit: query.limit } };
   }
 
+  async search(term: string) {
+    const where = term
+      ? [{ applicationNumber: Like(`%${term}%`) }, { customerName: Like(`%${term}%`) }, { mobile: Like(`%${term}%`) }, { pan: Like(`%${term}%`) }]
+      : [];
+    return { data: await this.applications.find({ where, order: { id: 'DESC' }, take: 25 }) };
+  }
+
   async create(dto: CreateApplicationDto, actor: Actor) {
     const entity = this.applications.create({ ...dto, requestedAmount: dto.requestedAmount ?? '0', applicationNumber: 'TEMP', createdBy: actor.id, updatedBy: actor.id });
     const saved = await this.applications.save(entity);
@@ -52,6 +61,12 @@ export class ApplicationsService {
     return { data: await this.applications.save(application) };
   }
 
+  async remove(id: number) {
+    const result = await this.applications.delete(id);
+    if (!result.affected) throw new NotFoundException('Application not found');
+    return { data: null, message: 'Application deleted' };
+  }
+
   async addVisit(applicationId: number, dto: CreateVisitDto, actor: Actor) {
     await this.findOne(applicationId);
     return { data: await this.visits.save(this.visits.create({ ...dto, applicationId, createdBy: actor.id, updatedBy: actor.id })) };
@@ -63,7 +78,7 @@ export class ApplicationsService {
 
   async addDocument(applicationId: number, documentType: string, file: Express.Multer.File, actor: Actor) {
     await this.findOne(applicationId);
-    return { data: await this.documents.save(this.documents.create({ applicationId, documentType, fileName: file.originalname, filePath: file.path ?? file.originalname, createdBy: actor.id, updatedBy: actor.id })) };
+    return { data: await this.documents.save(this.documents.create({ applicationId, documentType: documentType as DocumentType, documentName: documentType, fileName: file.originalname, filePath: file.path ?? file.originalname, fileSize: file.size, mimeType: file.mimetype, uploadedBy: actor.id, createdBy: actor.id, updatedBy: actor.id })) };
   }
 
   async listDocuments(applicationId: number) {
@@ -77,19 +92,19 @@ export class ApplicationsService {
       if (!application) throw new NotFoundException('Application not found');
       if (application.version !== dto.expectedVersion) throw new BadRequestException('Application version changed');
       const fromStage = application.stage;
-      if (dto.action === 'SUBMIT_TO_BM') {
-        if (application.stage !== ApplicationStage.LEAD && application.stage !== ApplicationStage.FIELD_VERIFICATION) throw new BadRequestException('Invalid stage for BM submission');
-        application.stage = ApplicationStage.BM_REVIEW;
-        application.status = ApplicationStatus.PENDING_APPROVAL;
+      if (dto.action === WorkflowAction.SUBMIT_TO_BM) {
+        if (application.stage !== ApplicationStage.RM) throw new BadRequestException('Invalid stage for BM submission');
+        application.stage = ApplicationStage.BM;
+        application.status = ApplicationStatus.BM_PENDING;
       } else if (dto.action === 'BM_APPROVE') {
         if (!actor.permissions.includes(PERMISSIONS.BM_APPROVE)) throw new ForbiddenException('Missing BM approval permission');
-        if (application.stage !== ApplicationStage.BM_REVIEW) throw new BadRequestException('Application is not in BM review');
-        application.stage = ApplicationStage.CM_SCREENING;
-        application.status = ApplicationStatus.IN_PROGRESS;
+        if (application.stage !== ApplicationStage.BM) throw new BadRequestException('Application is not in BM review');
+        application.stage = ApplicationStage.CM;
+        application.status = ApplicationStatus.CM_PENDING;
       }
       application.updatedBy = actor.id;
       const saved = await manager.save(application);
-      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId, fromStage, toStage: saved.stage, action: dto.action, remarks: dto.remarks, createdBy: actor.id }));
+      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId, fromRole: fromStage, toRole: saved.stage, action: dto.action, remarks: dto.remarks, actionBy: actor.id }));
       await manager.save(AuditLog, manager.create(AuditLog, { action: dto.action, entityName: 'applications', entityId: applicationId, snapshot: { fromStage, toStage: saved.stage }, createdBy: actor.id }));
       return { data: saved };
     });

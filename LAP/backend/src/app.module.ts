@@ -9,21 +9,47 @@ import { databaseConfig } from './config/database.config';
 import { validateEnvironment } from './config/environment.validation';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
 import { AuthModule } from './modules/auth/auth.module';
+import { AuditModule } from './modules/audit/audit.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
+import { CoApplicantsModule } from './modules/co-applicants/co-applicants.module';
+import { ContactPersonsModule } from './modules/contact-persons/contact-persons.module';
+import { CustomerProfilesModule } from './modules/customer-profiles/customer-profiles.module';
+import { DashboardsModule } from './modules/dashboards/dashboards.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { HealthModule } from './modules/health/health.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { UsersModule } from './modules/users/users.module';
+import { WorkflowModule } from './modules/workflow/workflow.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [appConfig, authConfig, fileConfig], validate: validateEnvironment }),
     TypeOrmModule.forRootAsync({ useFactory: databaseConfig }),
     AuthModule,
+    UsersModule,
+    RolesModule,
+    PermissionsModule,
+    AuditModule,
     ApplicationsModule,
+    CustomerProfilesModule,
+    ContactPersonsModule,
+    CoApplicantsModule,
+    DocumentsModule,
+    WorkflowModule,
+    NotificationsModule,
+    DashboardsModule,
     HealthModule
   ],
   providers: [
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_INTERCEPTOR, useClass: RequestIdInterceptor }
   ]

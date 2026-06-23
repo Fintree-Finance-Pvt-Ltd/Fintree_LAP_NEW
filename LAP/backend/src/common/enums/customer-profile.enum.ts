@@ -1,0 +1,35 @@
+export enum CustomerType {
+  INDIVIDUAL = 'INDIVIDUAL',
+  PROPRIETORSHIP = 'PROPRIETORSHIP',
+  PARTNERSHIP = 'PARTNERSHIP',
+  COMPANY = 'COMPANY'
+}
+
+export enum Gender {
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+  OTHER = 'OTHER'
+}
+
+export enum MaritalStatus {
+  SINGLE = 'SINGLE',
+  MARRIED = 'MARRIED',
+  DIVORCED = 'DIVORCED',
+  WIDOWED = 'WIDOWED'
+}
+
+export enum OccupationType {
+  SALARIED = 'SALARIED',
+  SELF_EMPLOYED = 'SELF_EMPLOYED',
+  BUSINESS = 'BUSINESS',
+  PROFESSIONAL = 'PROFESSIONAL',
+  RETIRED = 'RETIRED',
+  OTHER = 'OTHER'
+}
+
+export enum BureauStatus {
+  NOT_PULLED = 'NOT_PULLED',
+  PASS = 'PASS',
+  REFER = 'REFER',
+  FAIL = 'FAIL'
+}

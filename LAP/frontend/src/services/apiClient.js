@@ -20,7 +20,7 @@ apiClient.interceptors.response.use(
   (response) => response.data,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original?._retry && !original?.url?.includes('/auth/refresh')) {
+    if (error.response?.status === 401 && !original?._retry && !original?.skipAuthRefresh && !original?.url?.includes('/auth/refresh')) {
       original._retry = true;
       refreshPromise ??= apiClient.post('/auth/refresh').finally(() => {
         refreshPromise = null;

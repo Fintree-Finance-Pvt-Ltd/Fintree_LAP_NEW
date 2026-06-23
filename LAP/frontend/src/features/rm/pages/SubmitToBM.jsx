@@ -1,154 +1,141 @@
-import { useState } from "react";
-import { FaCheckCircle, FaTimesCircle, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+
+import { rmApi } from "../rmApi.js";
+import { formatCurrency, requiredDocumentTypes, workflowSteps } from "../rmUtils.js";
 
 export default function SubmitToBM() {
-  const steps = [
-    { id: 1, label: "Lead", status: "Current" },
-    { id: 2, label: "Field Verification", status: "Pending" },
-    { id: 3, label: "BM Review", status: "Pending" },
-    { id: 4, label: "CM Screening", status: "Pending" },
-    { id: 5, label: "Credit", status: "Pending" },
-    { id: 6, label: "Legal & Valuation", status: "Pending" },
-    { id: 7, label: "Sanction", status: "Pending" },
-    { id: 8, label: "Documentation", status: "Pending" },
-    { id: 9, label: "Disbursement", status: "Pending" },
-    { id: 10, label: "Active Loan", status: "Pending" },
-    { id: 11, label: "Collections", status: "Pending" },
-  ];
+  const [applicationId, setApplicationId] = useState("");
+  const [recommendation, setRecommendation] = useState("");
+  const [recommendedAmount, setRecommendedAmount] = useState("");
+  const [recommendedRoi, setRecommendedRoi] = useState("10.5");
+  const [recommendedTenure, setRecommendedTenure] = useState("120");
+  const [message, setMessage] = useState("");
+  const queryClient = useQueryClient();
 
-  const gateItems = [
-    { label: "Customer / residence visit completed", sub: "Validation passed", passed: true },
-    { label: "Business / office visit completed", sub: "Validation passed", passed: true },
-    { label: "Property visit completed", sub: "Validation passed", passed: true },
-    { label: "All geo locations captured", sub: "Validation passed", passed: true },
-    { label: "Mandatory KYC and consent available", sub: "Validation passed", passed: true },
-    { label: "Minimum income documents uploaded", sub: "Required before submission", passed: false },
-    { label: "Minimum property documents uploaded", sub: "Required before submission", passed: false },
-  ];
+  const applications = useQuery({ queryKey: ["rm-submit-applications"], queryFn: () => rmApi.applications({ page: 1, limit: 100 }) });
+  const selectedId = applicationId || applications.data?.data?.[0]?.id || "";
+  const selectedApplication = (applications.data?.data ?? []).find((item) => String(item.id) === String(selectedId));
+  const profile = useQuery({ queryKey: ["rm-profile", selectedId], queryFn: () => rmApi.getCustomerProfile(selectedId), enabled: Boolean(selectedId), retry: false });
+  const documents = useQuery({ queryKey: ["rm-documents", selectedId], queryFn: () => rmApi.documents(selectedId), enabled: Boolean(selectedId) });
 
-  const [recommendation, setRecommendation] = useState(
-    "Customer profile and property are satisfactory. Recommend BM review."
-  );
-  const [workflowOwner, setWorkflowOwner] = useState("Branch Manager");
-  const [priority, setPriority] = useState("Normal");
+  const gateItems = useMemo(() => {
+    const profileData = profile.data?.data;
+    const uploadedTypes = new Set((documents.data?.data ?? []).map((doc) => doc.documentType));
+    const docsComplete = requiredDocumentTypes.every((type) => uploadedTypes.has(type));
+    return [
+      { label: "Customer profile exists", sub: "Required before submission", passed: Boolean(profileData) },
+      { label: "PAN verified", sub: "Set from customer profile KYC status", passed: Boolean(profileData?.panVerified) },
+      { label: "Aadhaar verified", sub: "Set from customer profile KYC status", passed: Boolean(profileData?.aadhaarVerified) },
+      { label: "Eligibility completed", sub: "FOIR, eligible amount, ROI, tenure and EMI required", passed: Boolean(profileData?.foir && profileData?.eligibleAmount && profileData?.roi && profileData?.tenure && profileData?.emi) },
+      { label: "Required documents uploaded", sub: requiredDocumentTypes.join(", "), passed: docsComplete },
+      { label: "RM recommendation completed", sub: "Recommended amount, ROI, tenure and remarks required", passed: Boolean(recommendation && recommendedAmount && recommendedRoi && recommendedTenure) },
+    ];
+  }, [profile.data, documents.data, recommendation, recommendedAmount, recommendedRoi, recommendedTenure]);
+
+  const canSubmit = gateItems.every((item) => item.passed);
+
+  const submit = useMutation({
+    mutationFn: async () => {
+      await rmApi.updateCustomerProfile(selectedId, {
+        recommendedAmount: Number(recommendedAmount),
+        recommendedRoi: Number(recommendedRoi),
+        recommendedTenure: Number(recommendedTenure),
+        rmRecommendation: recommendation,
+      });
+      return rmApi.submitToBm(selectedId, { remarks: recommendation });
+    },
+    onSuccess: async () => {
+      setMessage("Application submitted to BM.");
+      await queryClient.invalidateQueries({ queryKey: ["rm-submit-applications"] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] });
+    },
+    onError: (error) => setMessage(error?.message || "Unable to submit to BM"),
+  });
 
   return (
-    <div className="p-8 space-y-6 bg-[#f8fafc] min-h-screen text-slate-800 antialiased">
-      
-      {/* 1. Header Capture Workspace Banner */}
+    <div className="min-h-screen space-y-6 bg-[#f8fafc] p-8 text-slate-800 antialiased">
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2575fc] via-[#1a4cb0] to-[#6a11cb] p-8 text-white shadow-xl shadow-blue-900/10">
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"></div>
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Submit Case to Branch Manager</h2>
-            <p className="mt-1 text-xs text-blue-100/90 font-semibold tracking-wide">
-              FTLIP-2026-0001 • Final RM quality check before hand-off.
+            <p className="mt-1 text-xs font-semibold tracking-wide text-blue-100/90">
+              {selectedApplication ? `${selectedApplication.applicationNumber} | ${selectedApplication.customerName}` : "Select an application for final RM quality check."}
             </p>
           </div>
-          <div className="flex gap-3 shrink-0">
-            <button className="rounded-xl bg-white/10 px-5 py-2.5 text-xs font-bold border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
-              Resolve Documents
-            </button>
-            <button className="rounded-xl bg-white/50 text-white font-extrabold text-xs px-5 py-2.5 backdrop-blur-md cursor-not-allowed transition-all">
-              Submit to BM
+          <div className="flex gap-3">
+            <select value={selectedId} onChange={(event) => setApplicationId(event.target.value)} className="rounded-xl border border-white/20 bg-white/20 px-4 py-2.5 text-sm font-bold text-white outline-none">
+              {(applications.data?.data ?? []).map((item) => (
+                <option key={item.id} value={item.id} className="text-slate-900">
+                  {item.applicationNumber} - {item.customerName}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={!canSubmit || submit.isPending}
+              onClick={() => submit.mutate()}
+              className="rounded-xl bg-white px-5 py-2.5 text-xs font-extrabold text-blue-700 shadow-md transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submit.isPending ? "Submitting..." : "Submit to BM"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* 2. Multi-Stage Timeline Component */}
+      {message && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">{message}</div>}
+
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between overflow-x-auto pb-4 gap-4 scrollbar-none">
-          {steps.map((step, idx) => (
-            <div key={step.id} className="flex items-center flex-1 min-w-[110px]">
-              <div className="flex flex-col items-center text-center flex-1">
-                <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                  step.id === 1 ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-slate-100 text-slate-500"
-                }`}>
-                  {step.id}
-                </div>
-                <span className={`mt-2 text-xs font-bold whitespace-nowrap ${step.id === 1 ? "text-blue-600" : "text-slate-700"}`}>{step.label}</span>
-                <span className="text-[10px] text-slate-400 font-medium mt-0.5">{step.status}</span>
+        <div className="flex items-center justify-between gap-4 overflow-x-auto pb-4">
+          {workflowSteps.map((label, idx) => (
+            <div key={label} className="flex min-w-[110px] flex-1 flex-col items-center text-center">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold ${idx <= 1 ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-slate-100 text-slate-500"}`}>
+                {idx + 1}
               </div>
-              {idx < steps.length - 1 && (
-                <div className="h-[2px] w-full bg-slate-200 mx-2 mt-[-16px]"></div>
-              )}
+              <span className={`mt-2 whitespace-nowrap text-xs font-bold ${idx <= 1 ? "text-blue-600" : "text-slate-700"}`}>{label}</span>
             </div>
           ))}
         </div>
-        <div className="flex justify-between border-t border-slate-100 pt-4 mt-2">
-          <button className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50"><FaChevronLeft size={12} /></button>
-          <button className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50"><FaChevronRight size={12} /></button>
-        </div>
       </div>
 
-      {/* 3. Submission Gate Validation Checklist */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-4">
+      <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
         <div className="border-b border-slate-100 pb-2">
-          <h3 className="text-sm font-extrabold text-[#0f2942] tracking-wide">Submission gate</h3>
+          <h3 className="text-sm font-extrabold tracking-wide text-[#0f2942]">Submission gate</h3>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {gateItems.map((item, idx) => (
-            <div key={idx} className="flex items-start gap-3 border border-slate-100 rounded-xl p-3 bg-slate-50/50">
-              {item.passed ? (
-                <FaCheckCircle className="text-emerald-500 mt-0.5 shrink-0" size={18} />
-              ) : (
-                <FaTimesCircle className="text-rose-400 mt-0.5 shrink-0" size={18} />
-              )}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {gateItems.map((item) => (
+            <div key={item.label} className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+              {item.passed ? <FaCheckCircle className="mt-0.5 shrink-0 text-emerald-500" size={18} /> : <FaTimesCircle className="mt-0.5 shrink-0 text-rose-400" size={18} />}
               <div>
                 <div className="text-xs font-bold text-slate-800">{item.label}</div>
-                <div className="text-[10px] text-slate-400 font-medium mt-0.5">{item.sub}</div>
+                <div className="mt-0.5 text-[10px] font-medium text-slate-400">{item.sub}</div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* 4. RM Recommendation Field Form Panel */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-6">
-        
-        {/* Recommendation Textarea Box */}
+      <div className="space-y-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
+          <Field label="Recommended Amount" type="number" value={recommendedAmount} onChange={setRecommendedAmount} placeholder={selectedApplication ? formatCurrency(selectedApplication.requestedAmount) : ""} />
+          <Field label="Recommended ROI" type="number" value={recommendedRoi} onChange={setRecommendedRoi} />
+          <Field label="Recommended Tenure" type="number" value={recommendedTenure} onChange={setRecommendedTenure} />
+        </div>
         <div className="flex flex-col gap-2">
-          <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">RM Recommendation</label>
-          <textarea
-            value={recommendation}
-            onChange={(e) => setRecommendation(e.target.value)}
-            rows={4}
-            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium bg-slate-50/50 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none"
-          />
+          <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">RM Recommendation</label>
+          <textarea value={recommendation} onChange={(event) => setRecommendation(event.target.value)} rows={4} className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:bg-white" />
         </div>
-
-        {/* Bottom Metadata Dropdowns Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
-          
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Workflow Owner</label>
-            <input
-              type="text"
-              value={workflowOwner}
-              onChange={(e) => setWorkflowOwner(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 outline-none focus:bg-white focus:border-blue-500 transition-all"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Priority</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-            >
-              <option>Normal</option>
-              <option>High</option>
-              <option>Low</option>
-            </select>
-          </div>
-
-        </div>
-
       </div>
+    </div>
+  );
+}
 
+function Field({ label, value, onChange, ...props }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</label>
+      <input {...props} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:bg-white" />
     </div>
   );
 }
