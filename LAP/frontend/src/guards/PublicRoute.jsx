@@ -1,7 +1,20 @@
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth.js';
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth.js";
 
 export default function PublicRoute() {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Outlet />;
+  const { isAuthenticated, user } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Outlet />;
+  }
+
+  const roles = Array.isArray(user?.roles)
+    ? user.roles
+    : [];
+
+  const destination = roles.includes("RM")
+    ? "/rmDashboard"
+    : "/dashboard";
+
+  return <Navigate to={destination} replace />;
 }

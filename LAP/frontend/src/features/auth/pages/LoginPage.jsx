@@ -34,12 +34,43 @@ export default function LoginPage() {
     }
   }, [spokes]);
 
-  const submit = async (event) => {
-    event.preventDefault();
+const submit = async (event) => {
+  event.preventDefault();
+
+  try {
     const response = await authApi.login(form);
-    dispatch(setCredentials(response.data));
-    navigate("/dashboard");
-  };
+
+    // Save either Axios envelope or direct data response.
+    const authData = response.data?.data ?? response.data;
+
+    dispatch(setCredentials(authData));
+
+    // Store login details for session persistence.
+    try {
+      window.localStorage.setItem(
+        "loginDetails",
+        JSON.stringify(authData)
+      );
+    } catch {
+      // ignore storage errors (e.g., private mode)
+    }
+
+    const roles = Array.isArray(authData?.user?.roles)
+      ? authData.user.roles
+      : [];
+
+    const destination = roles.includes("RM")
+      ? "/rmDashboard"
+      : "/dashboard";
+
+    navigate(destination, { replace: true });
+  } catch (error) {
+    console.error(
+      "Login failed:",
+      error?.response?.data?.message ?? error.message
+    );
+  }
+};
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#021933]">
