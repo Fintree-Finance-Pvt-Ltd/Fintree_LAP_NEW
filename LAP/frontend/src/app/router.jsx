@@ -12,11 +12,33 @@ import CreateApplicationPage from '../features/applications/pages/CreateApplicat
 import ApplicationDetailsPage from '../features/applications/pages/ApplicationDetailsPage.jsx';
 import PlaceholderPage from '../features/dashboard/pages/PlaceholderPage.jsx';
 
+import RMDashboard from '../features/rm/pages/RMDashboard.jsx';
+import MyLeads from '../features/rm/pages/MyLeads.jsx';
+import CreateLead from '../features/rm/pages/CreateLead.jsx';
+import FieldVisits from '../features/rm/pages/FieldVisits.jsx';
+import GeoVerification from '../features/rm/pages/GeoVerification.jsx';
+import KycDocuments from '../features/rm/pages/KycDocuments.jsx';
+import ChargesReceipts from '../features/rm/pages/ChargesReceipts.jsx';
+import PaymentManagement from '../features/rm/pages/PaymentManagement.jsx';
+import SubmitToBM from '../features/rm/pages/SubmitToBM.jsx';
+
 const protectedChildren = [
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/applications', element: <ApplicationsPage /> },
   { path: '/applications/create', element: <CreateApplicationPage /> },
   { path: '/applications/:applicationId', element: <ApplicationDetailsPage /> },
+
+  // RM routes (wired to Sidebar.jsx)
+  { path: '/rmDashboard', element: <RMDashboard /> },
+  { path: '/my-leads', element: <MyLeads /> },
+  { path: '/create-lead', element: <CreateLead /> },
+  { path: '/customer-visit', element: <FieldVisits /> },
+  { path: '/geo-verification', element: <GeoVerification /> },
+  { path: '/kyc-documents', element: <KycDocuments /> },
+  { path: '/charges-receipts', element: <ChargesReceipts /> },
+  { path: '/payment-management', element: <PaymentManagement /> },
+  { path: '/submit-bm', element: <SubmitToBM /> },
+
   ...[
     '/applications/:applicationId/applicants',
     '/applications/:applicationId/visits',
@@ -25,13 +47,6 @@ const protectedChildren = [
     '/applications/:applicationId/documents',
     '/applications/:applicationId/bm-review',
     '/applications/:applicationId/cm-screening',
-    '/applications/:applicationId/bureau',
-    '/applications/:applicationId/banking',
-    '/applications/:applicationId/credit',
-    '/applications/:applicationId/legal',
-    '/applications/:applicationId/valuation',
-    '/applications/:applicationId/fees',
-    '/applications/:applicationId/payments',
     '/applications/:applicationId/sanction',
     '/applications/:applicationId/pdd',
     '/applications/:applicationId/disbursement',

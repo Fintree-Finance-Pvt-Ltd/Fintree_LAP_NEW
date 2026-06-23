@@ -19,8 +19,7 @@ import {
   FaChartBar,
   FaHistory,
 } from "react-icons/fa";
-import { useAuth } from "../../hooks/useAuth";
-
+import { useAuth } from "../hooks/useAuth";
 
 const rolesConfig = {
   RM: [
@@ -146,8 +145,6 @@ export default function Sidebar() {
 
   const allowedGroups = groupOrder
     .map((category) => {
-      // Stable: deterministic order based on groupOrder.
-      // Within a group: deterministic order based on rolesConfig.role list order.
       const collected = [];
       const seenTo = new Set();
 
@@ -173,17 +170,13 @@ export default function Sidebar() {
 
   return (
     <aside className="hidden w-72 shrink-0 bg-[#0f1d40] text-slate-400 p-4 md:flex flex-col h-screen overflow-y-auto select-none">
-      {/* Brand Header */}
       <div className="mb-8 px-3">
-        <div className="text-white text-xl font-bold tracking-wide">
-          Fintree LAP
-        </div>
+        <div className="text-white text-xl font-bold tracking-wide">Fintree LAP</div>
         <div className="text-[10px] text-slate-400 font-semibold tracking-wider mt-0.5">
           LOS • LMS PORTAL
         </div>
       </div>
 
-      {/* Navigation Groups */}
       <nav className="space-y-6 flex-1">
         {allowedGroups.map((group) => (
           <div key={group.category} className="space-y-1">
@@ -213,3 +206,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+
