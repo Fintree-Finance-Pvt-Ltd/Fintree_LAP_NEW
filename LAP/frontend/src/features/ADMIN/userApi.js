@@ -6,4 +6,8 @@ export const usersApi = {
       "/users/access-list",
       config,
     ),
+
+    createUser: (payload) =>
+    apiClient.post("/users", payload),
+
 };
