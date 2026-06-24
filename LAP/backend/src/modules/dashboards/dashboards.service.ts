@@ -18,7 +18,7 @@ export class DashboardsService {
     const [totalCases, draftCases, submittedCases, pendingCases, approvedCases, rejectedCases, todayCases, monthlyCases] = await Promise.all([
       this.applications.count({ where: owner }),
       this.applications.count({ where: { ...owner, status: ApplicationStatus.DRAFT } }),
-      this.applications.count({ where: { ...owner, status: ApplicationStatus.SUBMITTED } }),
+      this.applications.count({ where: { ...owner, status: In([ApplicationStatus.BM_PENDING, ApplicationStatus.CM_PENDING, ApplicationStatus.CREDIT_PENDING, ApplicationStatus.LEGAL_PENDING, ApplicationStatus.VALUATION_PENDING, ApplicationStatus.SANCTION_PENDING, ApplicationStatus.AGREEMENT_PENDING, ApplicationStatus.DISBURSEMENT_PENDING]) } }),
       this.applications.count({ where: { ...owner, status: In([ApplicationStatus.BM_PENDING, ApplicationStatus.CM_PENDING, ApplicationStatus.CREDIT_PENDING, ApplicationStatus.LEGAL_PENDING, ApplicationStatus.VALUATION_PENDING, ApplicationStatus.SANCTION_PENDING, ApplicationStatus.AGREEMENT_PENDING, ApplicationStatus.DISBURSEMENT_PENDING]) } }),
       this.applications.count({ where: { ...owner, status: In([ApplicationStatus.BM_APPROVED, ApplicationStatus.CM_APPROVED, ApplicationStatus.CREDIT_APPROVED, ApplicationStatus.LEGAL_APPROVED, ApplicationStatus.VALUATION_APPROVED, ApplicationStatus.SANCTION_APPROVED, ApplicationStatus.AGREEMENT_COMPLETED, ApplicationStatus.DISBURSED, ApplicationStatus.ACTIVE]) } }),
       this.applications.count({ where: { ...owner, status: ApplicationStatus.REJECTED } }),

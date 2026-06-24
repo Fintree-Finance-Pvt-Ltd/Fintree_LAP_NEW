@@ -20,6 +20,12 @@ export const rmApi = {
   createApplication: (payload) =>
     apiClient.post("/applications", payload),
 
+  saveDraft: (payload) =>
+    apiClient.post("/applications/draft", payload),
+
+  submitApplication: (payload) =>
+    apiClient.post("/applications/submit", payload),
+
   getApplication: (applicationId) =>
     apiClient.get(`/applications/${applicationId}`),
 

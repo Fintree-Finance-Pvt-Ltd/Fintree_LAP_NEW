@@ -9,7 +9,7 @@ export const databaseConfig = (): TypeOrmModuleOptions => ({
   database: process.env.DB_DATABASE,
   charset: 'utf8mb4',
   autoLoadEntities: true,
-  synchronize: true,
+  synchronize: false,
   migrationsRun: false,
   logging: false
 });

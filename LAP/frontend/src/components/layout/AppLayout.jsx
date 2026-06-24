@@ -10,7 +10,7 @@
 import { Outlet } from "react-router-dom";
 
 import Sidebar from "./Sidebar.jsx";
-import Header from "./Header.jsx";
+import HeaderContainer from "./HeaderContainer.jsx";
 
 export default function AppLayout() {
   return (
@@ -22,7 +22,7 @@ export default function AppLayout() {
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header remains fixed */}
         <div className="shrink-0">
-          <Header />
+          <HeaderContainer />
         </div>
 
         {/* Only this section scrolls */}

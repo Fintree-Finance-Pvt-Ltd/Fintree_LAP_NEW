@@ -8,6 +8,7 @@ import { ApplicationsService } from './applications.service';
 import type { Actor } from './applications.service';
 import { ApplicationFilterDto } from './dto/application-filter.dto';
 import { CreateApplicationDto } from './dto/create-application.dto';
+import { CreateApplicationWithProfileDto } from './dto/create-application-with-profile.dto';
 import { TransitionApplicationDto } from './dto/transition-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 
@@ -26,6 +27,12 @@ export class ApplicationsController {
 
   @Post() @Permissions(PERMISSIONS.APPLICATION_CREATE)
   create(@Body() dto: CreateApplicationDto, @CurrentUser() user: Actor) { return this.service.create(dto, user); }
+
+  @Post('draft') @Permissions(PERMISSIONS.APPLICATION_CREATE)
+  draft(@Body() dto: CreateApplicationWithProfileDto, @CurrentUser() user: Actor) { return this.service.draft(dto, user); }
+
+  @Post('submit') @Permissions(PERMISSIONS.APPLICATION_CREATE)
+  submit(@Body() dto: CreateApplicationWithProfileDto, @CurrentUser() user: Actor) { return this.service.submit(dto, user); }
 
   @Get(':applicationId') @Permissions(PERMISSIONS.APPLICATION_READ)
   findOne(@Param('applicationId', ParseIntPipe) id: number) { return this.service.findOne(id); }

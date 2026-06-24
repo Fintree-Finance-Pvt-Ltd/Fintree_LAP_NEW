@@ -23,7 +23,6 @@ const emptyForm = {
   city: "",
   state: "",
   pinCode: "",
-  rmNotes: "",
 };
 
 export default function CreateLead() {
@@ -46,50 +45,54 @@ export default function CreateLead() {
     return { foir, ltv, roi, tenure, emi };
   }, [formData]);
 
-  const saveLead = useMutation({
+  const buildPayload = () => ({
+    customerName: formData.customerName,
+    mobile: formData.mobileNumber,
+    email: formData.emailId || undefined,
+    pan: formData.panNumber || undefined,
+    aadhaarNumber: formData.aadhaarNumber || undefined,
+    occupationType: formData.occupation,
+    businessName: formData.businessName || undefined,
+    monthlyIncome: formData.monthlyIncome ? Number(formData.monthlyIncome) : undefined,
+    monthlyObligations: formData.monthlyObligations ? Number(formData.monthlyObligations) : undefined,
+    requestedAmount: formData.requestedAmount || undefined,
+    requestedTenure: formData.requestedTenure ? Number(formData.requestedTenure) : undefined,
+    propertyType: formData.propertyType || undefined,
+    marketValue: formData.propertyValue ? Number(formData.propertyValue) : undefined,
+    propertyAddress: formData.propertyAddress || undefined,
+    propertyCity: formData.city || undefined,
+    propertyState: formData.state || undefined,
+    propertyPincode: formData.pinCode || undefined,
+    foir: calculated.foir,
+    emi: calculated.emi,
+    roi: calculated.roi,
+    tenure: calculated.tenure,
+  });
+
+  const saveDraft = useMutation({
     mutationFn: async () => {
-      const applicationResponse = await rmApi.createApplication({
-        customerName: formData.customerName,
-        mobile: formData.mobileNumber,
-        pan: formData.panNumber || undefined,
-        requestedAmount: String(formData.requestedAmount || 0),
-      });
-      const application = applicationResponse.data;
-      const [firstName, ...rest] = formData.customerName.trim().split(/\s+/);
-      await rmApi.createCustomerProfile({
-        applicationId: application.id,
-        customerType: "INDIVIDUAL",
-        firstName: firstName || formData.customerName,
-        lastName: rest.pop() || firstName || formData.customerName,
-        middleName: rest.join(" ") || undefined,
-        mobile: formData.mobileNumber,
-        email: formData.emailId || undefined,
-        occupationType: formData.occupation,
-        businessName: formData.businessName || undefined,
-        monthlyIncome: Number(formData.monthlyIncome || 0),
-        panNumber: formData.panNumber || undefined,
-        aadhaarNumber: formData.aadhaarNumber || undefined,
-        propertyType: formData.propertyType || undefined,
-        propertyAddress: formData.propertyAddress || undefined,
-        propertyCity: formData.city || undefined,
-        propertyState: formData.state || undefined,
-        propertyPincode: formData.pinCode || undefined,
-        marketValue: Number(formData.propertyValue || 0),
-        foir: Number(calculated.foir.toFixed(2)),
-        eligibleAmount: Number(formData.requestedAmount || 0),
-        roi: calculated.roi,
-        tenure: calculated.tenure,
-        emi: Number(calculated.emi.toFixed(2)),
-        remarks: formData.rmNotes || undefined,
-      });
-      return application;
+      const response = await rmApi.saveDraft(buildPayload());
+      return response;
     },
-    onSuccess: async (application) => {
+    onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ["rm-applications"] });
       await queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] });
-      navigate(`/applications/${application.id}`, { replace: true });
+      navigate(`/applications/${data.id}`, { replace: true });
     },
-    onError: (error) => setMessage(error?.message || "Unable to save lead"),
+    onError: (error) => setMessage(error?.message || "Unable to save draft"),
+  });
+
+  const submitApplication = useMutation({
+    mutationFn: async () => {
+      const response = await rmApi.submitApplication(buildPayload());
+      return response;
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["rm-applications"] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] });
+      navigate(`/applications/${data.id}`, { replace: true });
+    },
+    onError: (error) => setMessage(error?.message || "Unable to submit application"),
   });
 
   const handleInputChange = (event) => {
@@ -100,8 +103,10 @@ export default function CreateLead() {
   const handleSubmit = (event) => {
     event.preventDefault();
     setMessage("");
-    saveLead.mutate();
+    saveDraft.mutate();
   };
+
+  const isPending = saveDraft.isPending || submitApplication.isPending;
 
   return (
     <form onSubmit={handleSubmit} className="min-h-screen space-y-6 bg-[#f8fafc] p-8 text-slate-800 antialiased">
@@ -111,9 +116,14 @@ export default function CreateLead() {
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Lead & Application Capture</h2>
             <p className="mt-1 text-xs font-semibold tracking-wide text-blue-100/90">Capture applicant, loan and collateral details.</p>
           </div>
-          <button type="submit" disabled={saveLead.isPending} className="rounded-xl bg-white px-5 py-2.5 text-xs font-extrabold text-blue-700 shadow-md transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60">
-            {saveLead.isPending ? "Saving..." : "Save Draft"}
-          </button>
+          <div className="flex gap-3">
+            <button type="submit" disabled={isPending} className="rounded-xl bg-white px-5 py-2.5 text-xs font-extrabold text-blue-700 shadow-md transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60">
+              {saveDraft.isPending ? "Saving..." : "Save Draft"}
+            </button>
+            <button type="button" disabled={isPending} onClick={() => { setMessage(""); submitApplication.mutate(); }} className="rounded-xl bg-blue-900 px-5 py-2.5 text-xs font-extrabold text-white shadow-md transition-all hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60">
+              {submitApplication.isPending ? "Submitting..." : "Submit for Review"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -133,7 +143,7 @@ export default function CreateLead() {
       {message && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{message}</div>}
 
       <div className="space-y-10 rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
-        <Section title="Primary applicant">
+        <Section title="Customer Details">
           <Field label="Customer / Entity Name *" name="customerName" value={formData.customerName} onChange={handleInputChange} required />
           <Field label="Mobile Number *" name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} required />
           <Field label="Email ID" name="emailId" type="email" value={formData.emailId} onChange={handleInputChange} />
@@ -151,31 +161,19 @@ export default function CreateLead() {
           <Field label="Employer / Business Name" name="businessName" value={formData.businessName} onChange={handleInputChange} />
           <Field label="Verified Monthly Income" name="monthlyIncome" type="number" value={formData.monthlyIncome} onChange={handleInputChange} />
           <Field label="Existing Monthly Obligations" name="monthlyObligations" type="number" value={formData.monthlyObligations} onChange={handleInputChange} />
-        </Section>
 
-        <Section title="Loan requirement">
           <Field label="Requested Loan Amount *" name="requestedAmount" type="number" value={formData.requestedAmount} onChange={handleInputChange} required />
           <Field label="Requested Tenure (months)" name="requestedTenure" type="number" value={formData.requestedTenure} onChange={handleInputChange} />
           <ReadOnly label="Indicative EMI" value={formatCurrency(calculated.emi)} />
         </Section>
 
-        <Section title="Collateral property">
+        <Section title="Property Details">
           <Field label="Property Type" name="propertyType" value={formData.propertyType} onChange={handleInputChange} />
           <Field label="Approximate Property Value" name="propertyValue" type="number" value={formData.propertyValue} onChange={handleInputChange} />
           <Field label="Property Address" name="propertyAddress" value={formData.propertyAddress} onChange={handleInputChange} />
           <Field label="City" name="city" value={formData.city} onChange={handleInputChange} />
           <Field label="State" name="state" value={formData.state} onChange={handleInputChange} />
           <Field label="PIN Code" name="pinCode" value={formData.pinCode} onChange={handleInputChange} maxLength={6} />
-        </Section>
-
-        <Section title="Indicative eligibility">
-          <ReadOnly label="FOIR" value={`${calculated.foir.toFixed(2)}%`} />
-          <ReadOnly label="Indicative LTV" value={`${calculated.ltv.toFixed(2)}%`} />
-          <ReadOnly label="ROI" value={`${calculated.roi.toFixed(2)}%`} />
-          <div className="flex flex-col gap-2 md:col-span-3">
-            <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">RM Notes</label>
-            <textarea name="rmNotes" value={formData.rmNotes} onChange={handleInputChange} rows={3} className="resize-none rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:bg-white" />
-          </div>
         </Section>
       </div>
     </form>

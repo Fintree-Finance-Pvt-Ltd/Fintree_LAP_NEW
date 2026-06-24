@@ -11,6 +11,6 @@ import { DashboardsService } from './dashboards.service';
 @Controller('rm/dashboard')
 export class DashboardsController {
   constructor(private readonly service: DashboardsService) {}
-  @Get() @Permissions(PERMISSIONS.DASHBOARD_READ)
+  @Get()
   rm(@CurrentUser() user: Actor) { return this.service.rm(user); }
 }
