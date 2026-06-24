@@ -57,61 +57,21 @@ const rolesConfig = {
       ],
     },
   ],
+
+
   ADMIN: [
     {
       category: "PRIMARY",
-      items: [{ to: "/overview", label: "Overview", Icon: FaHome }],
+      items: [{ to: "/adminDashboard", label: "My Work", Icon: FaBriefcase }],
     },
     {
       category: "MODULES",
       items: [
+       
+       
         {
-          to: "/action-flow",
-          label: "Easy Action Flow",
-          Icon: FaPlayCircle,
-        },
-        { to: "/journey", label: "Journey", Icon: FaRoute },
-      ],
-    },
-    {
-      category: "ADMINISTRATION",
-      items: [
-        { to: "/admin/users", label: "Users & Roles", Icon: FaUsers },
-        { to: "/admin/policy", label: "Product Policy", Icon: FaSlidersH },
-        {
-          to: "/admin/control",
-          label: "Control Review",
-          Icon: FaShieldAlt,
-        },
-        {
-          to: "/admin/integrations",
-          label: "API Integrations",
-          Icon: FaLink,
-        },
-      ],
-    },
-    {
-      category: "OPERATIONS",
-      items: [
-        { to: "/ops/all-cases", label: "All Cases", Icon: FaFolder },
-        {
-          to: "/ops/reports",
-          label: "MIS & Reports",
-          Icon: FaChartBar,
-        },
-        {
-          to: "/ops/audit",
-          label: "Audit Trail",
-          Icon: FaHistory,
-        },
-      ],
-    },
-    {
-      category: "FINANCE",
-      items: [
-        {
-          to: "/charges-receipts",
-          label: "Charges & Receipts",
+          to: "/roles-access",
+          label: "Users & Roles",
           Icon: FaReceipt,
         },
         {
@@ -119,9 +79,75 @@ const rolesConfig = {
           label: "Payment Management",
           Icon: FaCreditCard,
         },
+        { to: "/submit-bm", label: "Submit to BM", Icon: FaPaperPlane },
       ],
     },
   ],
+  // ADMIN: [
+  //   {
+  //     category: "PRIMARY",
+  //     items: [{ to: "/overview", label: "Overview", Icon: FaHome }],
+  //   },
+  //   {
+  //     category: "MODULES",
+  //     items: [
+  //       {
+  //         to: "/action-flow",
+  //         label: "Easy Action Flow",
+  //         Icon: FaPlayCircle,
+  //       },
+  //       { to: "/journey", label: "Journey", Icon: FaRoute },
+  //     ],
+  //   },
+  //   {
+  //     category: "ADMINISTRATION",
+  //     items: [
+  //       { to: "/admin/users", label: "Users & Roles", Icon: FaUsers },
+  //       { to: "/admin/policy", label: "Product Policy", Icon: FaSlidersH },
+  //       {
+  //         to: "/admin/control",
+  //         label: "Control Review",
+  //         Icon: FaShieldAlt,
+  //       },
+  //       {
+  //         to: "/admin/integrations",
+  //         label: "API Integrations",
+  //         Icon: FaLink,
+  //       },
+  //     ],
+  //   },
+  //   {
+  //     category: "OPERATIONS",
+  //     items: [
+  //       { to: "/ops/all-cases", label: "All Cases", Icon: FaFolder },
+  //       {
+  //         to: "/ops/reports",
+  //         label: "MIS & Reports",
+  //         Icon: FaChartBar,
+  //       },
+  //       {
+  //         to: "/ops/audit",
+  //         label: "Audit Trail",
+  //         Icon: FaHistory,
+  //       },
+  //     ],
+  //   },
+  //   {
+  //     category: "FINANCE",
+  //     items: [
+  //       {
+  //         to: "/charges-receipts",
+  //         label: "Charges & Receipts",
+  //         Icon: FaReceipt,
+  //       },
+  //       {
+  //         to: "/payment-management",
+  //         label: "Payment Management",
+  //         Icon: FaCreditCard,
+  //       },
+  //     ],
+  //   },
+  // ],
 };
 
 const groupOrder = [

@@ -22,6 +22,10 @@ import ChargesReceipts from '../features/rm/pages/ChargesReceipts.jsx';
 import PaymentManagement from '../features/rm/pages/PaymentManagement.jsx';
 import SubmitToBM from '../features/rm/pages/SubmitToBM.jsx';
 
+
+import AdminDashboard from '../features/ADMIN/pages/AdminDashboard.jsx';
+import RolesAccess from '../features/ADMIN/pages/rolesAccess.jsx';
+
 const protectedChildren = [
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/applications', element: <ApplicationsPage /> },
@@ -30,6 +34,10 @@ const protectedChildren = [
 
   // RM routes (wired to Sidebar.jsx)
   { path: '/rmDashboard', element: <RMDashboard /> },
+    { path: '/adminDashboard', element: <AdminDashboard /> },
+        { path: '/roles-access', element: <RolesAccess /> },
+
+
   { path: '/my-leads', element: <MyLeads /> },
   { path: '/create-lead', element: <CreateLead /> },
   { path: '/customer-visit', element: <FieldVisits /> },

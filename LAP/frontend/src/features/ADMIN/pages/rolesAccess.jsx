@@ -1,0 +1,921 @@
+import { useMemo, useState,   useCallback,useEffect, } from "react";
+import {
+  FaCheck,
+  FaPlus,
+  FaSearch,
+  FaStar,
+  FaTimes,
+} from "react-icons/fa";
+
+import { usersApi } from "../userApi";
+// const initialUsers = [
+//   {
+//     id: 1,
+//     name: "Aditi Sharma",
+//     email: "admin@fintree.in",
+//     role: "System Administrator",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 2,
+//     name: "Rohit Mehta",
+//     email: "rm@fintree.in",
+//     role: "Relationship Manager",
+//     location: "Noida Spoke",
+//     dataScope: "Assigned Spoke / Cases",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 3,
+//     name: "Bhavna Malhotra",
+//     email: "bm@fintree.in",
+//     role: "Branch Manager",
+//     location: "Noida Spoke",
+//     dataScope: "Assigned Spoke / Cases",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 4,
+//     name: "Chirag Mishra",
+//     email: "cm@fintree.in",
+//     role: "Credit Manager",
+//     location: "Noida Spoke",
+//     dataScope: "Assigned Spoke / Cases",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 5,
+//     name: "Kavita Rao",
+//     email: "credit@fintree.in",
+//     role: "Hub Credit / Underwriting",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 6,
+//     name: "Leena Gupta",
+//     email: "legal@fintree.in",
+//     role: "Legal Officer",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 7,
+//     name: "Vikas Arora",
+//     email: "valuer@fintree.in",
+//     role: "Technical Valuer",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 8,
+//     name: "Sameer Khanna",
+//     email: "sanction@fintree.in",
+//     role: "Sanction & KFS Officer",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 9,
+//     name: "Ojas Batra",
+//     email: "ops@fintree.in",
+//     role: "Operations / Disbursement",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 10,
+//     name: "Lakshmi Nair",
+//     email: "lms@fintree.in",
+//     role: "Loan Servicing",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 11,
+//     name: "Chetan Yadav",
+//     email: "collection@fintree.in",
+//     role: "Collections Officer",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 12,
+//     name: "Karan Malhotra",
+//     email: "credit.maker@fintree.in",
+//     role: "Credit Maker",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 13,
+//     name: "Charu Bansal",
+//     email: "credit.checker@fintree.in",
+//     role: "Credit Checker / Approver",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 14,
+//     name: "Om Prakash",
+//     email: "ops.maker@fintree.in",
+//     role: "Operations Maker",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 15,
+//     name: "Pooja Sethi",
+//     email: "ops.checker@fintree.in",
+//     role: "Operations Checker / Authorizer",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 16,
+//     name: "Farah Khan",
+//     email: "fees@fintree.in",
+//     role: "Fee & Receipt Operations",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 17,
+//     name: "Meera Joshi",
+//     email: "payment.maker@fintree.in",
+//     role: "Payment Desk Maker",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+//   {
+//     id: 18,
+//     name: "Rohit Suri",
+//     email: "payment.checker@fintree.in",
+//     role: "Payment & Reconciliation Checker",
+//     location: "Delhi Hub",
+//     dataScope: "Hub / Authorised Portfolio",
+//     mfa: "Enabled",
+//     status: "Active",
+//   },
+// ];
+
+const informationCards = [
+  {
+    title: "Access controls",
+    points: [
+      "OAuth/OIDC and short-lived tokens",
+      "MFA for privileged and approval roles",
+      "Role + geography + case-assignment scope",
+      "Field-level masking for KYC/bank data",
+    ],
+  },
+  {
+    title: "Maker-checker conflicts",
+    points: [
+      "No self-approval",
+      "Segregation of credit and operations",
+      "Bank detail change requires checker",
+      "Waiver/refund/adjustment controlled",
+    ],
+  },
+  {
+    title: "Lifecycle",
+    points: [
+      "Joiner / mover / leaver workflow",
+      "Access expiry and periodic recertification",
+      "Vendor and partner time-bound access",
+      "Session and download audit",
+    ],
+  },
+];
+
+const emptyForm = {
+  name: "",
+  email: "",
+  role: "",
+  location: "",
+  dataScope: "",
+};
+
+function StatusBadge({ children }) {
+  return (
+    <span className="inline-flex min-w-[80px] items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm">
+      {children}
+    </span>
+  );
+}
+
+function AddUserModal({ open, onClose, onSubmit }) {
+  const [form, setForm] = useState(emptyForm);
+  const [error, setError] = useState("");
+
+  if (!open) return null;
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    setError("");
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    const hasEmptyField = Object.values(form).some(
+      (value) => !value.trim(),
+    );
+
+    if (hasEmptyField) {
+      setError("Please complete all fields.");
+      return;
+    }
+
+    onSubmit(form);
+    setForm(emptyForm);
+    setError("");
+  };
+
+  const handleClose = () => {
+    setForm(emptyForm);
+    setError("");
+    onClose();
+  };
+
+  const inputClasses =
+    "h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100";
+
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">
+              Add User
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Create a new LAP system user and assign access.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleClose}
+            className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Full name
+              <input
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Enter full name"
+                className={inputClasses}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Email address
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="name@fintree.in"
+                className={inputClasses}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Role
+              <select
+                name="role"
+                value={form.role}
+                onChange={handleChange}
+                className={inputClasses}
+              >
+                <option value="">Select role</option>
+                <option value="System Administrator">
+                  System Administrator
+                </option>
+                <option value="Relationship Manager">
+                  Relationship Manager
+                </option>
+                <option value="Branch Manager">
+                  Branch Manager
+                </option>
+                <option value="Credit Manager">
+                  Credit Manager
+                </option>
+                <option value="Legal Officer">
+                  Legal Officer
+                </option>
+                <option value="Operations Officer">
+                  Operations Officer
+                </option>
+              </select>
+            </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Location
+              <select
+                name="location"
+                value={form.location}
+                onChange={handleChange}
+                className={inputClasses}
+              >
+                <option value="">Select location</option>
+                <option value="Delhi Hub">Delhi Hub</option>
+                <option value="Noida Spoke">Noida Spoke</option>
+                <option value="Mumbai Hub">Mumbai Hub</option>
+                <option value="Pune Spoke">Pune Spoke</option>
+              </select>
+            </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:col-span-2">
+              Data scope
+              <select
+                name="dataScope"
+                value={form.dataScope}
+                onChange={handleChange}
+                className={inputClasses}
+              >
+                <option value="">Select data scope</option>
+                <option value="Hub / Authorised Portfolio">
+                  Hub / Authorised Portfolio
+                </option>
+                <option value="Assigned Spoke / Cases">
+                  Assigned Spoke / Cases
+                </option>
+              </select>
+            </label>
+          </div>
+
+          {error && (
+            <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              {error}
+            </p>
+          )}
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 px-5 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5"
+            >
+              <FaCheck />
+              Add User
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function getRoleName(user) {
+  const role =
+    user?.primaryRole ||
+    user?.role ||
+    user?.roles?.[0];
+
+  if (!role) return "Not Assigned";
+
+  if (typeof role === "string") {
+    return role;
+  }
+
+  return (
+    role?.name ||
+    role?.roleName ||
+    role?.role ||
+    role?.code ||
+    "Not Assigned"
+  );
+}
+
+function normalizeUser(user) {
+  const fullName =
+    user?.name ||
+    [user?.firstName, user?.lastName]
+      .filter(Boolean)
+      .join(" ");
+
+  const location =
+    user?.location?.name ||
+    user?.organizationUnit?.name ||
+    user?.spoke?.name ||
+    user?.hub?.name ||
+    user?.location ||
+    "-";
+
+  const mfaEnabled =
+    user?.mfaEnabled ??
+    user?.mfa_enabled ??
+    user?.isMfaEnabled;
+
+  const active =
+    user?.isActive ??
+    user?.active ??
+    String(user?.status || "").toUpperCase() ===
+      "ACTIVE";
+
+  return {
+    id: user?.id,
+    name: fullName || "-",
+    email: user?.email || "-",
+    role: getRoleName(user),
+    location,
+    dataScope:
+      user?.dataScope ||
+      user?.data_scope ||
+      "Assigned Cases",
+    mfa:
+      mfaEnabled === false
+        ? "Disabled"
+        : "Enabled",
+    status:
+      active === false
+        ? "Inactive"
+        : "Active",
+  };
+}
+
+
+export default function RolesAccess() {
+const [users, setUsers] = useState([]);
+const [search, setSearch] = useState("");
+const [showAddUser, setShowAddUser] =
+  useState(false);
+
+const [loading, setLoading] = useState(true);
+const [apiError, setApiError] = useState("");
+
+
+const loadUsers = useCallback(async (signal) => {
+  try {
+    setLoading(true);
+    setApiError("");
+
+    const response =
+      await usersApi.getAccessList({
+        signal,
+      });
+
+    const responseData =
+      response?.data?.data?.users ??
+      response?.data?.users ??
+      response?.data?.data ??
+      response?.data ??
+      [];
+
+    if (!Array.isArray(responseData)) {
+      throw new Error(
+        "Invalid users response received from server.",
+      );
+    }
+
+    setUsers(
+      responseData.map(normalizeUser),
+    );
+  } catch (error) {
+    if (
+      error?.name === "CanceledError" ||
+      error?.code === "ERR_CANCELED"
+    ) {
+      return;
+    }
+
+    console.error(
+      "Unable to load users:",
+      error,
+    );
+
+    setUsers([]);
+
+    setApiError(
+      error?.response?.data?.message ||
+        error?.message ||
+        "Unable to load users.",
+    );
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
+useEffect(() => {
+  const controller = new AbortController();
+
+  loadUsers(controller.signal);
+
+  return () => {
+    controller.abort();
+  };
+}, [loadUsers]);
+
+
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) return users;
+
+    return users.filter((user) =>
+      [
+        user.name,
+        user.email,
+        user.role,
+        user.location,
+        user.dataScope,
+        user.status,
+      ].some((value) =>
+        String(value).toLowerCase().includes(query),
+      ),
+    );
+  }, [search, users]);
+
+  const handleAddUser = (formData) => {
+    setUsers((previous) => [
+      ...previous,
+      {
+        id: Date.now(),
+        ...formData,
+        mfa: "Enabled",
+        status: "Active",
+      },
+    ]);
+
+    setShowAddUser(false);
+  };
+
+  return (
+    <>
+      <div className="min-h-full">
+        {/* Hero section */}
+        <section className="relative overflow-hidden rounded-[30px] bg-[#0f1d40] from-indigo-600 via-[#4d55bf] to-[#2ab7b5] px-6 py-10 text-white shadow-[0_24px_55px_rgba(67,76,190,0.24)] md:px-11 md:py-11">
+          <div className="absolute -left-20 -top-36 h-[360px] w-[360px] rounded-full bg-cyan-400/45" />
+          <div className="absolute left-12 -top-32 h-[330px] w-[330px] rounded-full border-[48px] border-indigo-400/40" />
+          <div className="absolute -bottom-32 -right-16 h-[280px] w-[280px] rounded-full bg-white/10" />
+
+          <div className="relative z-10 flex flex-col gap-7 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 items-start gap-5">
+              <div className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-[22px] border border-white/30 bg-white/15 text-3xl shadow-inner backdrop-blur-md">
+                <FaStar />
+              </div>
+
+              <div className="min-w-0 ">
+                <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-[44px]">
+                  Users, Roles & Access
+                </h1>
+
+                <p className="mt-4 text-sm text-white/85 sm:text-base lg:text-lg">
+                  Role-based and attribute-based access across LSP,
+                  Spoke, Hub and NBFC functions.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAddUser(true)}
+              className="relative z-10 flex h-14 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/15 px-7 text-base font-bold text-white shadow-lg backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/25 sm:ml-auto"
+            >
+              <FaPlus />
+              Add User
+            </button>
+          </div>
+        </section>
+
+        {/* Search */}
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">
+              System users
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              {filteredUsers.length} users available
+            </p>
+          </div>
+
+          <label className="flex h-11 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 shadow-sm focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-100 sm:max-w-sm">
+            <FaSearch className="shrink-0 text-slate-400" />
+
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search users, roles or locations"
+              className="w-full border-0 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+            />
+          </label>
+        </div>
+
+        {/* Table card */}
+        <section className="mt-5 rounded-[28px] border border-indigo-200/70 bg-white p-4 shadow-[0_20px_55px_rgba(35,52,95,0.09)] sm:p-7">
+          <div className="overflow-x-auto rounded-[22px] border border-slate-200">
+            <table className="w-full min-w-[1020px] border-separate border-spacing-0 text-left">
+              <thead>
+                <tr className="bg-gradient-to-r from-indigo-50 to-[#f4f5ff]">
+                  {[
+                    "USER",
+                    "ROLE",
+                    "LOCATION",
+                    "DATA SCOPE",
+                    "MFA",
+                    "STATUS",
+                  ].map((heading) => (
+                    <th
+                      key={heading}
+                      className="border-b-2 border-indigo-200 px-5 py-5 text-xs font-black tracking-[0.06em] text-indigo-800"
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+<tbody>
+  {/* Loading users from database */}
+  {loading ? (
+    <tr>
+      <td
+        colSpan={6}
+        className="px-6 py-16 text-center"
+      >
+        <div className="inline-flex items-center gap-3 text-sm font-medium text-slate-500">
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+
+          Loading users...
+        </div>
+      </td>
+    </tr>
+  ) : apiError ? (
+    /* API or database error */
+    <tr>
+      <td
+        colSpan={6}
+        className="px-6 py-14 text-center"
+      >
+        <p className="text-sm font-semibold text-red-600">
+          {apiError}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => loadUsers()}
+          className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-500"
+        >
+          Try Again
+        </button>
+      </td>
+    </tr>
+  ) : filteredUsers.length > 0 ? (
+    /* Database users */
+    filteredUsers.map((user, index) => {
+      const cellClass = `
+        border-b border-slate-200
+        px-5 py-4
+        transition
+        group-hover:bg-indigo-50/50
+        ${
+          index % 2 === 0
+            ? "bg-white"
+            : "bg-slate-50/60"
+        }
+      `;
+
+      return (
+        <tr
+          key={user.id ?? user.email}
+          className="group"
+        >
+          {/* User name and email */}
+          <td className={cellClass}>
+            <strong className="block text-sm font-bold text-slate-700">
+              {user.name || "-"}
+            </strong>
+
+            <span className="mt-1 block text-xs text-slate-500">
+              {user.email || "-"}
+            </span>
+          </td>
+
+          {/* Role */}
+          <td
+            className={`${cellClass} text-sm text-slate-700`}
+          >
+            {user.role || "Not Assigned"}
+          </td>
+
+          {/* Location */}
+          <td
+            className={`${cellClass} text-sm text-slate-700`}
+          >
+            {user.location || "-"}
+          </td>
+
+          {/* Data scope */}
+          <td
+            className={`${cellClass} text-sm text-slate-700`}
+          >
+            {user.dataScope || "Assigned Cases"}
+          </td>
+
+          {/* MFA status */}
+          <td className={cellClass}>
+            <StatusBadge>
+              {user.mfa || "Disabled"}
+            </StatusBadge>
+          </td>
+
+          {/* User status */}
+          <td className={cellClass}>
+            <StatusBadge>
+              {user.status || "Inactive"}
+            </StatusBadge>
+          </td>
+        </tr>
+      );
+    })
+  ) : (
+    /* No records returned from database or search */
+    <tr>
+      <td
+        colSpan={6}
+        className="px-6 py-16 text-center"
+      >
+        <p className="text-sm font-medium text-slate-500">
+          {search
+            ? "No users match your search."
+            : "No users found in the database."}
+        </p>
+      </td>
+    </tr>
+  )}
+</tbody>
+              {/* <tbody>
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((user, index) => (
+                    <tr
+                      key={user.id}
+                      className="group"
+                    >
+                      <td
+                        className={`border-b border-slate-200 px-5 py-5 transition group-hover:bg-indigo-50/50 ${
+                          index % 2 === 0
+                            ? "bg-white"
+                            : "bg-slate-50/60"
+                        }`}
+                      >
+                        <strong className="block text-base font-bold text-slate-700">
+                          {user.name}
+                        </strong>
+
+                        <span className="mt-1 block text-sm text-slate-500">
+                          {user.email}
+                        </span>
+                      </td>
+
+                      <td
+                        className={`border-b border-slate-200 px-5 py-5 text-base text-slate-700 transition group-hover:bg-indigo-50/50 ${
+                          index % 2 === 0
+                            ? "bg-white"
+                            : "bg-slate-50/60"
+                        }`}
+                      >
+                        {user.role}
+                      </td>
+
+                      <td
+                        className={`border-b border-slate-200 px-5 py-5 text-base text-slate-700 transition group-hover:bg-indigo-50/50 ${
+                          index % 2 === 0
+                            ? "bg-white"
+                            : "bg-slate-50/60"
+                        }`}
+                      >
+                        {user.location}
+                      </td>
+
+                      <td
+                        className={`border-b border-slate-200 px-5 py-5 text-base text-slate-700 transition group-hover:bg-indigo-50/50 ${
+                          index % 2 === 0
+                            ? "bg-white"
+                            : "bg-slate-50/60"
+                        }`}
+                      >
+                        {user.dataScope}
+                      </td>
+
+                      <td
+                        className={`border-b border-slate-200 px-5 py-5 transition group-hover:bg-indigo-50/50 ${
+                          index % 2 === 0
+                            ? "bg-white"
+                            : "bg-slate-50/60"
+                        }`}
+                      >
+                        <StatusBadge>{user.mfa}</StatusBadge>
+                      </td>
+
+                      <td
+                        className={`border-b border-slate-200 px-5 py-5 transition group-hover:bg-indigo-50/50 ${
+                          index % 2 === 0
+                            ? "bg-white"
+                            : "bg-slate-50/60"
+                        }`}
+                      >
+                        <StatusBadge>{user.status}</StatusBadge>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-16 text-center text-sm text-slate-500"
+                    >
+                      No matching users found.
+                    </td>
+                  </tr>
+                )}
+              </tbody> */}
+            </table>
+          </div>
+        </section>
+
+        {/* Information cards */}
+        <section className="mt-6 grid grid-cols-1 gap-5 pb-8 lg:grid-cols-3">
+          {informationCards.map((card) => (
+            <article
+              key={card.title}
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_15px_35px_rgba(35,52,95,0.07)]"
+            >
+              <h3 className="relative pb-4 text-base font-bold text-slate-800 after:absolute after:bottom-0 after:left-0 after:h-1 after:w-10 after:rounded-full after:bg-gradient-to-r after:from-indigo-600 after:to-cyan-500">
+                {card.title}
+              </h3>
+
+              <ul className="mt-5 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">
+                {card.points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </section>
+      </div>
+
+      <AddUserModal
+        open={showAddUser}
+        onClose={() => setShowAddUser(false)}
+        onSubmit={handleAddUser}
+      />
+    </>
+  );
+}

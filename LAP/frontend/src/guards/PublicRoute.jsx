@@ -16,5 +16,6 @@ export default function PublicRoute() {
     ? "/rmDashboard"
     : "/dashboard";
 
+   
   return <Navigate to={destination} replace />;
 }

@@ -63,6 +63,11 @@ const submit = async (event) => {
       ? "/rmDashboard"
       : "/dashboard";
 
+      // const destination = roles.includes("ADMIN")
+      // ? "/adminDashboard"
+      // : "/dashboard";
+
+
     navigate(destination, { replace: true });
   } catch (error) {
     console.error(
