@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import { useParams } from "react-router-dom";
 
 import { rmApi } from "../rmApi.js";
 import { formatCurrency, requiredDocumentTypes, workflowSteps } from "../rmUtils.js";
 
 export default function SubmitToBM() {
-  const [applicationId, setApplicationId] = useState("");
+  const { applicationId: routeApplicationId } = useParams();
+  const [applicationId, setApplicationId] = useState(routeApplicationId || "");
   const [recommendation, setRecommendation] = useState("");
   const [recommendedAmount, setRecommendedAmount] = useState("");
   const [recommendedRoi, setRecommendedRoi] = useState("10.5");
@@ -15,7 +17,7 @@ export default function SubmitToBM() {
   const queryClient = useQueryClient();
 
   const applications = useQuery({ queryKey: ["rm-submit-applications"], queryFn: () => rmApi.applications({ page: 1, limit: 100 }) });
-  const selectedId = applicationId || applications.data?.data?.[0]?.id || "";
+  const selectedId = applicationId || routeApplicationId || applications.data?.data?.[0]?.id || "";
   const selectedApplication = (applications.data?.data ?? []).find((item) => String(item.id) === String(selectedId));
   const profile = useQuery({ queryKey: ["rm-profile", selectedId], queryFn: () => rmApi.getCustomerProfile(selectedId), enabled: Boolean(selectedId), retry: false });
   const documents = useQuery({ queryKey: ["rm-documents", selectedId], queryFn: () => rmApi.documents(selectedId), enabled: Boolean(selectedId) });
@@ -48,8 +50,11 @@ export default function SubmitToBM() {
     },
     onSuccess: async () => {
       setMessage("Application submitted to BM.");
+      await rmApi.recordWorkflowStep(selectedId, { action: "SUBMITTED_TO_BM", remarks: recommendation }).catch(() => undefined);
       await queryClient.invalidateQueries({ queryKey: ["rm-submit-applications"] });
       await queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-workflow", selectedId] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] });
     },
     onError: (error) => setMessage(error?.message || "Unable to submit to BM"),
   });

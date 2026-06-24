@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { FaCheckCircle, FaInfoCircle, FaShieldAlt } from "react-icons/fa";
+import { useParams } from "react-router-dom";
 
 import { rmApi } from "../rmApi.js";
 import { requiredDocumentTypes } from "../rmUtils.js";
@@ -16,12 +17,14 @@ const documentLabels = {
 };
 
 export default function KycDocuments() {
-  const [applicationId, setApplicationId] = useState("");
+  const { applicationId: routeApplicationId } = useParams();
+  const [applicationId, setApplicationId] = useState(routeApplicationId || "");
   const [uploadingType, setUploadingType] = useState("");
+  const [message, setMessage] = useState("");
   const queryClient = useQueryClient();
 
   const applications = useQuery({ queryKey: ["rm-applications-documents"], queryFn: () => rmApi.applications({ page: 1, limit: 100 }) });
-  const selectedId = applicationId || applications.data?.data?.[0]?.id || "";
+  const selectedId = applicationId || routeApplicationId || applications.data?.data?.[0]?.id || "";
   const documentsQuery = useQuery({
     queryKey: ["rm-documents", selectedId],
     queryFn: () => rmApi.documents(selectedId),
@@ -42,7 +45,13 @@ export default function KycDocuments() {
       formData.append("file", file);
       return rmApi.uploadDocument(formData);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rm-documents", selectedId] }),
+    onSuccess: async () => {
+      setMessage("Documents uploaded and workflow state refreshed.");
+      await queryClient.invalidateQueries({ queryKey: ["rm-documents", selectedId] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-workflow", selectedId] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] });
+      await rmApi.recordWorkflowStep(selectedId, { action: "DOCUMENTS_UPLOADED", remarks: "Documents uploaded" }).catch(() => undefined);
+    },
     onSettled: () => setUploadingType(""),
   });
 
@@ -70,6 +79,8 @@ export default function KycDocuments() {
           </select>
         </div>
       </div>
+
+      {message && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">{message}</div>}
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {metrics.map((card) => (

@@ -1,25 +1,25 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import AuthLayout from '../components/layout/AuthLayout.jsx';
 import AppLayout from '../components/layout/AppLayout.jsx';
-import ProtectedRoute from '../guards/ProtectedRoute.jsx';
-import PublicRoute from '../guards/PublicRoute.jsx';
-import PermissionRoute from '../guards/PermissionRoute.jsx';
+import AuthLayout from '../components/layout/AuthLayout.jsx';
 import { PERMISSIONS } from '../constants/permissions.js';
-import LoginPage from '../features/auth/pages/LoginPage.jsx';
-import DashboardPage from '../features/dashboard/pages/DashboardPage.jsx';
+import ApplicationDetailsPage from '../features/applications/pages/ApplicationDetailsPage.jsx';
 import ApplicationsPage from '../features/applications/pages/ApplicationsPage.jsx';
 import CreateApplicationPage from '../features/applications/pages/CreateApplicationPage.jsx';
-import ApplicationDetailsPage from '../features/applications/pages/ApplicationDetailsPage.jsx';
+import LoginPage from '../features/auth/pages/LoginPage.jsx';
+import DashboardPage from '../features/dashboard/pages/DashboardPage.jsx';
 import PlaceholderPage from '../features/dashboard/pages/PlaceholderPage.jsx';
+import PermissionRoute from '../guards/PermissionRoute.jsx';
+import ProtectedRoute from '../guards/ProtectedRoute.jsx';
+import PublicRoute from '../guards/PublicRoute.jsx';
 
-import RMDashboard from '../features/rm/pages/RMDashboard.jsx';
-import MyLeads from '../features/rm/pages/MyLeads.jsx';
+import ChargesReceipts from '../features/rm/pages/ChargesReceipts.jsx';
 import CreateLead from '../features/rm/pages/CreateLead.jsx';
 import FieldVisits from '../features/rm/pages/FieldVisits.jsx';
 import GeoVerification from '../features/rm/pages/GeoVerification.jsx';
 import KycDocuments from '../features/rm/pages/KycDocuments.jsx';
-import ChargesReceipts from '../features/rm/pages/ChargesReceipts.jsx';
+import MyLeads from '../features/rm/pages/MyLeads.jsx';
 import PaymentManagement from '../features/rm/pages/PaymentManagement.jsx';
+import RMDashboard from '../features/rm/pages/RMDashboard.jsx';
 import SubmitToBM from '../features/rm/pages/SubmitToBM.jsx';
 
 
@@ -40,12 +40,12 @@ const protectedChildren = [
 
   { path: '/my-leads', element: <MyLeads /> },
   { path: '/create-lead', element: <CreateLead /> },
-  { path: '/customer-visit', element: <FieldVisits /> },
-  { path: '/geo-verification', element: <GeoVerification /> },
-  { path: '/kyc-documents', element: <KycDocuments /> },
+  { path: '/customer-visit/:applicationId?', element: <FieldVisits /> },
+  { path: '/geo-verification/:applicationId?', element: <GeoVerification /> },
+  { path: '/kyc-documents/:applicationId?', element: <KycDocuments /> },
   { path: '/charges-receipts', element: <ChargesReceipts /> },
   { path: '/payment-management', element: <PaymentManagement /> },
-  { path: '/submit-bm', element: <SubmitToBM /> },
+  { path: '/submit-bm/:applicationId?', element: <SubmitToBM /> },
 
   ...[
     '/applications/:applicationId/applicants',

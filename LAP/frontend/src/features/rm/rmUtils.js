@@ -14,15 +14,35 @@ export const requiredDocumentTypes = [
 ];
 
 export const workflowSteps = [
-  "Lead",
-  "KYC",
-  "Documents",
-  "Submission",
-  "Review",
-  "Sanction",
-  "Agreement",
-  "Disbursement",
+  "Lead Created",
+  "Lead Submitted",
+  "Customer Visit",
+  "Business Visit",
+  "Geo Verification",
+  "Property Visit",
+  "Docs Uploaded",
+  "Submitted To BM",
 ];
+
+export const buildWorkflowTimeline = (status = {}) => [
+  { key: "leadCreated", label: "Lead Created", completed: Boolean(status.leadCreated) },
+  { key: "leadSubmitted", label: "Lead Submitted", completed: Boolean(status.leadSubmitted) },
+  { key: "customerVisit", label: "Customer Visit", completed: Boolean(status.customerVisit) },
+  { key: "businessVisit", label: "Business Visit", completed: Boolean(status.businessVisit) },
+  { key: "geoVerification", label: "Geo Verification", completed: Boolean(status.geoVerification) },
+  { key: "propertyVisit", label: "Property Visit", completed: Boolean(status.propertyVisit) },
+  { key: "documentsUploaded", label: "Docs Uploaded", completed: Boolean(status.documentsUploaded) },
+  { key: "submittedToBm", label: "Submitted To BM", completed: Boolean(status.submittedToBm) },
+];
+
+export const getNextWorkflowStep = (status = {}) => {
+  if (!status.leadSubmitted) return "create-lead";
+  if (!status.customerVisit) return "customer-visit";
+  if (!status.geoVerification) return "geo-verification";
+  if (!status.documentsUploaded) return "kyc-documents";
+  if (!status.submittedToBm) return "submit-bm";
+  return "submit-bm";
+};
 
 export const displayStage = (stage) => {
   const stages = {

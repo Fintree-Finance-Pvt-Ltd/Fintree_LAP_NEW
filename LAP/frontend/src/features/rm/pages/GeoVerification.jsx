@@ -1,12 +1,29 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { FaMapMarkerAlt, FaCompass, FaExternalLinkAlt } from "react-icons/fa";
+import { FaExternalLinkAlt } from "react-icons/fa";
+import { useParams } from "react-router-dom";
+
+import { rmApi } from "../rmApi.js";
 
 export default function GeoVerification() {
+  const { applicationId } = useParams();
+  const [message, setMessage] = useState("");
+  const queryClient = useQueryClient();
   // Local states mimicking the data inside image_579077.png
   const [geoData, setGeoData] = useState({
     residence: { lat: "28.5708", lng: "77.3260", gpsAddress: "Sector 18, Noida, Uttar Pradesh 201301", manualAddress: "Sector 18, Noida, Uttar Pradesh 201301", status: "Verified" },
     business: { lat: "28.5712", lng: "77.3248", gpsAddress: "Noida, Uttar Pradesh", status: "Verified" },
     property: { lat: "28.5708", lng: "77.3260", distanceSpoke: "18", mismatch: "No", status: "Verified" }
+  });
+
+  const markGeoComplete = useMutation({
+    mutationFn: async () => rmApi.recordWorkflowStep(applicationId, { action: "GEO_VERIFICATION_DONE", remarks: "Geo verification completed" }),
+    onSuccess: async () => {
+      setMessage("Geo verification workflow step recorded.");
+      await queryClient.invalidateQueries({ queryKey: ["rm-workflow", applicationId] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] });
+    },
+    onError: () => setMessage("Unable to update workflow state."),
   });
 
   return (
@@ -28,12 +45,14 @@ export default function GeoVerification() {
             <button className="rounded-xl bg-white/10 px-5 py-2.5 text-xs font-bold border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
               Capture Browser Location
             </button>
-            <button className="rounded-xl bg-white/20 text-white font-extrabold text-xs px-5 py-2.5 border border-white/30 shadow-md hover:bg-white/30 transition-all">
-              Save Verification
+            <button type="button" disabled={!applicationId || markGeoComplete.isPending} onClick={() => markGeoComplete.mutate()} className="rounded-xl bg-white/20 text-white font-extrabold text-xs px-5 py-2.5 border border-white/30 shadow-md hover:bg-white/30 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+              {markGeoComplete.isPending ? "Saving..." : "Save Verification"}
             </button>
           </div>
         </div>
       </div>
+
+      {message && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">{message}</div>}
 
       {/* 2. 3-Column Verification Form Matrix */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

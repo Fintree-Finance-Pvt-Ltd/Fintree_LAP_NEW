@@ -1,8 +1,25 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { FaCamera, FaCalendarAlt } from "react-icons/fa";
+import { FaCalendarAlt, FaCamera } from "react-icons/fa";
+import { useParams } from "react-router-dom";
+
+import { rmApi } from "../rmApi.js";
 
 export default function FieldVisits() {
+  const { applicationId } = useParams();
   const [activeTab, setActiveTab] = useState("Customer / Residence");
+  const [message, setMessage] = useState("");
+  const queryClient = useQueryClient();
+
+  const markVisitComplete = useMutation({
+    mutationFn: async () => rmApi.recordWorkflowStep(applicationId, { action: "CUSTOMER_VISIT_DONE", remarks: "Customer visit completed" }),
+    onSuccess: async () => {
+      setMessage("Visit workflow step recorded.");
+      await queryClient.invalidateQueries({ queryKey: ["rm-workflow", applicationId] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] });
+    },
+    onError: () => setMessage("Unable to update workflow state."),
+  });
 
   return (
     <div className="p-8 space-y-6 bg-[#f8fafc] min-h-screen text-slate-800 antialiased">
@@ -21,12 +38,14 @@ export default function FieldVisits() {
             <button className="rounded-xl bg-white/10 px-5 py-2.5 text-xs font-bold border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
               Save Visit Draft
             </button>
-            <button className="rounded-xl bg-white text-blue-700 font-extrabold text-xs px-5 py-2.5 shadow-md hover:bg-blue-50 transition-all">
-              Complete Visits
+            <button type="button" disabled={!applicationId || markVisitComplete.isPending} onClick={() => markVisitComplete.mutate()} className="rounded-xl bg-white text-blue-700 font-extrabold text-xs px-5 py-2.5 shadow-md hover:bg-blue-50 transition-all disabled:cursor-not-allowed disabled:opacity-60">
+              {markVisitComplete.isPending ? "Saving..." : "Complete Visits"}
             </button>
           </div>
         </div>
       </div>
+
+      {message && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">{message}</div>}
 
       {/* 2. Horizontal Sub-Tabs Section */}
       <div className="flex flex-wrap items-center gap-2">

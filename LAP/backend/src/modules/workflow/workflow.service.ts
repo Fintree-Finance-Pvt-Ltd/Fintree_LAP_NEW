@@ -6,14 +6,16 @@ import { ApplicationStatus } from '../../common/enums/application-status.enum';
 import { DocumentType } from '../../common/enums/document-type.enum';
 import { RoleCode } from '../../common/enums/role.enum';
 import { WorkflowAction } from '../../common/enums/workflow-action.enum';
-import { Application } from '../applications/entities/application.entity';
+import { WorkflowLogAction } from '../../common/enums/workflow-log-action.enum';
 import type { Actor } from '../applications/applications.service';
+import { Application } from '../applications/entities/application.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { CustomerProfile } from '../customer-profiles/entities/customer-profile.entity';
 import { Document } from '../documents/entities/document.entity';
 import { Notification } from '../notifications/entities/notification.entity';
 import { WorkflowActionDto } from './dto/workflow-action.dto';
 import { WorkflowHistory } from './entities/workflow-history.entity';
+import { WorkflowLog } from './entities/workflow-log.entity';
 import { Workflow } from './entities/workflow.entity';
 
 @Injectable()
@@ -23,6 +25,7 @@ export class WorkflowService {
   constructor(
     @InjectRepository(Workflow) private readonly workflows: Repository<Workflow>,
     @InjectRepository(WorkflowHistory) private readonly history: Repository<WorkflowHistory>,
+    @InjectRepository(WorkflowLog) private readonly workflowLogs: Repository<WorkflowLog>,
     private readonly dataSource: DataSource
   ) {}
 
@@ -50,6 +53,7 @@ export class WorkflowService {
       const saved = await manager.save(application);
       await this.upsertWorkflow(manager, saved, WorkflowAction.SUBMIT_TO_BM, dto.remarks, RoleCode.BM, actor.id);
       await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId, fromRole: RoleCode.RM, toRole: RoleCode.BM, action: WorkflowAction.SUBMIT_TO_BM, remarks: dto.remarks ?? 'Submitted to BM', actionBy: actor.id }));
+      await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId, action: WorkflowLogAction.SUBMITTED_TO_BM, remarks: dto.remarks ?? 'Submitted to BM', createdBy: actor.id }));
       await manager.save(Notification, manager.create(Notification, { applicationId, title: 'LAP case pending BM review', message: `${application.applicationNumber} is pending BM review.` }));
       await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.SUBMIT_TO_BM, entityName: 'applications', entityId: applicationId, snapshot: { status: saved.status, stage: saved.stage }, createdBy: actor.id }));
       return { data: saved };

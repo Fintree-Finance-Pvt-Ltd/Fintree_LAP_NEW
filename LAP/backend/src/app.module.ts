@@ -44,8 +44,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     WorkflowModule,
     NotificationsModule,
     DashboardsModule,
-    HealthModule,
-    UsersModule
+    HealthModule
   ],
   providers: [
     { provide: APP_GUARD, useClass: RateLimitGuard },

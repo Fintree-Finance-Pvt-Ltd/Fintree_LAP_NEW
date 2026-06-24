@@ -1,16 +1,17 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { PERMISSIONS } from '../../common/constants/permissions.constant';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
-import { PERMISSIONS } from '../../common/constants/permissions.constant';
 import { CreateVisitDto } from '../visits/dto/create-visit.dto';
-import { ApplicationsService } from './applications.service';
 import type { Actor } from './applications.service';
+import { ApplicationsService } from './applications.service';
 import { ApplicationFilterDto } from './dto/application-filter.dto';
-import { CreateApplicationDto } from './dto/create-application.dto';
 import { CreateApplicationWithProfileDto } from './dto/create-application-with-profile.dto';
+import { CreateApplicationDto } from './dto/create-application.dto';
 import { TransitionApplicationDto } from './dto/transition-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
+import { WorkflowStepDto } from './dto/workflow-step.dto';
 
 @Controller('applications')
 export class ApplicationsController {
@@ -61,6 +62,12 @@ export class ApplicationsController {
   @Post(':applicationId/transitions') @Permissions(PERMISSIONS.APPLICATION_TRANSITION)
   transition(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: TransitionApplicationDto, @CurrentUser() user: Actor) { return this.service.transition(id, dto, user); }
 
-  @Get(':applicationId/workflow-history') @Permissions(PERMISSIONS.APPLICATION_READ)
+  @Get(':applicationId/workflow-history') 
   workflowHistory(@Param('applicationId', ParseIntPipe) id: number) { return this.service.workflowHistory(id); }
+
+  @Get(':applicationId/workflow')
+  workflowStatus(@Param('applicationId', ParseIntPipe) id: number) { return this.service.workflowStatus(id); }
+
+  @Post(':applicationId/workflow')
+  recordWorkflowStep(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: WorkflowStepDto, @CurrentUser() user: Actor) { return this.service.recordWorkflowStep(id, dto, user); }
 }

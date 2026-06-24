@@ -133,4 +133,10 @@ export const rmApi = {
     apiClient.get(
       `/applications/${applicationId}/workflow-history`
     ),
+
+  workflowStatus: (applicationId) =>
+    apiClient.get(`/applications/${applicationId}/workflow`),
+
+  recordWorkflowStep: (applicationId, payload) =>
+    apiClient.post(`/applications/${applicationId}/workflow`, payload),
 };

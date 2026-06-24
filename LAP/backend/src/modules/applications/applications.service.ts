@@ -2,11 +2,12 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Like, Repository } from 'typeorm';
 import { PERMISSIONS } from '../../common/constants/permissions.constant';
-import { ApplicationStatus } from '../../common/enums/application-status.enum';
 import { ApplicationStage } from '../../common/enums/application-stage.enum';
+import { ApplicationStatus } from '../../common/enums/application-status.enum';
 import { CustomerType } from '../../common/enums/customer-profile.enum';
 import { DocumentType } from '../../common/enums/document-type.enum';
 import { WorkflowAction } from '../../common/enums/workflow-action.enum';
+import { WorkflowLogAction } from '../../common/enums/workflow-log-action.enum';
 import { createReferenceNumber } from '../../common/utils/reference-number.util';
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { CustomerProfile } from '../customer-profiles/entities/customer-profile.entity';
@@ -14,9 +15,11 @@ import { Document } from '../documents/entities/document.entity';
 import { CreateVisitDto } from '../visits/dto/create-visit.dto';
 import { Visit } from '../visits/entities/visit.entity';
 import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
+import { WorkflowLog } from '../workflow/entities/workflow-log.entity';
+import { Workflow } from '../workflow/entities/workflow.entity';
 import { ApplicationFilterDto } from './dto/application-filter.dto';
-import { CreateApplicationDto } from './dto/create-application.dto';
 import { CreateApplicationWithProfileDto } from './dto/create-application-with-profile.dto';
+import { CreateApplicationDto } from './dto/create-application.dto';
 import { TransitionApplicationDto } from './dto/transition-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { Application } from './entities/application.entity';
@@ -30,6 +33,8 @@ export class ApplicationsService {
     @InjectRepository(Visit) private readonly visits: Repository<Visit>,
     @InjectRepository(Document) private readonly documents: Repository<Document>,
     @InjectRepository(WorkflowHistory) private readonly history: Repository<WorkflowHistory>,
+    @InjectRepository(Workflow) private readonly workflows: Repository<Workflow>,
+    @InjectRepository(WorkflowLog) private readonly workflowLogs: Repository<WorkflowLog>,
     @InjectRepository(CustomerProfile) private readonly profiles: Repository<CustomerProfile>,
     private readonly dataSource: DataSource
   ) {}
@@ -74,7 +79,16 @@ export class ApplicationsService {
       await manager.save(saved);
       const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
       await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
-      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId: saved.id, fromRole: ApplicationStage.RM, toRole: ApplicationStage.RM, action: 'SAVE_DRAFT', remarks: dto.remarks || 'Saved as draft', actionBy: actor.id }));
+      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId: saved.id, fromRole: ApplicationStage.RM, toRole: ApplicationStage.RM, action: WorkflowAction.SAVE_DRAFT, remarks: dto.remarks || 'Saved as draft', actionBy: actor.id }));
+      await manager.save(Workflow, manager.create(Workflow, {
+        applicationId: saved.id,
+        currentStage: ApplicationStage.RM,
+        currentStatus: ApplicationStatus.DRAFT,
+        assignedTo: actor.roles?.[0],
+        currentOwner: actor.id,
+        lastAction: WorkflowAction.SAVE_DRAFT,
+        lastRemarks: dto.remarks || 'Saved as draft',
+      }));
       return { data: saved };
     });
   }
@@ -112,8 +126,19 @@ export class ApplicationsService {
       await manager.save(saved);
       const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
       await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
-      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId: saved.id, fromRole: ApplicationStage.RM, toRole: ApplicationStage.RM, action: 'SUBMIT', remarks: dto.remarks || 'Application submitted', actionBy: actor.id }));
-      await manager.save(AuditLog, manager.create(AuditLog, { action: 'SUBMIT', entityName: 'applications', entityId: saved.id, snapshot: { status: saved.status, stage: saved.stage }, createdBy: actor.id }));
+      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId: saved.id, fromRole: ApplicationStage.RM, toRole: ApplicationStage.RM, action: WorkflowAction.SUBMIT, remarks: dto.remarks || 'Application submitted', actionBy: actor.id }));
+      await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId: saved.id, action: WorkflowLogAction.LEAD_CREATED, remarks: 'Lead created', createdBy: actor.id }));
+      await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId: saved.id, action: WorkflowLogAction.LEAD_SUBMITTED, remarks: dto.remarks || 'Lead submitted', createdBy: actor.id }));
+      await manager.save(Workflow, manager.create(Workflow, {
+        applicationId: saved.id,
+        currentStage: ApplicationStage.RM,
+        currentStatus: ApplicationStatus.NEW,
+        assignedTo: actor.roles?.[0],
+        currentOwner: actor.id,
+        lastAction: WorkflowAction.SUBMIT,
+        lastRemarks: dto.remarks || 'Application submitted',
+      }));
+      await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.SUBMIT, entityName: 'applications', entityId: saved.id, snapshot: { status: saved.status, stage: saved.stage }, createdBy: actor.id }));
       return { data: saved };
     });
   }
@@ -138,7 +163,9 @@ export class ApplicationsService {
 
   async addVisit(applicationId: number, dto: CreateVisitDto, actor: Actor) {
     await this.findOne(applicationId);
-    return { data: await this.visits.save(this.visits.create({ ...dto, applicationId, createdBy: actor.id, updatedBy: actor.id })) };
+    const visit = await this.visits.save(this.visits.create({ ...dto, applicationId, createdBy: actor.id, updatedBy: actor.id }));
+    await this.workflowLogs.save(this.workflowLogs.create({ applicationId, action: this.visitAction(dto.visitType), remarks: dto.remarks || `Visit logged: ${dto.visitType}`, createdBy: actor.id }));
+    return { data: visit };
   }
 
   async listVisits(applicationId: number) {
@@ -147,7 +174,9 @@ export class ApplicationsService {
 
   async addDocument(applicationId: number, documentType: string, file: Express.Multer.File, actor: Actor) {
     await this.findOne(applicationId);
-    return { data: await this.documents.save(this.documents.create({ applicationId, documentType: documentType as DocumentType, documentName: documentType, fileName: file.originalname, filePath: file.path ?? file.originalname, fileSize: file.size, mimeType: file.mimetype, uploadedBy: actor.id, createdBy: actor.id, updatedBy: actor.id })) };
+    const document = await this.documents.save(this.documents.create({ applicationId, documentType: documentType as DocumentType, documentName: documentType, fileName: file.originalname, filePath: file.path ?? file.originalname, fileSize: file.size, mimeType: file.mimetype, uploadedBy: actor.id, createdBy: actor.id, updatedBy: actor.id }));
+    await this.workflowLogs.save(this.workflowLogs.create({ applicationId, action: WorkflowLogAction.DOCUMENTS_UPLOADED, remarks: `Document uploaded: ${documentType}`, createdBy: actor.id }));
+    return { data: document };
   }
 
   async listDocuments(applicationId: number) {
@@ -174,6 +203,15 @@ export class ApplicationsService {
       application.updatedBy = actor.id;
       const saved = await manager.save(application);
       await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId, fromRole: fromStage, toRole: saved.stage, action: dto.action, remarks: dto.remarks, actionBy: actor.id }));
+      await this.workflows.save(manager.create(Workflow, {
+        applicationId,
+        currentStage: saved.stage,
+        currentStatus: saved.status,
+        assignedTo: actor.roles?.[0],
+        currentOwner: actor.id,
+        lastAction: dto.action as WorkflowAction,
+        lastRemarks: dto.remarks,
+      }));
       await manager.save(AuditLog, manager.create(AuditLog, { action: dto.action, entityName: 'applications', entityId: applicationId, snapshot: { fromStage, toStage: saved.stage }, createdBy: actor.id }));
       return { data: saved };
     });
@@ -183,12 +221,42 @@ export class ApplicationsService {
     return { data: await this.history.find({ where: { applicationId }, order: { id: 'DESC' } }) };
   }
 
+  async workflowStatus(applicationId: number) {
+    const logs = await this.workflowLogs.find({ where: { applicationId }, order: { id: 'ASC' } });
+    const actions = new Set(logs.map((log) => log.action));
+    return {
+      data: {
+        leadCreated: actions.has(WorkflowLogAction.LEAD_CREATED),
+        leadSubmitted: actions.has(WorkflowLogAction.LEAD_SUBMITTED),
+        customerVisit: actions.has(WorkflowLogAction.CUSTOMER_VISIT_DONE),
+        businessVisit: actions.has(WorkflowLogAction.BUSINESS_VISIT_DONE),
+        geoVerification: actions.has(WorkflowLogAction.GEO_VERIFICATION_DONE),
+        propertyVisit: actions.has(WorkflowLogAction.PROPERTY_VISIT_DONE),
+        documentsUploaded: actions.has(WorkflowLogAction.DOCUMENTS_UPLOADED),
+        submittedToBm: actions.has(WorkflowLogAction.SUBMITTED_TO_BM),
+      },
+    };
+  }
+
+  async recordWorkflowStep(applicationId: number, dto: { action: string; remarks?: string }, actor: Actor) {
+    const application = await this.applications.findOneBy({ id: applicationId });
+    if (!application) throw new NotFoundException('Application not found');
+    const saved = await this.workflowLogs.save(this.workflowLogs.create({ applicationId, action: dto.action, remarks: dto.remarks, createdBy: actor.id }));
+    return { data: saved };
+  }
+
   private money(dto: Record<string, unknown>) {
     const copy = { ...dto };
     for (const key of ['monthlyIncome', 'annualIncome', 'marketValue', 'distressValue', 'averageBalance', 'foir', 'eligibleAmount', 'roi', 'emi', 'recommendedAmount', 'recommendedRoi']) {
       if (copy[key] !== undefined) copy[key] = String(copy[key]);
     }
     return copy;
+  }
+
+  private visitAction(visitType: string) {
+    if (visitType?.toLowerCase().includes('business')) return WorkflowLogAction.BUSINESS_VISIT_DONE;
+    if (visitType?.toLowerCase().includes('property')) return WorkflowLogAction.PROPERTY_VISIT_DONE;
+    return WorkflowLogAction.CUSTOMER_VISIT_DONE;
   }
 
   private buildProfile(application: Application, dto: CreateApplicationWithProfileDto): Record<string, unknown> {

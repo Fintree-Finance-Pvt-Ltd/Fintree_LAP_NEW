@@ -59,9 +59,18 @@ export default function ApplicationDetailsPage() {
     applicationsApi.uploadDocument(applicationId, formData);
   };
 
-  if (application.isLoading) return <AppLoader />;
+ if (application.isLoading)
+  return <AppLoader />;
 
-  const data = application.data.data;
+if (!application.data?.data) {
+  return (
+    <div className="p-6">
+      Application not found
+    </div>
+  );
+}
+
+const data = application.data.data;
 
   return (
     <>
