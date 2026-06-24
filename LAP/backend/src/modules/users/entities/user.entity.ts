@@ -7,6 +7,7 @@ export class User {
   @Column({ length: 120 }) name: string;
   @Column({ length: 180, unique: true }) email: string;
   @Column({ name: 'password_hash', length: 255 }) passwordHash: string;
+  @Column({length: 50 }) location: string;
   @Column({ default: true }) isActive: boolean;
   @ManyToMany(() => Role, (role) => role.users)
   @JoinTable({ name: 'user_roles' })
@@ -16,3 +17,4 @@ export class User {
   @Column({ name: 'created_by', type: 'bigint', unsigned: true, nullable: true }) createdBy?: number;
   @Column({ name: 'updated_by', type: 'bigint', unsigned: true, nullable: true }) updatedBy?: number;
 }
+ 

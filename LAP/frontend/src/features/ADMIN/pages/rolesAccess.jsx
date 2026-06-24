@@ -1,4 +1,4 @@
-import { useMemo, useState,   useCallback,useEffect, } from "react";
+import { useMemo, useState, useCallback, useEffect, } from "react";
 import {
   FaCheck,
   FaPlus,
@@ -8,188 +8,6 @@ import {
 } from "react-icons/fa";
 
 import { usersApi } from "../userApi";
-// const initialUsers = [
-//   {
-//     id: 1,
-//     name: "Aditi Sharma",
-//     email: "admin@fintree.in",
-//     role: "System Administrator",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 2,
-//     name: "Rohit Mehta",
-//     email: "rm@fintree.in",
-//     role: "Relationship Manager",
-//     location: "Noida Spoke",
-//     dataScope: "Assigned Spoke / Cases",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 3,
-//     name: "Bhavna Malhotra",
-//     email: "bm@fintree.in",
-//     role: "Branch Manager",
-//     location: "Noida Spoke",
-//     dataScope: "Assigned Spoke / Cases",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 4,
-//     name: "Chirag Mishra",
-//     email: "cm@fintree.in",
-//     role: "Credit Manager",
-//     location: "Noida Spoke",
-//     dataScope: "Assigned Spoke / Cases",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 5,
-//     name: "Kavita Rao",
-//     email: "credit@fintree.in",
-//     role: "Hub Credit / Underwriting",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 6,
-//     name: "Leena Gupta",
-//     email: "legal@fintree.in",
-//     role: "Legal Officer",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 7,
-//     name: "Vikas Arora",
-//     email: "valuer@fintree.in",
-//     role: "Technical Valuer",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 8,
-//     name: "Sameer Khanna",
-//     email: "sanction@fintree.in",
-//     role: "Sanction & KFS Officer",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 9,
-//     name: "Ojas Batra",
-//     email: "ops@fintree.in",
-//     role: "Operations / Disbursement",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 10,
-//     name: "Lakshmi Nair",
-//     email: "lms@fintree.in",
-//     role: "Loan Servicing",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 11,
-//     name: "Chetan Yadav",
-//     email: "collection@fintree.in",
-//     role: "Collections Officer",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 12,
-//     name: "Karan Malhotra",
-//     email: "credit.maker@fintree.in",
-//     role: "Credit Maker",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 13,
-//     name: "Charu Bansal",
-//     email: "credit.checker@fintree.in",
-//     role: "Credit Checker / Approver",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 14,
-//     name: "Om Prakash",
-//     email: "ops.maker@fintree.in",
-//     role: "Operations Maker",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 15,
-//     name: "Pooja Sethi",
-//     email: "ops.checker@fintree.in",
-//     role: "Operations Checker / Authorizer",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 16,
-//     name: "Farah Khan",
-//     email: "fees@fintree.in",
-//     role: "Fee & Receipt Operations",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 17,
-//     name: "Meera Joshi",
-//     email: "payment.maker@fintree.in",
-//     role: "Payment Desk Maker",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-//   {
-//     id: 18,
-//     name: "Rohit Suri",
-//     email: "payment.checker@fintree.in",
-//     role: "Payment & Reconciliation Checker",
-//     location: "Delhi Hub",
-//     dataScope: "Hub / Authorised Portfolio",
-//     mfa: "Enabled",
-//     status: "Active",
-//   },
-// ];
 
 const informationCards = [
   {
@@ -226,7 +44,7 @@ const emptyForm = {
   email: "",
   role: "",
   location: "",
-  dataScope: "",
+  password: "",
 };
 
 function StatusBadge({ children }) {
@@ -237,7 +55,7 @@ function StatusBadge({ children }) {
   );
 }
 
-function AddUserModal({ open, onClose, onSubmit }) {
+function AddUserModal({ open, onClose, onSubmit ,   submitting = false, submitError = "" }) {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
 
@@ -254,7 +72,7 @@ function AddUserModal({ open, onClose, onSubmit }) {
     setError("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     const hasEmptyField = Object.values(form).some(
@@ -265,10 +83,17 @@ function AddUserModal({ open, onClose, onSubmit }) {
       setError("Please complete all fields.");
       return;
     }
+  try {
+      await onSubmit(form);
 
-    onSubmit(form);
-    setForm(emptyForm);
-    setError("");
+      setForm(emptyForm);
+      setError("");
+    } catch (error) {
+      console.error(
+        "User submission failed:",
+        error,
+      );
+    }
   };
 
   const handleClose = () => {
@@ -374,7 +199,20 @@ function AddUserModal({ open, onClose, onSubmit }) {
               </select>
             </label>
 
-            <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:col-span-2">
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+  Password
+
+  <input
+    name="password"
+    type="password"
+    value={form.password}
+    onChange={handleChange}
+    placeholder="Enter password"
+    autoComplete="new-password"
+    className={inputClasses}
+  />
+</label>
+            {/* <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:col-span-2">
               Data scope
               <select
                 name="dataScope"
@@ -390,7 +228,7 @@ function AddUserModal({ open, onClose, onSubmit }) {
                   Assigned Spoke / Cases
                 </option>
               </select>
-            </label>
+            </label> */}
           </div>
 
           {error && (
@@ -410,10 +248,20 @@ function AddUserModal({ open, onClose, onSubmit }) {
 
             <button
               type="submit"
-              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 px-5 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5"
+              disabled={submitting}
+              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <FaCheck />
-              Add User
+              {submitting ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <FaCheck />
+                  Add User
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -467,14 +315,14 @@ function normalizeUser(user) {
     user?.isActive ??
     user?.active ??
     String(user?.status || "").toUpperCase() ===
-      "ACTIVE";
+    "ACTIVE";
 
   return {
     id: user?.id,
     name: fullName || "-",
     email: user?.email || "-",
     role: getRoleName(user),
-    location,
+    location:location,
     dataScope:
       user?.dataScope ||
       user?.data_scope ||
@@ -492,75 +340,76 @@ function normalizeUser(user) {
 
 
 export default function RolesAccess() {
-const [users, setUsers] = useState([]);
-const [search, setSearch] = useState("");
-const [showAddUser, setShowAddUser] =
-  useState(false);
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [showAddUser, setShowAddUser] =
+    useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState("");
 
-const [loading, setLoading] = useState(true);
-const [apiError, setApiError] = useState("");
 
+  const loadUsers = useCallback(async (signal) => {
+    try {
+      setLoading(true);
+      setApiError("");
 
-const loadUsers = useCallback(async (signal) => {
-  try {
-    setLoading(true);
-    setApiError("");
+      const response =
+        await usersApi.getAccessList({
+          signal,
+        });
 
-    const response =
-      await usersApi.getAccessList({
-        signal,
-      });
+      const responseData =
+        response?.data?.data?.users ??
+        response?.data?.users ??
+        response?.data?.data ??
+        response?.data ??
+        [];
 
-    const responseData =
-      response?.data?.data?.users ??
-      response?.data?.users ??
-      response?.data?.data ??
-      response?.data ??
-      [];
+      if (!Array.isArray(responseData)) {
+        throw new Error(
+          "Invalid users response received from server.",
+        );
+      }
 
-    if (!Array.isArray(responseData)) {
-      throw new Error(
-        "Invalid users response received from server.",
+      setUsers(
+        responseData.map(normalizeUser),
       );
-    }
+    } catch (error) {
+      if (
+        error?.name === "CanceledError" ||
+        error?.code === "ERR_CANCELED"
+      ) {
+        return;
+      }
 
-    setUsers(
-      responseData.map(normalizeUser),
-    );
-  } catch (error) {
-    if (
-      error?.name === "CanceledError" ||
-      error?.code === "ERR_CANCELED"
-    ) {
-      return;
-    }
+      console.error(
+        "Unable to load users:",
+        error,
+      );
 
-    console.error(
-      "Unable to load users:",
-      error,
-    );
+      setUsers([]);
 
-    setUsers([]);
-
-    setApiError(
-      error?.response?.data?.message ||
+      setApiError(
+        error?.response?.data?.message ||
         error?.message ||
         "Unable to load users.",
-    );
-  } finally {
-    setLoading(false);
-  }
-}, []);
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-useEffect(() => {
-  const controller = new AbortController();
+  useEffect(() => {
+    const controller = new AbortController();
 
-  loadUsers(controller.signal);
+    loadUsers(controller.signal);
 
-  return () => {
-    controller.abort();
-  };
-}, [loadUsers]);
+    return () => {
+      controller.abort();
+    };
+  }, [loadUsers]);
 
 
   const filteredUsers = useMemo(() => {
@@ -582,18 +431,44 @@ useEffect(() => {
     );
   }, [search, users]);
 
-  const handleAddUser = (formData) => {
-    setUsers((previous) => [
-      ...previous,
-      {
-        id: Date.now(),
-        ...formData,
-        mfa: "Enabled",
-        status: "Active",
-      },
-    ]);
+  const handleAddUser = async (formData) => {
+    try {
+      setSubmitting(true);
+      setSubmitError("");
 
-    setShowAddUser(false);
+      await usersApi.createUser({
+        name: formData.name.trim(),
+
+        email: formData.email
+          .trim()
+          .toLowerCase(),
+
+        password: formData.password,
+
+        role: formData.role,
+        location: formData.location,
+        dataScope: formData.dataScope,
+      });
+
+      setShowAddUser(false);
+
+      // Fetch again from DB so the table
+      // always shows actual saved records.
+      await loadUsers();
+    } catch (error) {
+      console.error(
+        "Unable to create user:",
+        error,
+      );
+
+      setSubmitError(
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to create user.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -682,125 +557,124 @@ useEffect(() => {
                   ))}
                 </tr>
               </thead>
-<tbody>
-  {/* Loading users from database */}
-  {loading ? (
-    <tr>
-      <td
-        colSpan={6}
-        className="px-6 py-16 text-center"
-      >
-        <div className="inline-flex items-center gap-3 text-sm font-medium text-slate-500">
-          <span className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+              <tbody>
+                {/* Loading users from database */}
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-16 text-center"
+                    >
+                      <div className="inline-flex items-center gap-3 text-sm font-medium text-slate-500">
+                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
 
-          Loading users...
-        </div>
-      </td>
-    </tr>
-  ) : apiError ? (
-    /* API or database error */
-    <tr>
-      <td
-        colSpan={6}
-        className="px-6 py-14 text-center"
-      >
-        <p className="text-sm font-semibold text-red-600">
-          {apiError}
-        </p>
+                        Loading users...
+                      </div>
+                    </td>
+                  </tr>
+                ) : apiError ? (
+                  /* API or database error */
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-14 text-center"
+                    >
+                      <p className="text-sm font-semibold text-red-600">
+                        {apiError}
+                      </p>
 
-        <button
-          type="button"
-          onClick={() => loadUsers()}
-          className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-500"
-        >
-          Try Again
-        </button>
-      </td>
-    </tr>
-  ) : filteredUsers.length > 0 ? (
-    /* Database users */
-    filteredUsers.map((user, index) => {
-      const cellClass = `
+                      <button
+                        type="button"
+                        onClick={() => loadUsers()}
+                        className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-500"
+                      >
+                        Try Again
+                      </button>
+                    </td>
+                  </tr>
+                ) : filteredUsers.length > 0 ? (
+                  /* Database users */
+                  filteredUsers.map((user, index) => {
+                    const cellClass = `
         border-b border-slate-200
         px-5 py-4
         transition
         group-hover:bg-indigo-50/50
-        ${
-          index % 2 === 0
-            ? "bg-white"
-            : "bg-slate-50/60"
-        }
+        ${index % 2 === 0
+                        ? "bg-white"
+                        : "bg-slate-50/60"
+                      }
       `;
 
-      return (
-        <tr
-          key={user.id ?? user.email}
-          className="group"
-        >
-          {/* User name and email */}
-          <td className={cellClass}>
-            <strong className="block text-sm font-bold text-slate-700">
-              {user.name || "-"}
-            </strong>
+                    return (
+                      <tr
+                        key={user.id ?? user.email}
+                        className="group"
+                      >
+                        {/* User name and email */}
+                        <td className={cellClass}>
+                          <strong className="block text-sm font-bold text-slate-700">
+                            {user.name || "-"}
+                          </strong>
 
-            <span className="mt-1 block text-xs text-slate-500">
-              {user.email || "-"}
-            </span>
-          </td>
+                          <span className="mt-1 block text-xs text-slate-500">
+                            {user.email || "-"}
+                          </span>
+                        </td>
 
-          {/* Role */}
-          <td
-            className={`${cellClass} text-sm text-slate-700`}
-          >
-            {user.role || "Not Assigned"}
-          </td>
+                        {/* Role */}
+                        <td
+                          className={`${cellClass} text-sm text-slate-700`}
+                        >
+                          {user.role || "Not Assigned"}
+                        </td>
 
-          {/* Location */}
-          <td
-            className={`${cellClass} text-sm text-slate-700`}
-          >
-            {user.location || "-"}
-          </td>
+                        {/* Location */}
+                        <td
+                          className={`${cellClass} text-sm text-slate-700`}
+                        >
+                          {user.location || "-"}
+                        </td>
 
-          {/* Data scope */}
-          <td
-            className={`${cellClass} text-sm text-slate-700`}
-          >
-            {user.dataScope || "Assigned Cases"}
-          </td>
+                        {/* Data scope */}
+                        <td
+                          className={`${cellClass} text-sm text-slate-700`}
+                        >
+                          {user.dataScope || "Assigned Cases"}
+                        </td>
 
-          {/* MFA status */}
-          <td className={cellClass}>
-            <StatusBadge>
-              {user.mfa || "Disabled"}
-            </StatusBadge>
-          </td>
+                        {/* MFA status */}
+                        <td className={cellClass}>
+                          <StatusBadge>
+                            {user.mfa || "Disabled"}
+                          </StatusBadge>
+                        </td>
 
-          {/* User status */}
-          <td className={cellClass}>
-            <StatusBadge>
-              {user.status || "Inactive"}
-            </StatusBadge>
-          </td>
-        </tr>
-      );
-    })
-  ) : (
-    /* No records returned from database or search */
-    <tr>
-      <td
-        colSpan={6}
-        className="px-6 py-16 text-center"
-      >
-        <p className="text-sm font-medium text-slate-500">
-          {search
-            ? "No users match your search."
-            : "No users found in the database."}
-        </p>
-      </td>
-    </tr>
-  )}
-</tbody>
+                        {/* User status */}
+                        <td className={cellClass}>
+                          <StatusBadge>
+                            {user.status || "Inactive"}
+                          </StatusBadge>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  /* No records returned from database or search */
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-16 text-center"
+                    >
+                      <p className="text-sm font-medium text-slate-500">
+                        {search
+                          ? "No users match your search."
+                          : "No users found in the database."}
+                      </p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
               {/* <tbody>
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map((user, index) => (
@@ -913,8 +787,13 @@ useEffect(() => {
 
       <AddUserModal
         open={showAddUser}
-        onClose={() => setShowAddUser(false)}
+        onClose={() => {
+        setShowAddUser(false);
+        setSubmitError("");
+        }}
         onSubmit={handleAddUser}
+        submitting={submitting}
+        submitError={submitError}
       />
     </>
   );
