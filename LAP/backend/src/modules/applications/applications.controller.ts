@@ -3,7 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { PERMISSIONS } from '../../common/constants/permissions.constant';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
-import { CreateVisitDto } from '../visits/dto/create-visit.dto';
+
 import type { Actor } from './applications.service';
 import { ApplicationsService } from './applications.service';
 import { ApplicationFilterDto } from './dto/application-filter.dto';
@@ -47,8 +47,22 @@ export class ApplicationsController {
   @Delete(':applicationId') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
   remove(@Param('applicationId', ParseIntPipe) id: number) { return this.service.remove(id); }
 
-  @Post(':applicationId/visits') @Permissions(PERMISSIONS.VISIT_CREATE)
-  addVisit(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: CreateVisitDto, @CurrentUser() user: Actor) { return this.service.addVisit(id, dto, user); }
+  @Post(':applicationId/visits')
+@Permissions(PERMISSIONS.VISIT_CREATE)
+addVisit(
+  @Param('applicationId', ParseIntPipe) id: number,
+  @Body()
+  body: {
+    visitType: string;
+    remarks?: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
+  },
+  @CurrentUser() user: Actor,
+) {
+  return this.service.addVisit(id, body, user);
+}
 
   @Get(':applicationId/visits') @Permissions(PERMISSIONS.APPLICATION_READ)
   listVisits(@Param('applicationId', ParseIntPipe) id: number) { return this.service.listVisits(id); }

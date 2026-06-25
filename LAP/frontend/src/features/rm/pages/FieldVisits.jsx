@@ -1,9 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { FaCalendarAlt, FaCamera } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 
 import { rmApi } from "../rmApi.js";
+import { buildWorkflowTimeline } from "../rmUtils.js"; 
 
 export default function FieldVisits() {
   const { applicationId } = useParams();
@@ -11,41 +12,157 @@ export default function FieldVisits() {
   const [message, setMessage] = useState("");
   const queryClient = useQueryClient();
 
-  const markVisitComplete = useMutation({
-    mutationFn: async () => rmApi.recordWorkflowStep(applicationId, { action: "CUSTOMER_VISIT_DONE", remarks: "Customer visit completed" }),
-    onSuccess: async () => {
-      setMessage("Visit workflow step recorded.");
-      await queryClient.invalidateQueries({ queryKey: ["rm-workflow", applicationId] });
-      await queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] });
-    },
-    onError: () => setMessage("Unable to update workflow state."),
-  });
+  // 1. Fetch live application workflow state using the correct endpoint path
+ // 1. Fetch live application workflow state with parsed Auth headers
+const { data: workflowResponse, isLoading } = useQuery({
+  queryKey: ["rm-workflow", applicationId],
+  queryFn: async () => {
+    let token = null;
+    
+    try {
+      // Safely parse the loginDetails string from localStorage
+      const loginDetailsStr = localStorage.getItem("loginDetails");
+      if (loginDetailsStr) {
+        const loginDetails = JSON.parse(loginDetailsStr);
+        token = loginDetails.accessToken; // Extract the nested token
+      }
+    } catch (err) {
+      console.error("Error parsing loginDetails from localStorage:", err);
+    }
 
+    const res = await fetch(`http://localhost:9000/api/applications/${applicationId}/workflow`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        // Pass the extracted JWT token into the Bearer header
+        ...(token && { Authorization: `Bearer ${token}` }), 
+      },
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error("Session expired or unauthorized. Please log in again.");
+      }
+      throw new Error("Network response was not ok");
+    }
+    return res.json();
+  },
+  enabled: !!applicationId,
+});
+
+  // 2. Map payload cleanly. The utility takes the status flags object directly (e.g. workflowResponse.data)
+  const leadJourney = buildWorkflowTimeline(workflowResponse?.data || {});
+
+const markVisitComplete = useMutation({
+  mutationFn: async () => {
+    const loginDetails = JSON.parse(localStorage.getItem("loginDetails") || "{}");
+
+    const response = await fetch(
+      `http://localhost:9000/api/applications/${applicationId}/field-visits/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${loginDetails.accessToken}`,
+        },
+        body: JSON.stringify({
+          remarks: "Customer visit completed",
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to complete visit");
+    }
+
+    return response.json();
+  },
+
+  onSuccess: async () => {
+    setMessage("Customer visit completed successfully.");
+
+    await queryClient.invalidateQueries({
+      queryKey: ["rm-workflow", applicationId],
+    });
+
+    await queryClient.invalidateQueries({
+      queryKey: ["rm-workflow-overview"],
+    });
+  },
+
+  onError: (error) => {
+    setMessage(error.message || "Unable to complete visit.");
+  },
+});
   return (
     <div className="p-8 space-y-6 bg-[#f8fafc] min-h-screen text-slate-800 antialiased">
       
       {/* 1. Dynamic Page Welcome Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2575fc] via-[#1a4cb0] to-[#6a11cb] p-8 text-white shadow-xl shadow-blue-900/10">
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"></div>
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Field Visits & Verification</h2>
-            <p className="mt-1 text-xs text-blue-100/90 font-semibold tracking-wide">
-              FTLIP-2026-0001 • Residence, business and property visit evidence.
-            </p>
+        <div className="relative z-10 flex flex-col gap-6">
+          
+          {/* Top Header Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Field Visits & Verification</h2>
+              <p className="mt-1 text-xs text-blue-100/90 font-semibold tracking-wide">
+                Application ID: {applicationId || "N/A"} • Residence, business and property visit evidence.
+              </p>
+            </div>
+            <div className="flex gap-3 h-fit">
+              <button className="rounded-xl bg-white/10 px-5 py-2.5 text-xs font-bold border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
+                Save Visit Draft
+              </button>
+              <button 
+                type="button" 
+                disabled={!applicationId || markVisitComplete.isPending || isLoading} 
+                onClick={() => markVisitComplete.mutate()} 
+                className="rounded-xl bg-white text-blue-700 font-extrabold text-xs px-5 py-2.5 shadow-md hover:bg-blue-50 transition-all disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {markVisitComplete.isPending ? "Saving..." : "Complete Visits"}
+              </button>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <button className="rounded-xl bg-white/10 px-5 py-2.5 text-xs font-bold border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
-              Save Visit Draft
-            </button>
-            <button type="button" disabled={!applicationId || markVisitComplete.isPending} onClick={() => markVisitComplete.mutate()} className="rounded-xl bg-white text-blue-700 font-extrabold text-xs px-5 py-2.5 shadow-md hover:bg-blue-50 transition-all disabled:cursor-not-allowed disabled:opacity-60">
-              {markVisitComplete.isPending ? "Saving..." : "Complete Visits"}
-            </button>
+
+          {/* Integrated Dynamic Stepper Container */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-5 shadow-inner text-slate-800 mt-2">
+            <div className="overflow-x-auto pb-2">
+              <div className="flex min-w-[800px] items-center justify-between">
+                {isLoading ? (
+                  <div className="w-full text-center py-2 text-xs font-semibold text-slate-400 animate-pulse">
+                    Loading workflow tracker timeline...
+                  </div>
+                ) : (
+                  leadJourney.map((item, index) => {
+                    const isCurrent = !item.completed && index === leadJourney.findIndex((step) => !step.completed);
+                    return (
+                      <div key={item.key || item.label} className="relative flex flex-1 flex-col items-center text-center">
+                        {index !== leadJourney.length - 1 && (
+                          <div className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${leadJourney[index + 1]?.completed ? "bg-emerald-500" : "bg-slate-200"}`} />
+                        )}
+                        <div className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+                          item.completed ? "bg-emerald-500 text-white ring-4 ring-emerald-100" : isCurrent ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-white text-slate-400 ring-2 ring-slate-200"
+                        }`}>
+                          {item.completed ? (
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : isCurrent ? "●" : index + 1}
+                        </div>
+                        <div className="mt-2.5 px-2">
+                          <p className={`text-xs font-semibold ${item.completed || isCurrent ? "text-slate-900" : "text-slate-500"}`}>{item.label}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
-
-      {message && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">{message}</div>}
 
       {/* 2. Horizontal Sub-Tabs Section */}
       <div className="flex flex-wrap items-center gap-2">
@@ -110,7 +227,6 @@ export default function FieldVisits() {
             <textarea rows={3} defaultValue="Customer residing at the stated address; neighbourhood feedback satisfactory." className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 outline-none resize-none" />
           </div>
 
-          {/* Geo-tagged Image Upload Container Box */}
           <div className="border-2 border-dashed border-blue-200 bg-blue-50/30 rounded-xl p-5 text-center cursor-pointer hover:bg-blue-50/60 transition-all group">
             <FaCamera className="mx-auto text-slate-400 group-hover:text-blue-500 mb-2" size={16} />
             <div className="text-xs font-bold text-slate-700">Upload geo-tagged residence photos</div>
@@ -163,7 +279,6 @@ export default function FieldVisits() {
             <textarea rows={3} defaultValue="Operations observed and business activity consistent with declared profile." className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 outline-none resize-none" />
           </div>
 
-          {/* Dropzone File Box 2 */}
           <div className="border-2 border-dashed border-blue-200 bg-blue-50/30 rounded-xl p-5 text-center cursor-pointer hover:bg-blue-50/60 transition-all group">
             <FaCamera className="mx-auto text-slate-400 group-hover:text-blue-500 mb-2" size={16} />
             <div className="text-xs font-bold text-slate-700">Upload business frontage, stock and office photos</div>
@@ -232,7 +347,6 @@ export default function FieldVisits() {
             <textarea rows={3} defaultValue="Property physically identified and access available." className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 outline-none resize-none" />
           </div>
 
-          {/* Dropzone File Box 3 */}
           <div className="border-2 border-dashed border-blue-200 bg-blue-50/30 rounded-xl p-5 text-center cursor-pointer hover:bg-blue-50/60 transition-all group">
             <FaCamera className="mx-auto text-slate-400 group-hover:text-blue-500 mb-2" size={16} />
             <div className="text-xs font-bold text-slate-700">Upload frontage, interiors, boundaries and landmark photos</div>
@@ -241,7 +355,7 @@ export default function FieldVisits() {
 
       </div>
 
-      {/* 4. Bottom System Audit Verification Field Control Checklist Segment */}
+      {/* 4. Bottom System Audit Checklist */}
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-4">
         <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-blue-600"></span>

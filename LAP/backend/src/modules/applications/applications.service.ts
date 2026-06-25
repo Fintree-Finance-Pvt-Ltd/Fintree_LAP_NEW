@@ -12,7 +12,7 @@ import { createReferenceNumber } from '../../common/utils/reference-number.util'
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { CustomerProfile } from '../customer-profiles/entities/customer-profile.entity';
 import { Document } from '../documents/entities/document.entity';
-import { CreateVisitDto } from '../visits/dto/create-visit.dto';
+
 import { Visit } from '../visits/entities/visit.entity';
 import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
 import { WorkflowLog } from '../workflow/entities/workflow-log.entity';
@@ -161,12 +161,33 @@ export class ApplicationsService {
     return { data: null, message: 'Application deleted' };
   }
 
-  async addVisit(applicationId: number, dto: CreateVisitDto, actor: Actor) {
-    await this.findOne(applicationId);
-    const visit = await this.visits.save(this.visits.create({ ...dto, applicationId, createdBy: actor.id, updatedBy: actor.id }));
-    await this.workflowLogs.save(this.workflowLogs.create({ applicationId, action: this.visitAction(dto.visitType), remarks: dto.remarks || `Visit logged: ${dto.visitType}`, createdBy: actor.id }));
-    return { data: visit };
-  }
+ async addVisit(
+  applicationId: number,
+  body: Record<string, any>,
+  actor: Actor,
+) {
+  await this.findOne(applicationId);
+
+  const visit = await this.visits.save(
+    this.visits.create({
+      ...body,
+      applicationId,
+      createdBy: actor.id,
+      updatedBy: actor.id,
+    }),
+  );
+
+  await this.workflowLogs.save(
+    this.workflowLogs.create({
+      applicationId,
+      action: this.visitAction(body.visitType),
+      remarks: body.remarks || `Visit logged: ${body.visitType}`,
+      createdBy: actor.id,
+    }),
+  );
+
+  return { data: visit };
+}
 
   async listVisits(applicationId: number) {
     return { data: await this.visits.find({ where: { applicationId }, order: { id: 'DESC' } }) };
