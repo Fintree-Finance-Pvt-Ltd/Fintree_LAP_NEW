@@ -26,6 +26,10 @@ import SubmitToBM from '../features/rm/pages/SubmitToBM.jsx';
 import AdminDashboard from '../features/ADMIN/pages/AdminDashboard.jsx';
 import RolesAccess from '../features/ADMIN/pages/rolesAccess.jsx';
 
+import BmDashboard from '../features/BM/pages/BmDashboard.jsx'
+import BMReview from '../features/BM/pages/BMReview.jsx';
+// import BMReviewQueue from '../features/BM/pages/ReviewQueue.jsx';
+
 const protectedChildren = [
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/applications', element: <ApplicationsPage /> },
@@ -34,8 +38,11 @@ const protectedChildren = [
 
   // RM routes (wired to Sidebar.jsx)
   { path: '/rmDashboard', element: <RMDashboard /> },
-    { path: '/adminDashboard', element: <AdminDashboard /> },
-        { path: '/roles-access', element: <RolesAccess /> },
+  { path: '/adminDashboard', element: <AdminDashboard /> },
+  { path: '/bmDashboard', element: <BmDashboard /> },
+  { path: '/bmReview', element: <BMReview /> },
+  {path: "/bmReview/:applicationId", element: <BMReview />,},
+  { path: '/roles-access', element: <RolesAccess /> },
 
 
   { path: '/my-leads', element: <MyLeads /> },

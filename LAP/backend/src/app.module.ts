@@ -20,13 +20,13 @@ import { ContactPersonsModule } from './modules/contact-persons/contact-persons.
 import { CustomerProfilesModule } from './modules/customer-profiles/customer-profiles.module';
 import { DashboardsModule } from './modules/dashboards/dashboards.module';
 import { DocumentsModule } from './modules/documents/documents.module';
-import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 import { FieldVisitsModule } from './modules/visits/field-visits.module';
+import { BmModule } from './modules/bm/bm.module';
 
 @Module({
   imports: [
@@ -34,6 +34,7 @@ import { FieldVisitsModule } from './modules/visits/field-visits.module';
     TypeOrmModule.forRootAsync({ useFactory: databaseConfig }),
     AuthModule,
     UsersModule,
+    BmModule,
     RolesModule,
     PermissionsModule,
     AuditModule,
@@ -45,8 +46,8 @@ import { FieldVisitsModule } from './modules/visits/field-visits.module';
     WorkflowModule,
     NotificationsModule,
     DashboardsModule,
-    HealthModule,
     FieldVisitsModule,
+    UsersModule
   ],
   providers: [
     { provide: APP_GUARD, useClass: RateLimitGuard },

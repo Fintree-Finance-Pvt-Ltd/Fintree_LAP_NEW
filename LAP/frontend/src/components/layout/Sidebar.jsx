@@ -83,6 +83,25 @@ const rolesConfig = {
       ],
     },
   ],
+
+
+    BM: [
+    {
+      category: "PRIMARY",
+      items: [{ to: "/bmDashboard", label: "My Work", Icon: FaBriefcase }],
+    },
+    {
+      category: "MODULES",
+      items: [
+               {
+          to: "/bmReview",
+          label: "BM Review",
+          Icon: FaReceipt,
+        },
+       
+      ],
+    },
+  ],
 };
 
 const groupOrder = [
@@ -131,8 +150,8 @@ export default function Sidebar() {
     .map((category) => {
       const collected = [];
       const seenTo = new Set();
-      const roleKeysInOrder = ["RM", "ADMIN"];
 
+      const roleKeysInOrder = ["RM", "BM","ADMIN"];
       for (const roleKey of roleKeysInOrder) {
         if (!roles.includes(roleKey)) continue;
         const roleGroups = rolesConfig[roleKey] || [];
