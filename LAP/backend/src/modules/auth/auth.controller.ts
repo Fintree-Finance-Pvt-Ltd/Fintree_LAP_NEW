@@ -41,4 +41,17 @@ export class AuthController {
   profile(@CurrentUser() user: { id: number; email: string; roles: string[]; permissions: string[] }) {
     return this.auth.profile(user);
   }
+
+  @Public()
+  @Post('send-mobile-otp')
+  sendMobileOtp(@Body() body: { mobile: string }) {
+    return this.auth.sendMobileOtp(body);
+  }
+
+  @Public()
+  @Post('verify-mobile-otp')
+  verifyMobileOtp(@Body() body: { mobile: string; otp: string }) {
+    return this.auth.verifyMobileOtp(body);
+  }
 }
+

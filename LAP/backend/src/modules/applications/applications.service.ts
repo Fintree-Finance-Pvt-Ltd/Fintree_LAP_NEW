@@ -58,37 +58,186 @@ export class ApplicationsService {
     return { data: await this.applications.save(saved) };
   }
 
-  async draft(dto: CreateApplicationWithProfileDto, actor: Actor) {
+  async draft(dto: CreateApplicationWithProfileDto & { verificationToken?: string; applicationId?: number }, actor: Actor) {
     if (!dto.customerName?.trim() || !dto.mobile?.trim() || !dto.requestedAmount) {
       throw new BadRequestException('customerName, mobile and requestedAmount are required for draft');
     }
+
+    // OTP-gating: without verified OTP token we MUST NOT create an application.
+    if (!dto.applicationId && !dto.verificationToken) {
+      throw new BadRequestException('verificationToken is required to create a lead draft');
+    }
+
     return this.dataSource.transaction(async (manager) => {
-      const entity = manager.create(Application, {
-        customerName: dto.customerName.trim(),
-        mobile: dto.mobile.trim(),
-        pan: dto.pan?.trim(),
-        requestedAmount: dto.requestedAmount || '0',
-        applicationNumber: 'TEMP',
-        status: ApplicationStatus.DRAFT,
-        stage: ApplicationStage.RM,
-        createdBy: actor.id,
-        updatedBy: actor.id,
+      // If applicationId exists, ONLY UPDATE it (no duplicates).
+      if (dto.applicationId) {
+        const existing = await manager.findOne(Application, { where: { id: dto.applicationId }, lock: { mode: 'pessimistic_write' } });
+        if (!existing) throw new NotFoundException('Application not found');
+
+        existing.customerName = dto.customerName.trim();
+        existing.mobile = dto.mobile.trim();
+        existing.pan = dto.pan?.trim();
+        existing.requestedAmount = dto.requestedAmount || '0';
+        existing.stage = ApplicationStage.RM;
+        existing.status = ApplicationStatus.DRAFT;
+        existing.updatedBy = actor.id;
+
+        const saved = await manager.save(existing);
+
+        const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
+        await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
+
+        // Keep it idempotent: only upsert workflow and history when creating for the first time.
+        return { data: saved };
+      }
+
+      // Create path: require verificationToken and create application ONLY once.
+      // Reuse draft if it was already created for this token/application.
+      const createdByOtp = await manager.query(
+        `SELECT 1 AS ok FROM mobile_otp_sessions WHERE verification_token = ? AND verified_at IS NOT NULL`,
+        [dto.verificationToken],
+      );
+
+      if (!createdByOtp?.length) {
+        throw new BadRequestException('OTP not verified');
+      }
+
+      // If a draft already exists for this mobile + customerName in DRAFT, reuse it.
+      // (Best-effort de-duplication in absence of a direct token->application mapping table.)
+      const existingDraft = await manager.findOne(Application, {
+        where: {
+          customerName: dto.customerName.trim(),
+          mobile: dto.mobile.trim(),
+          status: ApplicationStatus.DRAFT,
+          stage: ApplicationStage.RM,
+        },
+        lock: { mode: 'pessimistic_write' },
       });
-      const saved = await manager.save(entity);
-      saved.applicationNumber = createReferenceNumber('LAP', saved.id);
-      await manager.save(saved);
+
+      const application =
+        existingDraft ??
+        manager.create(Application, {
+          customerName: dto.customerName.trim(),
+          mobile: dto.mobile.trim(),
+          pan: dto.pan?.trim(),
+          requestedAmount: dto.requestedAmount || '0',
+          applicationNumber: 'TEMP',
+          status: ApplicationStatus.DRAFT,
+          stage: ApplicationStage.RM,
+          createdBy: actor.id,
+          updatedBy: actor.id,
+        });
+
+      if (!existingDraft) {
+        const saved = await manager.save(application);
+        saved.applicationNumber = createReferenceNumber('LAP', saved.id);
+        await manager.save(saved);
+
+        const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
+        await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
+
+        await manager.save(
+          WorkflowHistory,
+          manager.create(WorkflowHistory, {
+            applicationId: saved.id,
+            fromRole: ApplicationStage.RM,
+            toRole: ApplicationStage.RM,
+            action: WorkflowAction.SAVE_DRAFT,
+            remarks: dto.remarks || 'Saved as draft',
+            actionBy: actor.id,
+          }),
+        );
+
+        await manager.save(
+          Workflow,
+          manager.create(Workflow, {
+            applicationId: saved.id,
+            currentStage: ApplicationStage.RM,
+            currentStatus: ApplicationStatus.DRAFT,
+            assignedTo: actor.roles?.[0],
+            currentOwner: actor.id,
+            lastAction: WorkflowAction.SAVE_DRAFT,
+            lastRemarks: dto.remarks || 'Saved as draft',
+          }),
+        );
+
+        return { data: saved };
+      }
+
+      // Update existing draft
+      existingDraft.pan = dto.pan?.trim();
+      existingDraft.requestedAmount = dto.requestedAmount || '0';
+      existingDraft.updatedBy = actor.id;
+      existingDraft.stage = ApplicationStage.RM;
+      existingDraft.status = ApplicationStatus.DRAFT;
+
+      const saved = await manager.save(existingDraft);
+
       const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
       await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
-      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId: saved.id, fromRole: ApplicationStage.RM, toRole: ApplicationStage.RM, action: WorkflowAction.SAVE_DRAFT, remarks: dto.remarks || 'Saved as draft', actionBy: actor.id }));
+
+      return { data: saved };
+    });
+  }
+
+  async submitDraft(applicationId: number, dto: CreateApplicationWithProfileDto, actor: Actor) {
+    const errors: string[] = [];
+    if (!dto.customerName?.trim()) errors.push('customerName is required');
+    if (!dto.mobile?.trim()) errors.push('mobile is required');
+    if (!dto.pan?.trim()) errors.push('pan is required');
+    if (!dto.aadhaarNumber?.trim()) errors.push('aadhaarNumber is required');
+    if (!dto.requestedAmount) errors.push('requestedAmount is required');
+    if (!dto.occupationType) errors.push('occupationType is required');
+    if (!dto.monthlyIncome && dto.monthlyIncome !== 0) errors.push('monthlyIncome is required');
+    if (!dto.propertyType?.trim()) errors.push('propertyType is required');
+    if (!dto.marketValue && dto.marketValue !== 0) errors.push('marketValue is required');
+    if (!dto.propertyAddress?.trim()) errors.push('propertyAddress is required');
+    if (!dto.propertyCity?.trim()) errors.push('propertyCity is required');
+    if (!dto.propertyState?.trim()) errors.push('propertyState is required');
+    if (!dto.propertyPincode?.trim()) errors.push('propertyPincode is required');
+    if (errors.length) throw new BadRequestException(errors.join(', '));
+
+    return this.dataSource.transaction(async (manager) => {
+      const application = await manager.findOne(Application, { where: { id: applicationId }, lock: { mode: 'pessimistic_write' } });
+      if (!application) throw new NotFoundException('Application not found');
+      if (application.status !== ApplicationStatus.DRAFT) throw new BadRequestException('Application must be in DRAFT status');
+
+      application.customerName = dto.customerName.trim();
+      application.mobile = dto.mobile.trim();
+      application.pan = dto.pan?.trim();
+      application.requestedAmount = dto.requestedAmount || '0';
+      application.status = ApplicationStatus.LEAD_CREATED;
+      application.stage = ApplicationStage.RM;
+      application.updatedBy = actor.id;
+
+      const saved = await manager.save(application);
+
+      const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
+      await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
+
+      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, {
+        applicationId: saved.id,
+        fromRole: ApplicationStage.RM,
+        toRole: ApplicationStage.RM,
+        action: WorkflowAction.SUBMIT,
+        remarks: dto.remarks || 'Application submitted',
+        actionBy: actor.id,
+      }));
+
+      await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId: saved.id, action: WorkflowLogAction.LEAD_CREATED, remarks: 'Lead created', createdBy: actor.id }));
+      await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId: saved.id, action: WorkflowLogAction.LEAD_SUBMITTED, remarks: dto.remarks || 'Lead submitted', createdBy: actor.id }));
+
       await manager.save(Workflow, manager.create(Workflow, {
         applicationId: saved.id,
         currentStage: ApplicationStage.RM,
-        currentStatus: ApplicationStatus.DRAFT,
+        currentStatus: ApplicationStatus.LEAD_CREATED,
         assignedTo: actor.roles?.[0],
         currentOwner: actor.id,
-        lastAction: WorkflowAction.SAVE_DRAFT,
-        lastRemarks: dto.remarks || 'Saved as draft',
+        lastAction: WorkflowAction.SUBMIT,
+        lastRemarks: dto.remarks || 'Application submitted',
       }));
+
+      await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.SUBMIT, entityName: 'applications', entityId: saved.id, snapshot: { status: saved.status, stage: saved.stage }, createdBy: actor.id }));
       return { data: saved };
     });
   }
@@ -109,6 +258,7 @@ export class ApplicationsService {
     if (!dto.propertyState?.trim()) errors.push('propertyState is required');
     if (!dto.propertyPincode?.trim()) errors.push('propertyPincode is required');
     if (errors.length) throw new BadRequestException(errors.join(', '));
+
     return this.dataSource.transaction(async (manager) => {
       const entity = manager.create(Application, {
         customerName: dto.customerName.trim(),
@@ -116,7 +266,7 @@ export class ApplicationsService {
         pan: dto.pan?.trim(),
         requestedAmount: dto.requestedAmount || '0',
         applicationNumber: 'TEMP',
-        status: ApplicationStatus.NEW,
+        status: ApplicationStatus.LEAD_CREATED,
         stage: ApplicationStage.RM,
         createdBy: actor.id,
         updatedBy: actor.id,
@@ -132,13 +282,13 @@ export class ApplicationsService {
       await manager.save(Workflow, manager.create(Workflow, {
         applicationId: saved.id,
         currentStage: ApplicationStage.RM,
-        currentStatus: ApplicationStatus.NEW,
+        currentStatus: ApplicationStatus.LEAD_CREATED,
         assignedTo: actor.roles?.[0],
         currentOwner: actor.id,
         lastAction: WorkflowAction.SUBMIT,
         lastRemarks: dto.remarks || 'Application submitted',
       }));
-      await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.SUBMIT, entityName: 'applications', entityId: saved.id, snapshot: { status: saved.status, stage: saved.stage }, createdBy: actor.id }));
+await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.SUBMIT, entityName: 'applications', entityId: saved.id, snapshot: { status: saved.status, stage: saved.stage }, createdBy: actor.id }));
       return { data: saved };
     });
   }

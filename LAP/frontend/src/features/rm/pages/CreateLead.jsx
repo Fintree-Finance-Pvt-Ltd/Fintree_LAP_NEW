@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { rmApi } from "../rmApi.js";
@@ -25,12 +25,78 @@ const emptyForm = {
   pinCode: "",
 };
 
+function Section({ title, children }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+        <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">{title}</h3>
+      </div>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, ...props }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</label>
+      <input
+        {...props}
+        className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:bg-white placeholder:text-slate-300"
+      />
+    </div>
+  );
+}
+
 export default function CreateLead() {
   const { applicationId } = useParams();
-  const [formData, setFormData] = useState(emptyForm);
-  const [message, setMessage] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const [formData, setFormData] = useState(emptyForm);
+  const [message, setMessage] = useState("");
+
+  const [otpPopupOpen, setOtpPopupOpen] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [otpContext, setOtpContext] = useState({
+    mobile: "",
+    verificationToken: null,
+  });
+
+  const [otpStage, setOtpStage] = useState("ENTER_MOBILE");
+
+  const applicationQuery = useQuery({
+    queryKey: ["application", applicationId],
+    queryFn: () => rmApi.getApplication(applicationId),
+    enabled: Boolean(applicationId),
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (applicationQuery.data?.data && !applicationQuery.isLoading) {
+      const app = applicationQuery.data.data;
+      setFormData({
+        customerName: app.customerName || "",
+        mobileNumber: app.mobile || "",
+        emailId: app.email || "",
+        panNumber: app.pan || "",
+        aadhaarNumber: "",
+        occupation: "SELF_EMPLOYED",
+        businessName: "",
+        monthlyIncome: app.monthlyIncome || "",
+        monthlyObligations: app.monthlyObligations || "",
+        requestedAmount: app.requestedAmount || "",
+        requestedTenure: "120",
+        propertyType: app.propertyType || "",
+        propertyValue: app.marketValue || "",
+        propertyAddress: app.propertyAddress || "",
+        city: app.propertyCity || "",
+        state: app.propertyState || "",
+        pinCode: app.propertyPincode || "",
+      });
+    }
+  }, [applicationQuery.data, applicationQuery.isLoading]);
 
   const workflowQuery = useQuery({
     queryKey: ["rm-workflow", applicationId],
@@ -38,6 +104,7 @@ export default function CreateLead() {
     enabled: Boolean(applicationId),
     retry: false,
   });
+
   const leadJourney = useMemo(() => buildWorkflowTimeline(workflowQuery.data?.data ?? {}), [workflowQuery.data]);
 
   const calculated = useMemo(() => {
@@ -78,9 +145,13 @@ export default function CreateLead() {
     tenure: calculated.tenure,
   });
 
-  const saveDraft = useMutation({
-    mutationFn: async () => {
-      const response = await rmApi.saveDraft(buildPayload());
+  // Create draft only after OTP verified (spec)
+  const createDraftWithOtp = useMutation({
+    mutationFn: async (verificationToken) => {
+      const response = await rmApi.saveDraft({
+        ...buildPayload(),
+        verificationToken,
+      });
       return response;
     },
     onSuccess: async (data) => {
@@ -88,20 +159,40 @@ export default function CreateLead() {
       await queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] });
       navigate(`/applications/${data.id}`, { replace: true });
     },
+    onError: (error) => setMessage(error?.message || "Unable to create draft"),
+  });
+
+  // Save Draft must UPDATE existing application when applicationId exists (spec)
+  const saveDraft = useMutation({
+    mutationFn: async () => {
+      const response = await rmApi.saveDraft({
+        ...buildPayload(),
+        applicationId,
+      });
+      return response;
+    },
+    enabled: Boolean(applicationId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["rm-applications"] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] });
+      setMessage("Draft saved");
+    },
     onError: (error) => setMessage(error?.message || "Unable to save draft"),
   });
 
-const submitApplication = useMutation({
+  const submitApplication = useMutation({
     mutationFn: async () => {
-      const response = await rmApi.submitApplication(buildPayload());
+      const response = await rmApi.submitDraft(applicationId, buildPayload());
       return response.data;
     },
-    onSuccess: async (data) => {
+    enabled: Boolean(applicationId),
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["rm-applications"] });
       await queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] });
-      await queryClient.invalidateQueries({ queryKey: ["rm-workflow", data.id] });
+      await queryClient.invalidateQueries({ queryKey: ["rm-workflow", applicationId] });
       navigate(`/my-leads`, { replace: true });
     },
+    onError: (error) => setMessage(error?.message || "Unable to submit"),
   });
 
   const handleInputChange = (event) => {
@@ -109,35 +200,102 @@ const submitApplication = useMutation({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const handleSendOtp = async () => {
     setMessage("");
+
+    const mobile = (formData.mobileNumber || "").trim();
+    if (!mobile) {
+      setMessage("Mobile number is required");
+      return;
+    }
+
+    const res = await rmApi.sendMobileOtp({ mobile });
+    setOtpContext({ mobile, verificationToken: res.data?.verificationToken ?? null });
+    setOtpStage("ENTER_OTP");
+    setOtpPopupOpen(true);
+  };
+
+  const handleVerifyOtp = async () => {
+    setMessage("");
+    const mobile = otpContext.mobile;
+    const otp = (otpValue || "").trim();
+
+    if (!otp) {
+      setMessage("OTP is required");
+      return;
+    }
+
+    const res = await rmApi.verifyMobileOtp({ mobile, otp });
+    const verificationToken = res?.data?.verificationToken;
+    if (!verificationToken) {
+      setMessage("OTP verification failed");
+      return;
+    }
+
+    setOtpPopupOpen(false);
+    setOtpStage("ENTER_MOBILE");
+
+    // OTP success => create Application draft now
+    await createDraftWithOtp.mutateAsync(verificationToken);
+  };
+
+  const handleSaveDraftClick = () => {
+    setMessage("");
+    if (!applicationId) {
+      // No application yet: enforce OTP step
+      setMessage("Verify mobile OTP first to create the lead draft");
+      return;
+    }
     saveDraft.mutate();
   };
 
-  const isPending = saveDraft.isPending || submitApplication.isPending;
+  const handleSubmitForReviewClick = () => {
+    setMessage("");
+    if (!applicationId) {
+      setMessage("Create a draft first");
+      return;
+    }
+    submitApplication.mutate();
+  };
+
+  const isPending =
+    saveDraft.isPending ||
+    submitApplication.isPending ||
+    createDraftWithOtp.isPending;
 
   return (
-    <form onSubmit={handleSubmit} className="min-h-screen space-y-6 bg-slate-50 p-6 text-slate-800 antialiased lg:p-8">
-      {/* Top Banner & Action Header */}
+    <form onSubmit={(e) => e.preventDefault()} className="min-h-screen space-y-6 bg-slate-50 p-6 text-slate-800 antialiased lg:p-8">
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-700 via-indigo-800 to-violet-800 p-6 text-white shadow-lg">
         <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Lead & Application Capture</h2>
-            <p className="mt-1 text-xs text-blue-100/80">Configure structural applicant verification, loan assessment and collateral parameters.</p>
+            <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Create Lead</h2>
+            <p className="mt-1 text-xs text-blue-100/80">OTP gated lead draft creation</p>
           </div>
           <div className="flex items-center gap-3">
-            <button 
-              type="submit" 
-              disabled={isPending} 
-              className="rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-blue-700 shadow transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saveDraft.isPending ? "Saving..." : "Save Draft"}
-            </button>
-            <button 
-              type="button" 
-              disabled={isPending} 
-              onClick={() => { setMessage(""); submitApplication.mutate(); }} 
+            {!applicationId ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={handleSendOtp}
+                className="rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-blue-700 shadow transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Verify Mobile
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={handleSaveDraftClick}
+                className="rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-blue-700 shadow transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saveDraft.isPending ? "Saving..." : "Save Draft"}
+              </button>
+            )}
+
+            <button
+              type="button"
+              disabled={isPending || !applicationId}
+              onClick={handleSubmitForReviewClick}
               className="rounded-xl bg-blue-950 px-5 py-2.5 text-xs font-bold text-white shadow transition-all hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitApplication.isPending ? "Submitting..." : "Submit for Review"}
@@ -146,14 +304,13 @@ const submitApplication = useMutation({
         </div>
       </div>
 
-      {/* Horizontal Workflow Stepper */}
+      {/* Workflow stepper */}
       <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center justify-between">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">RM Workflow Journey</h3>
           <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10"> Active Track </span>
         </div>
-        
-        {/* Horizontal Container scrollable on smaller viewports */}
+
         <div className="overflow-x-auto pb-2">
           <div className="flex min-w-[800px] items-center justify-between">
             {leadJourney.map((item, index) => {
@@ -161,16 +318,28 @@ const submitApplication = useMutation({
               return (
                 <div key={item.label} className="relative flex flex-1 flex-col items-center text-center">
                   {index !== leadJourney.length - 1 && (
-                    <div className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${leadJourney[index + 1].completed ? "bg-emerald-500" : "bg-slate-200"}`} />
+                    <div
+                      className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${leadJourney[index + 1].completed ? "bg-emerald-500" : "bg-slate-200"}`}
+                    />
                   )}
-                  <div className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
-                    item.completed ? "bg-emerald-500 text-white ring-4 ring-emerald-100" : isCurrent ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-white text-slate-400 ring-2 ring-slate-200"
-                  }`}>
+                  <div
+                    className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+                      item.completed
+                        ? "bg-emerald-500 text-white ring-4 ring-emerald-100"
+                        : isCurrent
+                          ? "bg-blue-600 text-white ring-4 ring-blue-100"
+                          : "bg-white text-slate-400 ring-2 ring-slate-200"
+                    }`}
+                  >
                     {item.completed ? (
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
-                    ) : isCurrent ? "●" : index + 1}
+                    ) : isCurrent ? (
+                      "●"
+                    ) : (
+                      index + 1
+                    )}
                   </div>
                   <div className="mt-2.5 px-2">
                     <p className={`text-xs font-semibold ${item.completed || isCurrent ? "text-slate-900" : "text-slate-500"}`}>{item.label}</p>
@@ -183,28 +352,24 @@ const submitApplication = useMutation({
       </div>
 
       {message && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">
-          {message}
-        </div>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{message}</div>
       )}
 
-      {/* Main Core Form Block */}
+      {/* Main Form */}
       <div className="space-y-8 rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm lg:p-8">
-        
-        {/* Section: Customer Demographics */}
         <Section title="Customer Identification & Identity">
           <Field label="Customer / Entity Name *" name="customerName" value={formData.customerName} onChange={handleInputChange} required />
           <Field label="Mobile Number *" name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} required />
           <Field label="Email ID" name="emailId" type="email" value={formData.emailId} onChange={handleInputChange} />
           <Field label="PAN Number" name="panNumber" value={formData.panNumber} onChange={handleInputChange} maxLength={10} />
           <Field label="Aadhaar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleInputChange} maxLength={12} />
-          
+
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Occupation / Constitution</label>
-            <select 
-              name="occupation" 
-              value={formData.occupation} 
-              onChange={handleInputChange} 
+            <select
+              name="occupation"
+              value={formData.occupation}
+              onChange={handleInputChange}
               className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:bg-white"
             >
               <option value="SELF_EMPLOYED">Self employed</option>
@@ -216,14 +381,12 @@ const submitApplication = useMutation({
           <Field label="Employer / Business Name" name="businessName" value={formData.businessName} onChange={handleInputChange} />
         </Section>
 
-        {/* Section: Financial Profiles & Live Calculation Preview Widget */}
         <Section title="Financial Profiles & Request Framework">
           <Field label="Verified Monthly Income" name="monthlyIncome" type="number" value={formData.monthlyIncome} onChange={handleInputChange} />
           <Field label="Existing Monthly Obligations" name="monthlyObligations" type="number" value={formData.monthlyObligations} onChange={handleInputChange} />
           <Field label="Requested Loan Amount *" name="requestedAmount" type="number" value={formData.requestedAmount} onChange={handleInputChange} required />
           <Field label="Requested Tenure (months)" name="requestedTenure" type="number" value={formData.requestedTenure} onChange={handleInputChange} />
-          
-          {/* Visual Dynamic Underwriting Widget Box */}
+
           <div className="md:col-span-2 rounded-xl bg-slate-50 p-4 border border-slate-200/50 grid grid-cols-3 gap-4">
             <div className="text-center md:text-left">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Indicative EMI</span>
@@ -231,9 +394,7 @@ const submitApplication = useMutation({
             </div>
             <div className="text-center md:text-left border-x border-slate-200 px-4">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">FOIR Ratio</span>
-              <span className={`text-base font-extrabold mt-1 block ${calculated.foir > 50 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                {calculated.foir.toFixed(2)}%
-              </span>
+              <span className={`text-base font-extrabold mt-1 block ${calculated.foir > 50 ? "text-amber-600" : "text-emerald-600"}`}>{calculated.foir.toFixed(2)}%</span>
             </div>
             <div className="text-center md:text-left">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Estimated LTV</span>
@@ -242,7 +403,6 @@ const submitApplication = useMutation({
           </div>
         </Section>
 
-        {/* Section: Real Estate Asset / Collateral */}
         <Section title="Collateral & Property Specifics">
           <Field label="Property Type" name="propertyType" value={formData.propertyType} onChange={handleInputChange} placeholder="e.g. Commercial / Residential" />
           <Field label="Approximate Property Value" name="propertyValue" type="number" value={formData.propertyValue} onChange={handleInputChange} />
@@ -252,30 +412,53 @@ const submitApplication = useMutation({
           <Field label="PIN Code" name="pinCode" value={formData.pinCode} onChange={handleInputChange} maxLength={6} />
         </Section>
       </div>
+
+      {/* OTP Popup */}
+      {otpPopupOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="w-[92%] max-w-[420px] rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-slate-900">Enter OTP</h3>
+              <p className="text-sm text-slate-600">OTP sent to {otpContext.mobile}</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <input
+                value={otpValue}
+                onChange={(e) => setOtpValue(e.target.value)}
+                inputMode="numeric"
+                placeholder="0000"
+                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none"
+              />
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpPopupOpen(false);
+                    setOtpValue("");
+                    setOtpStage("ENTER_MOBILE");
+                  }}
+                  className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={createDraftWithOtp.isPending}
+                  onClick={handleVerifyOtp}
+                  className="flex-1 rounded-xl bg-blue-700 py-2.5 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-60"
+                >
+                  Verify
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 text-xs text-slate-500">Dev shortcut: if you enter <b>0000</b>, OTP verification succeeds.</div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
 
-function Section({ title, children }) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">{title}</h3>
-      </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">{children}</div>
-    </div>
-  );
-}
-
-function Field({ label, ...props }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</label>
-      <input 
-        {...props} 
-        className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:bg-white placeholder:text-slate-300" 
-      />
-    </div>
-  );
-}

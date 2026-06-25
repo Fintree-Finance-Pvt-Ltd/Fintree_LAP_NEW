@@ -17,8 +17,12 @@ export default function MyLeads() {
 
   const rows = useMemo(() => {
     const data = query.data?.data ?? [];
-    if (selectedStage === "All Stages") return data;
-    return data.filter((item) => item.stage === selectedStage);
+
+    // Per spec: My Leads should show DRAFT applications only.
+    const drafted = data.filter((item) => item.status === "DRAFT");
+
+    if (selectedStage === "All Stages") return drafted;
+    return drafted.filter((item) => item.stage === selectedStage);
   }, [query.data, selectedStage]);
 
   const workflowQueries = useQuery({
@@ -102,7 +106,7 @@ export default function MyLeads() {
               ) : rows.length ? rows.map((lead) => {
                 const status = workflowQueries.data?.[lead.id] ?? {};
                 const nextStep = getNextWorkflowStep(status);
-                const continueRoute = nextStep === "create-lead" ? `/create-lead` : nextStep === "customer-visit" ? `/customer-visit/${lead.id}` : nextStep === "geo-verification" ? `/geo-verification/${lead.id}` : nextStep === "kyc-documents" ? `/kyc-documents/${lead.id}` : `/submit-bm/${lead.id}`;
+                const continueRoute = nextStep === "create-lead" ? `/create-lead/${lead.id}` : nextStep === "customer-visit" ? `/customer-visit/${lead.id}` : nextStep === "geo-verification" ? `/geo-verification/${lead.id}` : nextStep === "kyc-documents" ? `/kyc-documents/${lead.id}` : `/submit-bm/${lead.id}`;
                 return (
                   <tr key={lead.id} className="transition-colors hover:bg-slate-50/50">
                     <td className="p-4 pl-6">

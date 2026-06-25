@@ -1,38 +1,20 @@
-# TODO — Lead/Workflow complete flow
+# TODO - Create Lead OTP-gated Application Creation
 
-## Step 1 — Wire correct workflow endpoint (RM submit)
-- Update `frontend/src/features/applications/pages/ApplicationDetailsPage.jsx`
-- Replace `applicationsApi.transition(... 'SUBMIT_TO_BM')` with call to backend `POST /workflow/submit-to-bm/:applicationId`
-- Add api helper in `frontend/src/features/applications/applicationsApi.js` (or new file) for `workflowSubmitToBm`
-
-## Step 2 — Extend Visit entity to support required module fields
-- Update `backend/src/modules/visits/entities/visit.entity.ts`
-  - add: visitDate, visitStatus(Positive/Negative/Revisit), revisitRemarks, distance, manualAddress, geoTaggedPhotoPath (or reference), photoPath (if needed)
-- Update `backend/src/modules/visits/dto/create-visit.dto.ts`
-  - add matching validation decorators
-
-## Step 3 — Update BM submission validations
-- Update `backend/src/modules/workflow/workflow.service.ts`
-  - Enhance `validateRmSubmission` to check:
-    - Customer visit completed
-    - Business visit completed
-    - Geo verification completed
-    - Property visit completed
-  - Completion logic: existence of `Visit` rows with required `visitType` and required columns not null.
-
-## Step 4 — Add document upload validation (file type/size)
-- Update `backend/src/modules/documents/documents.service.ts`
-  - validate allowed mime/ext + max 10MB
-  - reject invalid files before saving
-
-## Step 5 — Update UI to capture modules (at least minimal)
-- Update `ApplicationDetailsPage.jsx` to allow capturing multiple visit types:
-  - Customer / Business / Geo / Property
-  - Include visit status Positive/Negative/Revisit, date, remarks
-  - Capture GPS fields + distance + manual address
-  - Upload module photos and persist as document/paths depending on chosen approach
-
-## Step 6 — DB migration
-- Create migration for `visits` table schema changes.
-
-
+- [x] Add OTP endpoints (if not present) and a verification token mechanism
+  - [x] `POST /auth/send-mobile-otp`
+  - [x] `POST /auth/verify-mobile-otp`
+- [x] Update backend Applications flow
+  - [x] Ensure `applications` insert happens only after successful OTP verify
+  - [x] Make `POST /applications/draft` accept a `verificationToken` and create application only once
+  - [x] Ensure subsequent `POST /applications/draft` calls UPDATE existing draft (no new application)
+- [x] Update Submit-for-Review behavior
+  - [x] Validate mandatory fields and transition `DRAFT -> LEAD_CREATED`
+  - [x] Update workflow current_status and insert workflow history `LEAD_CREATED`
+- [x] Update MyLeads filtering
+  - [x] Only show `DRAFT` applications
+- [x] Update CreateLead frontend workflow
+  - [x] Step 1: keep all lead fields in React state (no backend calls)
+  - [x] Step 2: Verify Mobile -> OTP screen
+  - [x] Step 3: After OTP success, call `POST /applications/draft` with full payload + `verificationToken`
+  - [x] Step 4: Save Draft should UPDATE existing application by `applicationId`
+  - [x] Step 5: Continue Journey loads `GET /applications/:applicationId`

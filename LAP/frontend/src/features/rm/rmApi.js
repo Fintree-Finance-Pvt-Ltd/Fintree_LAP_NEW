@@ -23,6 +23,17 @@ export const rmApi = {
   saveDraft: (payload) =>
     apiClient.post("/applications/draft", payload),
 
+  submitDraft: (applicationId, payload) =>
+    apiClient.post("/applications/submit-draft", { ...payload, applicationId }),
+
+  // =========================
+  // OTP
+  // =========================
+  sendMobileOtp: (payload) =>
+    apiClient.post("/auth/send-mobile-otp", payload),
+  verifyMobileOtp: (payload) =>
+    apiClient.post("/auth/verify-mobile-otp", payload),
+
   submitApplication: (payload) =>
     apiClient.post("/applications/submit", payload),
 

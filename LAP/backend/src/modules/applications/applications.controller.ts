@@ -30,10 +30,15 @@ export class ApplicationsController {
   create(@Body() dto: CreateApplicationDto, @CurrentUser() user: Actor) { return this.service.create(dto, user); }
 
   @Post('draft') @Permissions(PERMISSIONS.APPLICATION_CREATE)
-  draft(@Body() dto: CreateApplicationWithProfileDto, @CurrentUser() user: Actor) { return this.service.draft(dto, user); }
+  draft(@Body() dto: CreateApplicationWithProfileDto & { verificationToken?: string; applicationId?: number }, @CurrentUser() user: Actor) { return this.service.draft(dto, user); }
 
   @Post('submit') @Permissions(PERMISSIONS.APPLICATION_CREATE)
   submit(@Body() dto: CreateApplicationWithProfileDto, @CurrentUser() user: Actor) { return this.service.submit(dto, user); }
+
+  @Post('submit-draft') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
+  submitDraft(@Body() dto: CreateApplicationWithProfileDto & { applicationId: number }, @CurrentUser() user: Actor) {
+    return this.service.submitDraft(dto.applicationId, dto, user);
+  }
 
   @Get(':applicationId') @Permissions(PERMISSIONS.APPLICATION_READ)
   findOne(@Param('applicationId', ParseIntPipe) id: number) { return this.service.findOne(id); }
