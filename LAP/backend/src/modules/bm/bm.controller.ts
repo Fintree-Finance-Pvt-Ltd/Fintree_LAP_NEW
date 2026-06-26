@@ -27,6 +27,17 @@ export class BmController {
     };
   }
 
+
+   @Get("approved")
+  async getApprovedToBmCases() {
+    const applications =
+      await this.bmReviewsService.getApprovedToBmCases();
+
+    return {
+      success: true,
+      applications,
+    };
+  }
   // GET /api/bm-reviews/application/25
   @Get("application/:applicationId")
   async getReview(

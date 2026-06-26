@@ -102,6 +102,84 @@ export class BmReviewsService {
     }
   }
 
+
+    async getApprovedToBmCases() {
+    try {
+      const rows =
+        await this.dataSource.query(`
+          SELECT
+            a.id,
+            a.application_number AS applicationNumber,
+            a.customer_name AS customerName,
+            a.mobile AS mobileNumber,
+            a.pan AS panNumber,
+            a.requested_amount AS requestedAmount,
+            a.stage,
+            a.status,
+            a.version,
+            a.assigned_to AS assignedTo,
+            a.created_at AS createdAt,
+            a.updated_at AS updatedAt
+          FROM applications a
+          WHERE
+            a.stage = 'BM'
+            AND a.status = 'BM_APPROVED'
+          ORDER BY a.updated_at DESC
+        `);
+
+      return rows.map(
+        (row: Record<string, any>) => ({
+          id: Number(row.id),
+
+          applicationNumber:
+            row.applicationNumber,
+
+          customerName:
+            row.customerName,
+
+          mobileNumber:
+            row.mobileNumber,
+
+          panNumber:
+            row.panNumber,
+
+          requestedAmount: Number(
+            row.requestedAmount ?? 0,
+          ),
+
+          stage: row.stage,
+
+          status: row.status,
+
+          version: Number(
+            row.version ?? 0,
+          ),
+
+          assignedTo:
+            row.assignedTo !== null
+              ? Number(row.assignedTo)
+              : null,
+
+          createdAt:
+            row.createdAt,
+
+          updatedAt:
+            row.updatedAt,
+        }),
+      );
+    } catch (error) {
+      this.logger.error(
+        "Unable to fetch BM review queue",
+        error instanceof Error
+          ? error.stack
+          : String(error),
+      );
+
+      throw new InternalServerErrorException(
+        "Unable to fetch BM review queue.",
+      );
+    }
+  }
   /**
    * Get one application for detailed BM review.
    */
