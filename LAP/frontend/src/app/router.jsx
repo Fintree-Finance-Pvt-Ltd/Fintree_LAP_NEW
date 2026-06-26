@@ -28,6 +28,7 @@ import RolesAccess from '../features/ADMIN/pages/rolesAccess.jsx';
 
 import BmDashboard from '../features/BM/pages/BmDashboard.jsx'
 import BMReview from '../features/BM/pages/BMReview.jsx';
+import BMApproved from '../features/BM/pages/BmApproved.jsx';
 // import BMReviewQueue from '../features/BM/pages/ReviewQueue.jsx';
 
 const protectedChildren = [
@@ -43,6 +44,7 @@ const protectedChildren = [
   { path: '/bmReview', element: <BMReview /> },
   {path: "/bmReview/:applicationId", element: <BMReview />,},
   { path: '/roles-access', element: <RolesAccess /> },
+  {path: "/bmApproved", element: <BMApproved />,},
 
 
   { path: '/my-leads', element: <MyLeads /> },

@@ -8,6 +8,12 @@ export const bmReviewApi = {
       config,
     ),
 
+      getApproved: (config = {}) =>
+    apiClient.get(
+      "/bm-reviews/approved",
+      config,
+    ),
+    
   getByApplicationId: (
     applicationId,
     config = {},
