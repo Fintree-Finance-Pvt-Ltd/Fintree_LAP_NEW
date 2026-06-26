@@ -1,0 +1,81 @@
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Post,
+} from '@nestjs/common';
+
+import {
+  ApiTags,
+} from '@nestjs/swagger';
+
+import { OtpService } from './otp.service';
+
+@ApiTags('OTP')
+@Controller('otp')
+export class OtpController {
+  constructor(
+    private readonly otpService:
+      OtpService,
+  ) {}
+
+  /*
+   * Both routes work:
+   *
+   * POST /api/otp/send
+   * POST /api/otp/send-otp
+   */
+  @Post([
+    'send',
+    'send-otp',
+  ])
+  sendOtp(
+    @Body()
+    body: Record<string, unknown>,
+  ) {
+    if (
+      !body ||
+      typeof body !== 'object'
+    ) {
+      throw new BadRequestException(
+        'Request body is required.',
+      );
+    }
+
+    return this.otpService.sendOtp(
+      body.mobile,
+      body.applicationId,
+    );
+  }
+
+  /*
+   * Both routes work:
+   *
+   * POST /api/otp/verify
+   * POST /api/otp/verify-otp
+   */
+  @Post([
+    'verify',
+    'verify-otp',
+  ])
+  verifyOtp(
+    @Body()
+    body: Record<string, unknown>,
+  ) {
+    if (
+      !body ||
+      typeof body !== 'object'
+    ) {
+      throw new BadRequestException(
+        'Request body is required.',
+      );
+    }
+
+    return this.otpService.verifyOtp(
+      body.mobile,
+      body.otp,
+      body.consentText,
+      body.applicationId,
+    );
+  }
+}
