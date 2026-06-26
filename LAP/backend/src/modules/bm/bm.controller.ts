@@ -1,37 +1,4 @@
-// import {
-//   Controller,
-//   Get,
-//   Param,
-//   ParseIntPipe,
-// } from "@nestjs/common";
-// import { BmService } from "./bm.service";
 
-// @Controller("bm-reviews")
-// export class BmController {
-//   constructor(
-//     private readonly bmService:
-//       BmService,
-//   ) {}
-
-//   @Get(":applicationId")
-//   async getReview(
-//     @Param(
-//       "applicationId",
-//       ParseIntPipe,
-//     )
-//     applicationId: number,
-//   ) {
-//     const data =
-//       await this.bmService.getReview(
-//         applicationId,
-//       );
-
-//     return {
-//       success: true,
-//       data,
-//     };
-//   }
-// }
 
 import {
   Controller,

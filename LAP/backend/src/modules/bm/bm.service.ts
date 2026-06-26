@@ -1,331 +1,3 @@
-// import {
-//   BadRequestException,
-//   Injectable,
-//   NotFoundException,
-// } from "@nestjs/common";
-// import { DataSource } from "typeorm";
-
-// const DEFAULT_CHECKLIST = [
-//   {
-//     code: "SOURCE_VERIFIED",
-//     title: "Source and partner verified",
-//     sortOrder: 1,
-//   },
-//   {
-//     code: "APPLICANT_CONTACTED",
-//     title: "Applicant contacted",
-//     sortOrder: 2,
-//   },
-//   {
-//     code: "DUPLICATE_CHECKED",
-//     title: "Duplicate PAN/mobile checked",
-//     sortOrder: 3,
-//   },
-//   {
-//     code: "FIELD_VISIT_ACCEPTABLE",
-//     title: "Field visit acceptable",
-//     sortOrder: 4,
-//   },
-//   {
-//     code: "GEO_WITHIN_RADIUS",
-//     title: "Geo within permitted radius",
-//     sortOrder: 5,
-//   },
-//   {
-//     code: "DOCUMENTS_AVAILABLE",
-//     title: "Minimum documents available",
-//     sortOrder: 6,
-//   },
-//   {
-//     code: "LOAN_PURPOSE_ACCEPTABLE",
-//     title: "Loan purpose acceptable",
-//     sortOrder: 7,
-//   },
-//   {
-//     code: "NO_NEGATIVE_FINDING",
-//     title: "No negative field finding",
-//     sortOrder: 8,
-//   },
-// ];
-
-// @Injectable()
-// export class BmService {
-//   constructor(
-//     private readonly dataSource: DataSource,
-//   ) {}
-
-//   async getReview(applicationId: number) {
-//     if (
-//       !Number.isInteger(applicationId) ||
-//       applicationId <= 0
-//     ) {
-//       throw new BadRequestException(
-//         "A valid application ID is required.",
-//       );
-//     }
-
-//     const applications =
-//       await this.dataSource.query(
-//         `
-//           SELECT
-//             la.id,
-//             la.application_number,
-//             la.customer_name,
-//             la.requested_amount,
-//             la.monthly_income,
-//             la.foir,
-//             la.indicative_ltv,
-//             la.distance_km,
-//             la.current_stage,
-
-//             (
-//               SELECT COUNT(*)
-//               FROM loan_documents ld
-//               WHERE ld.application_id = la.id
-//                 AND ld.status IN (
-//                   'UPLOADED',
-//                   'VERIFIED'
-//                 )
-//             ) AS documents_uploaded,
-
-//             COALESCE(
-//               la.documents_required,
-//               16
-//             ) AS documents_required
-
-//           FROM loan_applications la
-//           WHERE la.id = ?
-//           LIMIT 1
-//         `,
-//         [applicationId],
-//       );
-
-//     const application = applications[0];
-
-//     if (!application) {
-//       throw new NotFoundException(
-//         `Application ${applicationId} was not found.`,
-//       );
-//     }
-
-//     await this.ensureChecklistExists(
-//       applicationId,
-//     );
-
-//     const checklist =
-//       await this.dataSource.query(
-//         `
-//           SELECT
-//             id,
-//             item_code,
-//             title,
-//             checked,
-//             sort_order
-//           FROM bm_review_checklist
-//           WHERE application_id = ?
-//           ORDER BY sort_order ASC, id ASC
-//         `,
-//         [applicationId],
-//       );
-
-//     const reviews =
-//       await this.dataSource.query(
-//         `
-//           SELECT
-//             id,
-//             sourcing_quality,
-//             geo_decision,
-//             preliminary_eligibility,
-//             remarks,
-//             status
-//           FROM bm_reviews
-//           WHERE application_id = ?
-//           LIMIT 1
-//         `,
-//         [applicationId],
-//       );
-
-//     const review = reviews[0] ?? null;
-
-//     return {
-//       application: {
-//         id: Number(application.id),
-
-//         applicationNumber:
-//           application.application_number,
-
-//         customerName:
-//           application.customer_name,
-
-//         requestedAmount: Number(
-//           application.requested_amount ?? 0,
-//         ),
-
-//         monthlyIncome: Number(
-//           application.monthly_income ?? 0,
-//         ),
-
-//         foir: Number(application.foir ?? 0),
-
-//         indicativeLtv: Number(
-//           application.indicative_ltv ?? 0,
-//         ),
-
-//         distanceKm: Number(
-//           application.distance_km ?? 0,
-//         ),
-
-//         documentsUploaded: Number(
-//           application.documents_uploaded ?? 0,
-//         ),
-
-//         documentsRequired: Number(
-//           application.documents_required ?? 0,
-//         ),
-
-//         currentStage:
-//           application.current_stage ??
-//           "BM_REVIEW",
-//       },
-
-//       stages: this.buildStages(
-//         application.current_stage,
-//       ),
-
-//       checklist: checklist.map(
-//         (item: Record<string, unknown>) => ({
-//           id: Number(item.id),
-//           code: String(item.item_code),
-//           title: String(item.title),
-//           checked: Boolean(item.checked),
-//         }),
-//       ),
-
-//       review: {
-//         sourcingQuality:
-//           review?.sourcing_quality ?? "Good",
-
-//         geoDecision:
-//           review?.geo_decision ??
-//           "Within Policy",
-
-//         preliminaryEligibility:
-//           review?.preliminary_eligibility ??
-//           "Eligible",
-
-//         remarks: review?.remarks ?? "",
-
-//         status: review?.status ?? "DRAFT",
-//       },
-//     };
-//   }
-
-//   private async ensureChecklistExists(
-//     applicationId: number,
-//   ) {
-//     const countResult =
-//       await this.dataSource.query(
-//         `
-//           SELECT COUNT(*) AS total
-//           FROM bm_review_checklist
-//           WHERE application_id = ?
-//         `,
-//         [applicationId],
-//       );
-
-//     const total = Number(
-//       countResult[0]?.total ?? 0,
-//     );
-
-//     if (total > 0) {
-//       return;
-//     }
-
-//     await this.dataSource.transaction(
-//       async (manager) => {
-//         for (const item of DEFAULT_CHECKLIST) {
-//           await manager.query(
-//             `
-//               INSERT INTO bm_review_checklist
-//               (
-//                 application_id,
-//                 item_code,
-//                 title,
-//                 checked,
-//                 sort_order
-//               )
-//               VALUES (?, ?, ?, 0, ?)
-//             `,
-//             [
-//               applicationId,
-//               item.code,
-//               item.title,
-//               item.sortOrder,
-//             ],
-//           );
-//         }
-//       },
-//     );
-//   }
-
-//   private buildStages(
-//     currentStage?: string,
-//   ) {
-//     const stages = [
-//       {
-//         key: "LEAD",
-//         label: "Lead",
-//       },
-//       {
-//         key: "FIELD_VERIFICATION",
-//         label: "Field Verification",
-//       },
-//       {
-//         key: "BM_REVIEW",
-//         label: "BM Review",
-//       },
-//       {
-//         key: "CM_SCREENING",
-//         label: "CM Screening",
-//       },
-//       {
-//         key: "CREDIT",
-//         label: "Credit",
-//       },
-//       {
-//         key: "LEGAL_VALUATION",
-//         label: "Legal & Valuation",
-//       },
-//       {
-//         key: "SANCTION",
-//         label: "Sanction",
-//       },
-//     ];
-
-//     const normalizedCurrentStage =
-//       currentStage || "BM_REVIEW";
-
-//     const currentIndex = stages.findIndex(
-//       (stage) =>
-//         stage.key === normalizedCurrentStage,
-//     );
-
-//     const effectiveIndex =
-//       currentIndex >= 0 ? currentIndex : 2;
-
-//     return stages.map((stage, index) => ({
-//       ...stage,
-
-//       status:
-//         index < effectiveIndex
-//           ? "completed"
-//           : index === effectiveIndex
-//             ? "current"
-//             : "pending",
-//     }));
-//   }
-// }
-
 
 
 import {
@@ -433,60 +105,352 @@ export class BmReviewsService {
   /**
    * Get one application for detailed BM review.
    */
-  async getReview(applicationId: number) {
-    try {
-      const rows =
-        await this.dataSource.query(
-          `
-            SELECT
-              a.id,
-              a.application_number AS applicationNumber,
-              a.customer_name AS customerName,
-              a.mobile AS mobileNumber,
-              a.pan AS panNumber,
-              a.requested_amount AS requestedAmount,
-              a.stage,
-              a.status,
-              a.version,
-              a.assigned_to AS assignedTo,
-              a.created_at AS createdAt,
-              a.updated_at AS updatedAt
-            FROM applications a
-            WHERE a.id = ?
-            LIMIT 1
-          `,
-          [applicationId],
-        );
+  // async getReview(applicationId: number) {
+  //   try {
+  //     const rows =
+  //       await this.dataSource.query(
+  //         `
+  //           SELECT
+  //             a.id,
+  //             a.application_number AS applicationNumber,
+  //             a.customer_name AS customerName,
+  //             a.mobile AS mobileNumber,
+  //             a.pan AS panNumber,
+  //             a.requested_amount AS requestedAmount,
+  //             a.stage,
+  //             a.status,
+  //             a.version,
+  //             a.assigned_to AS assignedTo,
+  //             a.created_at AS createdAt,
+  //             a.updated_at AS updatedAt
+  //           FROM applications a
+  //           WHERE a.id = ?
+  //           LIMIT 1
+  //         `,
+  //         [applicationId],
+  //       );
 
-      if (!rows.length) {
-        throw new NotFoundException(
-          `Application ${applicationId} was not found.`,
-        );
+  //     if (!rows.length) {
+  //       throw new NotFoundException(
+  //         `Application ${applicationId} was not found.`,
+  //       );
+  //     }
+
+  //     const row = rows[0];
+
+  //     const application = {
+  //       id: Number(row.id),
+
+  //       applicationNumber:
+  //         row.applicationNumber,
+
+  //       customerName:
+  //         row.customerName,
+
+  //       mobileNumber:
+  //         row.mobileNumber,
+
+  //       panNumber:
+  //         row.panNumber,
+
+  //       requestedAmount: Number(
+  //         row.requestedAmount ?? 0,
+  //       ),
+
+  //       stage: row.stage,
+
+  //       status: row.status,
+
+  //       version: Number(
+  //         row.version ?? 0,
+  //       ),
+
+  //       assignedTo:
+  //         row.assignedTo !== null
+  //           ? Number(row.assignedTo)
+  //           : null,
+
+  //       createdAt:
+  //         row.createdAt,
+
+  //       updatedAt:
+  //         row.updatedAt,
+
+  //       // These values are unavailable in the applications table.
+  //       monthlyIncome: 0,
+  //       foir: 0,
+  //       indicativeLtv: 0,
+  //       distanceKm: 0,
+  //       documentsUploaded: 0,
+  //       documentsRequired: 0,
+  //     };
+
+  //     return {
+  //       application,
+
+  //       stages: [
+  //         {
+  //           key: "LEAD",
+  //           label: "Lead",
+  //           status: "completed",
+  //         },
+  //         {
+  //           key: "FIELD_VERIFICATION",
+  //           label: "Field Verification",
+  //           status: "completed",
+  //         },
+  //         {
+  //           key: "BM_REVIEW",
+  //           label: "BM Review",
+  //           status: "current",
+  //         },
+  //         {
+  //           key: "CM_SCREENING",
+  //           label: "CM Screening",
+  //           status: "pending",
+  //         },
+  //         {
+  //           key: "CREDIT",
+  //           label: "Credit",
+  //           status: "pending",
+  //         },
+  //         {
+  //           key: "LEGAL_VALUATION",
+  //           label: "Legal & Valuation",
+  //           status: "pending",
+  //         },
+  //         {
+  //           key: "SANCTION",
+  //           label: "Sanction",
+  //           status: "pending",
+  //         },
+  //       ],
+
+  //       checklist: [],
+
+  //       review: {
+  //         sourcingQuality: "Good",
+  //         geoDecision: "Within Policy",
+  //         preliminaryEligibility:
+  //           "Eligible",
+  //         remarks: "",
+  //       },
+  //     };
+  //   } catch (error) {
+  //     if (
+  //       error instanceof NotFoundException
+  //     ) {
+  //       throw error;
+  //     }
+
+  //     this.logger.error(
+  //       `Unable to fetch BM review for application ${applicationId}`,
+  //       error instanceof Error
+  //         ? error.stack
+  //         : String(error),
+  //     );
+
+  //     throw new InternalServerErrorException(
+  //       "Unable to fetch BM review details.",
+  //     );
+  //   }
+  // }
+
+
+
+  async getReview(applicationId: number) {
+  try {
+    const rows = await this.dataSource.query(
+      `
+        SELECT
+          /* Application */
+          a.id,
+          a.application_number AS applicationNumber,
+          a.customer_name AS applicationCustomerName,
+          a.mobile AS applicationMobile,
+          a.pan AS applicationPan,
+          a.requested_amount AS requestedAmount,
+          a.stage,
+          a.status,
+          a.version,
+          a.assigned_to AS assignedTo,
+          a.created_at AS applicationCreatedAt,
+          a.updated_at AS applicationUpdatedAt,
+
+          /* Customer profile */
+          cp.customer_type AS customerType,
+          cp.first_name AS firstName,
+          cp.middle_name AS middleName,
+          cp.last_name AS lastName,
+          cp.mobile AS customerMobile,
+          cp.email,
+          cp.dob,
+          cp.gender,
+          cp.marital_status AS maritalStatus,
+          cp.education,
+          cp.occupation_type AS occupationType,
+          cp.business_name AS businessName,
+          cp.designation,
+
+          /* Income */
+          cp.monthly_income AS monthlyIncome,
+          cp.annual_income AS annualIncome,
+
+          /* KYC */
+          cp.pan_number AS customerPan,
+          cp.pan_verified AS panVerified,
+          cp.aadhaar_number AS aadhaarNumber,
+          cp.aadhaar_verified AS aadhaarVerified,
+          cp.ckyc_number AS ckycNumber,
+          cp.ckyc_verified AS ckycVerified,
+
+          /* Bureau */
+          cp.bureau_score AS bureauScore,
+          cp.bureau_status AS bureauStatus,
+
+          /* Current address */
+          cp.current_address AS currentAddress,
+          cp.current_city AS currentCity,
+          cp.current_state AS currentState,
+          cp.current_pincode AS currentPincode,
+
+          /* Permanent address */
+          cp.permanent_address AS permanentAddress,
+          cp.permanent_city AS permanentCity,
+          cp.permanent_state AS permanentState,
+          cp.permanent_pincode AS permanentPincode,
+
+          /* Property */
+          cp.property_type AS propertyType,
+          cp.property_address AS propertyAddress,
+          cp.property_city AS propertyCity,
+          cp.property_state AS propertyState,
+          cp.property_pincode AS propertyPincode,
+          cp.ownership_type AS ownershipType,
+          cp.market_value AS marketValue,
+          cp.distress_value AS distressValue,
+
+          /* Banking */
+          cp.bank_name AS bankName,
+          cp.account_number AS accountNumber,
+          cp.ifsc,
+          cp.branch_name AS branchName,
+          cp.average_balance AS averageBalance,
+
+          /* Eligibility */
+          cp.foir,
+          cp.eligible_amount AS eligibleAmount,
+          cp.roi,
+          cp.tenure,
+          cp.emi,
+
+          /* RM recommendation */
+          cp.recommended_amount AS recommendedAmount,
+          cp.recommended_roi AS recommendedRoi,
+          cp.recommended_tenure AS recommendedTenure,
+          cp.rm_recommendation AS rmRecommendation,
+          cp.remarks AS rmRemarks
+
+        FROM applications a
+
+        LEFT JOIN customer_profiles cp
+          ON cp.application_id = a.id
+
+        WHERE a.id = ?
+        LIMIT 1
+      `,
+      [applicationId],
+    );
+
+    if (!rows.length) {
+      throw new NotFoundException(
+        `Application ${applicationId} was not found.`,
+      );
+    }
+
+    const row = rows[0];
+
+    const toNumberOrNull = (
+      value: unknown,
+    ): number | null => {
+      if (
+        value === null ||
+        value === undefined ||
+        value === ""
+      ) {
+        return null;
       }
 
-      const row = rows[0];
+      const numberValue = Number(value);
 
-      const application = {
+      return Number.isFinite(numberValue)
+        ? numberValue
+        : null;
+    };
+
+    const requestedAmount =
+      toNumberOrNull(row.requestedAmount);
+
+    const marketValue =
+      toNumberOrNull(row.marketValue);
+
+    const distressValue =
+      toNumberOrNull(row.distressValue);
+
+    const indicativeLtv =
+      requestedAmount !== null &&
+      marketValue !== null &&
+      marketValue > 0
+        ? Number(
+            (
+              (requestedAmount / marketValue) *
+              100
+            ).toFixed(2),
+          )
+        : null;
+
+    const distressLtv =
+      requestedAmount !== null &&
+      distressValue !== null &&
+      distressValue > 0
+        ? Number(
+            (
+              (requestedAmount / distressValue) *
+              100
+            ).toFixed(2),
+          )
+        : null;
+
+    const fullName = [
+      row.firstName,
+      row.middleName,
+      row.lastName,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return {
+      application: {
         id: Number(row.id),
 
         applicationNumber:
           row.applicationNumber,
 
         customerName:
-          row.customerName,
+          fullName ||
+          row.applicationCustomerName,
 
         mobileNumber:
-          row.mobileNumber,
+          row.customerMobile ||
+          row.applicationMobile,
 
         panNumber:
-          row.panNumber,
+          row.customerPan ||
+          row.applicationPan,
 
-        requestedAmount: Number(
-          row.requestedAmount ?? 0,
-        ),
+        requestedAmount,
 
         stage: row.stage,
-
         status: row.status,
 
         version: Number(
@@ -499,88 +463,353 @@ export class BmReviewsService {
             : null,
 
         createdAt:
-          row.createdAt,
+          row.applicationCreatedAt,
 
         updatedAt:
-          row.updatedAt,
+          row.applicationUpdatedAt,
+      },
 
-        // These values are unavailable in the applications table.
-        monthlyIncome: 0,
-        foir: 0,
-        indicativeLtv: 0,
-        distanceKm: 0,
-        documentsUploaded: 0,
-        documentsRequired: 0,
-      };
+      applicant: {
+        fullName,
 
-      return {
-        application,
+        customerType:
+          row.customerType,
 
-        stages: [
-          {
-            key: "LEAD",
-            label: "Lead",
-            status: "completed",
-          },
-          {
-            key: "FIELD_VERIFICATION",
-            label: "Field Verification",
-            status: "completed",
-          },
-          {
-            key: "BM_REVIEW",
-            label: "BM Review",
-            status: "current",
-          },
-          {
-            key: "CM_SCREENING",
-            label: "CM Screening",
-            status: "pending",
-          },
-          {
-            key: "CREDIT",
-            label: "Credit",
-            status: "pending",
-          },
-          {
-            key: "LEGAL_VALUATION",
-            label: "Legal & Valuation",
-            status: "pending",
-          },
-          {
-            key: "SANCTION",
-            label: "Sanction",
-            status: "pending",
-          },
-        ],
+        firstName:
+          row.firstName,
 
-        checklist: [],
+        middleName:
+          row.middleName,
 
-        review: {
-          sourcingQuality: "Good",
-          geoDecision: "Within Policy",
-          preliminaryEligibility:
-            "Eligible",
-          remarks: "",
+        lastName:
+          row.lastName,
+
+        mobile:
+          row.customerMobile ||
+          row.applicationMobile,
+
+        email:
+          row.email,
+
+        dob:
+          row.dob,
+
+        gender:
+          row.gender,
+
+        maritalStatus:
+          row.maritalStatus,
+
+        education:
+          row.education,
+
+        occupationType:
+          row.occupationType,
+
+        businessName:
+          row.businessName,
+
+        designation:
+          row.designation,
+      },
+
+      kycSummary: {
+        panNumber:
+          row.customerPan ||
+          row.applicationPan,
+
+        panVerified:
+          Boolean(
+            Number(row.panVerified ?? 0),
+          ),
+
+        aadhaarNumber:
+          row.aadhaarNumber,
+
+        aadhaarVerified:
+          Boolean(
+            Number(
+              row.aadhaarVerified ?? 0,
+            ),
+          ),
+
+        ckycNumber:
+          row.ckycNumber,
+
+        ckycVerified:
+          Boolean(
+            Number(row.ckycVerified ?? 0),
+          ),
+      },
+
+      bureauSummary: {
+        score:
+          toNumberOrNull(row.bureauScore),
+
+        status:
+          row.bureauStatus ??
+          "NOT_PULLED",
+      },
+
+      addressSummary: {
+        current: {
+          address:
+            row.currentAddress,
+
+          city:
+            row.currentCity,
+
+          state:
+            row.currentState,
+
+          pincode:
+            row.currentPincode,
         },
-      };
-    } catch (error) {
-      if (
-        error instanceof NotFoundException
-      ) {
-        throw error;
-      }
 
-      this.logger.error(
-        `Unable to fetch BM review for application ${applicationId}`,
-        error instanceof Error
-          ? error.stack
-          : String(error),
-      );
+        permanent: {
+          address:
+            row.permanentAddress,
 
-      throw new InternalServerErrorException(
-        "Unable to fetch BM review details.",
-      );
+          city:
+            row.permanentCity,
+
+          state:
+            row.permanentState,
+
+          pincode:
+            row.permanentPincode,
+        },
+      },
+
+      propertySummary: {
+        type:
+          row.propertyType,
+
+        address:
+          row.propertyAddress,
+
+        city:
+          row.propertyCity,
+
+        state:
+          row.propertyState,
+
+        pincode:
+          row.propertyPincode,
+
+        ownershipType:
+          row.ownershipType,
+
+        marketValue,
+        distressValue,
+        indicativeLtv,
+        distressLtv,
+      },
+
+      financialSummary: {
+        monthlyIncome:
+          toNumberOrNull(
+            row.monthlyIncome,
+          ),
+
+        annualIncome:
+          toNumberOrNull(
+            row.annualIncome,
+          ),
+
+        averageBalance:
+          toNumberOrNull(
+            row.averageBalance,
+          ),
+
+        foir:
+          toNumberOrNull(row.foir),
+
+        eligibleAmount:
+          toNumberOrNull(
+            row.eligibleAmount,
+          ),
+
+        roi:
+          toNumberOrNull(row.roi),
+
+        tenure:
+          toNumberOrNull(row.tenure),
+
+        emi:
+          toNumberOrNull(row.emi),
+      },
+
+      bankSummary: {
+        bankName:
+          row.bankName,
+
+        accountNumber:
+          row.accountNumber,
+
+        ifsc:
+          row.ifsc,
+
+        branchName:
+          row.branchName,
+
+        averageBalance:
+          toNumberOrNull(
+            row.averageBalance,
+          ),
+      },
+
+      rmRecommendation: {
+        recommendedAmount:
+          toNumberOrNull(
+            row.recommendedAmount,
+          ),
+
+        recommendedRoi:
+          toNumberOrNull(
+            row.recommendedRoi,
+          ),
+
+        recommendedTenure:
+          toNumberOrNull(
+            row.recommendedTenure,
+          ),
+
+        recommendation:
+          row.rmRecommendation,
+
+        remarks:
+          row.rmRemarks,
+      },
+
+      stages: [
+        {
+          key: "LEAD",
+          label: "Lead",
+          status: "completed",
+        },
+        {
+          key: "FIELD_VERIFICATION",
+          label: "Field Verification",
+          status: "completed",
+        },
+        {
+          key: "BM_REVIEW",
+          label: "BM Review",
+          status: "current",
+        },
+        {
+          key: "CM_SCREENING",
+          label: "CM Screening",
+          status: "pending",
+        },
+        {
+          key: "CREDIT",
+          label: "Credit",
+          status: "pending",
+        },
+        {
+          key: "LEGAL_VALUATION",
+          label: "Legal & Valuation",
+          status: "pending",
+        },
+        {
+          key: "SANCTION",
+          label: "Sanction",
+          status: "pending",
+        },
+      ],
+
+      checklist: [
+        {
+          id: 1,
+          code: "APPLICANT_REVIEWED",
+          title:
+            "Applicant details reviewed",
+          checked: false,
+        },
+        {
+          id: 2,
+          code: "KYC_REVIEWED",
+          title:
+            "KYC verification reviewed",
+          checked: false,
+        },
+        {
+          id: 3,
+          code: "BUREAU_REVIEWED",
+          title:
+            "Bureau score and status reviewed",
+          checked: false,
+        },
+        {
+          id: 4,
+          code: "PROPERTY_REVIEWED",
+          title:
+            "Property and ownership details reviewed",
+          checked: false,
+        },
+        {
+          id: 5,
+          code: "FINANCIAL_REVIEWED",
+          title:
+            "Income, FOIR and eligibility reviewed",
+          checked: false,
+        },
+        {
+          id: 6,
+          code: "BANKING_REVIEWED",
+          title:
+            "Banking information reviewed",
+          checked: false,
+        },
+        {
+          id: 7,
+          code:
+            "RM_RECOMMENDATION_REVIEWED",
+          title:
+            "RM recommendation reviewed",
+          checked: false,
+        },
+        {
+          id: 8,
+          code: "NO_MAJOR_NEGATIVE",
+          title:
+            "No unresolved major negative finding",
+          checked: false,
+        },
+      ],
+
+      review: {
+        sourcingQuality:
+          "Good",
+
+        geoDecision:
+          "Within Policy",
+
+        preliminaryEligibility:
+          "Eligible",
+
+        remarks: "",
+      },
+    };
+  } catch (error) {
+    if (
+      error instanceof NotFoundException
+    ) {
+      throw error;
     }
+
+    this.logger.error(
+      `Unable to fetch BM review for application ${applicationId}`,
+      error instanceof Error
+        ? error.stack
+        : String(error),
+    );
+
+    throw new InternalServerErrorException(
+      "Unable to fetch BM review details.",
+    );
   }
+}
 }

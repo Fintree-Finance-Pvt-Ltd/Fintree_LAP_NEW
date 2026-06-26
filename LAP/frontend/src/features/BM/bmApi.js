@@ -1,15 +1,3 @@
-// import { apiClient } from "../../services/apiClient.js";
-
-// export const bmApi = {
-//   getByApplicationId: (
-//     applicationId,
-//     config = {},
-//   ) =>
-//     apiClient.get(
-//       `/bm-reviews/${applicationId}`,
-//       config,
-//     ),
-// };
 
 import { apiClient } from "../../services/apiClient.js";
 
