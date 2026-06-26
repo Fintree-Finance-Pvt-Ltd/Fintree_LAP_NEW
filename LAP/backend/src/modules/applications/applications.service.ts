@@ -91,17 +91,6 @@ export class ApplicationsService {
         return { data: saved };
       }
 
-      // Create path: require verificationToken and create application ONLY once.
-      // Reuse draft if it was already created for this token/application.
-      const createdByOtp = await manager.query(
-        `SELECT 1 AS ok FROM mobile_otp_sessions WHERE verification_token = ? AND verified_at IS NOT NULL`,
-        [dto.verificationToken],
-      );
-
-      if (!createdByOtp?.length) {
-        throw new BadRequestException('OTP not verified');
-      }
-
       // If a draft already exists for this mobile + customerName in DRAFT, reuse it.
       // (Best-effort de-duplication in absence of a direct token->application mapping table.)
       const existingDraft = await manager.findOne(Application, {
@@ -181,22 +170,9 @@ export class ApplicationsService {
   }
 
   async submitDraft(applicationId: number, dto: CreateApplicationWithProfileDto, actor: Actor) {
-    const errors: string[] = [];
-    if (!dto.customerName?.trim()) errors.push('customerName is required');
-    if (!dto.mobile?.trim()) errors.push('mobile is required');
-    if (!dto.pan?.trim()) errors.push('pan is required');
-    if (!dto.aadhaarNumber?.trim()) errors.push('aadhaarNumber is required');
-    if (!dto.requestedAmount) errors.push('requestedAmount is required');
-    if (!dto.occupationType) errors.push('occupationType is required');
-    if (!dto.monthlyIncome && dto.monthlyIncome !== 0) errors.push('monthlyIncome is required');
-    if (!dto.propertyType?.trim()) errors.push('propertyType is required');
-    if (!dto.marketValue && dto.marketValue !== 0) errors.push('marketValue is required');
-    if (!dto.propertyAddress?.trim()) errors.push('propertyAddress is required');
-    if (!dto.propertyCity?.trim()) errors.push('propertyCity is required');
-    if (!dto.propertyState?.trim()) errors.push('propertyState is required');
-    if (!dto.propertyPincode?.trim()) errors.push('propertyPincode is required');
-    if (errors.length) throw new BadRequestException(errors.join(', '));
-
+    // Final submission validation is intentionally handled at the frontend.
+    // Backend here focuses on: correct status transition DRAFT -> LEAD_CREATED and persisting data.
+    // (We still guard the workflow transition itself.)
     return this.dataSource.transaction(async (manager) => {
       const application = await manager.findOne(Application, { where: { id: applicationId }, lock: { mode: 'pessimistic_write' } });
       if (!application) throw new NotFoundException('Application not found');

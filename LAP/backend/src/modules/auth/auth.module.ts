@@ -9,14 +9,15 @@ import { User } from '../users/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { Hub } from './entities/hub.entity';
-import { MobileOtpSession } from './entities/mobile-otp-session.entity';
+
 import { Organization } from './entities/organization.entity';
 import { Spoke } from './entities/spoke.entity';
 import { JwtStrategy } from './jwt.strategy';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, Permission, Spoke, Hub, Organization, MobileOtpSession]),
+    TypeOrmModule.forFeature([User, Role, Permission, Spoke, Hub, Organization]),
+
     PassportModule,
     JwtModule.registerAsync({ imports: [ConfigModule], inject: [ConfigService], useFactory: (config: ConfigService) => ({ secret: config.get('JWT_ACCESS_SECRET'), signOptions: { expiresIn: config.get('JWT_ACCESS_EXPIRES_IN') } }) })
   ],

@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { PartialType } from '@nestjs/swagger'; // Use mapped types if using swagger, or standard Partial
 import { PERMISSIONS } from '../../common/constants/permissions.constant';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -29,12 +30,18 @@ export class ApplicationsController {
   @Post() @Permissions(PERMISSIONS.APPLICATION_CREATE)
   create(@Body() dto: CreateApplicationDto, @CurrentUser() user: Actor) { return this.service.create(dto, user); }
 
+  // 1. ENDPOINT: POST /applications/draft
+  // Used to initialize a brand new lead in the database table with partial data
   @Post('draft') @Permissions(PERMISSIONS.APPLICATION_CREATE)
-  draft(@Body() dto: CreateApplicationWithProfileDto & { verificationToken?: string; applicationId?: number }, @CurrentUser() user: Actor) { return this.service.draft(dto, user); }
+  draft(@Body() dto: CreateApplicationWithProfileDto & { verificationToken?: string; applicationId?: number }, @CurrentUser() user: Actor) { 
+    return this.service.draft(dto, user); 
+  }
 
   @Post('submit') @Permissions(PERMISSIONS.APPLICATION_CREATE)
   submit(@Body() dto: CreateApplicationWithProfileDto, @CurrentUser() user: Actor) { return this.service.submit(dto, user); }
 
+  // 2. ENDPOINT: POST /applications/submit-draft
+  // Used to trigger final validation processing for workflow transitions
   @Post('submit-draft') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
   submitDraft(@Body() dto: CreateApplicationWithProfileDto & { applicationId: number }, @CurrentUser() user: Actor) {
     return this.service.submitDraft(dto.applicationId, dto, user);
@@ -43,31 +50,33 @@ export class ApplicationsController {
   @Get(':applicationId') @Permissions(PERMISSIONS.APPLICATION_READ)
   findOne(@Param('applicationId', ParseIntPipe) id: number) { return this.service.findOne(id); }
 
+  // 3. ENDPOINT: PATCH /applications/:applicationId
+  // FIXED: Changed DTO definition type to accept partial fields from the profile schema layout
   @Patch(':applicationId') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
-  update(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: UpdateApplicationDto, @CurrentUser() user: Actor) { return this.service.update(id, dto, user); }
+  update(
+    @Param('applicationId', ParseIntPipe) id: number, 
+    @Body() dto: Partial<CreateApplicationWithProfileDto>, // ✅ Allows single field modifications to save cleanly
+    @CurrentUser() user: Actor
+  ) { 
+    return this.service.update(id, dto, user); 
+  }
 
   @Put(':applicationId') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
-  replace(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: UpdateApplicationDto, @CurrentUser() user: Actor) { return this.service.update(id, dto, user); }
+  replace(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: Partial<CreateApplicationWithProfileDto>, @CurrentUser() user: Actor) { 
+    return this.service.update(id, dto, user); 
+  }
 
   @Delete(':applicationId') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
   remove(@Param('applicationId', ParseIntPipe) id: number) { return this.service.remove(id); }
 
-  @Post(':applicationId/visits')
-@Permissions(PERMISSIONS.VISIT_CREATE)
-addVisit(
-  @Param('applicationId', ParseIntPipe) id: number,
-  @Body()
-  body: {
-    visitType: string;
-    remarks?: string;
-    latitude?: number;
-    longitude?: number;
-    address?: string;
-  },
-  @CurrentUser() user: Actor,
-) {
-  return this.service.addVisit(id, body, user);
-}
+  @Post(':applicationId/visits') @Permissions(PERMISSIONS.VISIT_CREATE)
+  addVisit(
+    @Param('applicationId', ParseIntPipe) id: number,
+    @Body() body: { visitType: string; remarks?: string; latitude?: number; longitude?: number; address?: string; },
+    @CurrentUser() user: Actor,
+  ) {
+    return this.service.addVisit(id, body, user);
+  }
 
   @Get(':applicationId/visits') @Permissions(PERMISSIONS.APPLICATION_READ)
   listVisits(@Param('applicationId', ParseIntPipe) id: number) { return this.service.listVisits(id); }

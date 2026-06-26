@@ -128,7 +128,10 @@ export default function MyLeads() {
                         <Link to={`/applications/${lead.id}`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-[#0f2942] shadow-sm transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600">
                           View
                         </Link>
-                        <Link to={continueRoute} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700">
+                        <Link
+                          to={continueRoute}
+                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700"
+                        >
                           Continue Journey
                         </Link>
                       </div>

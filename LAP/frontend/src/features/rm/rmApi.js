@@ -19,6 +19,9 @@ export const rmApi = {
       },
     }),
 
+    // for RM Lead create this is call
+
+    
   createApplication: (payload) =>
     apiClient.post("/applications", payload),
 
@@ -45,15 +48,6 @@ export const rmApi = {
 
   deleteApplication: (applicationId) =>
     apiClient.delete(`/applications/${applicationId}`),
-
-  // =========================
-  // OTP
-  // =========================
-  sendMobileOtp: (payload) =>
-    apiClient.post("/auth/send-mobile-otp", payload),
-
-  verifyMobileOtp: (payload) =>
-    apiClient.post("/auth/verify-mobile-otp", payload),
 
   // =========================
   // CUSTOMER PROFILE

@@ -15,6 +15,8 @@ import fileConfig from './config/file.config';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { OtpModule } from './modules/otp/otp.module';
+
 import { BmModule } from './modules/bm/bm.module';
 import { CoApplicantsModule } from './modules/co-applicants/co-applicants.module';
 import { ContactPersonsModule } from './modules/contact-persons/contact-persons.module';
@@ -33,6 +35,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     ConfigModule.forRoot({ isGlobal: true, load: [appConfig, authConfig, fileConfig], validate: validateEnvironment }),
     TypeOrmModule.forRootAsync({ useFactory: databaseConfig }),
     AuthModule,
+    OtpModule,
     UsersModule,
     BmModule,
     RolesModule,
