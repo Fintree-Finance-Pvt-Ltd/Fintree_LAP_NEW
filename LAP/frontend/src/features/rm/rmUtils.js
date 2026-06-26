@@ -76,3 +76,54 @@ export const statusClass = (status) => {
 
   return statuses[status] || "bg-slate-100 text-slate-600";
 };
+
+
+
+export const PROPERTY_CATEGORY = [
+  "Residential",
+  "Commercial",
+  "Industrial",
+  "Land / Plot",
+];
+
+export const PROPERTY_TYPE = {
+  Residential: [
+    "Independent House",
+    "Flat / Apartment",
+    "Villa",
+    "Bungalow",
+    "Row House",
+    "Duplex",
+    "Penthouse",
+    "Residential Building",
+  ],
+  Commercial: [
+    "Office",
+    "Shop",
+    "Showroom",
+    "Commercial Building",
+    "Warehouse",
+    "Godown",
+    "Hotel",
+    "Restaurant",
+    "Hospital",
+    "School / College",
+    "Mall / Shopping Complex",
+  ],
+  Industrial: [
+    "Factory",
+    "Industrial Shed",
+    "Industrial Unit",
+    "Warehouse",
+    "Godown",
+    "Manufacturing Unit",
+    "Workshop",
+  ],
+  "Land / Plot": [
+    "Residential Plot",
+    "Commercial Plot",
+    "Industrial Plot",
+    "Agricultural Land",
+    "NA Land (Non-Agricultural)",
+  ],
+};

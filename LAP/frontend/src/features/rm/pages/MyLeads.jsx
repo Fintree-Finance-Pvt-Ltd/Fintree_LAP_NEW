@@ -16,14 +16,14 @@ export default function MyLeads() {
   });
 
   const rows = useMemo(() => {
-    const data = query.data?.data ?? [];
+  const data = query.data?.data ?? [];
 
-    // Per spec: My Leads should show DRAFT applications only.
-    const drafted = data.filter((item) => item.status === "DRAFT");
+  if (selectedStage === "All Stages") {
+    return data;
+  }
 
-    if (selectedStage === "All Stages") return drafted;
-    return drafted.filter((item) => item.stage === selectedStage);
-  }, [query.data, selectedStage]);
+  return data.filter((item) => item.stage === selectedStage);
+}, [query.data, selectedStage]);
 
   const workflowQueries = useQuery({
     queryKey: ["rm-workflow-overview"],

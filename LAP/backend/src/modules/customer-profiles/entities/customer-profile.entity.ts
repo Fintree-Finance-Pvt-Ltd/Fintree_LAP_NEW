@@ -40,6 +40,7 @@ export class CustomerProfile {
   @Column({ name: 'permanent_city', length: 100, nullable: true }) permanentCity?: string;
   @Column({ name: 'permanent_state', length: 100, nullable: true }) permanentState?: string;
   @Column({ name: 'permanent_pincode', length: 6, nullable: true }) permanentPincode?: string;
+  @Column({ name: 'property_category', length: 80, nullable: true }) propertyCategory?: string;
   @Column({ name: 'property_type', length: 80, nullable: true }) propertyType?: string;
   @Column({ name: 'property_address', type: 'text', nullable: true }) propertyAddress?: string;
   @Column({ name: 'property_city', length: 100, nullable: true }) propertyCity?: string;

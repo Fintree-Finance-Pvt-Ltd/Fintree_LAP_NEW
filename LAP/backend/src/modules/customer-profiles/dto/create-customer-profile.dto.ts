@@ -36,6 +36,7 @@ export class CreateCustomerProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() permanentCity?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() permanentState?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(6, 6) permanentPincode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() propertyCategory?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyType?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyAddress?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyCity?: string;

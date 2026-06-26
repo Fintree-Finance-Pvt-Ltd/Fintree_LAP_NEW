@@ -2,6 +2,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import * as path from "path";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { Logger } from "@nestjs/common";
@@ -34,6 +35,16 @@ async function bootstrap() {
     new ResponseInterceptor(),
     new TimeoutInterceptor(),
   );
+
+  const uploadDir = config.get<string>('UPLOAD_DIR') ?? 'uploads';
+  const express = (await import('express')).default;
+  app.use('/uploads', express.static(path.join(process.cwd(), uploadDir), {
+    etag: true,
+    lastModified: true,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    },
+  }));
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("LAP Documentation API")

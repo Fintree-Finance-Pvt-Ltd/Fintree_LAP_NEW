@@ -12,6 +12,7 @@ export class Document {
   application: Application;
   @Column({ name: 'document_type', type: 'enum', enum: DocumentType }) documentType: DocumentType;
   @Column({ name: 'document_name', length: 160 }) documentName: string;
+  @Column({ name: 'document_source', length: 40, nullable: true, default: 'OTHER' }) documentSource?: string;
   @Column({ name: 'file_name', length: 255 }) fileName: string;
   @Column({ name: 'file_path', length: 500 }) filePath: string;
   @Column({ name: 'file_size', type: 'bigint', unsigned: true }) fileSize: number;

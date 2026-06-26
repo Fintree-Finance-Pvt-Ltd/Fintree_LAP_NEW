@@ -1,40 +1,184 @@
-import axios from 'axios';
-import { tokenManager } from './tokenManager.js';
+import axios from "axios";
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 30000,
-  withCredentials: true
+  withCredentials: true,
 });
 
-apiClient.interceptors.request.use((config) => {
-  const token = tokenManager.getAccessToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  config.headers['X-Request-ID'] = crypto.randomUUID?.() ?? String(Date.now());
-  return config;
-});
+/* =========================================================
+   GET TOKEN FROM LOCAL STORAGE
+========================================================= */
+
+const getAccessToken = () => {
+  try {
+    const loginDetails = JSON.parse(
+      localStorage.getItem("loginDetails") || "{}",
+    );
+
+    return (
+      loginDetails?.accessToken ||
+      loginDetails?.data?.accessToken ||
+      localStorage.getItem("accessToken") ||
+      null
+    );
+  } catch (error) {
+    console.error("Unable to read access token:", error);
+
+    return localStorage.getItem("accessToken");
+  }
+};
+
+/* =========================================================
+   REQUEST INTERCEPTOR
+========================================================= */
+
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = getAccessToken();
+
+    config.headers = config.headers || {};
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    config.headers["X-Request-ID"] =
+      globalThis.crypto?.randomUUID?.() ||
+      String(Date.now());
+
+    /*
+     * Remove manually assigned Content-Type for FormData.
+     * Axios/browser will add the multipart boundary.
+     */
+    if (
+      typeof FormData !== "undefined" &&
+      config.data instanceof FormData
+    ) {
+      if (typeof config.headers.delete === "function") {
+        config.headers.delete("Content-Type");
+      } else {
+        delete config.headers["Content-Type"];
+        delete config.headers["content-type"];
+      }
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+/* =========================================================
+   TOKEN REFRESH
+========================================================= */
 
 let refreshPromise = null;
 
 apiClient.interceptors.response.use(
   (response) => response.data,
+
   async (error) => {
-    const original = error.config;
-    if (error.response?.status === 401 && !original?._retry && !original?.skipAuthRefresh && !original?.url?.includes('/auth/refresh')) {
-      original._retry = true;
-      refreshPromise ??= apiClient.post('/auth/refresh').finally(() => {
-        refreshPromise = null;
-      });
+    const originalRequest = error?.config;
+    const status = error?.response?.status;
+
+    const shouldRefresh =
+      status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.skipAuthRefresh &&
+      !originalRequest.url?.includes("/auth/refresh");
+
+    if (shouldRefresh) {
+      originalRequest._retry = true;
+
       try {
-        const refreshed = await refreshPromise;
-        tokenManager.setAccessToken(refreshed.data.accessToken);
-        original.headers.Authorization = `Bearer ${refreshed.data.accessToken}`;
-        return apiClient(original);
-      } catch {
-        tokenManager.clear();
-        window.location.assign('/login');
+        refreshPromise ??= apiClient
+          .post(
+            "/auth/refresh",
+            {},
+            {
+              skipAuthRefresh: true,
+            },
+          )
+          .finally(() => {
+            refreshPromise = null;
+          });
+
+        const refreshedResponse = await refreshPromise;
+
+        const newAccessToken =
+          refreshedResponse?.accessToken ||
+          refreshedResponse?.data?.accessToken;
+
+        if (!newAccessToken) {
+          throw new Error(
+            "Access token not returned from refresh API",
+          );
+        }
+
+        /*
+         * Store refreshed token in localStorage.
+         */
+        localStorage.setItem(
+          "accessToken",
+          newAccessToken,
+        );
+
+        try {
+          const loginDetails = JSON.parse(
+            localStorage.getItem("loginDetails") || "{}",
+          );
+
+          localStorage.setItem(
+            "loginDetails",
+            JSON.stringify({
+              ...loginDetails,
+              accessToken: newAccessToken,
+            }),
+          );
+        } catch (storageError) {
+          console.error(
+            "Unable to update loginDetails:",
+            storageError,
+          );
+        }
+
+        originalRequest.headers =
+          originalRequest.headers || {};
+
+        originalRequest.headers.Authorization =
+          `Bearer ${newAccessToken}`;
+
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("loginDetails");
+
+        if (window.location.pathname !== "/login") {
+          window.location.assign("/login");
+        }
+
+        return Promise.reject({
+          status: 401,
+          message: "Session expired. Please log in again.",
+        });
       }
     }
-    return Promise.reject(error.response?.data ?? { message: error.message });
-  }
+
+    const responseData = error?.response?.data;
+
+    return Promise.reject({
+      success: false,
+      status,
+      errorCode: responseData?.errorCode,
+      message:
+        responseData?.message ||
+        error?.message ||
+        "Request failed",
+      errors: responseData?.errors || [],
+      requestId:
+        responseData?.requestId ||
+        responseData?.["requestId "],
+    });
+  },
 );

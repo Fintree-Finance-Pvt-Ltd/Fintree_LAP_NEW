@@ -14,7 +14,9 @@ export const rmApi = {
 
   searchApplications: (searchTerm) =>
     apiClient.get("/applications/search", {
-      params: { q: searchTerm },
+      params: {
+        q: searchTerm,
+      },
     }),
 
   createApplication: (payload) =>
@@ -24,15 +26,10 @@ export const rmApi = {
     apiClient.post("/applications/draft", payload),
 
   submitDraft: (applicationId, payload) =>
-    apiClient.post("/applications/submit-draft", { ...payload, applicationId }),
-
-  // =========================
-  // OTP
-  // =========================
-  sendMobileOtp: (payload) =>
-    apiClient.post("/auth/send-mobile-otp", payload),
-  verifyMobileOtp: (payload) =>
-    apiClient.post("/auth/verify-mobile-otp", payload),
+    apiClient.post("/applications/submit-draft", {
+      ...payload,
+      applicationId,
+    }),
 
   submitApplication: (payload) =>
     apiClient.post("/applications/submit", payload),
@@ -50,6 +47,15 @@ export const rmApi = {
     apiClient.delete(`/applications/${applicationId}`),
 
   // =========================
+  // OTP
+  // =========================
+  sendMobileOtp: (payload) =>
+    apiClient.post("/auth/send-mobile-otp", payload),
+
+  verifyMobileOtp: (payload) =>
+    apiClient.post("/auth/verify-mobile-otp", payload),
+
+  // =========================
   // CUSTOMER PROFILE
   // =========================
   createCustomerProfile: (payload) =>
@@ -61,7 +67,7 @@ export const rmApi = {
   updateCustomerProfile: (applicationId, payload) =>
     apiClient.put(
       `/customer-profiles/${applicationId}`,
-      payload
+      payload,
     ),
 
   // =========================
@@ -97,13 +103,58 @@ export const rmApi = {
   // =========================
   // FIELD VISITS
   // =========================
-  visits: (applicationId) =>
-    apiClient.get(`/applications/${applicationId}/visits`),
 
-  addVisit: (applicationId, payload) =>
+  getFieldVisits: (applicationId) =>
+    apiClient.get(
+      `/applications/${applicationId}/field-visits`,
+    ),
+
+  /**
+   * The backend no longer has saveDraft().
+   *
+   * This endpoint must:
+   * 1. Create/update the three visit records.
+   * 2. Save checklist and location data.
+   * 3. Validate all required visits/documents.
+   * 4. Mark the visits COMPLETED.
+   */
+  completeFieldVisits: (applicationId, payload) =>
     apiClient.post(
-      `/applications/${applicationId}/visits`,
-      payload
+      `/applications/${applicationId}/field-visits/complete`,
+      payload,
+    ),
+
+  getFieldVisitStatus: (applicationId) =>
+    apiClient.get(
+      `/applications/${applicationId}/field-visits/status`,
+    ),
+
+  getFieldVisitHistory: (applicationId) =>
+    apiClient.get(
+      `/applications/${applicationId}/field-visits/history`,
+    ),
+
+  getFieldVisitDocuments: (applicationId) =>
+    apiClient.get(
+      `/applications/${applicationId}/field-visits/documents`,
+    ),
+
+  /**
+   * Do not manually set multipart Content-Type.
+   * Axios/browser will add the correct multipart boundary.
+   */
+  uploadFieldVisitDocument: (applicationId, formData) =>
+    apiClient.post(
+      `/applications/${applicationId}/field-visits/documents`,
+      formData,
+    ),
+
+  deleteFieldVisitDocument: (
+    applicationId,
+    documentId,
+  ) =>
+    apiClient.delete(
+      `/applications/${applicationId}/field-visits/documents/${documentId}`,
     ),
 
   // =========================
@@ -111,18 +162,13 @@ export const rmApi = {
   // =========================
   documents: (applicationId) =>
     apiClient.get(
-      `/applications/${applicationId}/documents`
+      `/applications/${applicationId}/documents`,
     ),
 
   uploadDocument: (applicationId, formData) =>
     apiClient.post(
       `/applications/${applicationId}/documents`,
       formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
     ),
 
   // =========================
@@ -131,23 +177,28 @@ export const rmApi = {
   submitToBm: (applicationId, payload) =>
     apiClient.post(
       `/applications/${applicationId}/transitions`,
-      payload
+      payload,
     ),
 
   transitionApplication: (applicationId, payload) =>
     apiClient.post(
       `/applications/${applicationId}/transitions`,
-      payload
+      payload,
     ),
 
   workflowHistory: (applicationId) =>
     apiClient.get(
-      `/applications/${applicationId}/workflow-history`
+      `/applications/${applicationId}/workflow-history`,
     ),
 
   workflowStatus: (applicationId) =>
-    apiClient.get(`/applications/${applicationId}/workflow`),
+    apiClient.get(
+      `/applications/${applicationId}/workflow`,
+    ),
 
   recordWorkflowStep: (applicationId, payload) =>
-    apiClient.post(`/applications/${applicationId}/workflow`, payload),
+    apiClient.post(
+      `/applications/${applicationId}/workflow`,
+      payload,
+    ),
 };

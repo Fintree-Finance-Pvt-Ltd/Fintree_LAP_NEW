@@ -21,6 +21,7 @@ export class CreateApplicationWithProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsEmail() email?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(12, 12) aadhaarNumber?: string;
 
+  @ApiPropertyOptional() @IsOptional() @IsString() propertyCategory?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyType?: string;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() marketValue?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyAddress?: string;

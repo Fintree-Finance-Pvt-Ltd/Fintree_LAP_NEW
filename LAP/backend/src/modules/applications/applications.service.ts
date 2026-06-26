@@ -251,6 +251,7 @@ export class ApplicationsService {
     if (!dto.requestedAmount) errors.push('requestedAmount is required');
     if (!dto.occupationType) errors.push('occupationType is required');
     if (!dto.monthlyIncome && dto.monthlyIncome !== 0) errors.push('monthlyIncome is required');
+    if (!dto.propertyCategory?.trim()) errors.push('propertyCategory is required');
     if (!dto.propertyType?.trim()) errors.push('propertyType is required');
     if (!dto.marketValue && dto.marketValue !== 0) errors.push('marketValue is required');
     if (!dto.propertyAddress?.trim()) errors.push('propertyAddress is required');
@@ -445,6 +446,7 @@ await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.S
       monthlyIncome: dto.monthlyIncome ?? undefined,
       panNumber: dto.pan || undefined,
       aadhaarNumber: dto.aadhaarNumber || undefined,
+      propertyCategory: dto.propertyCategory || undefined,
       propertyType: dto.propertyType || undefined,
       propertyAddress: dto.propertyAddress || undefined,
       propertyCity: dto.propertyCity || undefined,
