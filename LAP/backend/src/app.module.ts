@@ -32,7 +32,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [appConfig, authConfig, fileConfig], validate: validateEnvironment }),
     TypeOrmModule.forRootAsync({ useFactory: databaseConfig }),
-    AuthModule,s
+    AuthModule,
     UsersModule,
     BmModule,
     RolesModule,
