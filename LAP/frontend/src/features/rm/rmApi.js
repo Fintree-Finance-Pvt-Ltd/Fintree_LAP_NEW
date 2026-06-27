@@ -64,6 +64,19 @@ export const rmApi = {
       payload,
     ),
 
+// =========================
+// OTP
+// =========================
+sendOtp: (payload) =>
+  apiClient.post("/otp/send-otp", payload),
+
+verifyOtp: (payload) =>
+  apiClient.post("/otp/verify-otp", payload),
+  verifyOtpAndCreate(data) {
+    return apiClient.post("/otp/verify-and-create", data);
+  },
+
+
   // =========================
   // CONTACT PERSONS
   // =========================

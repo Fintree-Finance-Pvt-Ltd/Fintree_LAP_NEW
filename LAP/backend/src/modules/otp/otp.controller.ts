@@ -78,4 +78,26 @@ export class OtpController {
       body.applicationId,
     );
   }
+
+  /*
+   * OTP verify AND create application (OTP-gated lead creation)
+   */
+  @Post([
+    'verify-and-create',
+    'verify-and-create-application',
+  ])
+  verifyOtpAndCreate(
+    @Body()
+    body: Record<string, unknown>,
+  ) {
+    if (!body || typeof body !== 'object') {
+      throw new BadRequestException(
+        'Request body is required.',
+      );
+    }
+
+    return this.otpService.verifyOtpAndCreate(
+      body,
+    );
+  }
 }

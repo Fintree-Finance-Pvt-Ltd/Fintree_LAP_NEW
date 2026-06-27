@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { rmApi } from "../rmApi.js";
 import {
@@ -30,7 +30,8 @@ const emptyForm = {
   state: "",
   pinCode: "",
 };
-
+const CONSENT_TEXT =
+  "I hereby provide my consent to Fintree Finance Private Limited to verify my mobile number and process my information for the loan application.";
 const unwrapResponse = (response) => {
   if (response?.data !== undefined) {
     return response.data;
@@ -99,13 +100,44 @@ export default function CreateLead() {
   const { applicationId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const location = useLocation();
 
-  const [formData, setFormData] = useState(emptyForm);
+  const [formData, setFormData] = useState(
+    location?.state?.formData ? { ...emptyForm, ...location.state.formData } : emptyForm,
+  );
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("error");
 
+  const [otpPopup, setOtpPopup] = useState({
+    open: false,
+    title: "",
+    body: "",
+    severity: "info",
+  });
+
+  const [otpModal, setOtpModal] = useState({
+    open: false,
+    sentMobileMasked: "",
+    resendAfterSeconds: 0,
+    expiresInSeconds: 0,
+  });
+
+  const [otpCode, setOtpCode] = useState(Array(6).fill(""));
+  const [otpError, setOtpError] = useState("");
+  const otpInputRefs = useRef([]);
+
+  const [timer, setTimer] = useState({
+    resendAfterSeconds: 0,
+  });
+
+  const otpLoadingRef = useRef(false);
+
+
+
   /* =========================================================
      NESTJS GET SINGLE APPLICATION
+     NOTE: For new lead flow (/create-lead) we must NOT create or fetch an application.
+     For /applications/:applicationId we will prefer location.state.formData and only fetch if missing.
   ========================================================= */
   const applicationQuery = useQuery({
     queryKey: ["application", applicationId],
@@ -115,8 +147,11 @@ export default function CreateLead() {
     retry: false,
   });
 
+  const hasPrefilledFromState = Boolean(location?.state?.formData);
+
   useEffect(() => {
     if (!applicationId || !applicationQuery.data) return;
+    if (hasPrefilledFromState) return;
 
     const response = unwrapResponse(applicationQuery.data);
     const application = response?.data ?? response;
@@ -147,7 +182,104 @@ export default function CreateLead() {
       state: application.propertyState || application.state || "",
       pinCode: application.propertyPincode || application.pinCode || "",
     });
-  }, [applicationId, applicationQuery.data]);
+  }, [applicationId, applicationQuery.data, hasPrefilledFromState]);
+
+const sendOtpMutation = useMutation({
+  mutationFn: () =>
+    rmApi.sendOtp({
+      mobile: formData.mobileNumber,
+    }),
+
+  onSuccess: (response) => {
+    const result = unwrapResponse(response);
+
+    setMessageType("success");
+    setMessage(result.message || "OTP sent successfully.");
+
+    setOtpPopup({
+      open: true,
+      title: "OTP Sent",
+      body: result.message || "OTP sent successfully.",
+      severity: "success",
+    });
+  },
+
+  onError: (error) => {
+    const msg =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Failed to send OTP.";
+
+    setMessageType("error");
+    setMessage(msg);
+
+    // If backend fails due to missing template configuration, show clearer popup.
+    const friendly = String(msg).includes('MOBILE_OTP_TEMPLATE_ID')
+      ? 'OTP provider is misconfigured on server (MOBILE_OTP_TEMPLATE_ID missing). Please contact admin.'
+      : msg;
+
+    setOtpPopup({
+      open: true,
+      title: "OTP Failed",
+      body: friendly,
+      severity: "error",
+    });
+  },
+});
+
+
+const handleSendOtp = () => {
+
+
+  if (!/^[6-9]\d{9}$/.test(formData.mobileNumber)) {
+    setMessageType("error");
+    setMessage("Enter a valid mobile number.");
+    return;
+  }
+
+  sendOtpMutation.mutate();
+};
+
+  const verifyOtpAndCreateMutation = useMutation({
+    mutationFn: () => {
+      const payload = {
+        ...buildPayload(false),
+        mobile: formData.mobileNumber,
+        otp: otpCode.join(""),
+        consentText:
+          "I authorize Fintree Finance Private Limited to verify my mobile number and process my information for the loan application.",
+        // backend expects pan and requestedAmount, both are inside buildPayload
+        pan: formData.panNumber,
+      };
+
+      return rmApi.verifyOtpAndCreate(payload);
+    },
+    onSuccess: async (res) => {
+      const result = unwrapResponse(res);
+      const created = result?.data ?? result;
+
+      setMessageType("success");
+      setMessage("✓ Lead created successfully");
+
+      setOtpModal((p) => ({ ...p, open: false }));
+      const newId = created?.applicationId ?? created?.application?.id ?? created?.id;
+      const newNumber = created?.applicationNumber ?? created?.applicationNumber;
+
+      if (newId) {
+        navigate(`/applications/${newId}`, {
+          replace: true,
+          state: {
+            formData,
+            applicationNumber: newNumber,
+          },
+        });
+      }
+    },
+    onError: (error) => {
+      const msg = error?.response?.data?.message || error?.message || "Invalid OTP";
+      setOtpError(msg);
+    },
+  });
 
   /* =========================================================
      WORKFLOW TIMELINE STATUS
@@ -482,6 +614,198 @@ export default function CreateLead() {
         </div>
       )}
 
+      {/* OTP Verification Modal */}
+      {otpModal.open && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setOtpModal((p) => ({ ...p, open: false }))}
+            aria-hidden="true"
+          />
+
+          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-xl overflow-hidden">
+            <div className="bg-gradient-to-r from-[#0b1329] to-[#0f3d66] px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white text-sm font-bold">Mobile Verification</h3>
+                <button
+                  type="button"
+                  onClick={() => setOtpModal((p) => ({ ...p, open: false }))}
+                  className="rounded-md border border-white/30 bg-white/10 px-2 py-1 text-sm font-bold text-white"
+                  aria-label="Close OTP modal"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-white/80 text-xs mt-1">
+                OTP sent to {otpModal.sentMobileMasked || formData.mobileNumber}
+              </p>
+            </div>
+
+            <div className="px-6 py-5">
+              <div className="space-y-3">
+                <div className="text-slate-700 text-xs font-semibold">
+                  Enter the 6-digit OTP to verify your mobile number.
+                </div>
+
+                <div className="flex flex-wrap gap-2 justify-start">
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <input
+                      key={idx}
+                      ref={(el) => {
+                        otpInputRefs.current[idx] = el;
+                      }}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={otpCode[idx]}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        if (raw.length === 0) {
+                          setOtpCode((prev) => {
+                            const next = [...prev];
+                            next[idx] = "";
+                            return next;
+                          });
+                          return;
+                        }
+
+                        const digits = raw.slice(-1);
+                        setOtpCode((prev) => {
+                          const next = [...prev];
+                          next[idx] = digits;
+                          return next;
+                        });
+
+                        const nextIndex = Math.min(idx + 1, 5);
+                        otpInputRefs.current[nextIndex]?.focus();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Backspace") {
+                          if (!otpCode[idx]) {
+                            const prevIndex = Math.max(idx - 1, 0);
+                            otpInputRefs.current[prevIndex]?.focus();
+                          }
+                        }
+                      }}
+                      onPaste={(e) => {
+                        const pasted = (e.clipboardData.getData("text") || "").replace(/\D/g, "");
+                        if (!pasted) return;
+                        e.preventDefault();
+                        const code = pasted.slice(0, 6).padEnd(6, " ").split("").slice(0, 6).map((c) => (c === " " ? "" : c));
+                        setOtpCode(code);
+                        otpInputRefs.current[5]?.focus();
+                      }}
+                      className="w-11 h-12 rounded-xl border border-slate-200 bg-slate-50/40 text-center text-lg font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50/50"
+                      aria-label={`OTP digit ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+
+                {otpError && (
+                  <div className="text-xs font-semibold text-rose-600">
+                    {otpError}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className="text-xs text-slate-500">
+                    {timer.resendAfterSeconds > 0
+                      ? `Resend OTP in ${timer.resendAfterSeconds}s`
+                      : "Didn't receive?"}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={timer.resendAfterSeconds > 0}
+                    onClick={() => {
+                      if (timer.resendAfterSeconds > 0) return;
+                      setOtpError("");
+                      sendOtpMutation.mutate();
+                    }}
+                    className="text-xs font-bold text-[#0f3d66] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setOtpModal((p) => ({ ...p, open: false }))}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={verifyOtpAndCreateMutation.isPending}
+                  onClick={() => {
+                    setOtpError("");
+                    const joined = otpCode.join("");
+                    if (!/^\d{6}$/.test(joined)) {
+                      setOtpError("Enter a valid 6-digit OTP.");
+                      return;
+                    }
+                    verifyOtpAndCreateMutation.mutate(joined);
+                  }}
+                  className="rounded-xl bg-[#0f3d66] hover:bg-[#0b1329] px-5 py-2 text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {verifyOtpAndCreateMutation.isPending ? "Verifying..." : "Verify OTP"}
+                </button>
+              </div>
+
+              <div className="mt-4 text-[11px] text-slate-500">
+                By verifying, you authorize Fintree Finance to process your application.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Legacy OTP popup (errors only) */}
+      {otpPopup.open && !otpModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setOtpPopup((p) => ({ ...p, open: false }))}
+          />
+          <div className="relative w-full mx-4 max-w-lg rounded-lg bg-white shadow-lg">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+              <h3 className="text-base font-bold text-slate-800">{otpPopup.title}</h3>
+              <button
+                type="button"
+                onClick={() => setOtpPopup((p) => ({ ...p, open: false }))}
+                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-sm font-bold text-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="px-5 py-4">
+              <div
+                className={`rounded-xl border p-4 text-sm font-semibold ${
+                  otpPopup.severity === "success"
+                    ? "border-emerald-100 bg-emerald-50/50 text-emerald-700"
+                    : "border-rose-100 bg-rose-50/50 text-rose-700"
+                }`}
+              >
+                {otpPopup.body}
+              </div>
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setOtpPopup((p) => ({ ...p, open: false }))}
+                  className="rounded-md bg-[#0f3d66] px-4 py-2 text-sm font-bold text-white"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {/* Operational Response Message Alerts */}
       {message && (
         <div className={`rounded-xl border p-4 text-xs font-semibold ${
@@ -493,6 +817,7 @@ export default function CreateLead() {
 
       {/* Core Input Form Workspaces */}
       <div className="space-y-6">
+
         <Section title="Customer Identification & Identity">
           <Field
             label="Customer / Entity Name *"
@@ -516,12 +841,14 @@ export default function CreateLead() {
                 required
                 className="flex-1 rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50/50"
               />
-              <button
-                type="button"
-                className="rounded-xl bg-[#0b1329] hover:bg-slate-800 px-5 text-xs font-bold text-white shadow-sm transition-all active:scale-[0.98] whitespace-nowrap"
-              >
-                Send OTP
-              </button>
+<button
+  type="button"
+  onClick={handleSendOtp}
+  disabled={sendOtpMutation.isPending}
+  className="rounded-xl bg-[#0b1329] hover:bg-slate-800 px-5 text-xs font-bold text-white shadow-sm transition-all active:scale-[0.98]"
+>
+  {sendOtpMutation.isPending ? "Sending..." : "Send OTP"}
+</button>
             </div>
           </div>
 
