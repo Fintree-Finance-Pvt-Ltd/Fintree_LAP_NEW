@@ -9,7 +9,13 @@ export class CustomerProfile {
   @OneToOne(() => Application, (application) => application.customerProfile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'application_id' })
   application: Application;
-  @Column({ name: 'customer_type', type: 'enum', enum: CustomerType }) customerType: CustomerType;
+@Column({
+  name: 'customer_type',
+  type: 'enum',
+  enum: CustomerType,
+  nullable: true,
+})
+customerType?: CustomerType;
   @Column({ name: 'first_name', length: 80 }) firstName: string;
   @Column({ name: 'middle_name', length: 80, nullable: true }) middleName?: string;
   @Column({ name: 'last_name', length: 80 }) lastName: string;

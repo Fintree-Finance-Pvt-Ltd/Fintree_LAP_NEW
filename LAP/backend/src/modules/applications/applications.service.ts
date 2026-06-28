@@ -17,11 +17,6 @@ import { Visit } from '../visits/entities/visit.entity';
 import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
 import { WorkflowLog } from '../workflow/entities/workflow-log.entity';
 import { Workflow } from '../workflow/entities/workflow.entity';
-import { ApplicationFilterDto } from './dto/application-filter.dto';
-import { CreateApplicationWithProfileDto } from './dto/create-application-with-profile.dto';
-import { CreateApplicationDto } from './dto/create-application.dto';
-import { TransitionApplicationDto } from './dto/transition-application.dto';
-import { UpdateApplicationDto } from './dto/update-application.dto';
 import { Application } from './entities/application.entity';
 
 export type Actor = { id: number; roles: string[]; permissions: string[] };
@@ -39,7 +34,7 @@ export class ApplicationsService {
     private readonly dataSource: DataSource
   ) {}
 
-  async findAll(query: ApplicationFilterDto) {
+  async findAll(query: any) {
     const [data, total] = await this.applications.findAndCount({ order: { id: 'DESC' }, skip: (query.page - 1) * query.limit, take: query.limit });
     return { data, meta: { total, page: query.page, limit: query.limit } };
   }
@@ -51,14 +46,14 @@ export class ApplicationsService {
     return { data: await this.applications.find({ where, order: { id: 'DESC' }, take: 25 }) };
   }
 
-  async create(dto: CreateApplicationDto, actor: Actor) {
+  async create(dto: any, actor: Actor) {
     const entity = this.applications.create({ ...dto, requestedAmount: dto.requestedAmount ?? '0', applicationNumber: 'TEMP', createdBy: actor.id, updatedBy: actor.id });
-    const saved = await this.applications.save(entity);
+    const saved = await this.applications.save(entity) as unknown as Application;
     saved.applicationNumber = createReferenceNumber('LAP', saved.id);
     return { data: await this.applications.save(saved) };
   }
 
-  async draft(dto: CreateApplicationWithProfileDto & { verificationToken?: string; applicationId?: number }, actor: Actor) {
+  async draft(dto: any, actor: Actor) {
     if (!dto.customerName?.trim() || !dto.mobile?.trim() || !dto.requestedAmount) {
       throw new BadRequestException('customerName, mobile and requestedAmount are required for draft');
     }
@@ -84,8 +79,16 @@ export class ApplicationsService {
 
         const saved = await manager.save(existing);
 
-        const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
-        await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
+        let customerProfile = await manager.findOne(CustomerProfile, { where: { applicationId: saved.id } });
+        const profileData = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
+
+        if (customerProfile) {
+          Object.assign(customerProfile, profileData);
+          await manager.save(customerProfile);
+        } else {
+          customerProfile = manager.create(CustomerProfile, profileData as Partial<CustomerProfile>);
+          await manager.save(customerProfile);
+        }
 
         // Keep it idempotent: only upsert workflow and history when creating for the first time.
         return { data: saved };
@@ -122,8 +125,16 @@ export class ApplicationsService {
         saved.applicationNumber = createReferenceNumber('LAP', saved.id);
         await manager.save(saved);
 
-        const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
-        await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
+        let customerProfile = await manager.findOne(CustomerProfile, { where: { applicationId: saved.id } });
+        const profileData = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
+
+        if (customerProfile) {
+          Object.assign(customerProfile, profileData);
+          await manager.save(customerProfile);
+        } else {
+          customerProfile = manager.create(CustomerProfile, profileData as Partial<CustomerProfile>);
+          await manager.save(customerProfile);
+        }
 
         await manager.save(
           WorkflowHistory,
@@ -162,14 +173,22 @@ export class ApplicationsService {
 
       const saved = await manager.save(existingDraft);
 
-      const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
-      await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
+      let customerProfile = await manager.findOne(CustomerProfile, { where: { applicationId: saved.id } });
+      const profileData = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
+
+      if (customerProfile) {
+        Object.assign(customerProfile, profileData);
+        await manager.save(customerProfile);
+      } else {
+        customerProfile = manager.create(CustomerProfile, profileData as Partial<CustomerProfile>);
+        await manager.save(customerProfile);
+      }
 
       return { data: saved };
     });
   }
 
-  async submitDraft(applicationId: number, dto: CreateApplicationWithProfileDto, actor: Actor) {
+  async submitDraft(applicationId: number, dto: any, actor: Actor) {
     // Final submission validation is intentionally handled at the frontend.
     // Backend here focuses on: correct status transition DRAFT -> LEAD_CREATED and persisting data.
     // (We still guard the workflow transition itself.)
@@ -178,6 +197,9 @@ export class ApplicationsService {
       if (!application) throw new NotFoundException('Application not found');
       if (application.status !== ApplicationStatus.DRAFT) throw new BadRequestException('Application must be in DRAFT status');
 
+      // ==========================================
+      // 1. PREPARING APPLICATION UPDATE PAYLOAD
+      // ==========================================
       application.customerName = dto.customerName.trim();
       application.mobile = dto.mobile.trim();
       application.pan = dto.pan?.trim();
@@ -186,39 +208,150 @@ export class ApplicationsService {
       application.stage = ApplicationStage.RM;
       application.updatedBy = actor.id;
 
+      console.log('--- DB INSERT/UPDATE: Application Update Payload ---', {
+        id: application.id,
+        customerName: application.customerName,
+        mobile: application.mobile,
+        pan: application.pan,
+        requestedAmount: application.requestedAmount,
+        status: application.status,
+        stage: application.stage,
+        updatedBy: application.updatedBy
+      });
+
       const saved = await manager.save(application);
 
-      const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
-      await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
+      // ==========================================
+      // 2. PREPARING CUSTOMER PROFILE PAYLOAD
+      // ==========================================
+      let customerProfile = await manager.findOne(CustomerProfile, { where: { applicationId: saved.id } });
+      const profileData = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
+      
+      if (customerProfile) {
+        console.log('--- DB INSERT/UPDATE: Customer Profile Update Payload ---', profileData);
+        Object.assign(customerProfile, profileData);
+        await manager.save(customerProfile);
+      } else {
+        console.log('--- DB INSERT/UPDATE: Customer Profile Creation Payload ---', profileData);
+        customerProfile = manager.create(CustomerProfile, profileData as Partial<CustomerProfile>);
+        await manager.save(customerProfile);
+      }
 
-      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, {
+      // ==========================================
+      // 3. PREPARING WORKFLOW HISTORY PAYLOAD
+      // ==========================================
+      const workflowHistoryPayload = {
         applicationId: saved.id,
         fromRole: ApplicationStage.RM,
         toRole: ApplicationStage.RM,
         action: WorkflowAction.SUBMIT,
         remarks: dto.remarks || 'Application submitted',
         actionBy: actor.id,
-      }));
+      };
 
-      await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId: saved.id, action: WorkflowLogAction.LEAD_CREATED, remarks: 'Lead created', createdBy: actor.id }));
-      await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId: saved.id, action: WorkflowLogAction.LEAD_SUBMITTED, remarks: dto.remarks || 'Lead submitted', createdBy: actor.id }));
+      console.log('--- DB INSERT/UPDATE: Workflow History Payload ---', workflowHistoryPayload);
 
-      await manager.save(Workflow, manager.create(Workflow, {
-        applicationId: saved.id,
-        currentStage: ApplicationStage.RM,
-        currentStatus: ApplicationStatus.LEAD_CREATED,
-        assignedTo: actor.roles?.[0],
-        currentOwner: actor.id,
-        lastAction: WorkflowAction.SUBMIT,
-        lastRemarks: dto.remarks || 'Application submitted',
-      }));
+      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, workflowHistoryPayload));
 
-      await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.SUBMIT, entityName: 'applications', entityId: saved.id, snapshot: { status: saved.status, stage: saved.stage }, createdBy: actor.id }));
-      return { data: saved };
+      // ==========================================
+      // 4. PREPARING WORKFLOW LOG PAYLOADS
+      // ==========================================
+      const logLeadCreatedPayload = { 
+        applicationId: saved.id, 
+        action: WorkflowLogAction.LEAD_CREATED, 
+        remarks: 'Lead created', 
+        createdBy: actor.id 
+      };
+      const logLeadSubmittedPayload = { 
+        applicationId: saved.id, 
+        action: WorkflowLogAction.LEAD_SUBMITTED, 
+        remarks: dto.remarks || 'Lead submitted', 
+        createdBy: actor.id 
+      };
+
+      console.log('--- DB INSERT/UPDATE: Workflow Log (Lead Created) ---', logLeadCreatedPayload);
+      await manager.save(WorkflowLog, manager.create(WorkflowLog, logLeadCreatedPayload));
+
+      console.log('--- DB INSERT/UPDATE: Workflow Log (Lead Submitted) ---', logLeadSubmittedPayload);
+      await manager.save(WorkflowLog, manager.create(WorkflowLog, logLeadSubmittedPayload));
+
+// ==========================================
+// 5. PREPARING WORKFLOW STATUS PAYLOAD
+// ==========================================
+const workflowPayload = {
+  applicationId: saved.id,
+  currentStage: ApplicationStage.RM,
+  currentStatus: ApplicationStatus.LEAD_CREATED,
+  assignedTo: actor.roles?.[0] ?? null,
+  currentOwner: actor.id,
+  lastAction: WorkflowAction.SUBMIT,
+  lastRemarks: dto.remarks || 'Application submitted',
+};
+
+console.log(
+  '--- DB INSERT/UPDATE: Workflow Runtime Status Payload ---',
+  workflowPayload,
+);
+
+let workflow = await manager.findOne(Workflow, {
+  where: {
+    applicationId: saved.id,
+  },
+});
+
+if (workflow) {
+  console.log('Updating existing workflow:', workflow.id);
+
+  Object.assign(workflow, workflowPayload);
+
+  workflow = await manager.save(workflow);
+} else {
+  console.log('Creating new workflow');
+
+  workflow = manager.create(Workflow, workflowPayload);
+
+  workflow = await manager.save(workflow);
+}
+
+console.log('Workflow Saved:', workflow);
+
+// ==========================================
+// 6. PREPARING AUDIT LOG PAYLOAD
+// ==========================================
+const auditLogPayload = {
+  action: WorkflowAction.SUBMIT,
+  entityName: 'applications',
+  entityId: saved.id,
+  snapshot: {
+    status: saved.status,
+    stage: saved.stage,
+  },
+  createdBy: actor.id,
+};
+
+console.log(
+  '--- DB INSERT/UPDATE: Audit Log Payload ---',
+  auditLogPayload,
+);
+
+await manager.save(
+  AuditLog,
+  manager.create(AuditLog, auditLogPayload),
+);
+
+console.log('Audit Log Saved');
+
+return {
+  success: true,
+  message: 'Application submitted successfully.',
+  data: saved,
+};
+     
+
     });
   }
 
-  async submit(dto: CreateApplicationWithProfileDto, actor: Actor) {
+  async submit(dto: any, actor: Actor) {
     const errors: string[] = [];
     if (!dto.customerName?.trim()) errors.push('customerName is required');
     if (!dto.mobile?.trim()) errors.push('mobile is required');
@@ -251,8 +384,18 @@ export class ApplicationsService {
       const saved = await manager.save(entity);
       saved.applicationNumber = createReferenceNumber('LAP', saved.id);
       await manager.save(saved);
-      const profile = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
-      await manager.save(CustomerProfile, manager.create(CustomerProfile, profile as Partial<CustomerProfile>));
+
+      let customerProfile = await manager.findOne(CustomerProfile, { where: { applicationId: saved.id } });
+      const profileData = this.money(this.buildProfile(saved, dto) as unknown as Record<string, unknown>);
+
+      if (customerProfile) {
+        Object.assign(customerProfile, profileData);
+        await manager.save(customerProfile);
+      } else {
+        customerProfile = manager.create(CustomerProfile, profileData as Partial<CustomerProfile>);
+        await manager.save(customerProfile);
+      }
+
       await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId: saved.id, fromRole: ApplicationStage.RM, toRole: ApplicationStage.RM, action: WorkflowAction.SUBMIT, remarks: dto.remarks || 'Application submitted', actionBy: actor.id }));
       await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId: saved.id, action: WorkflowLogAction.LEAD_CREATED, remarks: 'Lead created', createdBy: actor.id }));
       await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId: saved.id, action: WorkflowLogAction.LEAD_SUBMITTED, remarks: dto.remarks || 'Lead submitted', createdBy: actor.id }));
@@ -265,7 +408,7 @@ export class ApplicationsService {
         lastAction: WorkflowAction.SUBMIT,
         lastRemarks: dto.remarks || 'Application submitted',
       }));
-await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.SUBMIT, entityName: 'applications', entityId: saved.id, snapshot: { status: saved.status, stage: saved.stage }, createdBy: actor.id }));
+      await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.SUBMIT, entityName: 'applications', entityId: saved.id, snapshot: { status: saved.status, stage: saved.stage }, createdBy: actor.id }));
       return { data: saved };
     });
   }
@@ -276,10 +419,150 @@ await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.S
     return { data: application };
   }
 
-  async update(id: number, dto: UpdateApplicationDto, actor: Actor) {
-    const application = await this.applications.preload({ id, ...dto, updatedBy: actor.id });
-    if (!application) throw new NotFoundException('Application not found');
-    return { data: await this.applications.save(application) };
+  async update(id: number, dto: any, actor: Actor) {
+    console.log('========== UPDATE START ==========');
+
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+
+        console.log('Step 1');
+
+        const applicationRepo = manager.getRepository(Application);
+        const profileRepo = manager.getRepository(CustomerProfile);
+        const workflowRepo = manager.getRepository(Workflow);
+
+        // ===========================
+        // APPLICATION
+        // ===========================
+        const application = await applicationRepo.findOne({
+          where: { id },
+        });
+
+        console.log('Step 2', application);
+
+        if (!application) {
+          throw new NotFoundException('Application not found');
+        }
+
+        console.log('Step 3');
+
+        application.customerName =
+          dto.customerName ?? application.customerName;
+
+        application.mobile =
+          dto.mobile ?? application.mobile;
+
+        application.pan =
+          dto.pan ?? application.pan;
+
+        if (dto.requestedAmount !== undefined) {
+          application.requestedAmount = dto.requestedAmount;
+        }
+
+        application.updatedBy = actor.id;
+
+        const savedApp = await applicationRepo.save(application);
+
+        console.log('Step 4', savedApp);
+
+        // ===========================
+        // CUSTOMER PROFILE
+        // ===========================
+        console.log('Step 5');
+
+        let profile = await profileRepo.findOne({
+          where: {
+            applicationId: id,
+          },
+        });
+
+        console.log('Step 6', profile);
+
+        const profileData = this.money(
+          this.buildProfile(savedApp, dto) as Record<string, unknown>,
+        );
+
+        console.log('Step 7', profileData);
+
+        if (profile) {
+          console.log('Step 8 UPDATE PROFILE');
+
+          Object.assign(profile, profileData);
+
+          profile = await profileRepo.save(profile);
+
+        } else {
+          console.log('Step 8 CREATE PROFILE');
+
+          profile = profileRepo.create(
+            profileData as Partial<CustomerProfile>,
+          );
+
+          profile = await profileRepo.save(profile);
+        }
+
+        console.log('PROFILE SAVED', profile);
+
+        // ===========================
+        // WORKFLOW
+        // ===========================
+        console.log('Step 9');
+
+        let workflow = await workflowRepo.findOne({
+          where: {
+            applicationId: id,
+          },
+        });
+
+        if (!workflow) {
+
+          console.log('CREATE WORKFLOW');
+
+          workflow = workflowRepo.create({
+            applicationId: id,
+            currentStage: savedApp.stage,
+            currentStatus: savedApp.status,
+            assignedTo: actor.roles?.[0] ?? null,
+            currentOwner: actor.id,
+            lastAction: WorkflowAction.SAVE_DRAFT,
+            lastRemarks: dto.remarks ?? null,
+          });
+
+        } else {
+
+          console.log('UPDATE WORKFLOW');
+
+          workflow.currentStage = savedApp.stage;
+          workflow.currentStatus = savedApp.status;
+          workflow.assignedTo = actor.roles?.[0] ?? workflow.assignedTo;
+          workflow.currentOwner = actor.id;
+          workflow.lastAction =
+            dto.lastAction ?? workflow.lastAction;
+          workflow.lastRemarks =
+            dto.remarks ?? workflow.lastRemarks;
+        }
+
+        workflow = await workflowRepo.save(workflow);
+
+        console.log('WORKFLOW SAVED', workflow);
+
+        console.log('Step 10');
+
+        return {
+          success: true,
+          message: 'Application updated successfully.',
+          data: {
+            application: savedApp,
+            customerProfile: profile,
+            workflow,
+          },
+        };
+      });
+    } catch (e) {
+      console.error('========== UPDATE FAILED ==========');
+      console.error(e);
+      throw e;
+    }
   }
 
   async remove(id: number) {
@@ -288,33 +571,33 @@ await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.S
     return { data: null, message: 'Application deleted' };
   }
 
- async addVisit(
-  applicationId: number,
-  body: Record<string, any>,
-  actor: Actor,
-) {
-  await this.findOne(applicationId);
+  async addVisit(
+    applicationId: number,
+    body: Record<string, any>,
+    actor: Actor,
+  ) {
+    await this.findOne(applicationId);
 
-  const visit = await this.visits.save(
-    this.visits.create({
-      ...body,
-      applicationId,
-      createdBy: actor.id,
-      updatedBy: actor.id,
-    }),
-  );
+    const visit = await this.visits.save(
+      this.visits.create({
+        ...body,
+        applicationId,
+        createdBy: actor.id,
+        updatedBy: actor.id,
+      }),
+    );
 
-  await this.workflowLogs.save(
-    this.workflowLogs.create({
-      applicationId,
-      action: this.visitAction(body.visitType),
-      remarks: body.remarks || `Visit logged: ${body.visitType}`,
-      createdBy: actor.id,
-    }),
-  );
+    await this.workflowLogs.save(
+      this.workflowLogs.create({
+        applicationId,
+        action: this.visitAction(body.visitType),
+        remarks: body.remarks || `Visit logged: ${body.visitType}`,
+        createdBy: actor.id,
+      }),
+    );
 
-  return { data: visit };
-}
+    return { data: visit };
+  }
 
   async listVisits(applicationId: number) {
     return { data: await this.visits.find({ where: { applicationId }, order: { id: 'DESC' } }) };
@@ -331,7 +614,7 @@ await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.S
     return { data: await this.documents.find({ where: { applicationId }, order: { id: 'DESC' } }) };
   }
 
-  async transition(applicationId: number, dto: TransitionApplicationDto, actor: Actor) {
+  async transition(applicationId: number, dto: any, actor: Actor) {
     if (!actor.permissions?.includes(PERMISSIONS.APPLICATION_TRANSITION)) throw new ForbiddenException('Missing workflow permission');
     return this.dataSource.transaction(async (manager) => {
       const application = await manager.findOne(Application, { where: { id: applicationId }, lock: { mode: 'pessimistic_write' } });
@@ -407,15 +690,16 @@ await manager.save(AuditLog, manager.create(AuditLog, { action: WorkflowAction.S
     return WorkflowLogAction.CUSTOMER_VISIT_DONE;
   }
 
-  private buildProfile(application: Application, dto: CreateApplicationWithProfileDto): Record<string, unknown> {
-    const parts = dto.customerName.trim().split(/\s+/);
+  private buildProfile(application: Application, dto: any): Record<string, unknown> {
+    const name = dto?.customerName?.trim() || '';
+    const parts = name ? name.split(/\s+/) : [];
     return {
       applicationId: application.id,
       customerType: dto.customerType || CustomerType.INDIVIDUAL,
-      firstName: dto.firstName || parts[0] || dto.customerName.trim(),
-      lastName: dto.lastName || parts[parts.length - 1] || dto.customerName.trim(),
+      firstName: dto.firstName || parts[0] || name,
+      lastName: dto.lastName || parts[parts.length - 1] || name,
       middleName: dto.middleName || (parts.length > 2 ? parts.slice(1, -1).join(' ') : undefined),
-      mobile: dto.mobile.trim(),
+      mobile: dto?.mobile?.trim() || '',
       email: dto.email || undefined,
       occupationType: dto.occupationType,
       businessName: dto.businessName || undefined,

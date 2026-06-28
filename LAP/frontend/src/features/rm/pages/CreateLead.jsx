@@ -30,8 +30,10 @@ const emptyForm = {
   state: "",
   pinCode: "",
 };
+
 const CONSENT_TEXT =
   "I hereby provide my consent to Fintree Finance Private Limited to verify my mobile number and process my information for the loan application.";
+
 const unwrapResponse = (response) => {
   if (response?.data !== undefined) {
     return response.data;
@@ -64,14 +66,16 @@ const normalizePropertyType = (value, category) => {
 
 function Section({ title, children }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 p-6 md:p-8 shadow-sm space-y-6 transition-all hover:border-slate-300/60">
-      <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
-        <span className="h-3.5 w-1 bg-blue-600 rounded-full" />
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-          {title}
-        </h3>
+    <div className="bg-white rounded-xl border border-slate-200/80 p-6 md:p-8 shadow-xs space-y-6">
+      <div className="border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="h-4 w-1.5 bg-blue-600 rounded-full" />
+          <h3 className="text-sm font-bold tracking-wide text-slate-900">
+            {title}
+          </h3>
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
         {children}
       </div>
     </div>
@@ -81,7 +85,7 @@ function Section({ title, children }) {
 function Field({ label, children, ...props }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+      <label className="text-xs font-semibold text-slate-700">
         {label}
       </label>
       {children ? (
@@ -89,7 +93,7 @@ function Field({ label, children, ...props }) {
       ) : (
         <input
           {...props}
-          className="rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50/50"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
         />
       )}
     </div>
@@ -102,6 +106,10 @@ export default function CreateLead() {
   const queryClient = useQueryClient();
   const location = useLocation();
 
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [createdApplicationId, setCreatedApplicationId] = useState(null);
+  const [applicationNumber, setApplicationNumber] = useState("");
   const [formData, setFormData] = useState(
     location?.state?.formData ? { ...emptyForm, ...location.state.formData } : emptyForm,
   );
@@ -130,15 +138,6 @@ export default function CreateLead() {
     resendAfterSeconds: 0,
   });
 
-  const otpLoadingRef = useRef(false);
-
-
-
-  /* =========================================================
-     NESTJS GET SINGLE APPLICATION
-     NOTE: For new lead flow (/create-lead) we must NOT create or fetch an application.
-     For /applications/:applicationId we will prefer location.state.formData and only fetch if missing.
-  ========================================================= */
   const applicationQuery = useQuery({
     queryKey: ["application", applicationId],
     queryFn: () => rmApi.getApplication(applicationId),
@@ -184,74 +183,61 @@ export default function CreateLead() {
     });
   }, [applicationId, applicationQuery.data, hasPrefilledFromState]);
 
-const sendOtpMutation = useMutation({
-  mutationFn: () =>
-    rmApi.sendOtp({
-      mobile: formData.mobileNumber,
-    }),
+  const sendOtpMutation = useMutation({
+    mutationFn: () =>
+      rmApi.sendOtp({
+        mobile: formData.mobileNumber,
+      }),
+    onSuccess: (response) => {
+      const result = unwrapResponse(response);
+      setMessageType("success");
+      setMessage(result.message || "OTP sent successfully.");
 
-  onSuccess: (response) => {
-    const result = unwrapResponse(response);
+      setOtpModal({
+        open: true,
+        sentMobileMasked: formData.mobileNumber ? `XXXXXX${formData.mobileNumber.slice(-4)}` : "",
+        resendAfterSeconds: 30,
+        expiresInSeconds: 300,
+      });
+      setOtpCode(Array(6).fill(""));
+      setOtpError("");
+    },
+    onError: (error) => {
+      const msg = error?.response?.data?.message || error?.message || "Failed to send OTP.";
+      setMessageType("error");
+      setMessage(msg);
 
-    setMessageType("success");
-    setMessage(result.message || "OTP sent successfully.");
+      const friendly = String(msg).includes('MOBILE_OTP_TEMPLATE_ID')
+        ? 'OTP provider is misconfigured on server. Please contact admin.'
+        : msg;
 
-    setOtpPopup({
-      open: true,
-      title: "OTP Sent",
-      body: result.message || "OTP sent successfully.",
-      severity: "success",
-    });
-  },
+      setOtpPopup({
+        open: true,
+        title: "OTP Failed",
+        body: friendly,
+        severity: "error",
+      });
+    },
+  });
 
-  onError: (error) => {
-    const msg =
-      error?.response?.data?.message ||
-      error?.message ||
-      "Failed to send OTP.";
-
-    setMessageType("error");
-    setMessage(msg);
-
-    // If backend fails due to missing template configuration, show clearer popup.
-    const friendly = String(msg).includes('MOBILE_OTP_TEMPLATE_ID')
-      ? 'OTP provider is misconfigured on server (MOBILE_OTP_TEMPLATE_ID missing). Please contact admin.'
-      : msg;
-
-    setOtpPopup({
-      open: true,
-      title: "OTP Failed",
-      body: friendly,
-      severity: "error",
-    });
-  },
-});
-
-
-const handleSendOtp = () => {
-
-
-  if (!/^[6-9]\d{9}$/.test(formData.mobileNumber)) {
-    setMessageType("error");
-    setMessage("Enter a valid mobile number.");
-    return;
-  }
-
-  sendOtpMutation.mutate();
-};
+  const handleSendOtp = () => {
+    if (otpVerified) return;
+    if (!/^[6-9]\d{9}$/.test(formData.mobileNumber)) {
+      setMessageType("error");
+      setMessage("Enter a valid mobile number.");
+      return;
+    }
+    sendOtpMutation.mutate();
+  };
 
   const verifyOtpAndCreateMutation = useMutation({
     mutationFn: () => {
       const payload = {
-        ...buildPayload(false),
+        customerName: formData.customerName,
         mobile: formData.mobileNumber,
         otp: otpCode.join(""),
-        consentText:
-          "I authorize Fintree Finance Private Limited to verify my mobile number and process my information for the loan application.",
-        // backend expects pan and requestedAmount, both are inside buildPayload
-        pan: formData.panNumber,
+        consentText: consentAccepted ? CONSENT_TEXT : "",
       };
-
       return rmApi.verifyOtpAndCreate(payload);
     },
     onSuccess: async (res) => {
@@ -262,17 +248,19 @@ const handleSendOtp = () => {
       setMessage("✓ Lead created successfully");
 
       setOtpModal((p) => ({ ...p, open: false }));
+      setConsentAccepted(false);
+      setOtpCode(Array(6).fill(""));
+      setOtpError("");
+
       const newId = created?.applicationId ?? created?.application?.id ?? created?.id;
-      const newNumber = created?.applicationNumber ?? created?.applicationNumber;
+      const newNumber = created?.applicationNumber;
 
       if (newId) {
-        navigate(`/applications/${newId}`, {
-          replace: true,
-          state: {
-            formData,
-            applicationNumber: newNumber,
-          },
-        });
+        setCreatedApplicationId(newId);
+        setApplicationNumber(newNumber || "");
+        setOtpVerified(true);
+        setMessageType("success");
+        setMessage("✓ Mobile verified successfully.");
       }
     },
     onError: (error) => {
@@ -281,9 +269,6 @@ const handleSendOtp = () => {
     },
   });
 
-  /* =========================================================
-     WORKFLOW TIMELINE STATUS
-  ========================================================= */
   const workflowQuery = useQuery({
     queryKey: ["rm-workflow", applicationId],
     queryFn: () => rmApi.workflowStatus(applicationId),
@@ -296,9 +281,6 @@ const handleSendOtp = () => {
     return buildWorkflowTimeline(response?.data ?? response ?? {});
   }, [workflowQuery.data]);
 
-  /* =========================================================
-     REAL-TIME INTERMEDIARY METRICS
-  ========================================================= */
   const calculated = useMemo(() => {
     const income = Number(formData.monthlyIncome || 0);
     const obligations = Number(formData.monthlyObligations || 0);
@@ -325,9 +307,6 @@ const handleSendOtp = () => {
 
   const propertyTypeOptions = PROPERTY_TYPE[formData.propertyCategory] || [];
 
-  /* =========================================================
-     CLEAN PAYLOAD DATA COMPLIANCE MAPPING
-  ========================================================= */
   const buildPayload = (isPatchUpdate = false) => {
     const basePayload = {
       customerName: formData.customerName.trim() || undefined,
@@ -354,7 +333,6 @@ const handleSendOtp = () => {
       tenure: calculated.tenure,
     };
 
-    // If making a PATCH update to /applications/:id, filter out properties your UpdateApplicationDto blocks
     if (isPatchUpdate) {
       const allowedPatchFields = ["customerName", "mobile", "pan", "requestedAmount", "monthlyIncome", "businessName"];
       const filteredPayload = {};
@@ -365,53 +343,43 @@ const handleSendOtp = () => {
       });
       return filteredPayload;
     }
-
     return basePayload;
   };
 
   const validateFullSubmission = () => {
     const errors = [];
-
-    if (!formData.customerName.trim()) errors.push("customerName is required");
-
-    if (!/^[6-9]\d{9}$/.test(formData.mobileNumber.trim())) errors.push("mobile is required");
-
-    if (!formData.panNumber.trim()) errors.push("pan is required");
-
-    if (!formData.aadhaarNumber.trim()) errors.push("aadhaarNumber is required");
-
-    if (!formData.requestedAmount) errors.push("requestedAmount is required");
-
-    if (!formData.occupation) errors.push("occupationType is required");
-
-    if (formData.monthlyIncome === "" || formData.monthlyIncome === null || formData.monthlyIncome === undefined) {
-      errors.push("monthlyIncome is required");
-    }
-
-    if (!formData.propertyType?.trim()) errors.push("propertyType is required");
-    if (!formData.propertyValue) errors.push("marketValue is required");
-
-    if (!formData.propertyAddress.trim()) errors.push("propertyAddress is required");
-    if (!formData.city.trim()) errors.push("propertyCity is required");
-    if (!formData.state.trim()) errors.push("propertyState is required");
-    if (!formData.pinCode.trim()) errors.push("propertyPincode is required");
+    if (!formData.customerName.trim()) errors.push("Customer Name is required");
+    if (!/^[6-9]\d{9}$/.test(formData.mobileNumber.trim())) errors.push("Valid Mobile number is required");
+    if (!formData.panNumber.trim()) errors.push("PAN Number is required");
+    if (!formData.aadhaarNumber.trim()) errors.push("Aadhaar Number is required");
+    if (!formData.requestedAmount) errors.push("Requested Amount is required");
+    if (!formData.occupation) errors.push("Occupation is required");
+    if (formData.monthlyIncome === "" || formData.monthlyIncome === undefined) errors.push("Monthly Income is required");
+    if (!formData.propertyType?.trim()) errors.push("Property Type is required");
+    if (!formData.propertyValue) errors.push("Property Value is required");
+    if (!formData.propertyAddress.trim()) errors.push("Property Address is required");
+    if (!formData.city.trim()) errors.push("City is required");
+    if (!formData.state.trim()) errors.push("State is required");
+    if (!formData.pinCode.trim()) errors.push("PIN Code is required");
 
     if (errors.length) {
       setMessageType("error");
       setMessage(errors.join(", "));
       return false;
     }
-
     return true;
   };
 
-  /* =========================================================
-     API MUTATIONS (SYNCHRONIZED WITH YOUR NESTJS ENDPOINTS)
-  ========================================================= */
-  
-  // POST /applications/draft -> For brand new entries
   const saveNewDraftMutation = useMutation({
-    mutationFn: () => rmApi.saveDraft(buildPayload(false)),
+    mutationFn: () => {
+      // If OTP already created an application, update that created one.
+      if (createdApplicationId != null) {
+        return rmApi.updateApplication(createdApplicationId, buildPayload(true));
+      }
+
+      // Otherwise, create initial draft via POST /applications/draft.
+      return rmApi.saveDraft(buildPayload(false));
+    },
     onSuccess: async (response) => {
       const result = unwrapResponse(response);
       const created = result?.data ?? result;
@@ -423,9 +391,9 @@ const handleSendOtp = () => {
       ]);
 
       setMessageType("success");
-      setMessage("Draft entry written and saved directly into the database.");
+      setMessage("Draft entry saved successfully.");
       if (newApplicationId) {
-        navigate(`/applications/${newApplicationId}`, { replace: true });
+        navigate(`/create-lead/${newApplicationId}`, { replace: true });
       } else {
         navigate("/my-leads", { replace: true });
       }
@@ -436,44 +404,50 @@ const handleSendOtp = () => {
     },
   });
 
-  // PATCH /applications/:applicationId -> Automatically sanitizes fields to clear whitelist validation blocks
   const updateDraftMutation = useMutation({
-    mutationFn: () => rmApi.updateApplication(applicationId, buildPayload(true)),
+    mutationFn: () =>
+      rmApi.updateApplication(
+        createdApplicationId ?? applicationId,
+        buildPayload(true),
+      ),
     onSuccess: async () => {
+      const idToInvalidate = createdApplicationId ?? applicationId;
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["application", applicationId] }),
+        queryClient.invalidateQueries({ queryKey: ["application", idToInvalidate] }),
         queryClient.invalidateQueries({ queryKey: ["rm-applications"] }),
         queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] }),
       ]);
       setMessageType("success");
-      setMessage("Draft modified successfully directly in your system table.");
+      setMessage("Draft modified successfully.");
     },
     onError: (error) => {
       setMessageType("error");
-      setMessage(error?.message || "Failed executing partial draft mutation update.");
+      setMessage(error?.message || "Failed executing partial draft update.");
     },
   });
 
-  // POST /applications/submit-draft -> Final processing verification
   const submitDraftMutation = useMutation({
-    mutationFn: () => rmApi.submitDraft({ ...buildPayload(false), applicationId: Number(applicationId) }),
+    mutationFn: () =>
+      rmApi.submitDraft(
+        Number(createdApplicationId ?? applicationId),
+        buildPayload(false),
+      ),
     onSuccess: async () => {
+      const idToInvalidate = createdApplicationId ?? applicationId;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["rm-applications"] }),
         queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["rm-workflow", applicationId] }),
+        queryClient.invalidateQueries({ queryKey: ["rm-workflow", idToInvalidate] }),
       ]);
-      navigate("/my-leads", { replace: true });
+      setMessageType("success");
+      setMessage("✓ Submitted successfully.");
     },
     onError: (error) => {
       setMessageType("error");
-      setMessage(error?.message || "NestJS complete validation returned structured schema exceptions.");
+      setMessage(error?.message || "Submission returned structured validation exceptions.");
     },
   });
 
-  /* =========================================================
-     EVENT HANDLERS
-  ========================================================= */
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setFormData((previous) => ({ ...previous, [name]: value }));
@@ -492,6 +466,11 @@ const handleSendOtp = () => {
     if (event) event.preventDefault();
     setMessage("");
 
+    if (createdApplicationId) {
+      updateDraftMutation.mutate();
+      return;
+    }
+
     if (!applicationId) {
       saveNewDraftMutation.mutate();
     } else {
@@ -499,16 +478,30 @@ const handleSendOtp = () => {
     }
   };
 
+  const handleVerifyOtpSubmit = () => {
+    setOtpError("");
+    if (!consentAccepted) {
+      setOtpError("Please read and accept the consent before continuing.");
+      return;
+    }
+    const joined = otpCode.join("");
+    if (!/^\d{6}$/.test(joined)) {
+      setOtpError("Enter a valid 6-digit OTP configuration.");
+      return;
+    }
+    verifyOtpAndCreateMutation.mutate();
+  };
+
   const handleSubmitForReview = () => {
     setMessage("");
+    const idToSubmit = createdApplicationId ?? applicationId;
 
-    if (!applicationId) {
+    if (!idToSubmit) {
       setMessageType("error");
       setMessage("Please execute a 'Save Draft' sequence before invoking workflow evaluations.");
       return;
     }
     if (!validateFullSubmission()) return;
-
     submitDraftMutation.mutate();
   };
 
@@ -518,52 +511,49 @@ const handleSendOtp = () => {
     submitDraftMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 antialiased p-6 md:p-8 space-y-6">
+    <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
       
-      {/* Upper Layout Header Control Action Bar */}
+      {/* Top Action Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-5">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">
-            {applicationId ? "Modify Lead Workspace" : "Create Lead"}
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900">
+            {applicationId ? "Modify Lead Workspace" : "New Loan Application"}
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Synchronizes active input attributes safely with your NestJS backend data tables.
+          <p className="text-xs text-slate-500 mt-1">
+            Fill in information parameters to initiate property loan underwriting creation rules.
           </p>
         </div>
 
-        {/* Global Action Management Controls */}
         <div className="flex items-center gap-3">
           <button
             type="button"
             disabled={isPending}
             onClick={handleSaveDraft}
-            className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-5 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-700 shadow-xs transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saveNewDraftMutation.isPending || updateDraftMutation.isPending
-              ? "Persisting Changes..."
-              : "Save Draft"}
+            {saveNewDraftMutation.isPending || updateDraftMutation.isPending ? "Saving..." : "Save Draft"}
           </button>
 
           <button
             type="button"
             disabled={isPending || !applicationId}
             onClick={handleSubmitForReview}
-            className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white shadow transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
+            className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
-            {submitDraftMutation.isPending ? "Submitting Work..." : "Submit for Review"}
+            {submitDraftMutation.isPending ? "Submitting..." : "Submit for Underwriting"}
           </button>
         </div>
       </div>
 
-      {/* Workflow Tracker Layer */}
+      {/* Workflow Timeline Status Tracker */}
       {applicationId && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-xs">
           <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              RM Workflow Journey
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Application Workflow Journey
             </h3>
             <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10">
-              Active Track
+              Live Stage
             </span>
           </div>
 
@@ -614,211 +604,188 @@ const handleSendOtp = () => {
         </div>
       )}
 
-      {/* OTP Verification Modal */}
+      {/* Redesigned Clean OTP Verification Modal */}
       {otpModal.open && (
-
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
             onClick={() => setOtpModal((p) => ({ ...p, open: false }))}
             aria-hidden="true"
           />
 
-          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-[#0b1329] to-[#0f3d66] px-6 py-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-white text-sm font-bold">Mobile Verification</h3>
-                <button
-                  type="button"
-                  onClick={() => setOtpModal((p) => ({ ...p, open: false }))}
-                  className="rounded-md border border-white/30 bg-white/10 px-2 py-1 text-sm font-bold text-white"
-                  aria-label="Close OTP modal"
-                >
-                  ✕
-                </button>
-              </div>
-              <p className="text-white/80 text-xs mt-1">
-                OTP sent to {otpModal.sentMobileMasked || formData.mobileNumber}
+          <div className="relative w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden border border-slate-200">
+            <div className="border-b border-slate-100 p-6">
+              <h3 className="text-lg font-bold text-slate-900">Verify Mobile Number</h3>
+              <p className="text-slate-500 text-xs mt-1">
+                An OTP has been sent to your registered device ending in <span className="font-semibold text-slate-700">{otpModal.sentMobileMasked || formData.mobileNumber.slice(-4)}</span>.
               </p>
             </div>
 
-            <div className="px-6 py-5">
-              <div className="space-y-3">
-                <div className="text-slate-700 text-xs font-semibold">
-                  Enter the 6-digit OTP to verify your mobile number.
-                </div>
-
-                <div className="flex flex-wrap gap-2 justify-start">
-                  {Array.from({ length: 6 }).map((_, idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => {
-                        otpInputRefs.current[idx] = el;
-                      }}
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      value={otpCode[idx]}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/\D/g, "");
-                        if (raw.length === 0) {
-                          setOtpCode((prev) => {
-                            const next = [...prev];
-                            next[idx] = "";
-                            return next;
-                          });
-                          return;
-                        }
-
-                        const digits = raw.slice(-1);
+            <div className="p-6 space-y-5">
+              <div className="flex gap-2 justify-between">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => {
+                      otpInputRefs.current[idx] = el;
+                    }}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={1}
+                    value={otpCode[idx]}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      if (raw.length === 0) {
                         setOtpCode((prev) => {
                           const next = [...prev];
-                          next[idx] = digits;
+                          next[idx] = "";
                           return next;
                         });
+                        return;
+                      }
 
-                        const nextIndex = Math.min(idx + 1, 5);
-                        otpInputRefs.current[nextIndex]?.focus();
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Backspace") {
-                          if (!otpCode[idx]) {
-                            const prevIndex = Math.max(idx - 1, 0);
-                            otpInputRefs.current[prevIndex]?.focus();
-                          }
-                        }
-                      }}
-                      onPaste={(e) => {
-                        const pasted = (e.clipboardData.getData("text") || "").replace(/\D/g, "");
-                        if (!pasted) return;
-                        e.preventDefault();
-                        const code = pasted.slice(0, 6).padEnd(6, " ").split("").slice(0, 6).map((c) => (c === " " ? "" : c));
-                        setOtpCode(code);
-                        otpInputRefs.current[5]?.focus();
-                      }}
-                      className="w-11 h-12 rounded-xl border border-slate-200 bg-slate-50/40 text-center text-lg font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50/50"
-                      aria-label={`OTP digit ${idx + 1}`}
-                    />
-                  ))}
-                </div>
+                      const digits = raw.slice(-1);
+                      setOtpCode((prev) => {
+                        const next = [...prev];
+                        next[idx] = digits;
+                        return next;
+                      });
 
-                {otpError && (
-                  <div className="text-xs font-semibold text-rose-600">
-                    {otpError}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-xs text-slate-500">
-                    {timer.resendAfterSeconds > 0
-                      ? `Resend OTP in ${timer.resendAfterSeconds}s`
-                      : "Didn't receive?"}
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={timer.resendAfterSeconds > 0}
-                    onClick={() => {
-                      if (timer.resendAfterSeconds > 0) return;
-                      setOtpError("");
-                      sendOtpMutation.mutate();
+                      const nextIndex = Math.min(idx + 1, 5);
+                      otpInputRefs.current[nextIndex]?.focus();
                     }}
-                    className="text-xs font-bold text-[#0f3d66] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Resend OTP
-                  </button>
-                </div>
+                    onKeyDown={(e) => {
+                      if (e.key === "Backspace" && !otpCode[idx]) {
+                        const prevIndex = Math.max(idx - 1, 0);
+                        otpInputRefs.current[prevIndex]?.focus();
+                      }
+                    }}
+                    onPaste={(e) => {
+                      const pasted = (e.clipboardData.getData("text") || "").replace(/\D/g, "");
+                      if (!pasted) return;
+                      e.preventDefault();
+                      const code = pasted.slice(0, 6).padEnd(6, " ").split("").slice(0, 6).map((c) => (c === " " ? "" : c));
+                      setOtpCode(code);
+                      otpInputRefs.current[5]?.focus();
+                    }}
+                    className="w-12 h-12 rounded-lg border border-slate-300 bg-slate-50 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                    aria-label={`Digit ${idx + 1}`}
+                  />
+                ))}
               </div>
 
-              <div className="mt-5 flex items-center justify-end gap-3">
+              {otpError && (
+                <div className="text-xs font-semibold text-rose-600 bg-rose-50 p-3 rounded-lg border border-rose-100">
+                  {otpError}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between text-xs border-b border-slate-100 pb-4">
+                <span className="text-slate-500">
+                  {timer.resendAfterSeconds > 0 ? `Resend in ${timer.resendAfterSeconds}s` : "Didn't get the code?"}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={otpVerified || timer.resendAfterSeconds > 0}
+                  onClick={() => {
+                    if (otpVerified) return;
+                    setOtpError("");
+                    sendOtpMutation.mutate();
+                  }}
+                  className="font-bold text-blue-600 hover:text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {otpVerified ? "Verified" : "Resend OTP"}
+                </button>
+              </div>
+
+              {/* Consent Block Integrated Fluidly inside the form container */}
+              <div className="rounded-lg bg-slate-50 p-4 border border-slate-200/60">
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
+                  Customer Consent Note
+                </h4>
+                <div className="text-xs text-slate-600 leading-relaxed mb-3">
+                  {CONSENT_TEXT}
+                </div>
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={consentAccepted}
+                    onChange={(e) => setConsentAccepted(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-slate-700 font-medium">
+                    I have read and agree to proceed with mobile verification.
+                  </span>
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => setOtpModal((p) => ({ ...p, open: false }))}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700"
+                  className="flex-1 rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  disabled={verifyOtpAndCreateMutation.isPending}
-                  onClick={() => {
-                    setOtpError("");
-                    const joined = otpCode.join("");
-                    if (!/^\d{6}$/.test(joined)) {
-                      setOtpError("Enter a valid 6-digit OTP.");
-                      return;
-                    }
-                    verifyOtpAndCreateMutation.mutate(joined);
-                  }}
-                  className="rounded-xl bg-[#0f3d66] hover:bg-[#0b1329] px-5 py-2 text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={verifyOtpAndCreateMutation.isPending || !consentAccepted}
+                  onClick={handleVerifyOtpSubmit}
+                  className="flex-1 rounded-lg bg-slate-900 hover:bg-slate-800 py-2.5 text-sm font-semibold text-white shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {verifyOtpAndCreateMutation.isPending ? "Verifying..." : "Verify OTP"}
+                  {verifyOtpAndCreateMutation.isPending ? "Verifying..." : "Verify & Authorize"}
                 </button>
-              </div>
-
-              <div className="mt-4 text-[11px] text-slate-500">
-                By verifying, you authorize Fintree Finance to process your application.
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Legacy OTP popup (errors only) */}
+      {/* Secondary Server Errors Alert Popup Container */}
       {otpPopup.open && !otpModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setOtpPopup((p) => ({ ...p, open: false }))}
-          />
-          <div className="relative w-full mx-4 max-w-lg rounded-lg bg-white shadow-lg">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-              <h3 className="text-base font-bold text-slate-800">{otpPopup.title}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-xs" onClick={() => setOtpPopup((p) => ({ ...p, open: false }))} />
+          <div className="relative w-full max-w-md rounded-xl bg-white shadow-xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900">{otpPopup.title}</h3>
               <button
                 type="button"
                 onClick={() => setOtpPopup((p) => ({ ...p, open: false }))}
-                className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-sm font-bold text-slate-700"
+                className="text-slate-400 hover:text-slate-600"
               >
                 ✕
               </button>
             </div>
-            <div className="px-5 py-4">
-              <div
-                className={`rounded-xl border p-4 text-sm font-semibold ${
-                  otpPopup.severity === "success"
-                    ? "border-emerald-100 bg-emerald-50/50 text-emerald-700"
-                    : "border-rose-100 bg-rose-50/50 text-rose-700"
-                }`}
+            <div className={`rounded-lg border p-4 text-sm ${otpPopup.severity === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-rose-100 bg-rose-50 text-rose-800"}`}>
+              {otpPopup.body}
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setOtpPopup((p) => ({ ...p, open: false }))}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
               >
-                {otpPopup.body}
-              </div>
-              <div className="mt-5 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setOtpPopup((p) => ({ ...p, open: false }))}
-                  className="rounded-md bg-[#0f3d66] px-4 py-2 text-sm font-bold text-white"
-                >
-                  OK
-                </button>
-              </div>
+                Dismiss
+              </button>
             </div>
           </div>
         </div>
       )}
 
-
-      {/* Operational Response Message Alerts */}
+      {/* Global Toast Alert Messages */}
       {message && (
-        <div className={`rounded-xl border p-4 text-xs font-semibold ${
-          messageType === "success" ? "border-emerald-100 bg-emerald-50/50 text-emerald-600" : "border-rose-100 bg-rose-50/50 text-rose-600"
+        <div className={`rounded-lg border p-4 text-xs font-semibold shadow-xs ${
+          messageType === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-700" : "border-rose-100 bg-rose-50 text-rose-700"
         }`}>
           {message}
         </div>
       )}
 
-      {/* Core Input Form Workspaces */}
+      {/* Main Core Form Inputs Viewport Layout matching image guidelines */}
       <div className="space-y-6">
-
-        <Section title="Customer Identification & Identity">
+        
+        <Section title="Primary Applicant Information">
           <Field
             label="Customer / Entity Name *"
             name="customerName"
@@ -828,7 +795,7 @@ const handleSendOtp = () => {
           />
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <label className="text-xs font-semibold text-slate-700">
               Mobile Number *
             </label>
             <div className="flex gap-2">
@@ -839,21 +806,35 @@ const handleSendOtp = () => {
                 maxLength={10}
                 inputMode="numeric"
                 required
-                className="flex-1 rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50/50"
+                disabled={otpVerified}
+                className={`flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
+                  otpVerified ? "bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200" : ""
+                }`}
               />
-<button
-  type="button"
-  onClick={handleSendOtp}
-  disabled={sendOtpMutation.isPending}
-  className="rounded-xl bg-[#0b1329] hover:bg-slate-800 px-5 text-xs font-bold text-white shadow-sm transition-all active:scale-[0.98]"
->
-  {sendOtpMutation.isPending ? "Sending..." : "Send OTP"}
-</button>
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                disabled={otpVerified || sendOtpMutation.isPending}
+                className={`rounded-lg px-4 text-xs font-bold shadow-xs transition-all border ${
+                  otpVerified
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                    : "bg-slate-900 border-slate-900 text-white hover:bg-slate-800"
+                }`}
+              >
+                {otpVerified ? "✓ Verified" : sendOtpMutation.isPending ? "Sending..." : "Send OTP"}
+              </button>
             </div>
+
+            {otpVerified && (
+              <div className="mt-2 bg-slate-50 rounded-lg p-2.5 border border-slate-200 flex justify-between items-center">
+                <span className="text-xs font-medium text-slate-500">Application Number</span>
+                <span className="text-xs font-bold text-slate-900">{applicationNumber || "—"}</span>
+              </div>
+            )}
           </div>
 
           <Field
-            label="Email ID"
+            label="Email ID Address"
             name="emailId"
             type="email"
             value={formData.emailId}
@@ -861,20 +842,22 @@ const handleSendOtp = () => {
           />
 
           <Field
-            label="PAN Number"
+            label="PAN Number *"
             name="panNumber"
             value={formData.panNumber}
             onChange={handleInputChange}
             maxLength={10}
+            placeholder="ABCDE1234F"
           />
 
           <Field
-            label="Aadhaar Number"
+            label="Aadhaar / OVD Number *"
             name="aadhaarNumber"
             value={formData.aadhaarNumber}
             onChange={handleInputChange}
             maxLength={12}
             inputMode="numeric"
+            placeholder="0000 0000 0000"
           />
 
           <Field label="Occupation / Constitution">
@@ -882,12 +865,12 @@ const handleSendOtp = () => {
               name="occupation"
               value={formData.occupation}
               onChange={handleInputChange}
-              className="rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50/50"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
-              <option value="SELF_EMPLOYED">Self employed</option>
-              <option value="SALARIED">Salaried</option>
-              <option value="BUSINESS">Business</option>
-              <option value="PROFESSIONAL">Professional</option>
+              <option value="SELF_EMPLOYED">Self-employed</option>
+              <option value="SALARIED">Salaried Sector</option>
+              <option value="BUSINESS">Corporate Business</option>
+              <option value="PROFESSIONAL">Licensed Professional</option>
             </select>
           </Field>
 
@@ -899,7 +882,7 @@ const handleSendOtp = () => {
           />
         </Section>
 
-        <Section title="Financial Profiles & Request Framework">
+        <Section title="Loan & Underwriting Metrics Requirement">
           <Field
             label="Verified Monthly Income"
             name="monthlyIncome"
@@ -929,7 +912,7 @@ const handleSendOtp = () => {
           />
 
           <Field
-            label="Requested Tenure (months)"
+            label="Requested Tenure (Months)"
             name="requestedTenure"
             type="number"
             min="1"
@@ -937,35 +920,36 @@ const handleSendOtp = () => {
             onChange={handleInputChange}
           />
 
-          <div className="grid grid-cols-3 gap-2 bg-gradient-to-br from-slate-50 to-slate-100/60 rounded-xl border border-slate-200 p-4 md:col-span-2 shadow-inner">
-            <div className="flex flex-col justify-center px-2">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Indicative EMI</span>
-              <span className="mt-1 text-sm md:text-base font-extrabold text-blue-600 tracking-tight">
+          {/* Indicators Box customized layout matching image values cleanly */}
+          <div className="grid grid-cols-3 gap-4 bg-slate-900 rounded-xl border border-slate-950 p-4 md:col-span-2 shadow-inner text-white">
+            <div className="flex flex-col justify-center px-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Indicative EMI</span>
+              <span className="mt-1 text-sm md:text-base font-extrabold text-blue-400 tracking-tight">
                 {formatCurrency(calculated.emi)}
               </span>
             </div>
-            <div className="flex flex-col justify-center border-x border-slate-200 px-4">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">FOIR Ratio</span>
-              <span className={`mt-1 text-sm md:text-base font-extrabold tracking-tight ${calculated.foir > 50 ? "text-amber-600" : "text-emerald-600"}`}>
+            <div className="flex flex-col justify-center border-x border-slate-800 px-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">FOIR Ratio</span>
+              <span className={`mt-1 text-sm md:text-base font-extrabold tracking-tight ${calculated.foir > 50 ? "text-amber-400" : "text-emerald-400"}`}>
                 {calculated.foir.toFixed(2)}%
               </span>
             </div>
-            <div className="flex flex-col justify-center px-4">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Estimated LTV</span>
-              <span className="mt-1 text-sm md:text-base font-extrabold text-slate-700 tracking-tight">
+            <div className="flex flex-col justify-center px-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Indicative LTV</span>
+              <span className="mt-1 text-sm md:text-base font-extrabold text-slate-100 tracking-tight">
                 {calculated.ltv.toFixed(2)}%
               </span>
             </div>
           </div>
         </Section>
 
-        <Section title="Collateral & Property Specifics">
+        <Section title="Collateral Property Information">
           <Field label="Property Category">
             <select
               name="propertyCategory"
               value={formData.propertyCategory}
               onChange={handleCategoryChange}
-              className="rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50/50"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
               {PROPERTY_CATEGORY.map((category) => (
                 <option key={category} value={category}>{category}</option>
@@ -973,12 +957,12 @@ const handleSendOtp = () => {
             </select>
           </Field>
 
-          <Field label="Property Type">
+          <Field label="Property Type *">
             <select
               name="propertyType"
               value={formData.propertyType}
               onChange={handleInputChange}
-              className="rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-2.5 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50/50"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
               {propertyTypeOptions.map((type) => (
                 <option key={type} value={type}>{type}</option>
@@ -987,7 +971,7 @@ const handleSendOtp = () => {
           </Field>
 
           <Field
-            label="Approximate Property Value"
+            label="Approximate Property Value *"
             name="propertyValue"
             type="number"
             min="0"
@@ -996,7 +980,7 @@ const handleSendOtp = () => {
           />
 
           <Field
-            label="Property Address"
+            label="Property Address *"
             name="propertyAddress"
             value={formData.propertyAddress}
             onChange={handleInputChange}

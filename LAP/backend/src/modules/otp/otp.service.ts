@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { CustomerType } from '../../common/enums/customer-profile.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomInt } from 'crypto';
 import { DataSource, Repository } from 'typeorm';
@@ -246,123 +247,109 @@ export class OtpService {
      OTP-GATED: VERIFY OTP AND CREATE APPLICATION
      POST /api/otp/verify-and-create
   ===================================================== */
+async verifyOtpAndCreate(body: Record<string, any>) {
+  const mobile = this.normalizeMobile(body.mobile);
+  const otp = this.normalizeOtp(body.otp);
+  const consentText = this.normalizeConsentText(body.consentText);
 
-  async verifyOtpAndCreate(body: Record<string, unknown>) {
-    const mobile = body.mobile;
-    const otp = body.otp;
-    const consentText = body.consentText;
+  const customerName = String(body.customerName || '').trim();
 
-    // Verify OTP first (this marks otp_sessions verified=true)
-    await this.verifyOtp(mobile, otp, consentText, undefined);
-
-    const payload = body; // Option A (top-level payload)
-
-    const customerName = String(payload.customerName ?? '').trim();
-    const mobileNumber = String(payload.mobile ?? '').trim();
-    const pan = payload.pan ? String(payload.pan).trim() : undefined;
-    const requestedAmount = payload.requestedAmount
-      ? String(payload.requestedAmount)
-      : undefined;
-
-    if (!customerName) throw new BadRequestException('customerName is required');
-    if (!mobileNumber) throw new BadRequestException('mobile is required');
-    if (!pan) throw new BadRequestException('pan is required');
-    if (!requestedAmount) throw new BadRequestException('requestedAmount is required');
-
-    return this.dataSource.transaction(async (manager) => {
-      const applicationRepo = manager.getRepository(Application);
-      const profileRepo = manager.getRepository(CustomerProfile);
-      const workflowRepo = manager.getRepository(Workflow);
-      const historyRepo = manager.getRepository(WorkflowHistory);
-
-      const application = manager.create(Application, {
-        customerName,
-        mobile: mobileNumber,
-        pan,
-        requestedAmount,
-        applicationNumber: 'TEMP',
-        status: ApplicationStatus.DRAFT,
-        stage: ApplicationStage.RM,
-        createdBy: 1,
-        updatedBy: 1,
-      });
-
-      const saved = await applicationRepo.save(application);
-      saved.applicationNumber = createReferenceNumber('LAP', saved.id);
-      await applicationRepo.save(saved);
-
-      // CustomerProfile best-effort mapping based on CreateApplicationWithProfileDto
-      const profile = profileRepo.create({
-        applicationId: saved.id,
-        customerType: (payload.customerType as any) ?? 'INDIVIDUAL',
-        firstName: (payload.firstName as any) ?? customerName.split(/\s+/)[0],
-        middleName: payload.middleName as any,
-        lastName:
-          (payload.lastName as any) ??
-          customerName.split(/\s+/).slice(-1)[0],
-        mobile: mobileNumber,
-        email: payload.email as any,
-        occupationType: (payload.occupationType as any) ?? (payload.occupationType as any),
-        businessName: payload.businessName as any,
-        monthlyIncome: payload.monthlyIncome != null ? String(payload.monthlyIncome) : undefined,
-        annualIncome: payload.annualIncome != null ? String(payload.annualIncome) : undefined,
-        panNumber: pan,
-        aadhaarNumber: payload.aadhaarNumber as any,
-        propertyCategory: payload.propertyCategory as any,
-        propertyType: payload.propertyType as any,
-        propertyAddress: payload.propertyAddress as any,
-        propertyCity: payload.propertyCity as any,
-        propertyState: payload.propertyState as any,
-        propertyPincode: payload.propertyPincode as any,
-        marketValue: payload.marketValue != null ? String(payload.marketValue) : undefined,
-        foir: payload.foir != null ? String(payload.foir) : undefined,
-        eligibleAmount: payload.eligibleAmount != null ? String(payload.eligibleAmount) : undefined,
-        roi: payload.roi != null ? String(payload.roi) : undefined,
-        tenure: payload.tenure != null ? Number(payload.tenure) : undefined,
-        emi: payload.emi != null ? String(payload.emi) : undefined,
-        recommendedAmount:
-          payload.recommendedAmount != null ? String(payload.recommendedAmount) : undefined,
-        recommendedRoi:
-          payload.recommendedRoi != null ? String(payload.recommendedRoi) : undefined,
-        recommendedTenure:
-          payload.recommendedTenure != null ? Number(payload.recommendedTenure) : undefined,
-        rmRecommendation: payload.rmRecommendation as any,
-        remarks: payload.remarks as any,
-      });
-
-      await profileRepo.save(profile);
-
-      await historyRepo.save(
-        historyRepo.create({
-          applicationId: saved.id,
-          fromRole: ApplicationStage.RM,
-          toRole: ApplicationStage.RM,
-          action: WorkflowAction.SAVE_DRAFT,
-          remarks: 'Saved as draft after OTP verification',
-          actionBy: 1,
-        }),
-      );
-
-      await workflowRepo.save(
-        workflowRepo.create({
-          applicationId: saved.id,
-          currentStage: ApplicationStage.RM,
-          currentStatus: ApplicationStatus.DRAFT,
-          assignedTo: undefined,
-          currentOwner: 1,
-          lastAction: WorkflowAction.SAVE_DRAFT,
-          lastRemarks: 'Saved as draft after OTP verification',
-        }),
-      );
-
-      return {
-        success: true,
-        applicationId: saved.id,
-        applicationNumber: saved.applicationNumber,
-        status: saved.status,
-      };
-    });
+  if (!customerName) {
+    throw new BadRequestException('customerName is required');
   }
+
+  const session = await this.otpSessions.findOne({
+    where: {
+      mobileNumber: mobile,
+    },
+    order: {
+      id: 'DESC',
+    },
+  });
+
+  if (!session) {
+    throw new BadRequestException('OTP not generated.');
+  }
+
+  if (session.verified) {
+    throw new BadRequestException('OTP already verified.');
+  }
+
+  if (new Date() > session.expiresAt) {
+    throw new BadRequestException('OTP expired.');
+  }
+
+  if (session.otp !== otp) {
+    session.attempts += 1;
+    await this.otpSessions.save(session);
+
+    throw new BadRequestException('Invalid OTP.');
+  }
+
+  // OTP Verified
+  session.verified = true;
+  session.consentGiven = true;
+  session.consentText = consentText;
+  session.consentAt = new Date();
+
+  await this.otpSessions.save(session);
+
+  // Create Application
+  const application = this.applications.create({
+    applicationNumber: 'TEMP',
+    customerName,
+    mobile,
+    status: ApplicationStatus.DRAFT,
+    stage: ApplicationStage.RM,
+    version: 1,
+  });
+
+  const saved = await this.applications.save(application);
+
+  saved.applicationNumber = createReferenceNumber('LAP', saved.id);
+
+  await this.applications.save(saved);
+
+  // Split Customer Name
+  const names = customerName.split(/\s+/);
+
+  const firstName = names[0] || '';
+  const lastName =
+    names.length > 1 ? names[names.length - 1] : '';
+
+  const middleName =
+    names.length > 2
+      ? names.slice(1, -1).join(' ')
+      : null;
+
+  // Create Customer Profile
+ const profile = this.customerProfiles.create({
+  applicationId: saved.id,
+  firstName,
+  middleName: middleName || undefined, // Ensure middleName is undefined if null
+  lastName,
+  mobile,
+});
+
+await this.customerProfiles.save(profile);
+
+  await this.customerProfiles.save(profile);
+
+  // Update OTP Session
+  session.applicationId = saved.id;
+  await this.otpSessions.save(session);
+
+  return {
+    success: true,
+    message: 'Lead created successfully.',
+    data: {
+      applicationId: saved.id,
+      applicationNumber: saved.applicationNumber,
+      customerName: saved.customerName,
+      mobile: saved.mobile,
+    },
+  };
+}
 
   /* =====================================================
      HELPERS

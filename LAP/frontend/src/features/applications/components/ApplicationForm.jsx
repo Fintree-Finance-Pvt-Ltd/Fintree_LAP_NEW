@@ -9,7 +9,7 @@ export default function ApplicationForm({
   submitLabel = "Save application",
 }) {
   const set = (key) => (event) =>
-    onChange({ ...value, [key]: event.target.value });
+    onChange({ [key]: event.target.value });
   return (
     <form className="grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
       <FormInput
