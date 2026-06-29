@@ -29,6 +29,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { FieldVisitsModule } from './modules/visits/field-visits.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
+import { GeoModule } from './modules/geo/geo.module';
 
 @Module({
   imports: [
@@ -50,7 +51,8 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     NotificationsModule,
     DashboardsModule,
     FieldVisitsModule,
-    UsersModule
+    UsersModule,
+    GeoModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: RateLimitGuard },

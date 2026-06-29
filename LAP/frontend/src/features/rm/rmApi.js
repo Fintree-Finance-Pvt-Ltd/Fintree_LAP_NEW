@@ -234,4 +234,15 @@ verifyOtp: (payload) =>
       `/applications/${applicationId}/workflow`,
       payload,
     ),
+
+  saveGeoLocation: (applicationId, payload,) =>
+  apiClient.post(
+    `/applications/${applicationId}/geo-location`,
+    payload,
+  ),
+
+  getGeoLocations: (applicationId) =>
+  apiClient.get(
+    `/applications/${applicationId}/geo-locations`,
+  ),
 };
