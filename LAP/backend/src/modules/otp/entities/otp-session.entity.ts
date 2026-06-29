@@ -11,6 +11,10 @@ import {
   'mobileNumber',
   'createdAt',
 ])
+@Index('idx_otp_lap_email_created', [
+  'emailId',
+  'createdAt',
+])
 @Index('idx_otp_lap_application', [
   'applicationId',
 ])
@@ -23,11 +27,22 @@ export class OtpSession {
 
   @Column({
     name: 'mobile_number',
+    type: 'varchar',
     length: 15,
+    nullable: true,
   })
-  mobileNumber: string;
+  mobileNumber?: string | null;
 
   @Column({
+    name: 'email_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  emailId?: string | null;
+
+  @Column({
+    type: 'varchar',
     length: 6,
   })
   otp: string;
@@ -69,14 +84,14 @@ export class OtpSession {
     type: 'text',
     nullable: true,
   })
-  consentText?: string;
+  consentText?: string | null;
 
   @Column({
     name: 'consent_at',
     type: 'datetime',
     nullable: true,
   })
-  consentAt?: Date;
+  consentAt?: Date | null;
 
   @Column({
     name: 'application_id',
@@ -84,7 +99,7 @@ export class OtpSession {
     unsigned: true,
     nullable: true,
   })
-  applicationId?: number;
+  applicationId?: number | null;
 
   @CreateDateColumn({
     name: 'created_at',

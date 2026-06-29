@@ -12,6 +12,7 @@ import { Application } from '../applications/entities/application.entity';
 import { CustomerProfile } from '../customer-profiles/entities/customer-profile.entity';
 import { Workflow } from '../workflow/entities/workflow.entity';
 import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
+import { EmailService } from './email/email.service';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
   providers: [
     OtpService,
     SmsService,
+    EmailService,
   ],
 
   exports: [

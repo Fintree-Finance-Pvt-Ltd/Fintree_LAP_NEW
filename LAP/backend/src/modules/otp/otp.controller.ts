@@ -17,7 +17,7 @@ export class OtpController {
   constructor(
     private readonly otpService:
       OtpService,
-  ) {}
+  ) { }
 
   /*
    * Both routes work:
@@ -100,4 +100,43 @@ export class OtpController {
       body,
     );
   }
+
+  @Post('email/send')
+  // sendEmailOtp(
+  //   @Body()
+  //   body: {
+  //     email?: string;
+  //     applicationId?: number | string;
+  //   },
+  // ) {
+  //   return this.otpService.sendEmailOtp(body);
+  // }
+  sendEmailOtp(@Body() body: any) {
+    console.log(
+      'EMAIL OTP CONTROLLER HIT:',
+      body,
+    );
+
+    return this.otpService.sendEmailOtp(
+      body,
+    );
+  }
+  // New email endpoint
+  @Post('email/verify')
+  verifyEmailOtp(
+    @Body()
+    body: {
+      email?: string;
+      otp?: string;
+      sessionId?: number | string;
+      applicationId?: number | string;
+      consentGiven?: boolean;
+      consentText?: string;
+    },
+  ) {
+    return this.otpService.verifyEmailOtp(
+      body,
+    );
+  }
+
 }

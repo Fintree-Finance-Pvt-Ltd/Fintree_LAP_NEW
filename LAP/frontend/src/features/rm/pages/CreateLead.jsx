@@ -115,7 +115,24 @@ export default function CreateLead() {
   );
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("error");
+  const [emailOtpCode, setEmailOtpCode] = useState(
+  Array(6).fill(""),
+);
 
+const [emailOtpError, setEmailOtpError] = useState("");
+
+const emailOtpInputRefs = useRef([]);
+
+const [emailOtpModal, setEmailOtpModal] = useState({
+  open: false,
+  sentEmailMasked: "",
+  resendAfterSeconds: 0,
+  expiresInSeconds: 0,
+});
+
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtpVerified, setEmailOtpVerified] = useState(false);
+  const [emailOtpSessionId, setEmailOtpSessionId] = useState(null);
   const [otpPopup, setOtpPopup] = useState({
     open: false,
     title: "",
@@ -182,7 +199,31 @@ export default function CreateLead() {
       pinCode: application.propertyPincode || application.pinCode || "",
     });
   }, [applicationId, applicationQuery.data, hasPrefilledFromState]);
+useEffect(() => {
+  if (
+    !emailOtpModal.open ||
+    emailOtpModal.resendAfterSeconds <= 0
+  ) {
+    return;
+  }
 
+  const interval = window.setInterval(() => {
+    setEmailOtpModal((previous) => ({
+      ...previous,
+      resendAfterSeconds: Math.max(
+        previous.resendAfterSeconds - 1,
+        0,
+      ),
+    }));
+  }, 1000);
+
+  return () => {
+    window.clearInterval(interval);
+  };
+}, [
+  emailOtpModal.open,
+  emailOtpModal.resendAfterSeconds,
+]);
   const sendOtpMutation = useMutation({
     mutationFn: () =>
       rmApi.sendOtp({
@@ -505,6 +546,226 @@ export default function CreateLead() {
     submitDraftMutation.mutate();
   };
 
+  //email
+const sendEmailOtpMutation = useMutation({
+  mutationFn: (payload) =>
+    rmApi.sendEmailOtp(payload),
+
+  onSuccess: (response) => {
+    const result = unwrapResponse(response);
+    const data = result?.data ?? result;
+
+    const sessionId = data?.sessionId;
+
+    if (!sessionId) {
+      setMessageType("error");
+      setMessage(
+        "OTP session ID was not returned by the server.",
+      );
+      return;
+    }
+
+    const email = String(
+      formData.emailId || "",
+    ).trim();
+
+    const [emailName, emailDomain] =
+      email.split("@");
+
+    const maskedEmail =
+      emailName && emailDomain
+        ? `${emailName.slice(0, 2)}${"*".repeat(
+            Math.max(emailName.length - 2, 3),
+          )}@${emailDomain}`
+        : email;
+
+    setEmailOtpSessionId(sessionId);
+    setEmailOtpSent(true);
+    setEmailOtpVerified(false);
+    setEmailOtpCode(Array(6).fill(""));
+    setEmailOtpError("");
+
+    setEmailOtpModal({
+      open: true,
+      sentEmailMasked: maskedEmail,
+      resendAfterSeconds: 30,
+      expiresInSeconds:
+        data?.expiresInSeconds ?? 300,
+    });
+
+    setMessageType("success");
+    setMessage(
+      result?.message ||
+        "OTP sent successfully to email.",
+    );
+
+    window.setTimeout(() => {
+      emailOtpInputRefs.current[0]?.focus();
+    }, 100);
+  },
+
+  onError: (error) => {
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Unable to send email OTP.";
+
+    setMessageType("error");
+    setMessage(
+      Array.isArray(message)
+        ? message.join(", ")
+        : message,
+    );
+  },
+});
+
+const verifyEmailOtpMutation = useMutation({
+  mutationFn: (payload) =>
+    rmApi.verifyEmailOtp(payload),
+
+  onSuccess: (response) => {
+    const result = unwrapResponse(response);
+    const data = result?.data ?? result;
+
+    setEmailOtpVerified(true);
+    setEmailOtpSent(false);
+    setEmailOtpError("");
+    setEmailOtpCode(Array(6).fill(""));
+
+    setEmailOtpModal((previous) => ({
+      ...previous,
+      open: false,
+    }));
+
+    if (data?.applicationNumber) {
+      setApplicationNumber(
+        data.applicationNumber,
+      );
+    }
+
+    setMessageType("success");
+    setMessage(
+      result?.message ||
+        "Email verified successfully.",
+    );
+  },
+
+  onError: (error) => {
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Email OTP verification failed.";
+
+    setEmailOtpError(
+      Array.isArray(message)
+        ? message.join(", ")
+        : message,
+    );
+  },
+});
+
+
+const handleVerifyEmailOtp = () => {
+  const email = String(
+    formData.emailId || "",
+  )
+    .trim()
+    .toLowerCase();
+
+  const otp = emailOtpCode.join("");
+
+  setEmailOtpError("");
+
+  if (!emailOtpSessionId) {
+    setEmailOtpError(
+      "OTP session not found. Please resend OTP.",
+    );
+    return;
+  }
+
+  if (!/^\d{6}$/.test(otp)) {
+    setEmailOtpError(
+      "Please enter a valid 6-digit OTP.",
+    );
+    return;
+  }
+
+  const currentApplicationId =
+    createdApplicationId ?? applicationId;
+
+  verifyEmailOtpMutation.mutate({
+    email,
+    otp,
+    sessionId: emailOtpSessionId,
+    applicationId: currentApplicationId
+      ? Number(currentApplicationId)
+      : undefined,
+  });
+};
+
+
+
+
+const handleEmailChange = (event) => {
+  const { name, value } = event.target;
+
+  setFormData((previous) => ({
+    ...previous,
+    [name]: value,
+  }));
+
+  setEmailOtpCode(Array(6).fill(""));
+  setEmailOtpSent(false);
+  setEmailOtpVerified(false);
+  setEmailOtpSessionId(null);
+  setEmailOtpError("");
+
+  setEmailOtpModal({
+    open: false,
+    sentEmailMasked: "",
+    resendAfterSeconds: 0,
+    expiresInSeconds: 0,
+  });
+};
+
+const handleSendEmailOtp = () => {
+  const email = String(
+    formData.emailId || "",
+  )
+    .trim()
+    .toLowerCase();
+
+  if (!email) {
+    setMessageType("error");
+    setMessage("Please enter email ID.");
+    return;
+  }
+
+  if (
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    setMessageType("error");
+    setMessage(
+      "Please enter a valid email ID.",
+    );
+    return;
+  }
+
+  const currentApplicationId =
+    createdApplicationId ?? applicationId;
+
+  sendEmailOtpMutation.mutate({
+    email,
+    applicationId: currentApplicationId
+      ? Number(currentApplicationId)
+      : undefined,
+  });
+};
+
+
+
+
+  
   const isPending =
     saveNewDraftMutation.isPending ||
     updateDraftMutation.isPending ||
@@ -512,7 +773,7 @@ export default function CreateLead() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
-      
+
       {/* Top Action Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-5">
         <div>
@@ -567,20 +828,18 @@ export default function CreateLead() {
                   <div key={item.key || item.label} className="relative flex flex-1 flex-col items-center text-center">
                     {index !== leadJourney.length - 1 && (
                       <div
-                        className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${
-                          leadJourney[index + 1]?.completed ? "bg-emerald-500" : "bg-slate-100"
-                        }`}
+                        className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${leadJourney[index + 1]?.completed ? "bg-emerald-500" : "bg-slate-100"
+                          }`}
                       />
                     )}
 
                     <div
-                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
-                        item.completed
+                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${item.completed
                           ? "bg-emerald-500 text-white ring-4 ring-emerald-50"
                           : isCurrent
-                          ? "bg-blue-600 text-white ring-4 ring-blue-50"
-                          : "bg-white text-slate-300 ring-2 ring-slate-100"
-                      }`}
+                            ? "bg-blue-600 text-white ring-4 ring-blue-50"
+                            : "bg-white text-slate-300 ring-2 ring-slate-100"
+                        }`}
                     >
                       {item.completed ? (
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -773,11 +1032,223 @@ export default function CreateLead() {
         </div>
       )}
 
+      {emailOtpModal.open && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
+      onClick={() =>
+        setEmailOtpModal((previous) => ({
+          ...previous,
+          open: false,
+        }))
+      }
+      aria-hidden="true"
+    />
+
+    <div className="relative w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+      <div className="border-b border-slate-100 p-6">
+        <h3 className="text-lg font-bold text-slate-900">
+          Verify Email Address
+        </h3>
+
+        <p className="mt-1 text-xs font-semibold text-slate-500">
+          An OTP has been sent to{" "}
+          <span className="font-bold text-slate-700">
+            {emailOtpModal.sentEmailMasked}
+          </span>
+        </p>
+      </div>
+
+      <div className="space-y-5 p-6">
+        <div className="flex justify-between gap-2">
+          {Array.from({ length: 6 }).map(
+            (_, index) => (
+              <input
+                key={index}
+                ref={(element) => {
+                  emailOtpInputRefs.current[index] =
+                    element;
+                }}
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={1}
+                value={emailOtpCode[index]}
+                onChange={(event) => {
+                  const rawValue =
+                    event.target.value.replace(
+                      /\D/g,
+                      "",
+                    );
+
+                  if (!rawValue) {
+                    setEmailOtpCode(
+                      (previous) => {
+                        const updated = [
+                          ...previous,
+                        ];
+
+                        updated[index] = "";
+
+                        return updated;
+                      },
+                    );
+
+                    return;
+                  }
+
+                  const digit =
+                    rawValue.slice(-1);
+
+                  setEmailOtpCode(
+                    (previous) => {
+                      const updated = [
+                        ...previous,
+                      ];
+
+                      updated[index] = digit;
+
+                      return updated;
+                    },
+                  );
+
+                  if (index < 5) {
+                    emailOtpInputRefs.current[
+                      index + 1
+                    ]?.focus();
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Backspace" &&
+                    !emailOtpCode[index] &&
+                    index > 0
+                  ) {
+                    emailOtpInputRefs.current[
+                      index - 1
+                    ]?.focus();
+                  }
+                }}
+                onPaste={(event) => {
+                  const pastedValue =
+                    event.clipboardData
+                      .getData("text")
+                      .replace(/\D/g, "")
+                      .slice(0, 6);
+
+                  if (!pastedValue) {
+                    return;
+                  }
+
+                  event.preventDefault();
+
+                  const updatedCode =
+                    Array(6).fill("");
+
+                  pastedValue
+                    .split("")
+                    .forEach(
+                      (digit, digitIndex) => {
+                        updatedCode[digitIndex] =
+                          digit;
+                      },
+                    );
+
+                  setEmailOtpCode(updatedCode);
+
+                  const focusIndex = Math.min(
+                    pastedValue.length,
+                    5,
+                  );
+
+                  emailOtpInputRefs.current[
+                    focusIndex
+                  ]?.focus();
+                }}
+                className="h-12 w-12 rounded-lg border border-slate-300 bg-slate-50 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                aria-label={`Email OTP digit ${
+                  index + 1
+                }`}
+              />
+            ),
+          )}
+        </div>
+
+        {emailOtpError && (
+          <div className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs font-semibold text-rose-600">
+            {emailOtpError}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 text-xs">
+          <span className="text-slate-500">
+            {emailOtpModal.resendAfterSeconds >
+            0
+              ? `Resend in ${emailOtpModal.resendAfterSeconds}s`
+              : "Didn't receive the OTP?"}
+          </span>
+
+          <button
+            type="button"
+            disabled={
+              emailOtpModal.resendAfterSeconds >
+                0 ||
+              sendEmailOtpMutation.isPending
+            }
+            onClick={() => {
+              setEmailOtpError("");
+              handleSendEmailOtp();
+            }}
+            className="font-bold text-blue-600 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {sendEmailOtpMutation.isPending
+              ? "Sending..."
+              : "Resend OTP"}
+          </button>
+        </div>
+
+        {/* No consent section for email OTP */}
+
+        <div className="flex gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() =>
+              setEmailOtpModal(
+                (previous) => ({
+                  ...previous,
+                  open: false,
+                }),
+              )
+            }
+            className="flex-1 rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              verifyEmailOtpMutation.isPending ||
+              emailOtpCode.join("").length !==
+                6
+            }
+            onClick={handleVerifyEmailOtp}
+            className="flex-1 rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white shadow-xs transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {verifyEmailOtpMutation.isPending
+              ? "Verifying..."
+              : "Verify Email"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
       {/* Global Toast Alert Messages */}
       {message && (
-        <div className={`rounded-lg border p-4 text-xs font-semibold shadow-xs ${
-          messageType === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-700" : "border-rose-100 bg-rose-50 text-rose-700"
-        }`}>
+        <div className={`rounded-lg border p-4 text-xs font-semibold shadow-xs ${messageType === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-700" : "border-rose-100 bg-rose-50 text-rose-700"
+          }`}>
           {message}
         </div>
       )}
@@ -807,19 +1278,17 @@ export default function CreateLead() {
                 inputMode="numeric"
                 required
                 disabled={otpVerified}
-                className={`flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
-                  otpVerified ? "bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200" : ""
-                }`}
+                className={`flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${otpVerified ? "bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200" : ""
+                  }`}
               />
               <button
                 type="button"
                 onClick={handleSendOtp}
                 disabled={otpVerified || sendOtpMutation.isPending}
-                className={`rounded-lg px-4 text-xs font-bold shadow-xs transition-all border ${
-                  otpVerified
+                className={`rounded-lg px-4 text-xs font-bold shadow-xs transition-all border ${otpVerified
                     ? "bg-emerald-50 border-emerald-200 text-emerald-700"
                     : "bg-slate-900 border-slate-900 text-white hover:bg-slate-800"
-                }`}
+                  }`}
               >
                 {otpVerified ? "✓ Verified" : sendOtpMutation.isPending ? "Sending..." : "Send OTP"}
               </button>
@@ -833,13 +1302,76 @@ export default function CreateLead() {
             )}
           </div>
 
-          <Field
+
+     
+
+      <div className="flex flex-col gap-1.5">
+  <label className="text-xs font-semibold text-slate-700">
+    Email Id *
+  </label>
+
+  <div className="flex gap-2">
+    <input
+      type="email"
+      name="emailId"
+      value={formData.emailId || ""}
+      onChange={handleEmailChange}
+      maxLength={255}
+      autoComplete="email"
+      placeholder="Enter email address"
+      required
+      disabled={emailOtpVerified}
+      className={`flex-1 rounded-lg border px-3.5 py-2 text-sm shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
+        emailOtpVerified
+          ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500"
+          : "border-slate-300 bg-white text-slate-900"
+      }`}
+    />
+
+    <button
+      type="button"
+      onClick={handleSendEmailOtp}
+      disabled={
+        emailOtpVerified ||
+        sendEmailOtpMutation.isPending
+      }
+      className={`rounded-lg border px-4 text-xs font-bold shadow-xs transition-all ${
+        emailOtpVerified
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+      }`}
+    >
+      {emailOtpVerified
+        ? "✓ Verified"
+        : sendEmailOtpMutation.isPending
+          ? "Sending..."
+          : emailOtpSent
+            ? "Resend OTP"
+            : "Send OTP"}
+    </button>
+  </div>
+
+  {emailOtpVerified && (
+    <div className="mt-2 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+      <span className="text-xs font-medium text-emerald-700">
+        Email successfully verified
+      </span>
+
+      <span className="text-xs font-bold text-emerald-700">
+        ✓ Verified
+      </span>
+    </div>
+  )}
+</div>
+
+
+          {/* <Field
             label="Email ID Address"
             name="emailId"
             type="email"
             value={formData.emailId}
             onChange={handleInputChange}
-          />
+          /> */}
 
           <Field
             label="PAN Number *"

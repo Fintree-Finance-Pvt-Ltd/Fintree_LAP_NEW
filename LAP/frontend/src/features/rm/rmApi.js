@@ -77,7 +77,33 @@ verifyOtp: (payload) =>
   },
 
 
-  // =========================
+
+  // Existing mobile OTP APIs
+  sendMobileOtp: (payload) =>
+    apiClient.post(
+      "/otp/mobile/send",
+      payload
+    ),
+
+  verifyMobileOtp: (payload) =>
+    apiClient.post(
+      "/otp/mobile/verify",
+      payload
+    ),
+
+  // New email OTP APIs
+  sendEmailOtp: (payload) =>
+    apiClient.post(
+      "/otp/email/send",
+      payload
+    ),
+
+  verifyEmailOtp: (payload) =>
+    apiClient.post(
+      "/otp/email/verify",
+      payload
+    ),
+
   // CONTACT PERSONS
   // =========================
   createContactPerson: (payload) =>

@@ -16,6 +16,23 @@ export default function GeoVerification() {
     property: { lat: "28.5708", lng: "77.3260", distanceSpoke: "18", mismatch: "No", status: "Verified" }
   });
 
+  const [activeTab, setActiveTab] = useState("residence");
+
+  const geoTabs = [
+    {
+      key: "residence",
+      label: "Residence Geo",
+    },
+    {
+      key: "business",
+      label: "Business Geo",
+    },
+    {
+      key: "property",
+      label: "Property Geo",
+    },
+  ];
+
   const markGeoComplete = useMutation({
     mutationFn: async () => rmApi.recordWorkflowStep(applicationId, { action: "GEO_VERIFICATION_DONE", remarks: "Geo verification completed" }),
     onSuccess: async () => {
@@ -28,7 +45,7 @@ export default function GeoVerification() {
 
   return (
     <div className="p-8 space-y-6 bg-[#f8fafc] min-h-screen text-slate-800 antialiased">
-      
+
       {/* 1. Top Core Dashboard Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2575fc] via-[#1a4cb0] to-[#6a11cb] p-8 text-white shadow-xl shadow-blue-900/10">
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"></div>
@@ -55,117 +72,398 @@ export default function GeoVerification() {
       {message && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-700">{message}</div>}
 
       {/* 2. 3-Column Verification Form Matrix */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        
-        {/* BLOCK A: RESIDENCE GEO */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-extrabold text-[#0f2942] border-b border-slate-100 pb-2 uppercase tracking-wide">Residence Geo</h3>
-          
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Latitude</label>
-            <input type="text" value={geoData.residence.lat} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
+      {/* GEO VERIFICATION TABS */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {/* TAB HEADER */}
+        <div className="border-b border-slate-200 bg-slate-50 px-4 pt-4">
+          <div className="flex gap-2 overflow-x-auto">
+            {geoTabs.map((tab) => {
+              const isActive = activeTab === tab.key;
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Longitude</label>
-            <input type="text" value={geoData.residence.lng} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`relative whitespace-nowrap rounded-t-xl px-5 py-3 text-xs font-extrabold uppercase tracking-wide transition-all ${isActive
+                      ? "bg-white text-blue-700 shadow-sm"
+                      : "text-slate-500 hover:bg-white/70 hover:text-slate-800"
+                    }`}
+                >
+                  {tab.label}
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">GPS Address</label>
-            <input type="text" value={geoData.residence.gpsAddress} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Manual Address</label>
-            <input type="text" value={geoData.residence.manualAddress} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
-            <select value={geoData.residence.status} disabled className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold bg-slate-50 text-slate-800 outline-none cursor-not-allowed">
-              <option>Verified</option>
-              <option>Mismatch</option>
-            </select>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 h-0.5 w-full bg-blue-600" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* BLOCK B: BUSINESS GEO */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-extrabold text-[#0f2942] border-b border-slate-100 pb-2 uppercase tracking-wide">Business Geo</h3>
-          
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Latitude</label>
-            <input type="text" value={geoData.business.lat} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
+        {/* TAB CONTENT */}
+        <div className="p-6 md:p-8">
+          {/* RESIDENCE GEO TAB */}
+          {activeTab === "residence" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-base font-extrabold text-[#0f2942]">
+                    Residence Geo Verification
+                  </h3>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Longitude</label>
-            <input type="text" value={geoData.business.lng} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Verify the applicant's current residential location.
+                  </p>
+                </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">GPS Address</label>
-            <input type="text" value={geoData.business.gpsAddress} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${geoData.residence.status === "Verified"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-rose-50 text-rose-700"
+                    }`}
+                >
+                  {geoData.residence.status}
+                </span>
+              </div>
 
-          <div className="flex flex-col gap-1.5 lg:pt-[68px]"> {/* Balances card heights perfectly */}
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
-            <select value={geoData.business.status} disabled className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold bg-slate-50 text-slate-800 outline-none cursor-not-allowed">
-              <option>Verified</option>
-              <option>Mismatch</option>
-            </select>
-          </div>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Latitude
+                  </label>
+
+                  <input
+                    type="text"
+                    value={geoData.residence.lat}
+                    readOnly
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Longitude
+                  </label>
+
+                  <input
+                    type="text"
+                    value={geoData.residence.lng}
+                    readOnly
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5 md:col-span-2">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    GPS Address
+                  </label>
+
+                  <input
+                    type="text"
+                    value={geoData.residence.gpsAddress}
+                    readOnly
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5 md:col-span-2">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Manual Address
+                  </label>
+
+                  <input
+                    type="text"
+                    value={geoData.residence.manualAddress}
+                    onChange={(event) =>
+                      setGeoData((previous) => ({
+                        ...previous,
+                        residence: {
+                          ...previous.residence,
+                          manualAddress: event.target.value,
+                        },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Verification Status
+                  </label>
+
+                  <select
+                    value={geoData.residence.status}
+                    onChange={(event) =>
+                      setGeoData((previous) => ({
+                        ...previous,
+                        residence: {
+                          ...previous.residence,
+                          status: event.target.value,
+                        },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="Verified">
+                      Verified
+                    </option>
+
+                    <option value="Mismatch">
+                      Mismatch
+                    </option>
+
+                    <option value="Pending">
+                      Pending
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* BUSINESS GEO TAB */}
+          {activeTab === "business" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-base font-extrabold text-[#0f2942]">
+                    Business Geo Verification
+                  </h3>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Verify the applicant's business or workplace location.
+                  </p>
+                </div>
+
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${geoData.business.status === "Verified"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-rose-50 text-rose-700"
+                    }`}
+                >
+                  {geoData.business.status}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Latitude
+                  </label>
+
+                  <input
+                    type="text"
+                    value={geoData.business.lat}
+                    readOnly
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Longitude
+                  </label>
+
+                  <input
+                    type="text"
+                    value={geoData.business.lng}
+                    readOnly
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5 md:col-span-2">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    GPS Address
+                  </label>
+
+                  <input
+                    type="text"
+                    value={geoData.business.gpsAddress}
+                    readOnly
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Verification Status
+                  </label>
+
+                  <select
+                    value={geoData.business.status}
+                    onChange={(event) =>
+                      setGeoData((previous) => ({
+                        ...previous,
+                        business: {
+                          ...previous.business,
+                          status: event.target.value,
+                        },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="Verified">
+                      Verified
+                    </option>
+
+                    <option value="Mismatch">
+                      Mismatch
+                    </option>
+
+                    <option value="Pending">
+                      Pending
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PROPERTY GEO TAB */}
+          {activeTab === "property" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-base font-extrabold text-[#0f2942]">
+                    Property Geo Verification
+                  </h3>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Verify collateral location and sourcing-radius compliance.
+                  </p>
+                </div>
+
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${geoData.property.status === "Verified"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-rose-50 text-rose-700"
+                    }`}
+                >
+                  {geoData.property.status}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Latitude
+                  </label>
+
+                  <input
+                    type="text"
+                    value={geoData.property.lat}
+                    readOnly
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Longitude
+                  </label>
+
+                  <input
+                    type="text"
+                    value={geoData.property.lng}
+                    readOnly
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Distance from Spoke (KM)
+                  </label>
+
+                  <input
+                    type="number"
+                    value={geoData.property.distanceSpoke}
+                    onChange={(event) =>
+                      setGeoData((previous) => ({
+                        ...previous,
+                        property: {
+                          ...previous.property,
+                          distanceSpoke: event.target.value,
+                        },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Distance Mismatch
+                  </label>
+
+                  <select
+                    value={geoData.property.mismatch}
+                    onChange={(event) =>
+                      setGeoData((previous) => ({
+                        ...previous,
+                        property: {
+                          ...previous.property,
+                          mismatch: event.target.value,
+                        },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Verification Status
+                  </label>
+
+                  <select
+                    value={geoData.property.status}
+                    onChange={(event) =>
+                      setGeoData((previous) => ({
+                        ...previous,
+                        property: {
+                          ...previous.property,
+                          status: event.target.value,
+                        },
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="Verified">
+                      Verified
+                    </option>
+
+                    <option value="Mismatch">
+                      Mismatch
+                    </option>
+
+                    <option value="Pending">
+                      Pending
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* BLOCK C: PROPERTY GEO */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-extrabold text-[#0f2942] border-b border-slate-100 pb-2 uppercase tracking-wide">Property Geo</h3>
-          
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Latitude</label>
-            <input type="text" value={geoData.property.lat} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Longitude</label>
-            <input type="text" value={geoData.property.lng} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Distance from Spoke (KM)</label>
-            <input type="text" value={geoData.property.distanceSpoke} readOnly className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-slate-50/50 text-slate-700 outline-none" />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Distance Mismatch</label>
-            <select value={geoData.property.mismatch} disabled className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold bg-slate-50 text-slate-800 outline-none cursor-not-allowed">
-              <option>No</option>
-              <option>Yes</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
-            <select value={geoData.property.status} disabled className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold bg-slate-50 text-slate-800 outline-none cursor-not-allowed">
-              <option>Verified</option>
-              <option>Mismatch</option>
-            </select>
-          </div>
-        </div>
-
       </div>
 
       {/* 3. Bottom Maps Wrapper & Geo Decision Panel Split */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 items-stretch">
-        
+
         {/* MAP AND DISTANCE CONTROL BLOCK */}
         <div className="xl:col-span-2 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm flex flex-col">
           <div className="border-b border-slate-100 pb-2 mb-4 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-blue-600"></span>
             <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#0f2942]">Map and distance control</h3>
           </div>
-          
+
           {/* Interactive Placeholder Simulation Canvas */}
           <div className="flex-1 bg-[#dbe4f4]/60 rounded-xl p-8 flex flex-col items-center justify-center text-center relative min-h-[260px]">
             {/* Custom SVG Location Map Pin Icon */}
@@ -173,11 +471,11 @@ export default function GeoVerification() {
               <div className="h-4 w-4 bg-rose-600 rounded-full border-2 border-white shadow-md relative z-10"></div>
               <div className="h-6 w-1 bg-rose-600 mx-auto -mt-1 rounded-b"></div>
             </div>
-            
+
             <h4 className="text-sm font-bold text-slate-800 max-w-md">Sector 18, Noida, Uttar Pradesh 201301</h4>
             <p className="text-xs text-slate-400 mt-2 font-medium">Prototype map placeholder</p>
             <p className="text-[11px] text-slate-400 font-mono mt-0.5">Coordinates: 28.5708, 77.3260</p>
-            
+
             <button className="mt-5 flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs px-5 py-2 rounded-xl shadow-sm transition-all">
               Open Google Maps <FaExternalLinkAlt size={10} className="text-slate-400" />
             </button>
@@ -191,7 +489,7 @@ export default function GeoVerification() {
               <span className="h-2 w-2 rounded-full bg-blue-600"></span>
               <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#0f2942]">Geo decision</h3>
             </div>
-            
+
             <div className="space-y-3 pt-2">
               <div className="flex justify-between text-xs border-b border-slate-50 pb-2">
                 <span className="text-slate-400 font-semibold">Assigned Spoke</span>

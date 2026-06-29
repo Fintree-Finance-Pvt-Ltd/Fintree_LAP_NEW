@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 
 import { CustomerType } from '../../common/enums/customer-profile.enum';
@@ -24,6 +25,7 @@ import { WorkflowAction } from '../../common/enums/workflow-action.enum';
 import { ApplicationStage } from '../../common/enums/application-stage.enum';
 import { ApplicationStatus } from '../../common/enums/application-status.enum';
 import { createReferenceNumber } from '../../common/utils/reference-number.util';
+import { EmailService } from './email/email.service';
 
 @Injectable()
 export class OtpService {
@@ -32,6 +34,8 @@ export class OtpService {
     private readonly otpSessions: Repository<OtpSession>,
 
     private readonly smsService: SmsService,
+
+    private readonly emailService: EmailService,
 
     private readonly dataSource: DataSource,
 
@@ -46,7 +50,7 @@ export class OtpService {
 
     @InjectRepository(WorkflowHistory)
     private readonly workflowHistory: Repository<WorkflowHistory>,
-  ) {}
+  ) { }
 
   /* =====================================================
      SEND OTP
@@ -96,6 +100,7 @@ export class OtpService {
 
     const session = this.otpSessions.create({
       mobileNumber: cleanedMobile,
+
       otp,
       verified: false,
       attempts: 0,
@@ -247,109 +252,109 @@ export class OtpService {
      OTP-GATED: VERIFY OTP AND CREATE APPLICATION
      POST /api/otp/verify-and-create
   ===================================================== */
-async verifyOtpAndCreate(body: Record<string, any>) {
-  const mobile = this.normalizeMobile(body.mobile);
-  const otp = this.normalizeOtp(body.otp);
-  const consentText = this.normalizeConsentText(body.consentText);
+  async verifyOtpAndCreate(body: Record<string, any>) {
+    const mobile = this.normalizeMobile(body.mobile);
+    const otp = this.normalizeOtp(body.otp);
+    const consentText = this.normalizeConsentText(body.consentText);
 
-  const customerName = String(body.customerName || '').trim();
+    const customerName = String(body.customerName || '').trim();
 
-  if (!customerName) {
-    throw new BadRequestException('customerName is required');
-  }
+    if (!customerName) {
+      throw new BadRequestException('customerName is required');
+    }
 
-  const session = await this.otpSessions.findOne({
-    where: {
-      mobileNumber: mobile,
-    },
-    order: {
-      id: 'DESC',
-    },
-  });
+    const session = await this.otpSessions.findOne({
+      where: {
+        mobileNumber: mobile,
+      },
+      order: {
+        id: 'DESC',
+      },
+    });
 
-  if (!session) {
-    throw new BadRequestException('OTP not generated.');
-  }
+    if (!session) {
+      throw new BadRequestException('OTP not generated.');
+    }
 
-  if (session.verified) {
-    throw new BadRequestException('OTP already verified.');
-  }
+    if (session.verified) {
+      throw new BadRequestException('OTP already verified.');
+    }
 
-  if (new Date() > session.expiresAt) {
-    throw new BadRequestException('OTP expired.');
-  }
+    if (new Date() > session.expiresAt) {
+      throw new BadRequestException('OTP expired.');
+    }
 
-  if (session.otp !== otp) {
-    session.attempts += 1;
+    if (session.otp !== otp) {
+      session.attempts += 1;
+      await this.otpSessions.save(session);
+
+      throw new BadRequestException('Invalid OTP.');
+    }
+
+    // OTP Verified
+    session.verified = true;
+    session.consentGiven = true;
+    session.consentText = consentText;
+    session.consentAt = new Date();
+
     await this.otpSessions.save(session);
 
-    throw new BadRequestException('Invalid OTP.');
-  }
+    // Create Application
+    const application = this.applications.create({
+      applicationNumber: 'TEMP',
+      customerName,
+      mobile,
+      status: ApplicationStatus.DRAFT,
+      stage: ApplicationStage.RM,
+      version: 1,
+    });
 
-  // OTP Verified
-  session.verified = true;
-  session.consentGiven = true;
-  session.consentText = consentText;
-  session.consentAt = new Date();
+    const saved = await this.applications.save(application);
 
-  await this.otpSessions.save(session);
+    saved.applicationNumber = createReferenceNumber('LAP', saved.id);
 
-  // Create Application
-  const application = this.applications.create({
-    applicationNumber: 'TEMP',
-    customerName,
-    mobile,
-    status: ApplicationStatus.DRAFT,
-    stage: ApplicationStage.RM,
-    version: 1,
-  });
+    await this.applications.save(saved);
 
-  const saved = await this.applications.save(application);
+    // Split Customer Name
+    const names = customerName.split(/\s+/);
 
-  saved.applicationNumber = createReferenceNumber('LAP', saved.id);
+    const firstName = names[0] || '';
+    const lastName =
+      names.length > 1 ? names[names.length - 1] : '';
 
-  await this.applications.save(saved);
+    const middleName =
+      names.length > 2
+        ? names.slice(1, -1).join(' ')
+        : null;
 
-  // Split Customer Name
-  const names = customerName.split(/\s+/);
-
-  const firstName = names[0] || '';
-  const lastName =
-    names.length > 1 ? names[names.length - 1] : '';
-
-  const middleName =
-    names.length > 2
-      ? names.slice(1, -1).join(' ')
-      : null;
-
-  // Create Customer Profile
- const profile = this.customerProfiles.create({
-  applicationId: saved.id,
-  firstName,
-  middleName: middleName || undefined, // Ensure middleName is undefined if null
-  lastName,
-  mobile,
-});
-
-await this.customerProfiles.save(profile);
-
-  await this.customerProfiles.save(profile);
-
-  // Update OTP Session
-  session.applicationId = saved.id;
-  await this.otpSessions.save(session);
-
-  return {
-    success: true,
-    message: 'Lead created successfully.',
-    data: {
+    // Create Customer Profile
+    const profile = this.customerProfiles.create({
       applicationId: saved.id,
-      applicationNumber: saved.applicationNumber,
-      customerName: saved.customerName,
-      mobile: saved.mobile,
-    },
-  };
-}
+      firstName,
+      middleName: middleName || undefined, // Ensure middleName is undefined if null
+      lastName,
+      mobile,
+    });
+
+    await this.customerProfiles.save(profile);
+
+    await this.customerProfiles.save(profile);
+
+    // Update OTP Session
+    session.applicationId = saved.id;
+    await this.otpSessions.save(session);
+
+    return {
+      success: true,
+      message: 'Lead created successfully.',
+      data: {
+        applicationId: saved.id,
+        applicationNumber: saved.applicationNumber,
+        customerName: saved.customerName,
+        mobile: saved.mobile,
+      },
+    };
+  }
 
   /* =====================================================
      HELPERS
@@ -432,5 +437,296 @@ await this.customerProfiles.save(profile);
 
     return `${'*'.repeat(mobile.length - 4)}${mobile.slice(-4)}`;
   }
+
+  async sendEmailOtp(body: {
+    email?: string;
+    applicationId?: number | string;
+  }) {
+    const email = String(body.email || '')
+      .trim()
+      .toLowerCase();
+
+    if (!email) {
+      throw new BadRequestException(
+        'Email ID is required.',
+      );
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException(
+        'Please enter a valid email ID.',
+      );
+    }
+
+    let applicationId: number | null = null;
+
+    if (
+      body.applicationId !== undefined &&
+      body.applicationId !== null &&
+      body.applicationId !== ''
+    ) {
+      applicationId = Number(body.applicationId);
+
+      if (
+        !Number.isInteger(applicationId) ||
+        applicationId <= 0
+      ) {
+        throw new BadRequestException(
+          'Invalid application ID.',
+        );
+      }
+    }
+
+    const currentTime = new Date();
+
+    const existingSession =
+      await this.otpSessions.findOne({
+        where: {
+          emailId: email,
+          verified: false,
+        },
+        order: {
+          createdAt: 'DESC',
+        },
+      });
+
+    if (existingSession) {
+      const lastSentTime = new Date(
+        existingSession.lastSentAt,
+      ).getTime();
+
+      const secondsPassed = Math.floor(
+        (currentTime.getTime() - lastSentTime) /
+        1000,
+      );
+
+      if (secondsPassed < 60) {
+        throw new HttpException(
+          `Please wait ${60 - secondsPassed
+          } seconds before resending OTP.`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
+
+    const otp = randomInt(
+      100000,
+      1000000,
+    ).toString();
+
+    const expiresAt = new Date(
+      currentTime.getTime() + 5 * 60 * 1000,
+    );
+
+    let otpSession: OtpSession;
+    let isNewSession = false;
+
+    if (existingSession) {
+      existingSession.emailId = email;
+
+      // Use entity property name, not mobile_number.
+      existingSession.mobileNumber = null;
+
+      existingSession.otp = otp;
+      existingSession.verified = false;
+      existingSession.attempts = 0;
+      existingSession.expiresAt = expiresAt;
+      existingSession.lastSentAt = currentTime;
+      existingSession.applicationId =
+        applicationId;
+
+      existingSession.consentGiven = false;
+      existingSession.consentText = null;
+      existingSession.consentAt = null;
+
+      otpSession =
+        await this.otpSessions.save(
+          existingSession,
+        );
+    } else {
+      isNewSession = true;
+
+      otpSession =
+        this.otpSessions.create({
+          // Use entity property names here.
+          emailId: email,
+          mobileNumber: null,
+
+          otp,
+          verified: false,
+          attempts: 0,
+          expiresAt,
+          lastSentAt: currentTime,
+          applicationId,
+          consentGiven: false,
+
+        });
+
+      otpSession =
+        await this.otpSessions.save(
+          otpSession,
+        );
+    }
+
+    try {
+      await this.emailService.sendOtp(
+        email,
+        otp,
+      );
+    } catch (error) {
+      if (isNewSession) {
+        await this.otpSessions.delete(
+          otpSession.id,
+        );
+      }
+
+      throw error;
+    }
+
+    return {
+      success: true,
+      message:
+        'OTP sent successfully to email ID.',
+      data: {
+        sessionId: otpSession.id,
+        emailId: otpSession.emailId,
+        expiresInSeconds: 300,
+      },
+    };
+  }
+  async verifyEmailOtp(body: {
+    email?: string;
+    otp?: string;
+    sessionId?: number | string;
+    applicationId?: number | string;
+    consentGiven?: boolean;
+    consentText?: string;
+  }) {
+    const email = String(body.email || '')
+      .trim()
+      .toLowerCase();
+
+    const otp = String(body.otp || '').trim();
+    const sessionId = Number(body.sessionId);
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ) {
+      throw new BadRequestException(
+        'Please enter a valid email ID.',
+      );
+    }
+
+    if (
+      !Number.isInteger(sessionId) ||
+      sessionId <= 0
+    ) {
+      throw new BadRequestException(
+        'Valid OTP session ID is required.',
+      );
+    }
+
+    if (!/^\d{6}$/.test(otp)) {
+      throw new BadRequestException(
+        'OTP must contain exactly 6 digits.',
+      );
+    }
+
+    const session =
+      await this.otpSessions.findOne({
+        where: {
+          id: sessionId,
+          emailId: email,
+        },
+      });
+
+    if (!session) {
+      throw new NotFoundException(
+        'Email OTP session was not found.',
+      );
+    }
+
+    if (session.mobileNumber !== null) {
+      throw new BadRequestException(
+        'This OTP session is not an email OTP session.',
+      );
+    }
+
+    if (session.verified) {
+      return {
+        success: true,
+        message: 'Email ID is already verified.',
+        data: {
+          verified: true,
+          sessionId: session.id,
+          emailId: session.emailId,
+          applicationId:
+            session.applicationId || null,
+        },
+      };
+    }
+
+    if (
+      new Date(session.expiresAt).getTime() <
+      Date.now()
+    ) {
+      throw new UnauthorizedException(
+        'OTP has expired. Please resend OTP.',
+      );
+    }
+
+    if (session.attempts >= 5) {
+      throw new HttpException(
+        'Maximum OTP attempts exceeded. Please resend OTP.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    if (session.otp !== otp) {
+      session.attempts += 1;
+
+      await this.otpSessions.save(
+        session,
+      );
+
+      throw new UnauthorizedException(
+        `Invalid OTP. ${Math.max(
+          5 - session.attempts,
+          0,
+        )} attempts remaining.`,
+      );
+    }
+
+    session.verified = true;
+    session.attempts += 1;
+
+    if (body.consentGiven === true) {
+      session.consentGiven = true;
+      session.consentText =
+        body.consentText ||
+        'Customer consented to email verification.';
+      session.consentAt = new Date();
+    }
+
+    await this.otpSessions.save(
+      session,
+    );
+
+    return {
+      success: true,
+      message:
+        'Email ID verified successfully.',
+      data: {
+        verified: true,
+        sessionId: session.id,
+        emailId: session.emailId,
+        applicationId:
+          session.applicationId || null,
+      },
+    };
+  }
+
+
+
 }
 
