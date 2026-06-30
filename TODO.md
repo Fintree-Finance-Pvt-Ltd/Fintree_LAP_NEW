@@ -1,39 +1,20 @@
-# TODO - MUI Removal & Migration
+# TODO - Applications LAP LOS Service Refactor
 
-## Step 1: Repo inventory (manual)
-- [x] Read current MUI dependencies from `LAP/frontend/package.json`
-- [x] Identify MUI usage in root providers/layout/components via targeted reads
+- [ ] Refactor `backend/src/modules/applications/applications.service.ts`
+  - [ ] Add helpers: `mergeDefined`, `upsertCustomerProfile`, `upsertWorkflow`
+  - [ ] Rewrite `findOne()` to return merged `Application + CustomerProfile + Workflow`
+  - [x] Fix `update()` (PATCH) with a single transaction:
+    - [x] Lock Application row
+    - [x] Update only defined fields on Application
+    - [x] Upsert CustomerProfile with partial updates (no erasing missing fields)
+    - [x] Upsert Workflow for SAVE_DRAFT
+    - [x] Create WorkflowHistory only for first draft
+    - [x] Create AuditLog with before/after snapshots
+    - [x] Return `{ success:true, message:"Draft saved successfully", data:{ id, applicationNumber, status, stage } }`
 
-## Step 2: Add required libraries
-- [x] Update `LAP/frontend/package.json` (remove MUI deps, add react-toastify/react-select/react-icons)
-
-
-## Step 3: Remove MUI theme/providers
-- [x] Update `LAP/frontend/src/app/providers.jsx` to remove `ThemeProvider`/`CssBaseline` and MUI theme import
-- [ ] Remove/stop using `LAP/frontend/src/theme/*` if only for MUI (or refactor if needed)
-
-
-## Step 4: Toast migration
-- [x] Add single `ToastContainer` at app root (likely `LAP/frontend/src/main.jsx`)
-- [x] Replace `AppSnackbar` implementation with react-toastify `toast` + ensure no duplicate containers
-
-## Step 5: Replace form/select
-- [x] Migrate `FormSelect.jsx` from MUI `TextField select` to `react-select`
-
-
-## Step 6: Replace icons/components
-- [ ] Replace MUI icons/components in layout/components:
-  - Header menu icon
-  - Sidebar icons
-  - DataTable using standard HTML table
-  - Buttons/cards/chips/dialogs/loaders
-
-## Step 7: Validation/verification
-- [ ] Ensure no `@mui/` or `@material-ui/` imports remain in frontend src
-- [ ] Run `npm install`
-- [ ] Run `npm run build`
-- [ ] Run `npm run lint`
-
-## Step 8: Final report
-- [ ] Provide file-by-file modified list + removed/new deps + migrated fields summary
+  - [ ] Fix `draft()` to use upsert helpers and avoid duplicate history/workflow/profile
+  - [ ] Fix `submitDraft()` to upsert and create WorkflowHistory/WorkflowLog/AuditLog correctly (no duplicates)
+- [ ] Build & test
+  - [ ] `cd backend && npm run build`
+  - [ ] `cd backend && npm test` (if available)
 
