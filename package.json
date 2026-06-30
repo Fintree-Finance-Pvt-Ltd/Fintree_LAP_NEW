@@ -15,7 +15,7 @@
     "seed": "npm run seed -w backend"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.2.3"
   },
   "dependencies": {
     "nodemailer": "^9.0.2"

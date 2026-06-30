@@ -204,12 +204,31 @@ verifyOtp: (payload) =>
       `/applications/${applicationId}/documents`,
     ),
 
-  uploadDocument: (applicationId, formData) =>
-    apiClient.post(
-      `/applications/${applicationId}/documents`,
-      formData,
-    ),
+  // uploadDocument: (applicationId, formData) =>
+  //   apiClient.post(
+  //     `/applications/${applicationId}/documents`,
+  //     formData,
+  //   ),
 
+
+ // =========================
+  // DOCUMENTS
+  // =========================
+    uploadDocument: (formData) =>
+  apiClient.post(
+    "/documents/upload",
+    formData,
+  ),
+
+getDocuments: (applicationId) =>
+  apiClient.get(
+    `/documents/${applicationId}`,
+  ),
+
+deleteDocument: (documentId) =>
+  apiClient.delete(
+    `/documents/${documentId}`,
+  ),
   // =========================
   // WORKFLOW TRANSITIONS
   // =========================

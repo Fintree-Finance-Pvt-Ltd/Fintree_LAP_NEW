@@ -36,24 +36,24 @@ export default function KycDocuments() {
   const verified = requiredDocumentTypes.filter((type) => uploadedTypes.has(type)).length;
   const completion = Math.round((verified / requiredDocumentTypes.length) * 100);
 
-  const upload = useMutation({
-    mutationFn: ({ documentType, file }) => {
-      const formData = new FormData();
-      formData.append("applicationId", selectedId);
-      formData.append("documentType", documentType);
-      formData.append("documentName", documentLabels[documentType]);
-      formData.append("file", file);
-      return rmApi.uploadDocument(formData);
-    },
-    onSuccess: async () => {
-      setMessage("Documents uploaded and workflow state refreshed.");
-      await queryClient.invalidateQueries({ queryKey: ["rm-documents", selectedId] });
-      await queryClient.invalidateQueries({ queryKey: ["rm-workflow", selectedId] });
-      await queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] });
-      await rmApi.recordWorkflowStep(selectedId, { action: "DOCUMENTS_UPLOADED", remarks: "Documents uploaded" }).catch(() => undefined);
-    },
-    onSettled: () => setUploadingType(""),
-  });
+  // const upload = useMutation({
+  //   mutationFn: ({ documentType, file }) => {
+  //     const formData = new FormData();
+  //     formData.append("applicationId", selectedId);
+  //     formData.append("documentType", documentType);
+  //     formData.append("documentName", documentLabels[documentType]);
+  //     formData.append("file", file);
+  //     return rmApi.uploadDocument(formData);
+  //   },
+  //   onSuccess: async () => {
+  //     setMessage("Documents uploaded and workflow state refreshed.");
+  //     await queryClient.invalidateQueries({ queryKey: ["rm-documents", selectedId] });
+  //     await queryClient.invalidateQueries({ queryKey: ["rm-workflow", selectedId] });
+  //     await queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] });
+  //     await rmApi.recordWorkflowStep(selectedId, { action: "DOCUMENTS_UPLOADED", remarks: "Documents uploaded" }).catch(() => undefined);
+  //   },
+  //   onSettled: () => setUploadingType(""),
+  // });
 
   const metrics = [
     { title: "UPLOADED", value: verified, color: "from-blue-500/10 to-indigo-500/5", textColor: "text-blue-600" },
@@ -61,6 +61,60 @@ export default function KycDocuments() {
     { title: "COMPLETION", value: `${completion}%`, color: "from-rose-500/10 to-pink-500/5", textColor: "text-rose-600" },
     { title: "KYC STATUS", value: completion === 100 ? "Ready" : "Pending", color: "from-amber-500/10 to-orange-500/5", textColor: "text-amber-600" },
   ];
+
+
+  const upload = useMutation({
+    mutationFn: ({
+      applicationId,
+      documentType,
+      documentName,
+      file,
+    }) => {
+      const formData = new FormData();
+
+      formData.append(
+        "applicationId",
+        String(applicationId),
+      );
+
+      formData.append(
+        "documentType",
+        documentType,
+      );
+
+      formData.append(
+        "documentName",
+        documentName || documentType,
+      );
+
+      formData.append("file", file);
+
+      return rmApi.uploadDocument(
+        formData,
+      );
+    },
+
+    onSuccess: async () => {
+      setUploadingType("");
+
+      await queryClient.invalidateQueries({
+        queryKey: [
+          "application-documents",
+          selectedId,
+        ],
+      });
+    },
+
+    onError: (error) => {
+      setUploadingType("");
+
+      console.error(
+        "Document upload failed:",
+        error?.response?.data ||
+        error,
+      );
+    },
+  });
 
   return (
     <div className="min-h-screen space-y-6 bg-[#f8fafc] p-8 text-slate-800 antialiased">
@@ -91,7 +145,7 @@ export default function KycDocuments() {
         ))}
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+      {/* <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
         <h3 className="text-sm font-extrabold tracking-wide text-[#0f2942]">Consent controls</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {["Mobile OTP and application consent", "Credit bureau consent", "CKYC retrieval consent", "DigiLocker / document consent", "Account Aggregator / banking consent", "Property verification consent"].map((label) => (
@@ -104,11 +158,12 @@ export default function KycDocuments() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
 
       <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
         <div className="border-b border-slate-100 p-6">
           <h3 className="text-sm font-extrabold tracking-wide text-[#0f2942]">Document checklist</h3>
+          <button>add</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
@@ -142,12 +197,30 @@ export default function KycDocuments() {
                         <input
                           type="file"
                           className="hidden"
-                          disabled={!selectedId || upload.isPending}
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          disabled={
+                            !selectedId ||
+                            upload.isPending
+                          }
                           onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (!file) return;
+                            const file =
+                              event.target.files?.[0];
+
+                            if (!file) {
+                              return;
+                            }
+
                             setUploadingType(type);
-                            upload.mutate({ documentType: type, file });
+
+                            upload.mutate({
+                              applicationId: selectedId,
+                              documentType: type,
+                              documentName:
+                                documentLabels[type] || type,
+                              file,
+                            });
+
+                            event.target.value = "";
                           }}
                         />
                       </label>
