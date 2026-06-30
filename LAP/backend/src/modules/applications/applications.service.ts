@@ -413,11 +413,140 @@ return {
     });
   }
 
-  async findOne(id: number) {
-    const application = await this.applications.findOneBy({ id });
-    if (!application) throw new NotFoundException('Application not found');
-    return { data: application };
+async findOne(id: number) {
+  const application =
+    await this.applications.findOne({
+      where: {
+        id,
+      },
+    });
+
+  if (!application) {
+    throw new NotFoundException(
+      `Application ${id} was not found.`,
+    );
   }
+
+  const customerProfile =
+    await this.profiles.findOne({
+      where: {
+        applicationId: id,
+      },
+    });
+
+  /*
+   * Return application even when profile is not yet created.
+   */
+  if (!customerProfile) {
+    return {
+      data: {
+        ...application,
+
+        applicationId:
+          Number(application.id),
+
+        customerProfileId: null,
+        customerProfile: null,
+      },
+    };
+  }
+
+  /*
+   * Remove fields that would conflict with application.id,
+   * application.createdAt and application.updatedAt.
+   */
+  const {
+    id: customerProfileId,
+    applicationId: profileApplicationId,
+    application: _applicationRelation,
+    createdAt: profileCreatedAt,
+    updatedAt: profileUpdatedAt,
+    ...profileFields
+  } = customerProfile;
+
+  return {
+    data: {
+      /*
+       * Main application fields.
+       */
+      ...application,
+
+      /*
+       * Customer profile fields available directly
+       * for the React form.
+       */
+      ...profileFields,
+
+      /*
+       * Ensure application values are not overwritten
+       * by profile values.
+       */
+      id: application.id,
+
+      applicationId:
+        Number(application.id),
+
+      applicationNumber:
+        application.applicationNumber,
+
+      customerName:
+        application.customerName,
+
+      mobile:
+        application.mobile ||
+        customerProfile.mobile,
+
+      pan:
+        application.pan ||
+        customerProfile.panNumber,
+
+      requestedAmount:
+        application.requestedAmount,
+
+      stage:
+        application.stage,
+
+      status:
+        application.status,
+
+      assignedTo:
+        application.assignedTo,
+
+      version:
+        application.version,
+
+      createdAt:
+        application.createdAt,
+
+      updatedAt:
+        application.updatedAt,
+
+      /*
+       * Extra profile metadata.
+       */
+      customerProfileId:
+        Number(customerProfileId),
+
+      profileCreatedAt,
+      profileUpdatedAt,
+
+      /*
+       * Also preserve the complete nested profile.
+       */
+      customerProfile: {
+        ...customerProfile,
+
+        id: Number(
+          customerProfile.id,
+        ),
+
+        applicationId: Number(
+          profileApplicationId,
+        ),
+      },
+    },
+  };
+}
 
   async update(id: number, dto: any, actor: Actor) {
     console.log('========== UPDATE START ==========');
