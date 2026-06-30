@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
@@ -271,6 +272,70 @@ export class FieldVisitsController {
       applicationId,
     );
   }
+@Post('save')
+saveVisit(
+  @Param(
+    'applicationId',
+    ParseIntPipe,
+  )
+  applicationId: number,
+
+  body: {
+    propertyCategory?: string;
+
+    checklistData?: Record<
+      string,
+      unknown
+    >;
+
+    latitude?: number;
+    longitude?: number;
+    locationAccuracy?: number;
+    capturedAt?: string;
+    deviceId?: string;
+
+    visit?: {
+      visitType?: string;
+      visitDate?: string;
+      visitResult?: string;
+      remarks?: string;
+      propertyType?: string | null;
+
+      formData?: Record<
+        string,
+        unknown
+      >;
+
+      checklistData?: Record<
+        string,
+        unknown
+      >;
+
+      latitude?: number;
+      longitude?: number;
+      locationAccuracy?: number;
+      capturedAt?: string;
+      deviceId?: string;
+
+      [key: string]: unknown;
+    };
+  },
+
+  @Req()
+  request: Request & {
+    user?: {
+      id?: number;
+      userId?: number;
+      sub?: number;
+    };
+  },
+) {
+  return this.fieldVisitsService.saveVisit(
+    applicationId,
+    body,
+    this.getUserId(request),
+  );
+}
 
   private getUserId(
     request: Request & {

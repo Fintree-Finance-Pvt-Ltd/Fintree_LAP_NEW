@@ -156,6 +156,12 @@ verifyOtp: (payload) =>
       `/applications/${applicationId}/field-visits/complete`,
       payload,
     ),
+    
+    saveFieldVisit: (applicationId, payload) =>
+  apiClient.post(
+    `/applications/${applicationId}/field-visits/save`,
+    payload,
+  ),
 
   getFieldVisitStatus: (applicationId) =>
     apiClient.get(
