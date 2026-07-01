@@ -819,7 +819,7 @@ async workflowStatus(
 
       leadSubmitted,
 
-      
+      customerVisit:
         actions.has(
           WorkflowLogAction.CUSTOMER_VISIT_DONE,
         ),
