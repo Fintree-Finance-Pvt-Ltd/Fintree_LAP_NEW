@@ -34,6 +34,15 @@ export class ApplicationsService {
     private readonly dataSource: DataSource
   ) {}
 
+  private isWorkflowLogAction(
+  value: string,
+): value is WorkflowLogAction {
+  return Object.values(
+    WorkflowLogAction,
+  ).includes(
+    value as WorkflowLogAction,
+  );
+}
   async findAll(query: any) {
     const [data, total] = await this.applications.findAndCount({ order: { id: 'DESC' }, skip: (query.page - 1) * query.limit, take: query.limit });
     return { data, meta: { total, page: query.page, limit: query.limit } };
@@ -700,33 +709,27 @@ async findOne(id: number) {
     return { data: null, message: 'Application deleted' };
   }
 
-  async addVisit(
-    applicationId: number,
-    body: Record<string, any>,
-    actor: Actor,
-  ) {
-    await this.findOne(applicationId);
+async addVisit(
+  applicationId: number,
+  body: Record<string, any>,
+  actor: Actor,
+) {
+  await this.findOne(applicationId);
 
-    const visit = await this.visits.save(
-      this.visits.create({
-        ...body,
-        applicationId,
-        createdBy: actor.id,
-        updatedBy: actor.id,
-      }),
-    );
+  const visit = await this.visits.save(
+    this.visits.create({
+      ...body,
+      applicationId,
+      createdBy: actor.id,
+      updatedBy: actor.id,
+    }),
+  );
 
-    await this.workflowLogs.save(
-      this.workflowLogs.create({
-        applicationId,
-        action: this.visitAction(body.visitType),
-        remarks: body.remarks || `Visit logged: ${body.visitType}`,
-        createdBy: actor.id,
-      }),
-    );
 
-    return { data: visit };
-  }
+  return {
+    data: visit,
+  };
+}
 
   async listVisits(applicationId: number) {
     return { data: await this.visits.find({ where: { applicationId }, order: { id: 'DESC' } }) };
@@ -735,7 +738,7 @@ async findOne(id: number) {
   async addDocument(applicationId: number, documentType: string, file: Express.Multer.File, actor: Actor) {
     await this.findOne(applicationId);
     const document = await this.documents.save(this.documents.create({ applicationId, documentType: documentType as DocumentType, documentName: documentType, fileName: file.originalname, filePath: file.path ?? file.originalname, fileSize: file.size, mimeType: file.mimetype, uploadedBy: actor.id, createdBy: actor.id, updatedBy: actor.id }));
-    await this.workflowLogs.save(this.workflowLogs.create({ applicationId, action: WorkflowLogAction.DOCUMENTS_UPLOADED, remarks: `Document uploaded: ${documentType}`, createdBy: actor.id }));
+    
     return { data: document };
   }
 
@@ -781,29 +784,116 @@ async findOne(id: number) {
     return { data: await this.history.find({ where: { applicationId }, order: { id: 'DESC' } }) };
   }
 
-  async workflowStatus(applicationId: number) {
-    const logs = await this.workflowLogs.find({ where: { applicationId }, order: { id: 'ASC' } });
-    const actions = new Set(logs.map((log) => log.action));
-    return {
-      data: {
-        leadCreated: actions.has(WorkflowLogAction.LEAD_CREATED),
-        leadSubmitted: actions.has(WorkflowLogAction.LEAD_SUBMITTED),
-        customerVisit: actions.has(WorkflowLogAction.CUSTOMER_VISIT_DONE),
-        businessVisit: actions.has(WorkflowLogAction.BUSINESS_VISIT_DONE),
-        geoVerification: actions.has(WorkflowLogAction.GEO_VERIFICATION_DONE),
-        propertyVisit: actions.has(WorkflowLogAction.PROPERTY_VISIT_DONE),
-        documentsUploaded: actions.has(WorkflowLogAction.DOCUMENTS_UPLOADED),
-        submittedToBm: actions.has(WorkflowLogAction.SUBMITTED_TO_BM),
+async workflowStatus(
+  applicationId: number,
+) {
+  const logs =
+    await this.workflowLogs.find({
+      where: {
+        applicationId,
       },
-    };
+      order: {
+        id: 'ASC',
+      },
+    });
+
+  const actions =
+    new Set<WorkflowLogAction>(
+      logs.map(
+        (log) => log.action,
+      ),
+    );
+
+  const leadSubmitted =
+    actions.has(
+      WorkflowLogAction.LEAD_SUBMITTED,
+    );
+
+  return {
+    data: {
+      leadCreated:
+        actions.has(
+          WorkflowLogAction.LEAD_CREATED,
+        ) ||
+        leadSubmitted,
+
+      leadSubmitted,
+
+      
+        actions.has(
+          WorkflowLogAction.CUSTOMER_VISIT_DONE,
+        ),
+
+      geoVerification:
+        actions.has(
+          WorkflowLogAction.GEO_VERIFICATION_DONE,
+        ),
+
+      propertyVisit:
+        actions.has(
+          WorkflowLogAction.PROPERTY_VISIT_DONE,
+        ),
+
+      documentsUploaded:
+        actions.has(
+          WorkflowLogAction.DOCUMENTS_UPLOADED,
+        ),
+
+      submittedToBm:
+        actions.has(
+          WorkflowLogAction.SUBMITTED_TO_BM,
+        ),
+    },
+  };
+}
+
+async recordWorkflowStep(
+  applicationId: number,
+  dto: {
+    action: string;
+    remarks?: string;
+  },
+  actor: Actor,
+) {
+  const application =
+    await this.applications.findOneBy({
+      id: applicationId,
+    });
+
+  if (!application) {
+    throw new NotFoundException(
+      'Application not found',
+    );
   }
 
-  async recordWorkflowStep(applicationId: number, dto: { action: string; remarks?: string }, actor: Actor) {
-    const application = await this.applications.findOneBy({ id: applicationId });
-    if (!application) throw new NotFoundException('Application not found');
-    const saved = await this.workflowLogs.save(this.workflowLogs.create({ applicationId, action: dto.action, remarks: dto.remarks, createdBy: actor.id }));
-    return { data: saved };
+  if (
+    !this.isWorkflowLogAction(
+      dto.action,
+    )
+  ) {
+    throw new BadRequestException(
+      `Invalid workflow log action: ${dto.action}`,
+    );
   }
+
+  const workflowLog =
+    this.workflowLogs.create({
+      applicationId,
+      action: dto.action,
+      remarks: dto.remarks,
+      createdBy: actor.id,
+      updatedBy: actor.id,
+    });
+
+  const saved =
+    await this.workflowLogs.save(
+      workflowLog,
+    );
+
+  return {
+    data: saved,
+  };
+}
 
   private money(dto: Record<string, unknown>) {
     const copy = { ...dto };
@@ -813,11 +903,6 @@ async findOne(id: number) {
     return copy;
   }
 
-  private visitAction(visitType: string) {
-    if (visitType?.toLowerCase().includes('business')) return WorkflowLogAction.BUSINESS_VISIT_DONE;
-    if (visitType?.toLowerCase().includes('property')) return WorkflowLogAction.PROPERTY_VISIT_DONE;
-    return WorkflowLogAction.CUSTOMER_VISIT_DONE;
-  }
 
   private buildProfile(application: Application, dto: any): Record<string, unknown> {
     const name = dto?.customerName?.trim() || '';

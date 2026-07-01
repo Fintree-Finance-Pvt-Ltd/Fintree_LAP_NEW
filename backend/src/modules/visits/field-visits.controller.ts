@@ -8,29 +8,75 @@ import {
   ParseIntPipe,
   Post,
   Req,
+  Res,
   UploadedFile,
   UseInterceptors,
-} from '@nestjs/common';
+} from "@nestjs/common";
 
-import {
-  FileInterceptor,
-} from '@nestjs/platform-express';
+import { FileInterceptor } from "@nestjs/platform-express";
 
-import { randomUUID } from 'crypto';
-import { mkdirSync } from 'fs';
-import { extname, join } from 'path';
-import { diskStorage } from 'multer';
-import type { Request } from 'express';
+import { randomUUID } from "crypto";
 
-import { FieldVisitsService } from './field-visits.service';
+import { mkdirSync } from "fs";
+
+import { extname, join } from "path";
+
+import { diskStorage } from "multer";
+
+import type { Request, Response } from "express";
+
+import { FieldVisitsService } from "./field-visits.service";
+
+type AuthenticatedRequest = Request & {
+  user?: {
+    id?: number;
+    userId?: number;
+    sub?: number;
+  };
+};
+
+type SaveVisitBody = {
+  propertyCategory?: string;
+
+  checklistData?: Record<string, unknown>;
+
+  latitude?: number;
+  longitude?: number;
+  locationAccuracy?: number;
+  capturedAt?: string;
+  deviceId?: string;
+
+  visit?: {
+    visitType?: string;
+    visitDate?: string;
+    visitResult?: string;
+    visitStatus?: string;
+
+    propertyType?: string | null;
+
+    remarks?: string;
+
+    formData?: Record<string, unknown>;
+
+    checklistData?: Record<string, unknown>;
+
+    latitude?: number;
+    longitude?: number;
+    locationAccuracy?: number;
+    capturedAt?: string;
+    deviceId?: string;
+
+    [key: string]: unknown;
+  };
+};
 
 const allowedImageMimeTypes = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
 ]);
 
 const fieldVisitDocumentUpload = {
@@ -38,21 +84,17 @@ const fieldVisitDocumentUpload = {
     destination: (
       request: Request,
       _file: Express.Multer.File,
-      callback: (
-        error: Error | null,
-        destination: string,
-      ) => void,
+      callback: (error: Error | null, destination: string) => void,
     ) => {
-      const applicationId = String(
-        request.params?.applicationId || '',
-      ).replace(/\D/g, '');
+      const applicationId = String(request.params?.applicationId || "").replace(
+        /\D/g,
+        "",
+      );
 
       if (!applicationId) {
         callback(
-          new BadRequestException(
-            'A valid application ID is required.',
-          ),
-          '',
+          new BadRequestException("A valid application ID is required."),
+          "",
         );
 
         return;
@@ -60,8 +102,8 @@ const fieldVisitDocumentUpload = {
 
       const uploadDirectory = join(
         process.cwd(),
-        'uploads',
-        'field-visits',
+        "uploads",
+        "field-visits",
         applicationId,
       );
 
@@ -75,39 +117,23 @@ const fieldVisitDocumentUpload = {
     filename: (
       _request: Request,
       file: Express.Multer.File,
-      callback: (
-        error: Error | null,
-        filename: string,
-      ) => void,
+      callback: (error: Error | null, filename: string) => void,
     ) => {
       const extension =
-        extname(file.originalname || '')
-          .toLowerCase() || '.jpg';
+        extname(file.originalname || "").toLowerCase() || ".jpg";
 
-      callback(
-        null,
-        `${Date.now()}-${randomUUID()}${extension}`,
-      );
+      callback(null, `${Date.now()}-${randomUUID()}${extension}`);
     },
   }),
 
   fileFilter: (
     _request: Request,
     file: Express.Multer.File,
-    callback: (
-      error: Error | null,
-      acceptFile: boolean,
-    ) => void,
+    callback: (error: Error | null, acceptFile: boolean) => void,
   ) => {
-    if (
-      !allowedImageMimeTypes.has(
-        file.mimetype,
-      )
-    ) {
+    if (!allowedImageMimeTypes.has(file.mimetype)) {
       callback(
-        new BadRequestException(
-          `Unsupported image type: ${file.mimetype}`,
-        ),
+        new BadRequestException(`Unsupported image type: ${file.mimetype}.`),
         false,
       );
 
@@ -122,92 +148,112 @@ const fieldVisitDocumentUpload = {
   },
 };
 
-@Controller(
-  'applications/:applicationId/field-visits',
-)
+@Controller("applications/:applicationId/field-visits")
 export class FieldVisitsController {
-  constructor(
-    private readonly fieldVisitsService:
-      FieldVisitsService,
-  ) {}
+  constructor(private readonly fieldVisitsService: FieldVisitsService) {}
 
-  /*
-   * GET /api/applications/:applicationId/field-visits
-   */
+  /* =====================================================
+     GET CURRENT VISITS
+  ===================================================== */
+
   @Get()
   getFieldVisits(
-    @Param(
-      'applicationId',
-      ParseIntPipe,
-    )
+    @Param("applicationId", ParseIntPipe)
     applicationId: number,
   ) {
-    return this.fieldVisitsService.getCurrentVisits(
+    return this.fieldVisitsService.getCurrentVisits(applicationId);
+  }
+
+  /* =====================================================
+     SAVE ONE VISIT
+  ===================================================== */
+
+  @Post("save")
+  saveVisit(
+    @Param("applicationId", ParseIntPipe)
+    applicationId: number,
+
+    /*
+     * This @Body() decorator is mandatory.
+     *
+     * Without it, propertyCategory and visit
+     * will be undefined.
+     */
+    @Body()
+    body: SaveVisitBody,
+
+    @Req()
+    request: AuthenticatedRequest,
+  ) {
+    return this.fieldVisitsService.saveVisit(
       applicationId,
+      body,
+      this.getUserId(request),
     );
   }
 
-  /*
-   * GET /api/applications/:applicationId/field-visits/documents
-   */
-  @Get('documents')
+  /* =====================================================
+     COMPLETE ALL VISITS
+  ===================================================== */
+
+  @Post("complete")
+  completeVisits(
+    @Param("applicationId", ParseIntPipe)
+    applicationId: number,
+
+    @Body()
+    body: Record<string, any>,
+
+    @Req()
+    request: AuthenticatedRequest,
+  ) {
+    return this.fieldVisitsService.completeVisits(
+      applicationId,
+      body,
+      this.getUserId(request),
+    );
+  }
+
+  /* =====================================================
+     GET DOCUMENTS
+  ===================================================== */
+
+  @Get("documents")
   getFieldVisitDocuments(
-    @Param(
-      'applicationId',
-      ParseIntPipe,
-    )
+    @Param("applicationId", ParseIntPipe)
     applicationId: number,
   ) {
-    return this.fieldVisitsService.getDocuments(
-      applicationId,
-    );
+    return this.fieldVisitsService.getDocuments(applicationId);
   }
 
-  /*
-   * POST /api/applications/:applicationId/field-visits/documents
-   *
-   * multipart/form-data:
-   * file
-   * visitType
-   * documentName
-   */
-  @Post('documents')
-  @UseInterceptors(
-    FileInterceptor(
-      'file',
-      fieldVisitDocumentUpload,
-    ),
-  )
+  /* =====================================================
+     UPLOAD DOCUMENT
+  ===================================================== */
+
+  @Post("documents")
+  @UseInterceptors(FileInterceptor("file", fieldVisitDocumentUpload))
   uploadFieldVisitDocument(
-    @Param(
-      'applicationId',
-      ParseIntPipe,
-    )
+    @Param("applicationId", ParseIntPipe)
     applicationId: number,
 
     @UploadedFile()
     file: Express.Multer.File,
 
     @Req()
-    request: Request & {
-      user?: {
-        id?: number;
-        userId?: number;
-        sub?: number;
-      };
-
+    request: AuthenticatedRequest & {
       body: {
         visitType?: string;
+
         documentName?: string;
+
         documentType?: string;
+
         documentSource?: string;
       };
     },
   ) {
     if (!file) {
-      throw new BadRequestException(
-        'Field visit photo is required.',
-      );
+      throw new BadRequestException("Field visit photo is required.");
     }
 
     return this.fieldVisitsService.uploadDocument(
@@ -218,150 +264,94 @@ export class FieldVisitsController {
     );
   }
 
-  /*
-   * DELETE /api/applications/:applicationId/field-visits/documents/:documentId
-   */
-  @Delete('documents/:documentId')
-  deleteFieldVisitDocument(
-    @Param(
-      'applicationId',
-      ParseIntPipe,
-    )
+  /* =====================================================
+     VIEW DOCUMENT FILE
+  ===================================================== */
+
+  @Get("documents/:documentId/file")
+  async getFieldVisitDocumentFile(
+    @Param("applicationId", ParseIntPipe)
     applicationId: number,
 
-    @Param(
-      'documentId',
-      ParseIntPipe,
-    )
+    @Param("documentId", ParseIntPipe)
+    documentId: number,
+
+    @Res()
+    response: Response,
+  ) {
+    const { document, absolutePath } =
+      await this.fieldVisitsService.getDocumentFile(applicationId, documentId);
+
+    const safeFileName = String(
+      document.fileName || `field-visit-${documentId}`,
+    ).replace(/["\r\n]/g, "_");
+
+    response.setHeader(
+      "Content-Type",
+      document.mimeType || "application/octet-stream",
+    );
+
+    response.setHeader(
+      "Content-Disposition",
+      `inline; filename="${safeFileName}"`,
+    );
+
+    return response.sendFile(absolutePath);
+  }
+
+  /* =====================================================
+     DELETE DOCUMENT
+  ===================================================== */
+
+  @Delete("documents/:documentId")
+  deleteFieldVisitDocument(
+    @Param("applicationId", ParseIntPipe)
+    applicationId: number,
+
+    @Param("documentId", ParseIntPipe)
     documentId: number,
   ) {
-    return this.fieldVisitsService.deleteDocument(
-      applicationId,
-      documentId,
-    );
+    return this.fieldVisitsService.deleteDocument(applicationId, documentId);
   }
 
-  /*
-   * GET /api/applications/:applicationId/field-visits/history
-   */
-  @Get('history')
+  /* =====================================================
+     VISIT HISTORY
+  ===================================================== */
+
+  @Get("history")
   getHistory(
-    @Param(
-      'applicationId',
-      ParseIntPipe,
-    )
+    @Param("applicationId", ParseIntPipe)
     applicationId: number,
   ) {
-    return this.fieldVisitsService.getVisitHistory(
-      applicationId,
-    );
+    return this.fieldVisitsService.getVisitHistory(applicationId);
   }
 
-  /*
-   * GET /api/applications/:applicationId/field-visits/status
-   */
-  @Get('status')
+  /* =====================================================
+     COMPLETION STATUS
+  ===================================================== */
+
+  @Get("status")
   getStatus(
-    @Param(
-      'applicationId',
-      ParseIntPipe,
-    )
+    @Param("applicationId", ParseIntPipe)
     applicationId: number,
   ) {
-    return this.fieldVisitsService.getCompletionStatus(
-      applicationId,
-    );
+    return this.fieldVisitsService.getCompletionStatus(applicationId);
   }
-@Post('save')
-saveVisit(
-  @Param(
-    'applicationId',
-    ParseIntPipe,
-  )
-  applicationId: number,
 
-  body: {
-    propertyCategory?: string;
+  /* =====================================================
+     AUTH USER ID
+  ===================================================== */
 
-    checklistData?: Record<
-      string,
-      unknown
-    >;
-
-    latitude?: number;
-    longitude?: number;
-    locationAccuracy?: number;
-    capturedAt?: string;
-    deviceId?: string;
-
-    visit?: {
-      visitType?: string;
-      visitDate?: string;
-      visitResult?: string;
-      remarks?: string;
-      propertyType?: string | null;
-
-      formData?: Record<
-        string,
-        unknown
-      >;
-
-      checklistData?: Record<
-        string,
-        unknown
-      >;
-
-      latitude?: number;
-      longitude?: number;
-      locationAccuracy?: number;
-      capturedAt?: string;
-      deviceId?: string;
-
-      [key: string]: unknown;
-    };
-  },
-
-  @Req()
-  request: Request & {
-    user?: {
-      id?: number;
-      userId?: number;
-      sub?: number;
-    };
-  },
-) {
-  return this.fieldVisitsService.saveVisit(
-    applicationId,
-    body,
-    this.getUserId(request),
-  );
-}
-
-  private getUserId(
-    request: Request & {
-      user?: {
-        id?: number;
-        userId?: number;
-        sub?: number;
-      };
-    },
-  ) {
+  private getUserId(request: AuthenticatedRequest) {
     const rawUserId =
-      request.user?.id ??
-      request.user?.userId ??
-      request.user?.sub;
+      request.user?.id ?? request.user?.userId ?? request.user?.sub;
 
-    if (
-      rawUserId === undefined ||
-      rawUserId === null
-    ) {
+    if (rawUserId === undefined || rawUserId === null) {
       return undefined;
     }
 
     const userId = Number(rawUserId);
 
-    return Number.isFinite(userId)
-      ? userId
-      : undefined;
+    return Number.isFinite(userId) ? userId : undefined;
   }
 }

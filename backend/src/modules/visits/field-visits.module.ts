@@ -1,21 +1,22 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { Application } from '../applications/entities/application.entity';
 import { Document } from '../documents/entities/document.entity';
-import { DocumentsModule } from '../documents/documents.module';
+import { WorkflowLog } from '../workflow/entities/workflow-log.entity';
 
-import { Visit } from './entities/visit.entity';
 import { FieldVisitsController } from './field-visits.controller';
 import { FieldVisitsService } from './field-visits.service';
+import { Visit } from './entities/visit.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Visit,
       Document,
+      Application,
+      WorkflowLog,
     ]),
-
-    DocumentsModule,
   ],
 
   controllers: [

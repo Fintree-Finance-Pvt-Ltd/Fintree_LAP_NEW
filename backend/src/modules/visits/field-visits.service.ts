@@ -3,16 +3,25 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+
 import { InjectRepository } from "@nestjs/typeorm";
+
 import { createHash } from "crypto";
+
 import { existsSync, readFileSync, unlinkSync } from "fs";
+
 import { isAbsolute, join, relative } from "path";
+
 import { DataSource, EntityManager, Repository } from "typeorm";
 
 import { DocumentStatus } from "../../common/enums/document-status.enum";
 import { DocumentType } from "../../common/enums/document-type.enum";
+
 import { Application } from "../applications/entities/application.entity";
 import { Document } from "../documents/entities/document.entity";
+import { ApplicationStatus } from '../../common/enums/application-status.enum';
+import { WorkflowLog } from '../workflow/entities/workflow-log.entity';
+import { WorkflowLogAction } from '../../common/enums/workflow-action.enum';
 import {
   DOCUMENT_NAMES,
   DOCUMENT_SOURCE,
@@ -28,240 +37,64 @@ import {
   VISIT_STATUS,
   VISIT_TYPE,
 } from "./field-visits.constants";
+
 import { Visit } from "./entities/visit.entity";
+
+type SaveVisitBody = {
+  propertyCategory?: string;
+
+  checklistData?: Record<string, unknown>;
+
+  latitude?: number;
+  longitude?: number;
+  locationAccuracy?: number;
+  capturedAt?: string;
+  deviceId?: string;
+
+  visit?: {
+    visitType?: string;
+    visitDate?: string;
+    visitResult?: string;
+    visitStatus?: string;
+
+    propertyType?: string | null;
+
+    remarks?: string;
+    residenceRemarks?: string;
+    businessRemarks?: string;
+    propertyRemarks?: string;
+
+    formData?: Record<string, unknown>;
+    checklistData?: Record<string, unknown>;
+
+    latitude?: number;
+    longitude?: number;
+    locationAccuracy?: number;
+    capturedAt?: string;
+    deviceId?: string;
+
+    [key: string]: unknown;
+  };
+};
 
 @Injectable()
 export class FieldVisitsService {
-  constructor(
-    private readonly dataSource: DataSource,
+ constructor(
+  private readonly dataSource: DataSource,
 
-    @InjectRepository(Visit)
-    private readonly visitRepository: Repository<Visit>,
+  @InjectRepository(Visit)
+  private readonly visitRepository: Repository<Visit>,
 
-    @InjectRepository(Document)
-    private readonly documentRepository: Repository<Document>,
-  ) {}
+  @InjectRepository(Document)
+  private readonly documentRepository: Repository<Document>,
 
-private formatVisitTypeLabel(
-  visitType: string,
-) {
-  return String(visitType)
-    .toLowerCase()
-    .split('_')
-    .filter(Boolean)
-    .map(
-      (part) =>
-        part.charAt(0).toUpperCase() +
-        part.slice(1),
-    )
-    .join(' ');
-}
+  @InjectRepository(Application)
+  private readonly applicationRepository: Repository<Application>,
 
-  private applyVisitDraftData({
-  visit,
-  applicationId,
-  propertyCategory,
-  visitType,
-  input,
-  body,
-  userId,
-}: {
-  visit: Visit;
-  applicationId: number;
-  propertyCategory: string;
-  visitType: string;
-  input: Record<string, any>;
-  body: Record<string, any>;
-  userId?: number;
-}) {
-  visit.applicationId =
-    applicationId;
+  @InjectRepository(WorkflowLog)
+  private readonly workflowLogRepository: Repository<WorkflowLog>,
+) {} 
 
-  visit.visitType =
-    visitType;
-
-  visit.visitStatus =
-    VISIT_STATUS.DRAFT;
-
-  visit.propertyCategory =
-    propertyCategory;
-
-  visit.updatedBy =
-    userId;
-
-  /*
-   * Keep createdBy only for new records.
-   */
-  if (
-    !visit.createdBy &&
-    userId
-  ) {
-    visit.createdBy =
-      userId;
-  }
-
-  const visitDate =
-    input.visitDate ??
-    body.visitDate;
-
-  visit.visitDate =
-    this.hasValue(visitDate)
-      ? this.validateDate(
-          visitDate,
-          `${visitType}.visitDate`,
-        )
-      : undefined;
-
-  const rawVisitResult =
-    input.visitResult ??
-    input.visitStatus;
-
-  if (
-    this.hasValue(
-      rawVisitResult,
-    )
-  ) {
-    const visitResult =
-      normalizeVisitResult(
-        rawVisitResult,
-      );
-
-    if (!visitResult) {
-      throw new BadRequestException(
-        `${visitType}: visitResult must be Positive, Negative or Refer.`,
-      );
-    }
-
-    visit.visitResult =
-      visitResult;
-  } else {
-    visit.visitResult =
-      undefined;
-  }
-
-  visit.propertyType =
-    this.hasValue(
-      input.propertyType,
-    )
-      ? String(
-          input.propertyType,
-        )
-          .trim()
-          .slice(0, 80)
-      : undefined;
-
-  const remarks =
-    input.remarks ??
-    input.residenceRemarks ??
-    input.businessRemarks ??
-    input.propertyRemarks;
-
-  visit.remarks =
-    this.validateRemarks(
-      remarks,
-    );
-
-  const explicitFormData =
-    this.parseObject(
-      input.formData,
-      `${visitType}.formData`,
-      {},
-    );
-
-  visit.formData = {
-    ...this.extractFormData(
-      input,
-    ),
-
-    ...explicitFormData,
-  };
-
-  const commonChecklist =
-    this.parseObject(
-      body.checklistData,
-      'checklistData',
-      {},
-    );
-
-  const visitChecklist =
-    this.parseObject(
-      input.checklistData,
-      `${visitType}.checklistData`,
-      {},
-    );
-
-  visit.checklistData = {
-    ...commonChecklist,
-    ...visitChecklist,
-  };
-
-  const latitude =
-    input.latitude ??
-    body.latitude;
-
-  const longitude =
-    input.longitude ??
-    body.longitude;
-
-  const locationAccuracy =
-    input.locationAccuracy ??
-    body.locationAccuracy;
-
-  const capturedAt =
-    input.capturedAt ??
-    body.capturedAt;
-
-  const deviceId =
-    input.deviceId ??
-    body.deviceId;
-
-  visit.latitude =
-    this.hasValue(latitude)
-      ? this.validateCoordinate(
-          latitude,
-          `${visitType}.latitude`,
-          -90,
-          90,
-        )
-      : undefined;
-
-  visit.longitude =
-    this.hasValue(longitude)
-      ? this.validateCoordinate(
-          longitude,
-          `${visitType}.longitude`,
-          -180,
-          180,
-        )
-      : undefined;
-
-  visit.locationAccuracy =
-    this.hasValue(
-      locationAccuracy,
-    )
-      ? this.validatePositiveNumber(
-          locationAccuracy,
-          `${visitType}.locationAccuracy`,
-        )
-      : undefined;
-
-  visit.capturedAt =
-    this.hasValue(capturedAt)
-      ? this.validateDateTime(
-          capturedAt,
-          `${visitType}.capturedAt`,
-        )
-      : undefined;
-
-  visit.deviceId =
-    this.hasValue(deviceId)
-      ? String(deviceId)
-          .trim()
-          .slice(0, 120)
-      : undefined;
-
-  return visit;
-}
   /* =====================================================
      GET CURRENT VISITS
   ===================================================== */
@@ -270,8 +103,13 @@ private formatVisitTypeLabel(
     await this.assertApplicationExists(this.dataSource.manager, applicationId);
 
     const visits = await this.visitRepository.find({
-      where: { applicationId },
-      order: { updatedAt: "DESC" },
+      where: {
+        applicationId,
+      },
+
+      order: {
+        updatedAt: "DESC",
+      },
     });
 
     const documents = await this.getFieldVisitDocuments(
@@ -279,6 +117,13 @@ private formatVisitTypeLabel(
       applicationId,
     );
 
+    /*
+     * The unique database index should ensure
+     * one row per applicationId + visitType.
+     *
+     * This Map also protects old data that may
+     * already contain duplicate rows.
+     */
     const latestByType = new Map<string, Visit>();
 
     for (const visit of visits) {
@@ -301,192 +146,144 @@ private formatVisitTypeLabel(
 
     return {
       success: true,
+
+      message: "Field visits fetched successfully.",
+
       data: {
         applicationId,
+
         propertyCategory: completionStatus.propertyCategory,
+
         visits: currentVisits,
+
         checklistData,
+
         completionStatus,
       },
     };
   }
-  async saveVisit(
-  applicationId: number,
 
-  body: {
-    propertyCategory?: string;
+  /* =====================================================
+     SAVE ONE VISIT AS DRAFT
+  ===================================================== */
 
-    checklistData?: Record<
-      string,
-      unknown
-    >;
+  async saveVisit(applicationId: number, body: SaveVisitBody, userId?: number) {
+    const propertyCategory = normalizePropertyCategory(body?.propertyCategory);
 
-    latitude?: number;
-    longitude?: number;
-    locationAccuracy?: number;
-    capturedAt?: string;
-    deviceId?: string;
-
-    visit?: Record<string, any>;
-  },
-
-  userId?: number,
-) {
-  const propertyCategory =
-    normalizePropertyCategory(
-      body?.propertyCategory,
-    );
-
-  if (!propertyCategory) {
-    throw new BadRequestException(
-      'propertyCategory must be Residential, Commercial, Industrial or Land / Plot.',
-    );
-  }
-
-  if (
-    !body?.visit ||
-    typeof body.visit !== 'object' ||
-    Array.isArray(body.visit)
-  ) {
-    throw new BadRequestException(
-      'visit object is required.',
-    );
-  }
-
-  const input =
-    body.visit;
-
-  const visitType =
-    normalizeVisitType(
-      input.visitType,
-    );
-
-  if (!visitType) {
-    throw new BadRequestException(
-      `Invalid visit type: ${input.visitType || 'Empty'}`,
-    );
-  }
-
-  const requiredVisitTypes =
-    getRequiredVisitTypes(
-      propertyCategory,
-    );
-
-  if (
-    !requiredVisitTypes.includes(
-      visitType,
-    )
-  ) {
-    throw new BadRequestException(
-      `${visitType} is not applicable for ${propertyCategory}.`,
-    );
-  }
-
-  return this.dataSource.transaction(
-    async (manager) => {
-      await this.assertApplicationExists(
-        manager,
-        applicationId,
+    if (!propertyCategory) {
+      throw new BadRequestException(
+        "propertyCategory must be Residential, Commercial, Industrial or Land / Plot.",
       );
+    }
 
-      const visitRepository =
-        manager.getRepository(Visit);
+    if (
+      !body?.visit ||
+      typeof body.visit !== "object" ||
+      Array.isArray(body.visit)
+    ) {
+      throw new BadRequestException("visit object is required.");
+    }
+
+    const input = body.visit as Record<string, any>;
+
+    const visitType = normalizeVisitType(input.visitType);
+
+    if (!visitType) {
+      throw new BadRequestException(
+        `Invalid visit type: ${input.visitType || "Empty"}.`,
+      );
+    }
+
+    const requiredVisitTypes = getRequiredVisitTypes(propertyCategory);
+
+    if (!requiredVisitTypes.includes(visitType)) {
+      throw new BadRequestException(
+        `${visitType} is not applicable for ${propertyCategory}. Required visits: ${requiredVisitTypes.join(
+          ", ",
+        )}.`,
+      );
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      await this.assertApplicationExists(manager, applicationId);
+
+      const visitRepository = manager.getRepository(Visit);
 
       /*
-       * Find existing visit using:
+       * One record per:
        *
        * applicationId + visitType
        */
-      let visit =
-        await visitRepository.findOne({
-          where: {
-            applicationId,
-            visitType,
-          },
+      let visit = await visitRepository.findOne({
+        where: {
+          applicationId,
+          visitType,
+        },
 
-          order: {
-            updatedAt: 'DESC',
-          },
-        });
+        order: {
+          updatedAt: "DESC",
+        },
+      });
 
-      /*
-       * Do not allow completed visits
-       * to be converted back to DRAFT.
-       */
-      if (
-        visit?.visitStatus ===
-        VISIT_STATUS.COMPLETED
-      ) {
+      if (visit?.visitStatus === VISIT_STATUS.COMPLETED) {
         throw new BadRequestException(
           `${this.formatVisitTypeLabel(
             visitType,
-          )} Visit is already completed.`,
+          )} Visit has already been completed and cannot be modified.`,
         );
       }
 
       if (!visit) {
-        visit =
-          visitRepository.create({
-            applicationId,
-            visitType,
+        visit = visitRepository.create({
+          applicationId,
+          visitType,
 
-            visitStatus:
-              VISIT_STATUS.DRAFT,
+          visitStatus: VISIT_STATUS.DRAFT,
 
-            createdBy:
-              userId,
-          });
+          createdBy: userId,
+        });
       }
 
-      visit =
-        this.applyVisitDraftData({
-          visit,
-          applicationId,
-          propertyCategory,
-          visitType,
-          input,
-          body,
-          userId,
-        });
+      this.applyVisitData({
+        visit,
+        applicationId,
+        propertyCategory,
+        visitType,
+        input,
+        body: body as Record<string, any>,
+        userId,
+      });
 
-      const savedVisit =
-        await visitRepository.save(
-          visit,
-        );
+      visit.visitStatus = VISIT_STATUS.DRAFT;
+
+      const savedVisit = await visitRepository.save(visit);
 
       return {
         success: true,
 
-        message:
-          `${this.formatVisitTypeLabel(
-            visitType,
-          )} Visit saved successfully.`,
+        message: `${this.formatVisitTypeLabel(
+          visitType,
+        )} Visit saved successfully.`,
 
         data: {
-          visitId:
-            Number(savedVisit.id),
+          visitId: Number(savedVisit.id),
 
           applicationId,
 
-          visitType:
-            savedVisit.visitType,
+          visitType: savedVisit.visitType,
 
-          visitStatus:
-            savedVisit.visitStatus,
+          visitStatus: savedVisit.visitStatus,
+
+          propertyCategory: savedVisit.propertyCategory,
+
+          updatedAt: savedVisit.updatedAt,
         },
       };
-    },
-  );
-}
+    });
+  }
 
   /* =====================================================
-     COMPLETE VISITS
-
-     saveDraft() is removed. This method now:
-     1. Creates or updates the required visit rows.
-     2. Saves form, checklist and location data.
-     3. Validates documents and mandatory fields.
-     4. Marks all required visits as COMPLETED.
+     COMPLETE ALL VISITS
   ===================================================== */
 
   async completeVisits(
@@ -517,13 +314,13 @@ private formatVisitTypeLabel(
 
       if (!visitType) {
         throw new BadRequestException(
-          `Invalid visit type: ${input?.visitType}`,
+          `Invalid visit type: ${input?.visitType}.`,
         );
       }
 
       if (!requiredVisitTypes.includes(visitType)) {
         throw new BadRequestException(
-          `${visitType} is not applicable for ${propertyCategory}. Required visits: ${requiredVisitTypes.join(", ")}.`,
+          `${visitType} is not applicable for ${propertyCategory}.`,
         );
       }
 
@@ -554,34 +351,43 @@ private formatVisitTypeLabel(
       const visitRepository = manager.getRepository(Visit);
 
       const existingVisits = await visitRepository.find({
-        where: { applicationId },
-        order: { updatedAt: "DESC" },
+        where: {
+          applicationId,
+        },
+
+        order: {
+          updatedAt: "DESC",
+        },
       });
 
-      const latestExistingByType = new Map<string, Visit>();
+      const existingByType = new Map<string, Visit>();
 
       for (const visit of existingVisits) {
-        if (!latestExistingByType.has(visit.visitType)) {
-          latestExistingByType.set(visit.visitType, visit);
+        if (!existingByType.has(visit.visitType)) {
+          existingByType.set(visit.visitType, visit);
         }
       }
 
       const alreadyCompleted = requiredVisitTypes.every(
         (visitType) =>
-          latestExistingByType.get(visitType)?.visitStatus ===
-          VISIT_STATUS.COMPLETED,
+          existingByType.get(visitType)?.visitStatus === VISIT_STATUS.COMPLETED,
       );
 
       if (alreadyCompleted) {
         return {
           success: true,
+
           message: "Field visits were already completed.",
+
           data: {
             applicationId,
+
             propertyCategory,
+
             completedVisitTypes: requiredVisitTypes,
+
             completedAt:
-              latestExistingByType.get(requiredVisitTypes[0])?.updatedAt ||
+              existingByType.get(requiredVisitTypes[0])?.updatedAt ||
               new Date(),
           },
         };
@@ -606,138 +412,49 @@ private formatVisitTypeLabel(
       if (missingInputTypes.length) {
         throw new BadRequestException({
           success: false,
+
           errorCode: "FIELD_VISITS_MISSING",
+
           message:
             "All required field visits must be submitted before completion.",
+
           missingVisitTypes: missingInputTypes,
         });
       }
 
-      const commonChecklist = this.parseObject(
-        body?.checklistData,
-        "checklistData",
-        {},
-      );
-
       const savedVisits: Visit[] = [];
 
+      /*
+       * Update the same draft rows.
+       * No new duplicate rows are created.
+       */
       for (const visitType of requiredVisitTypes) {
         const input = inputByType.get(visitType)!;
 
-        let visit = latestExistingByType.get(visitType);
+        let visit = existingByType.get(visitType);
 
-        if (!visit || visit.visitStatus === VISIT_STATUS.COMPLETED) {
+        if (!visit) {
           visit = visitRepository.create({
             applicationId,
             visitType,
+
             visitStatus: VISIT_STATUS.DRAFT,
+
             createdBy: userId,
           });
         }
 
-        visit.applicationId = applicationId;
-        visit.visitType = visitType;
+        this.applyVisitData({
+          visit,
+          applicationId,
+          propertyCategory,
+          visitType,
+          input,
+          body,
+          userId,
+        });
+
         visit.visitStatus = VISIT_STATUS.DRAFT;
-        visit.propertyCategory = propertyCategory;
-        visit.updatedBy = userId;
-
-        const visitDate = input.visitDate ?? body.visitDate;
-
-        if (this.hasValue(visitDate)) {
-          visit.visitDate = this.validateDate(
-            visitDate,
-            `${visitType}.visitDate`,
-          );
-        } else {
-          visit.visitDate = undefined;
-        }
-
-        const rawVisitResult = input.visitResult ?? input.visitStatus;
-
-        if (this.hasValue(rawVisitResult)) {
-          const visitResult = normalizeVisitResult(rawVisitResult);
-
-          if (!visitResult) {
-            throw new BadRequestException(
-              `${visitType}: visitResult must be Positive, Negative or Refer.`,
-            );
-          }
-
-          visit.visitResult = visitResult;
-        } else {
-          visit.visitResult = undefined;
-        }
-
-        if (this.hasValue(input.propertyType)) {
-          visit.propertyType = String(input.propertyType).trim().slice(0, 80);
-        } else if (PROPERTY_VISIT_VISIT_TYPES.includes(visitType as any)) {
-          visit.propertyType = undefined;
-        }
-
-        const remarks =
-          input.remarks ??
-          input.residenceRemarks ??
-          input.businessRemarks ??
-          input.propertyRemarks;
-
-        visit.remarks = this.validateRemarks(remarks);
-
-        const explicitFormData = this.parseObject(
-          input.formData,
-          `${visitType}.formData`,
-          {},
-        );
-
-        visit.formData = {
-          ...this.extractFormData(input),
-          ...explicitFormData,
-        };
-
-        const visitChecklist = this.parseObject(
-          input.checklistData,
-          `${visitType}.checklistData`,
-          {},
-        );
-
-        visit.checklistData = {
-          ...commonChecklist,
-          ...visitChecklist,
-        };
-
-        const latitude = input.latitude ?? body.latitude;
-        const longitude = input.longitude ?? body.longitude;
-        const locationAccuracy =
-          input.locationAccuracy ?? body.locationAccuracy;
-        const capturedAt = input.capturedAt ?? body.capturedAt;
-        const deviceId = input.deviceId ?? body.deviceId;
-
-        visit.latitude = this.hasValue(latitude)
-          ? this.validateCoordinate(latitude, `${visitType}.latitude`, -90, 90)
-          : undefined;
-
-        visit.longitude = this.hasValue(longitude)
-          ? this.validateCoordinate(
-              longitude,
-              `${visitType}.longitude`,
-              -180,
-              180,
-            )
-          : undefined;
-
-        visit.locationAccuracy = this.hasValue(locationAccuracy)
-          ? this.validatePositiveNumber(
-              locationAccuracy,
-              `${visitType}.locationAccuracy`,
-            )
-          : undefined;
-
-        visit.capturedAt = this.hasValue(capturedAt)
-          ? this.validateDateTime(capturedAt, `${visitType}.capturedAt`)
-          : undefined;
-
-        visit.deviceId = this.hasValue(deviceId)
-          ? String(deviceId).trim().slice(0, 120)
-          : undefined;
 
         savedVisits.push(await visitRepository.save(visit));
       }
@@ -758,30 +475,123 @@ private formatVisitTypeLabel(
       if (errors.length) {
         throw new BadRequestException({
           success: false,
+
           errorCode: "FIELD_VISIT_VALIDATION_ERROR",
+
           message: errors,
+
           errors,
         });
       }
 
       const completedVisits: Visit[] = [];
 
-      for (const visit of savedVisits) {
-        visit.visitStatus = VISIT_STATUS.COMPLETED;
-        visit.updatedBy = userId;
-        completedVisits.push(await visitRepository.save(visit));
-      }
+for (const visit of savedVisits) {
+  visit.visitStatus =
+    VISIT_STATUS.COMPLETED;
 
-      return {
-        success: true,
-        message: "Field visits completed successfully.",
-        data: {
-          applicationId,
-          propertyCategory,
-          completedVisitTypes: completedVisits.map((visit) => visit.visitType),
-          completedAt: new Date().toISOString(),
-        },
-      };
+  visit.updatedBy =
+    userId;
+
+  completedVisits.push(
+    await visitRepository.save(
+      visit,
+    ),
+  );
+}
+
+const applicationRepository =
+  manager.getRepository(
+    Application,
+  );
+
+const workflowLogRepository =
+  manager.getRepository(
+    WorkflowLog,
+  );
+
+const application =
+  await applicationRepository.findOne({
+    where: {
+      id: applicationId,
+    },
+  });
+
+if (!application) {
+  throw new NotFoundException(
+    `Application ${applicationId} was not found.`,
+  );
+}
+
+application.status =
+  ApplicationStatus.IN_PROGRESS;
+
+application.updatedBy =
+  userId;
+
+await applicationRepository.save(
+  application,
+);
+
+const existingWorkflowLog =
+  await workflowLogRepository.findOne({
+    where: {
+      applicationId,
+      action:
+        WorkflowLogAction.CUSTOMER_VISIT_DONE,
+    },
+  });
+
+if (!existingWorkflowLog) {
+  const workflowLog =
+    workflowLogRepository.create({
+      applicationId,
+
+      action:
+        WorkflowLogAction.CUSTOMER_VISIT_DONE,
+
+      remarks:
+        'Field visits completed successfully.',
+
+      createdBy: userId,
+      updatedBy: userId,
+    });
+
+  await workflowLogRepository.save(
+    workflowLog,
+  );
+}
+
+return {
+  success: true,
+
+  message:
+    'Field visits completed successfully.',
+
+  data: {
+    applicationId,
+
+    applicationStatus:
+      ApplicationStatus.IN_PROGRESS,
+
+    workflowAction:
+      WorkflowLogAction.CUSTOMER_VISIT_DONE,
+
+    customerVisit:
+      true,
+
+    propertyCategory,
+
+    completedVisitTypes:
+      completedVisits.map(
+        (visit) =>
+          visit.visitType,
+      ),
+
+    completedAt:
+      new Date().toISOString(),
+  },
+};
     });
   }
 
@@ -795,9 +605,13 @@ private formatVisitTypeLabel(
     const visits = await this.visitRepository.find({
       where: {
         applicationId,
+
         visitStatus: VISIT_STATUS.COMPLETED,
       },
-      order: { updatedAt: "DESC" },
+
+      order: {
+        updatedAt: "DESC",
+      },
     });
 
     const documents = await this.getFieldVisitDocuments(
@@ -807,7 +621,14 @@ private formatVisitTypeLabel(
 
     return {
       success: true,
-      data: visits.map((visit) => this.serializeVisit(visit, documents)),
+
+      message: "Field visit history fetched successfully.",
+
+      data: {
+        applicationId,
+
+        visits: visits.map((visit) => this.serializeVisit(visit, documents)),
+      },
     };
   }
 
@@ -819,8 +640,13 @@ private formatVisitTypeLabel(
     await this.assertApplicationExists(this.dataSource.manager, applicationId);
 
     const visits = await this.visitRepository.find({
-      where: { applicationId },
-      order: { updatedAt: "DESC" },
+      where: {
+        applicationId,
+      },
+
+      order: {
+        updatedAt: "DESC",
+      },
     });
 
     const latestByType = new Map<string, Visit>();
@@ -838,15 +664,28 @@ private formatVisitTypeLabel(
     if (!propertyCategory) {
       return {
         completed: false,
+
         propertyCategory: null,
+
         requiredVisitTypes: [],
+
+        savedVisitTypes: [],
+
         completedVisitTypes: [],
+
+        savedCount: 0,
+
         completedCount: 0,
+
         requiredCount: 0,
       };
     }
 
     const requiredVisitTypes = getRequiredVisitTypes(propertyCategory);
+
+    const savedVisitTypes = requiredVisitTypes.filter((visitType) =>
+      Boolean(latestByType.get(visitType)),
+    );
 
     const completedVisitTypes = requiredVisitTypes.filter(
       (visitType) =>
@@ -857,16 +696,25 @@ private formatVisitTypeLabel(
       completed:
         requiredVisitTypes.length > 0 &&
         completedVisitTypes.length === requiredVisitTypes.length,
+
       propertyCategory,
+
       requiredVisitTypes,
+
+      savedVisitTypes,
+
       completedVisitTypes,
+
+      savedCount: savedVisitTypes.length,
+
       completedCount: completedVisitTypes.length,
+
       requiredCount: requiredVisitTypes.length,
     };
   }
 
   /* =====================================================
-     GET FIELD VISIT DOCUMENTS
+     GET DOCUMENTS
   ===================================================== */
 
   async getDocuments(applicationId: number) {
@@ -879,9 +727,12 @@ private formatVisitTypeLabel(
 
     return {
       success: true,
+
       message: "Field visit documents fetched successfully.",
+
       data: {
         applicationId,
+
         documents: documents.map((document) =>
           this.serializeDocument(document),
         ),
@@ -890,7 +741,7 @@ private formatVisitTypeLabel(
   }
 
   /* =====================================================
-     UPLOAD FIELD VISIT DOCUMENT
+     UPLOAD DOCUMENT
   ===================================================== */
 
   async uploadDocument(
@@ -919,7 +770,7 @@ private formatVisitTypeLabel(
 
       if (!allowedDocumentNames) {
         throw new BadRequestException(
-          `No document configuration found for visit type ${visitType}.`,
+          `No document configuration found for ${visitType}.`,
         );
       }
 
@@ -933,21 +784,25 @@ private formatVisitTypeLabel(
 
       if (!allowedDocumentNames.includes(documentName)) {
         throw new BadRequestException(
-          `${documentName} is not valid for ${visitType}. Allowed document names: ${allowedDocumentNames.join(", ")}.`,
+          `${documentName} is not valid for ${visitType}. Allowed names: ${allowedDocumentNames.join(
+            ", ",
+          )}.`,
         );
       }
 
-      const existingDocumentByName = await this.documentRepository.findOne({
+      const existingDocument = await this.documentRepository.findOne({
         where: {
           applicationId,
+
           documentName,
+
           documentSource: DOCUMENT_SOURCE.FIELD_VISIT,
         },
       });
 
-      if (existingDocumentByName) {
+      if (existingDocument) {
         throw new BadRequestException(
-          `${documentName} has already been uploaded for this application.`,
+          `${documentName} has already been uploaded.`,
         );
       }
 
@@ -958,20 +813,18 @@ private formatVisitTypeLabel(
         applicationId,
       );
 
-      for (const existingDocument of existingDocuments) {
-        const existingAbsolutePath = this.resolveAbsolutePath(
-          existingDocument.filePath,
-        );
+      for (const document of existingDocuments) {
+        const existingPath = this.resolveAbsolutePath(document.filePath);
 
-        if (!existsSync(existingAbsolutePath)) {
+        if (!existsSync(existingPath)) {
           continue;
         }
 
-        const existingFileHash = this.createFileHash(existingAbsolutePath);
+        const existingHash = this.createFileHash(existingPath);
 
-        if (uploadedFileHash === existingFileHash) {
+        if (uploadedFileHash === existingHash) {
           throw new BadRequestException(
-            `Duplicate field visit image detected: ${file.originalname}`,
+            `Duplicate field visit image detected: ${file.originalname}.`,
           );
         }
       }
@@ -983,16 +836,27 @@ private formatVisitTypeLabel(
 
       const document = this.documentRepository.create({
         applicationId,
+
         documentType: DocumentType.PHOTO,
+
         documentName,
+
         documentSource: DOCUMENT_SOURCE.FIELD_VISIT,
+
         fileName: file.originalname,
+
         filePath: relativeFilePath,
+
         fileSize: file.size,
+
         mimeType: file.mimetype,
+
         uploadedBy: userId,
+
         createdBy: userId,
+
         updatedBy: userId,
+
         status: DocumentStatus.UPLOADED,
       });
 
@@ -1000,7 +864,9 @@ private formatVisitTypeLabel(
 
       return {
         success: true,
+
         message: "Field visit document uploaded successfully.",
+
         data: this.serializeDocument(savedDocument),
       };
     } catch (error) {
@@ -1008,7 +874,7 @@ private formatVisitTypeLabel(
         try {
           unlinkSync(file.path);
         } catch {
-          // Preserve the original request error.
+          // Keep original error.
         }
       }
 
@@ -1024,7 +890,9 @@ private formatVisitTypeLabel(
     const document = await this.documentRepository.findOne({
       where: {
         id: documentId,
+
         applicationId,
+
         documentSource: DOCUMENT_SOURCE.FIELD_VISIT,
       },
     });
@@ -1048,14 +916,16 @@ private formatVisitTypeLabel(
   }
 
   /* =====================================================
-     DELETE FIELD VISIT DOCUMENT
+     DELETE DOCUMENT
   ===================================================== */
 
   async deleteDocument(applicationId: number, documentId: number) {
     const document = await this.documentRepository.findOne({
       where: {
         id: documentId,
+
         applicationId,
+
         documentSource: DOCUMENT_SOURCE.FIELD_VISIT,
       },
     });
@@ -1068,14 +938,16 @@ private formatVisitTypeLabel(
 
     if (!visitType) {
       throw new BadRequestException(
-        `Unable to identify visit type from document name ${document.documentName}.`,
+        `Unable to identify visit type from ${document.documentName}.`,
       );
     }
 
     const completedVisit = await this.visitRepository.findOne({
       where: {
         applicationId,
+
         visitType,
+
         visitStatus: VISIT_STATUS.COMPLETED,
       },
     });
@@ -1094,25 +966,183 @@ private formatVisitTypeLabel(
       try {
         unlinkSync(absolutePath);
       } catch {
-        // The database row is already removed. Do not fail the request.
+        // Database row is already deleted.
       }
     }
 
     return {
       success: true,
+
       message: "Field visit document deleted successfully.",
+
       data: {
         applicationId,
+
         documentId,
+
         documentName: document.documentName,
+
         visitType,
       },
     };
   }
 
-  /* Temporary compatibility with an older controller method name. */
-  async deleteDraftDocument(applicationId: number, documentId: number) {
-    return this.deleteDocument(applicationId, documentId);
+  /* =====================================================
+     SHARED VISIT ASSIGNMENT
+  ===================================================== */
+
+  private applyVisitData({
+    visit,
+    applicationId,
+    propertyCategory,
+    visitType,
+    input,
+    body,
+    userId,
+  }: {
+    visit: Visit;
+    applicationId: number;
+    propertyCategory: string;
+    visitType: string;
+    input: Record<string, any>;
+    body: Record<string, any>;
+    userId?: number;
+  }) {
+    visit.applicationId = applicationId;
+
+    visit.visitType = visitType;
+
+    visit.propertyCategory = propertyCategory;
+
+    visit.updatedBy = userId;
+
+    if (!visit.createdBy && userId) {
+      visit.createdBy = userId;
+    }
+
+    const visitDate = input.visitDate ?? body.visitDate;
+
+    if (this.hasValue(visitDate)) {
+      visit.visitDate = this.validateDate(visitDate, `${visitType}.visitDate`);
+    }
+
+    const rawVisitResult = input.visitResult ?? input.visitStatus;
+
+    if (this.hasValue(rawVisitResult)) {
+      const visitResult = normalizeVisitResult(rawVisitResult);
+
+      if (!visitResult) {
+        throw new BadRequestException(
+          `${visitType}: visitResult must be Positive, Negative or Refer.`,
+        );
+      }
+
+      visit.visitResult = visitResult;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, "propertyType")) {
+      visit.propertyType = this.hasValue(input.propertyType)
+        ? String(input.propertyType).trim().slice(0, 80)
+        : (null as any);
+    } else if (!PROPERTY_VISIT_VISIT_TYPES.includes(visitType as any)) {
+      visit.propertyType = null as any;
+    }
+
+    const remarks =
+      input.remarks ??
+      input.residenceRemarks ??
+      input.businessRemarks ??
+      input.propertyRemarks;
+
+    if (remarks !== undefined) {
+      visit.remarks = this.validateRemarks(remarks);
+    }
+
+    /*
+     * All card-specific frontend fields
+     * are saved in formData.
+     */
+    const explicitFormData = this.parseObject(
+      input.formData,
+      `${visitType}.formData`,
+      {},
+    );
+
+    visit.formData = {
+      ...(visit.formData || {}),
+
+      ...this.extractFormData(input),
+
+      ...explicitFormData,
+    };
+
+    const commonChecklist = this.parseObject(
+      body.checklistData,
+      "checklistData",
+      {},
+    );
+
+    const visitChecklist = this.parseObject(
+      input.checklistData,
+      `${visitType}.checklistData`,
+      {},
+    );
+
+    visit.checklistData = {
+      ...(visit.checklistData || {}),
+
+      ...commonChecklist,
+
+      ...visitChecklist,
+    };
+
+    const latitude = input.latitude ?? body.latitude;
+
+    const longitude = input.longitude ?? body.longitude;
+
+    const locationAccuracy = input.locationAccuracy ?? body.locationAccuracy;
+
+    const capturedAt = input.capturedAt ?? body.capturedAt;
+
+    const deviceId = input.deviceId ?? body.deviceId;
+
+    if (this.hasValue(latitude)) {
+      visit.latitude = this.validateCoordinate(
+        latitude,
+        `${visitType}.latitude`,
+        -90,
+        90,
+      );
+    }
+
+    if (this.hasValue(longitude)) {
+      visit.longitude = this.validateCoordinate(
+        longitude,
+        `${visitType}.longitude`,
+        -180,
+        180,
+      );
+    }
+
+    if (this.hasValue(locationAccuracy)) {
+      visit.locationAccuracy = this.validatePositiveNumber(
+        locationAccuracy,
+        `${visitType}.locationAccuracy`,
+      );
+    }
+
+    if (this.hasValue(capturedAt)) {
+      visit.capturedAt = this.validateDateTime(
+        capturedAt,
+        `${visitType}.capturedAt`,
+      );
+    }
+
+    if (this.hasValue(deviceId)) {
+      visit.deviceId = String(deviceId).trim().slice(0, 120);
+    }
+
+    return visit;
   }
 
   /* =====================================================
@@ -1156,7 +1186,9 @@ private formatVisitTypeLabel(
     if (visit.visitType === VISIT_TYPE.CUSTOMER_RESIDENCE) {
       this.requireFormFields(
         visit,
+
         ["customerName", "personMet", "residenceAddress", "residenceType"],
+
         errors,
       );
     }
@@ -1164,6 +1196,7 @@ private formatVisitTypeLabel(
     if (visit.visitType === VISIT_TYPE.BUSINESS_OFFICE) {
       this.requireFormFields(
         visit,
+
         [
           "occupationType",
           "businessName",
@@ -1172,6 +1205,7 @@ private formatVisitTypeLabel(
           "employeeCount",
           "stockOfficeSetup",
         ],
+
         errors,
       );
     }
@@ -1183,6 +1217,7 @@ private formatVisitTypeLabel(
 
       this.requireFormFields(
         visit,
+
         [
           "propertyAddress",
           "ownership",
@@ -1192,6 +1227,7 @@ private formatVisitTypeLabel(
           "nearbyLandmark",
           "marketValue",
         ],
+
         errors,
       );
     }
@@ -1206,7 +1242,9 @@ private formatVisitTypeLabel(
     if (visit.visitType === VISIT_TYPE.INDUSTRIAL_PROPERTY) {
       this.requireFormFields(
         visit,
+
         ["approachRoad", "machineryAvailable"],
+
         errors,
       );
     }
@@ -1214,7 +1252,9 @@ private formatVisitTypeLabel(
     if (visit.visitType === VISIT_TYPE.LAND_PLOT) {
       this.requireFormFields(
         visit,
+
         ["boundaryAvailable", "surveyNumber"],
+
         errors,
       );
     }
@@ -1255,59 +1295,97 @@ private formatVisitTypeLabel(
     return manager.getRepository(Document).find({
       where: {
         applicationId,
+
         documentSource: DOCUMENT_SOURCE.FIELD_VISIT,
+
         status: DocumentStatus.UPLOADED,
       },
-      order: { createdAt: "ASC" },
+
+      order: {
+        createdAt: "ASC",
+      },
     });
   }
 
   private serializeDocument(document: Document) {
     return {
       id: Number(document.id),
+
       applicationId: Number(document.applicationId),
+
       documentType: document.documentType,
+
       documentName: document.documentName,
+
       documentSource: document.documentSource,
+
       fileName: document.fileName,
+
       fileSize: Number(document.fileSize),
+
       mimeType: document.mimeType,
+
       status: document.status,
+
       fileUrl:
         `${UPLOAD_BASE_URL}/api/applications/` +
         `${document.applicationId}/field-visits/documents/` +
         `${document.id}/file`,
+
       createdAt: document.createdAt,
+
       updatedAt: document.updatedAt,
     };
   }
 
   private serializeVisit(visit: Visit, documents: Document[]) {
-    const visitDocumentNames = DOCUMENT_NAMES[visit.visitType] || [];
+    const expectedDocumentNames = DOCUMENT_NAMES[visit.visitType] || [];
 
     const visitDocuments = documents
-      .filter((document) => visitDocumentNames.includes(document.documentName))
+      .filter((document) =>
+        expectedDocumentNames.includes(document.documentName),
+      )
       .map((document) => this.serializeDocument(document));
 
     return {
       id: Number(visit.id),
+
       applicationId: Number(visit.applicationId),
+
       visitType: visit.visitType,
+
       visitDate: visit.visitDate,
+
       visitStatus: visit.visitStatus,
+
       visitResult: visit.visitResult,
+
       propertyCategory: visit.propertyCategory,
+
       propertyType: visit.propertyType,
+
       formData: visit.formData || {},
+
       checklistData: visit.checklistData || {},
-      latitude: visit.latitude,
-      longitude: visit.longitude,
-      locationAccuracy: visit.locationAccuracy,
+
+      latitude: visit.latitude ? Number(visit.latitude) : null,
+
+      longitude: visit.longitude ? Number(visit.longitude) : null,
+
+      locationAccuracy: visit.locationAccuracy
+        ? Number(visit.locationAccuracy)
+        : null,
+
       capturedAt: visit.capturedAt,
+
       deviceId: visit.deviceId,
+
       remarks: visit.remarks,
+
       documents: visitDocuments,
+
       createdAt: visit.createdAt,
+
       updatedAt: visit.updatedAt,
     };
   }
@@ -1516,6 +1594,15 @@ private formatVisitTypeLabel(
     );
   }
 
+  private formatVisitTypeLabel(visitType: string) {
+    return String(visitType)
+      .toLowerCase()
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+
   /* =====================================================
      APPLICATION CHECK
   ===================================================== */
@@ -1525,8 +1612,13 @@ private formatVisitTypeLabel(
     applicationId: number,
   ) {
     const application = await manager.getRepository(Application).findOne({
-      where: { id: applicationId },
-      select: { id: true },
+      where: {
+        id: applicationId,
+      },
+
+      select: {
+        id: true,
+      },
     });
 
     if (!application) {

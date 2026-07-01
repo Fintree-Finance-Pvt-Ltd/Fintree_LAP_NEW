@@ -33,6 +33,9 @@ export const PROPERTY_CATEGORIES = [
   'Commercial',
   'Industrial',
   'Land / Plot',
+  'Residential Property Visit',
+  'Business / Office Visit',
+  'Customer / Residence Visit',
 ] as const;
 
 export const CATEGORY_TO_VISIT_TYPE: Record<string, string> = {
@@ -162,12 +165,27 @@ export const normalizePropertyCategory = (
 
   const categories: Record<string, string> = {
     residential: 'Residential',
+    'residential property': 'Residential',
+    'residential property visit': 'Residential',
+    'customer / residence': 'Residential',
+    'customer / residence visit': 'Residential',
+    customer_residence: 'Residential',
+
     commercial: 'Commercial',
+    'commercial property': 'Commercial',
+    'commercial property visit': 'Commercial',
+    'business / office': 'Commercial',
+    'business / office visit': 'Commercial',
+    business_office: 'Commercial',
+
     industrial: 'Industrial',
+    'industrial property': 'Industrial',
+    'industrial property visit': 'Industrial',
 
     'land / plot': 'Land / Plot',
     'land/plot': 'Land / Plot',
     'land plot': 'Land / Plot',
+    'land and plot': 'Land / Plot',
     land: 'Land / Plot',
     plot: 'Land / Plot',
   };

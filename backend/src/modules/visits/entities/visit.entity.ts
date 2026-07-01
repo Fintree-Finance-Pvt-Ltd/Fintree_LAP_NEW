@@ -35,11 +35,23 @@ const jsonTransformer: ValueTransformer = {
 };
 
 @Entity('visits')
-@Index('idx_visits_application_type_status', [
-  'applicationId',
-  'visitType',
-  'visitStatus',
-])
+@Index(
+  'uq_visits_application_type',
+  [
+    'applicationId',
+    'visitType',
+  ],
+  {
+    unique: true,
+  },
+)
+@Index(
+  'idx_visits_application_status',
+  [
+    'applicationId',
+    'visitStatus',
+  ],
+)
 export class Visit {
   @PrimaryGeneratedColumn({
     type: 'bigint',

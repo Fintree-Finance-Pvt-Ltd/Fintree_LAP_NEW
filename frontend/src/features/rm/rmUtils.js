@@ -28,7 +28,6 @@ export const buildWorkflowTimeline = (status = {}) => [
   { key: "leadCreated", label: "Lead Created", completed: Boolean(status.leadCreated) },
   { key: "leadSubmitted", label: "Lead Submitted", completed: Boolean(status.leadSubmitted) },
   { key: "customerVisit", label: "Customer Visit", completed: Boolean(status.customerVisit) },
-  { key: "businessVisit", label: "Business Visit", completed: Boolean(status.businessVisit) },
   { key: "geoVerification", label: "Geo Verification", completed: Boolean(status.geoVerification) },
   { key: "propertyVisit", label: "Property Visit", completed: Boolean(status.propertyVisit) },
   { key: "documentsUploaded", label: "Docs Uploaded", completed: Boolean(status.documentsUploaded) },
