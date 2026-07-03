@@ -1,6 +1,8 @@
 import {
+  BadGatewayException,
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -107,6 +109,76 @@ export class GeoService {
 
     return accuracy;
   }
+
+
+async reverseGeocode(
+  latitudeValue: unknown,
+  longitudeValue: unknown,
+) {
+  const latitude =
+    this.parseLatitude(latitudeValue);
+
+  const longitude =
+    this.parseLongitude(longitudeValue);
+
+  try {
+    const url =
+      `https://nominatim.openstreetmap.org/reverse` +
+      `?format=jsonv2` +
+      `&lat=${encodeURIComponent(latitude)}` +
+      `&lon=${encodeURIComponent(longitude)}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'FieldVisitApplication/1.0',
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new BadGatewayException(
+        'Reverse geocoding service failed.',
+      );
+    }
+
+    const data = await response.json() as {
+      display_name?: string;
+      address?: Record<string, string>;
+    };
+
+    return {
+      success: true,
+      message:
+        'Address fetched successfully.',
+      data: {
+        latitude,
+        longitude,
+        formattedAddress:
+          data.display_name || '',
+        address:
+          data.address || null,
+      },
+    };
+  } catch (error) {
+    if (
+      error instanceof
+      BadGatewayException
+    ) {
+      throw error;
+    }
+
+    console.error(
+      'Reverse geocode error:',
+      error,
+    );
+
+    throw new InternalServerErrorException(
+      'Unable to reverse geocode location.',
+    );
+  }
+}
+
 
   async saveLiveLocation(
     applicationId: number,

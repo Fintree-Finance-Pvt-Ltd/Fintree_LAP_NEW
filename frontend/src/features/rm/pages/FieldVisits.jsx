@@ -5,6 +5,7 @@ import {
   FaCalendarAlt,
   FaCamera,
   FaCheckCircle,
+  FaEye,
   FaFileImage,
   FaHome,
   FaIndustry,
@@ -126,7 +127,8 @@ const PROPERTY_VISIT_CONFIG = {
       "Under Construction",
     ],
     landmarkPlaceholder: "Near society, school or main road",
-    photoText: "Capture building frontage, entrance, interiors and landmark photos",
+    photoText:
+      "Capture building frontage, entrance, interiors and landmark photos",
   },
   Commercial: {
     block: VISIT_BLOCKS.COMMERCIAL_PROPERTY,
@@ -146,7 +148,8 @@ const PROPERTY_VISIT_CONFIG = {
       "Other Commercial Use",
     ],
     landmarkPlaceholder: "Near market, business park or main road",
-    photoText: "Capture commercial frontage, signboard, interiors and landmark photos",
+    photoText:
+      "Capture commercial frontage, signboard, interiors and landmark photos",
   },
   Industrial: {
     block: VISIT_BLOCKS.INDUSTRIAL_PROPERTY,
@@ -164,7 +167,8 @@ const PROPERTY_VISIT_CONFIG = {
       "Other Industrial Use",
     ],
     landmarkPlaceholder: "Near industrial estate, highway or factory",
-    photoText: "Capture factory gate, shed, machinery, approach road and landmark photos",
+    photoText:
+      "Capture factory gate, shed, machinery, approach road and landmark photos",
   },
   "Land / Plot": {
     block: VISIT_BLOCKS.LAND_PLOT,
@@ -181,7 +185,8 @@ const PROPERTY_VISIT_CONFIG = {
       "Under Construction",
     ],
     landmarkPlaceholder: "Near survey marker, village road or highway",
-    photoText: "Capture plot boundaries, corners, survey marker, approach road and landmark photos",
+    photoText:
+      "Capture plot boundaries, corners, survey marker, approach road and landmark photos",
   },
 };
 
@@ -189,12 +194,36 @@ const PROPERTY_VISIT_CONFIG = {
    CHECKLIST
 ========================================================= */
 const CHECKLIST_ITEMS = [
-  { key: "customerIdentityMatched", label: "Customer identity matched", desc: "Customer identity verified during visit" },
-  { key: "visitWithinAssignedRoute", label: "Visit within assigned route", desc: "Visit location is within the assigned area" },
-  { key: "photosContainExifEvidence", label: "Photos contain EXIF/time evidence", desc: "Photo timestamp and location evidence captured" },
-  { key: "noImageDuplicationDetected", label: "No image duplication detected", desc: "Uploaded images are unique" },
-  { key: "addressComparedWithApplication", label: "Address compared with application", desc: "Physical address matches application details" },
-  { key: "negativeObservationsDisclosed", label: "Negative observations disclosed", desc: "All adverse observations have been recorded" },
+  {
+    key: "customerIdentityMatched",
+    label: "Customer identity matched",
+    desc: "Customer identity verified during visit",
+  },
+  {
+    key: "visitWithinAssignedRoute",
+    label: "Visit within assigned route",
+    desc: "Visit location is within the assigned area",
+  },
+  {
+    key: "photosContainExifEvidence",
+    label: "Photos contain EXIF/time evidence",
+    desc: "Photo timestamp and location evidence captured",
+  },
+  {
+    key: "noImageDuplicationDetected",
+    label: "No image duplication detected",
+    desc: "Uploaded images are unique",
+  },
+  {
+    key: "addressComparedWithApplication",
+    label: "Address compared with application",
+    desc: "Physical address matches application details",
+  },
+  {
+    key: "negativeObservationsDisclosed",
+    label: "Negative observations disclosed",
+    desc: "All adverse observations have been recorded",
+  },
 ];
 
 /* =========================================================
@@ -208,13 +237,15 @@ const textareaClass = `${inputClass} resize-none`;
 /* =========================================================
    HELPERS
 ========================================================= */
-const unwrapResponse = (response) => response?.data?.data ?? response?.data ?? response;
+const unwrapResponse = (response) =>
+  response?.data?.data ?? response?.data ?? response;
 
 const getApiErrorMessage = (error, fallbackMessage) => {
   const payload = error?.response?.data;
   const rawMessage = payload?.message ?? payload?.errors ?? error?.message;
   if (Array.isArray(rawMessage)) return rawMessage.join(", ");
-  if (rawMessage && typeof rawMessage === "object") return JSON.stringify(rawMessage);
+  if (rawMessage && typeof rawMessage === "object")
+    return JSON.stringify(rawMessage);
   return rawMessage || fallbackMessage;
 };
 
@@ -225,7 +256,11 @@ const getTodayDate = () => {
 };
 
 const normalizePropertyCategory = (value) => {
-  const normalizedValue = String(value || "").trim().toLowerCase().replace(/_/g, " ").replace(/\s+/g, " ");
+  const normalizedValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ");
   const categoryMap = {
     residential: "Residential",
     "residential property": "Residential",
@@ -256,13 +291,18 @@ const normalizePropertyType = (propertyType, propertyCategory) => {
   if (!propertyType) return "";
   const value = String(propertyType).trim();
   if (!propertyCategory) return value;
-  const escapedCategory = propertyCategory.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedCategory = propertyCategory.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
   const categoryPrefix = new RegExp(`^${escapedCategory}\\s*-\\s*`, "i");
   return value.replace(categoryPrefix, "").trim();
 };
 
 const normalizeVisitBlock = (value) => {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   const map = {
     customer_residence: VISIT_BLOCKS.CUSTOMER_RESIDENCE,
     business_office: VISIT_BLOCKS.BUSINESS_OFFICE,
@@ -275,7 +315,9 @@ const normalizeVisitBlock = (value) => {
 };
 
 const normalizeVisitResultForForm = (value) => {
-  const normalized = String(value || "").trim().toUpperCase();
+  const normalized = String(value || "")
+    .trim()
+    .toUpperCase();
   const map = { POSITIVE: "Positive", NEGATIVE: "Negative", REFER: "Refer" };
   return map[normalized] || "";
 };
@@ -289,7 +331,11 @@ const getBlockLabel = (block, propertyCategory) => {
     [VISIT_BLOCKS.INDUSTRIAL_PROPERTY]: "Industrial Property",
     [VISIT_BLOCKS.LAND_PLOT]: "Land / Plot",
   };
-  return labels[block] || PROPERTY_VISIT_CONFIG[propertyCategory]?.title || "Property";
+  return (
+    labels[block] ||
+    PROPERTY_VISIT_CONFIG[propertyCategory]?.title ||
+    "Property"
+  );
 };
 
 const hasValue = (value) => {
@@ -303,13 +349,19 @@ const getDocumentBlock = (document) => {
   if (visitTypeBlock) return visitTypeBlock;
   const documentName = String(document?.documentName || "").toUpperCase();
 
-  if (documentName.startsWith("CUSTOMER_RESIDENCE_") || documentName === "RESIDENCE_NEARBY_LANDMARK") {
+  if (
+    documentName.startsWith("CUSTOMER_RESIDENCE_") ||
+    documentName === "RESIDENCE_NEARBY_LANDMARK"
+  ) {
     return VISIT_BLOCKS.CUSTOMER_RESIDENCE;
   }
   if (documentName.startsWith("BUSINESS_")) return VISIT_BLOCKS.BUSINESS_OFFICE;
-  if (documentName.startsWith("RESIDENTIAL_PROPERTY_")) return VISIT_BLOCKS.RESIDENTIAL_PROPERTY;
-  if (documentName.startsWith("COMMERCIAL_PROPERTY_")) return VISIT_BLOCKS.COMMERCIAL_PROPERTY;
-  if (documentName.startsWith("INDUSTRIAL_PROPERTY_")) return VISIT_BLOCKS.INDUSTRIAL_PROPERTY;
+  if (documentName.startsWith("RESIDENTIAL_PROPERTY_"))
+    return VISIT_BLOCKS.RESIDENTIAL_PROPERTY;
+  if (documentName.startsWith("COMMERCIAL_PROPERTY_"))
+    return VISIT_BLOCKS.COMMERCIAL_PROPERTY;
+  if (documentName.startsWith("INDUSTRIAL_PROPERTY_"))
+    return VISIT_BLOCKS.INDUSTRIAL_PROPERTY;
   if (documentName.startsWith("LAND_PLOT_")) return VISIT_BLOCKS.LAND_PLOT;
   return null;
 };
@@ -317,7 +369,8 @@ const getDocumentBlock = (document) => {
 const normalizeDocuments = (payload) => {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.documents)) return payload.documents;
-  if (Array.isArray(payload?.uploadedDocuments)) return payload.uploadedDocuments;
+  if (Array.isArray(payload?.uploadedDocuments))
+    return payload.uploadedDocuments;
   return [];
 };
 
@@ -328,22 +381,121 @@ const normalizeVisits = (payload) => {
 };
 
 const createInitialChecklist = () =>
-  CHECKLIST_ITEMS.reduce((result, item) => ({ ...result, [item.key]: false }), {});
+  CHECKLIST_ITEMS.reduce(
+    (result, item) => ({ ...result, [item.key]: false }),
+    {},
+  );
 
 const createInitialVisitForms = (profile, propertyCategory) => {
   const today = getTodayDate();
-  const customerName = [profile?.firstName, profile?.middleName, profile?.lastName].filter(Boolean).join(" ");
-  const residenceAddress = [profile?.currentAddress, profile?.currentCity, profile?.currentState, profile?.currentPincode].filter(Boolean).join(", ");
-  const propertyAddress = [profile?.propertyAddress, profile?.propertyCity, profile?.propertyState, profile?.propertyPincode].filter(Boolean).join(", ");
-  const normalizedPropertyType = normalizePropertyType(profile?.propertyType, propertyCategory);
+  const customerName = [
+    profile?.firstName,
+    profile?.middleName,
+    profile?.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const residenceAddress = [
+    profile?.currentAddress,
+    profile?.currentCity,
+    profile?.currentState,
+    profile?.currentPincode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const propertyAddress = [
+    profile?.propertyAddress,
+    profile?.propertyCity,
+    profile?.propertyState,
+    profile?.propertyPincode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const normalizedPropertyType = normalizePropertyType(
+    profile?.propertyType,
+    propertyCategory,
+  );
 
   return {
-    [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: { visitDate: today, customerName, personMet: "Customer", residenceAddress, residenceType: "", visitResult: "", remarks: "" },
-    [VISIT_BLOCKS.BUSINESS_OFFICE]: { visitDate: today, occupationType: profile?.occupationType || "", businessName: profile?.businessName || "", businessVintage: "", businessActivity: "", employeeCount: "", stockOfficeSetup: "", visitResult: "", remarks: "" },
-    [VISIT_BLOCKS.RESIDENTIAL_PROPERTY]: { visitDate: today, propertyType: normalizedPropertyType, propertyAddress, ownership: profile?.ownershipType || "", usage: "", area: "", occupancy: "", propertyCondition: "", nearbyLandmark: "", marketValue: profile?.marketValue || "", visitResult: "", remarks: "" },
-    [VISIT_BLOCKS.COMMERCIAL_PROPERTY]: { visitDate: today, propertyType: normalizedPropertyType, propertyAddress, ownership: profile?.ownershipType || "", usage: "", area: "", occupancy: "", propertyCondition: "", nearbyLandmark: "", marketValue: profile?.marketValue || "", visitResult: "", remarks: "" },
-    [VISIT_BLOCKS.INDUSTRIAL_PROPERTY]: { visitDate: today, propertyType: normalizedPropertyType, propertyAddress, ownership: profile?.ownershipType || "", usage: "", area: "", occupancy: "", approachRoad: "", machineryAvailable: "", propertyCondition: "", nearbyLandmark: "", marketValue: profile?.marketValue || "", visitResult: "", remarks: "" },
-    [VISIT_BLOCKS.LAND_PLOT]: { visitDate: today, propertyType: normalizedPropertyType, propertyAddress, ownership: profile?.ownershipType || "", usage: "", area: "", boundaryAvailable: "", surveyNumber: "", propertyCondition: "", nearbyLandmark: "", marketValue: profile?.marketValue || "", visitResult: "", remarks: "" },
+    [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: {
+      visitDate: today,
+      customerName,
+      personMet: "Customer",
+      residenceAddress,
+      residenceType: "",
+      visitResult: "",
+      remarks: "",
+    },
+    [VISIT_BLOCKS.BUSINESS_OFFICE]: {
+      visitDate: today,
+      occupationType: profile?.occupationType || "",
+      businessName: profile?.businessName || "",
+      businessVintage: "",
+      businessActivity: "",
+      employeeCount: "",
+      stockOfficeSetup: "",
+      visitResult: "",
+      remarks: "",
+    },
+    [VISIT_BLOCKS.RESIDENTIAL_PROPERTY]: {
+      visitDate: today,
+      propertyType: normalizedPropertyType,
+      propertyAddress,
+      ownership: profile?.ownershipType || "",
+      usage: "",
+      area: "",
+      occupancy: "",
+      propertyCondition: "",
+      nearbyLandmark: "",
+      marketValue: profile?.marketValue || "",
+      visitResult: "",
+      remarks: "",
+    },
+    [VISIT_BLOCKS.COMMERCIAL_PROPERTY]: {
+      visitDate: today,
+      propertyType: normalizedPropertyType,
+      propertyAddress,
+      ownership: profile?.ownershipType || "",
+      usage: "",
+      area: "",
+      occupancy: "",
+      propertyCondition: "",
+      nearbyLandmark: "",
+      marketValue: profile?.marketValue || "",
+      visitResult: "",
+      remarks: "",
+    },
+    [VISIT_BLOCKS.INDUSTRIAL_PROPERTY]: {
+      visitDate: today,
+      propertyType: normalizedPropertyType,
+      propertyAddress,
+      ownership: profile?.ownershipType || "",
+      usage: "",
+      area: "",
+      occupancy: "",
+      approachRoad: "",
+      machineryAvailable: "",
+      propertyCondition: "",
+      nearbyLandmark: "",
+      marketValue: profile?.marketValue || "",
+      visitResult: "",
+      remarks: "",
+    },
+    [VISIT_BLOCKS.LAND_PLOT]: {
+      visitDate: today,
+      propertyType: normalizedPropertyType,
+      propertyAddress,
+      ownership: profile?.ownershipType || "",
+      usage: "",
+      area: "",
+      boundaryAvailable: "",
+      surveyNumber: "",
+      propertyCondition: "",
+      nearbyLandmark: "",
+      marketValue: profile?.marketValue || "",
+      visitResult: "",
+      remarks: "",
+    },
   };
 };
 
@@ -357,7 +509,9 @@ const mergeSavedVisits = (initialForms, savedVisits) => {
       ...mergedForms[block],
       ...(savedVisit?.formData || {}),
       visitDate: savedVisit?.visitDate || mergedForms[block].visitDate,
-      visitResult: normalizeVisitResultForForm(savedVisit?.visitResult) || mergedForms[block].visitResult,
+      visitResult:
+        normalizeVisitResultForForm(savedVisit?.visitResult) ||
+        mergedForms[block].visitResult,
       remarks: savedVisit?.remarks ?? mergedForms[block].remarks,
     };
     if (savedVisit?.propertyType !== undefined) {
@@ -386,7 +540,54 @@ const getBrowserLocation = () =>
       () => {
         resolve(null);
       },
-      { enableHighAccuracy: true, timeout: 12_000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 12_000, maximumAge: 0 },
+    );
+  });
+
+const reverseGeocode = async (latitude, longitude) => {
+  try {
+    const response = await rmApi.reverseGeocode(latitude, longitude);
+
+    const result =
+      response?.data?.data ??
+      response?.data ??
+      response;
+
+    return result?.formattedAddress || "";
+  } catch (error) {
+    console.error(
+      "Unable to retrieve location address:",
+      error,
+    );
+
+    return "";
+  }
+};
+
+
+const getCaptureLocation = () =>
+  new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        const locationName = await reverseGeocode(latitude, longitude);
+
+        resolve({
+          latitude,
+          longitude,
+          accuracy: position.coords.accuracy,
+          locationName,
+          capturedAt: new Date(),
+        });
+      },
+      reject,
+      {
+        enableHighAccuracy: true,
+        timeout: 12_000,
+        maximumAge: 0,
+      },
     );
   });
 
@@ -398,49 +599,70 @@ function GeoCameraModal({ isOpen, onClose, onCapture, blockName }) {
   const streamRef = useRef(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [isInitializing, setIsInitializing] = useState(true);
+  const [captureLocation, setCaptureLocation] = useState(null);
+  const [watermarkTime, setWatermarkTime] = useState(new Date());
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
+
+    const timer = window.setInterval(() => setWatermarkTime(new Date()), 1000);
 
     async function initVerificationFlow() {
       setIsInitializing(true);
       setErrorMsg("");
+      setCaptureLocation(null);
 
-      // 1. Enforce GPS Validation
       if (!navigator.geolocation) {
-        setErrorMsg("Location service (GPS) is required but not supported by this browser.");
+        setErrorMsg(
+          "Location service (GPS) is required but not supported by this browser.",
+        );
         setIsInitializing(false);
         return;
       }
 
       try {
-        // Explicitly check coordinate capability before launching the viewfinder stream loop
-        await new Promise((resolve, reject) => {
+        const position = await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 9000,
+            timeout: 12000,
+            maximumAge: 0,
           });
         });
+
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        const locationName = await reverseGeocode(latitude, longitude);
+
+        setCaptureLocation({
+          latitude,
+          longitude,
+          accuracy: position.coords.accuracy,
+          locationName,
+        });
       } catch (gpsError) {
-        setErrorMsg("Location access is required. Please enable high-accuracy GPS permissions to proceed.");
+        console.error("Location initialization failed:", gpsError);
+
+        setErrorMsg(
+          "Location access is required. Please enable high-accuracy GPS permissions.",
+        );
         setIsInitializing(false);
         return;
       }
 
-      // 2. Request Camera Permissions and initialize stream
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" } },
           audio: false,
         });
-        
+
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
         setIsInitializing(false);
       } catch (camError) {
-        setErrorMsg("Camera context access denied. Please approve camera peripherals permission updates.");
+        setErrorMsg(
+          "Camera access was denied. Please allow camera permission and try again.",
+        );
         setIsInitializing(false);
       }
     }
@@ -448,6 +670,7 @@ function GeoCameraModal({ isOpen, onClose, onCapture, blockName }) {
     initVerificationFlow();
 
     return () => {
+      window.clearInterval(timer);
       stopCameraSystem();
     };
   }, [isOpen]);
@@ -459,60 +682,148 @@ function GeoCameraModal({ isOpen, onClose, onCapture, blockName }) {
     }
   };
 
+  const formatCoordinate = (value) =>
+    Number.isFinite(value) ? Number(value).toFixed(6) : "N/A";
+
+  const wrapWatermarkText = (text, maxLength = 55) => {
+    if (!text) return [];
+
+    const words = text.split(/\s+/);
+    const lines = [];
+    let currentLine = "";
+
+    words.forEach((word) => {
+      const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+      if (nextLine.length > maxLength && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = nextLine;
+      }
+    });
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines;
+  };
+
+const getWatermarkLines = (capturedAt = new Date()) => {
+  const locationName = captureLocation?.locationName?.trim();
+
+  const locationLines = wrapWatermarkText(
+    locationName || "Address lookup failed"
+  );
+
+  return [
+    `Field Visit: ${blockName}`,
+    `Captured: ${capturedAt.toLocaleString()}`,
+    ...locationLines.map((line, index) =>
+      index === 0 ? `Location: ${line}` : line
+    ),
+    `Lat: ${formatCoordinate(
+      captureLocation?.latitude
+    )}  Long: ${formatCoordinate(captureLocation?.longitude)}`,
+  ];
+};
+
+  const drawWatermark = (context, canvas, capturedAt) => {
+    const lines = getWatermarkLines(capturedAt);
+    const padding = Math.max(12, Math.round(canvas.width * 0.018));
+    const fontSize = Math.max(15, Math.round(canvas.width * 0.022));
+    const lineHeight = Math.round(fontSize * 1.35);
+    const boxHeight = padding * 2 + lineHeight * lines.length;
+
+    context.save();
+    context.fillStyle = "rgba(0, 0, 0, 0.68)";
+    context.fillRect(0, canvas.height - boxHeight, canvas.width, boxHeight);
+    context.font = `600 ${fontSize}px Arial, sans-serif`;
+    context.fillStyle = "#ffffff";
+    context.textBaseline = "top";
+
+    lines.forEach((line, index) => {
+      context.fillText(
+        line,
+        padding,
+        canvas.height - boxHeight + padding + index * lineHeight,
+      );
+    });
+    context.restore();
+  };
+
   const handleCaptureAction = async () => {
-    if (!videoRef.current || !streamRef.current) return;
+    if (!videoRef.current || !streamRef.current || !captureLocation) return;
 
     try {
       const videoNode = videoRef.current;
       const canvas = document.createElement("canvas");
-      canvas.width = videoNode.videoWidth || 640;
-      canvas.height = videoNode.videoHeight || 480;
+      canvas.width = videoNode.videoWidth || 1280;
+      canvas.height = videoNode.videoHeight || 720;
 
       const context = canvas.getContext("2d");
+      if (!context) throw new Error("Canvas context is unavailable.");
+
       context.drawImage(videoNode, 0, 0, canvas.width, canvas.height);
+      const capturedAt = new Date();
+      drawWatermark(context, canvas, capturedAt);
 
       const blob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.95)
+        canvas.toBlob(resolve, "image/jpeg", 0.95),
       );
 
       if (blob) {
-        const capturedFile = new File([blob], `verification_${Date.now()}.jpg`, {
-          type: "image/jpeg",
-        });
+        const capturedFile = new File(
+          [blob],
+          `verification_${Date.now()}.jpg`,
+          {
+            type: "image/jpeg",
+            lastModified: capturedAt.getTime(),
+          },
+        );
         onCapture(capturedFile);
         stopCameraSystem();
         onClose();
       }
     } catch (err) {
-      setErrorMsg("Failed to snapshot canvas baseline frame data structure.");
+      setErrorMsg("Unable to capture the photo. Please try again.");
     }
   };
 
   if (!isOpen) return null;
 
+  const watermarkLines = getWatermarkLines(watermarkTime);
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/80 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <div>
-            <h4 className="text-sm font-extrabold text-slate-800">Secure Live Capture</h4>
-            <p className="text-[10px] font-medium text-slate-400">Target Area: {blockName}</p>
+            <h4 className="text-sm font-extrabold text-slate-800">
+              Secure Live Capture
+            </h4>
+            <p className="text-[10px] font-medium text-slate-400">
+              Target Area: {blockName}
+            </p>
           </div>
-          <button 
-            type="button" 
-            onClick={() => { stopCameraSystem(); onClose(); }}
+          <button
+            type="button"
+            onClick={() => {
+              stopCameraSystem();
+              onClose();
+            }}
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            aria-label="Close camera"
           >
             <FaTimes size={14} />
           </button>
         </div>
 
-        {/* Viewfinder Frame Body */}
-        <div className="relative bg-black aspect-video flex flex-col items-center justify-center p-2">
+        <div className="relative flex aspect-video flex-col items-center justify-center bg-black p-2">
           {isInitializing && !errorMsg && (
             <div className="text-center text-xs font-semibold text-slate-400">
-              Verifying system parameters & peripherals...
+              Verifying location and camera permissions...
             </div>
           )}
 
@@ -527,23 +838,33 @@ function GeoCameraModal({ isOpen, onClose, onCapture, blockName }) {
             autoPlay
             playsInline
             muted
-            className={`h-full w-full object-cover rounded-lg ${isInitializing || errorMsg ? "hidden" : "block"}`}
+            className={`h-full w-full rounded-lg object-cover ${isInitializing || errorMsg ? "hidden" : "block"}`}
           />
+
+          {!isInitializing && !errorMsg && (
+            <div className="pointer-events-none absolute inset-x-2 bottom-2 rounded-b-lg bg-black/70 px-3 py-2 text-[10px] font-semibold leading-4 text-white">
+              {watermarkLines.map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Actions Controls Dashboard Footer */}
         <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-5 py-4">
           <button
             type="button"
-            onClick={() => { stopCameraSystem(); onClose(); }}
+            onClick={() => {
+              stopCameraSystem();
+              onClose();
+            }}
             className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
           >
             Cancel
           </button>
-          
+
           <button
             type="button"
-            disabled={isInitializing || Boolean(errorMsg)}
+            disabled={isInitializing || Boolean(errorMsg) || !captureLocation}
             onClick={handleCaptureAction}
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -574,6 +895,37 @@ function FormField({ label, required = false, children }) {
 /* =========================================================
    PHOTO UPLOAD (UPDATED WITH MODAL INTERFACE TRIGGER)
 ========================================================= */
+function ImagePreviewModal({ imageUrl, title, onClose }) {
+  if (!imageUrl) return null;
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h4 className="truncate pr-4 text-sm font-extrabold text-slate-800">
+            {title || "Photo Preview"}
+          </h4>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            aria-label="Close preview"
+          >
+            <FaTimes size={14} />
+          </button>
+        </div>
+        <div className="flex max-h-[75vh] items-center justify-center bg-black p-3">
+          <img
+            src={imageUrl}
+            alt={title || "Captured photo preview"}
+            className="max-h-[70vh] max-w-full object-contain"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PhotoUpload({
   block,
   title,
@@ -590,18 +942,51 @@ function PhotoUpload({
   const totalFiles = selectedFiles.length + uploadedDocuments.length;
   const remainingFiles = Math.max(maxFiles - totalFiles, 0);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (preview?.isObjectUrl && preview.url) URL.revokeObjectURL(preview.url);
+    };
+  }, [preview]);
 
   const handleCaptureRegistration = (newFile) => {
     onFilesChange([...selectedFiles, newFile]);
+  };
+
+  const openSelectedFilePreview = (file) => {
+    if (preview?.isObjectUrl && preview.url) URL.revokeObjectURL(preview.url);
+    setPreview({
+      url: URL.createObjectURL(file),
+      title: file.name,
+      isObjectUrl: true,
+    });
+  };
+
+  const openUploadedDocumentPreview = (document) => {
+    const url =
+      document.fileUrl ||
+      document.documentUrl ||
+      document.url ||
+      document.previewUrl;
+    if (!url) return;
+    setPreview({
+      url,
+      title: document.fileName || document.documentName,
+      isObjectUrl: false,
+    });
+  };
+
+  const closePreview = () => {
+    if (preview?.isObjectUrl && preview.url) URL.revokeObjectURL(preview.url);
+    setPreview(null);
   };
 
   return (
     <div className="space-y-3">
       <div
         onClick={() => {
-          if (!disabled && remainingFiles > 0) {
-            setIsCameraOpen(true);
-          }
+          if (!disabled && remainingFiles > 0) setIsCameraOpen(true);
         }}
         className={`block rounded-xl border-2 border-dashed p-5 text-center transition-all ${
           disabled || remainingFiles === 0
@@ -611,7 +996,9 @@ function PhotoUpload({
       >
         <FaCamera className="mx-auto mb-2 text-slate-400" size={18} />
         <div className="text-xs font-bold text-slate-700">{title}</div>
-        <div className="mt-1 text-[10px] font-medium text-slate-400">{description}</div>
+        <div className="mt-1 text-[10px] font-medium text-slate-400">
+          {description}
+        </div>
         <div className="mt-2 text-[10px] font-bold text-blue-600">
           {remainingFiles > 0
             ? `${remainingFiles} photo slot(s) available`
@@ -619,7 +1006,6 @@ function PhotoUpload({
         </div>
       </div>
 
-      {/* Render Camera Viewport Component overlay container */}
       <GeoCameraModal
         isOpen={isCameraOpen}
         onClose={() => setIsCameraOpen(false)}
@@ -627,44 +1013,74 @@ function PhotoUpload({
         blockName={blockLabel}
       />
 
+      <ImagePreviewModal
+        imageUrl={preview?.url}
+        title={preview?.title}
+        onClose={closePreview}
+      />
+
       {uploadedDocuments.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-extrabold uppercase text-slate-500">Uploaded photos</p>
-          {uploadedDocuments.map((document) => (
-            <div
-              key={document.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <FaCheckCircle className="shrink-0 text-emerald-600" />
-                  <p className="truncate text-xs font-bold text-slate-700">
-                    {document.fileName || document.documentName}
+          <p className="text-[10px] font-extrabold uppercase text-slate-500">
+            Uploaded photos
+          </p>
+          {uploadedDocuments.map((document) => {
+            const previewUrl =
+              document.fileUrl ||
+              document.documentUrl ||
+              document.url ||
+              document.previewUrl;
+            return (
+              <div
+                key={document.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <FaCheckCircle className="shrink-0 text-emerald-600" />
+                    <p className="truncate text-xs font-bold text-slate-700">
+                      {document.fileName || document.documentName}
+                    </p>
+                  </div>
+                  <p className="mt-0.5 truncate pl-6 text-[9px] font-medium text-slate-400">
+                    {document.documentName}
                   </p>
                 </div>
-                <p className="mt-0.5 truncate pl-6 text-[9px] font-medium text-slate-400">
-                  {document.documentName}
-                </p>
-              </div>
 
-              {!disabled && (
-                <button
-                  type="button"
-                  disabled={deletingDocumentId === document.id}
-                  onClick={() => onDeleteDocument(document.id)}
-                  className="rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-100 disabled:opacity-50"
-                >
-                  <FaTrash size={11} />
-                </button>
-              )}
-            </div>
-          ))}
+                <div className="flex shrink-0 items-center gap-1">
+                  {previewUrl && (
+                    <button
+                      type="button"
+                      onClick={() => openUploadedDocumentPreview(document)}
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-bold text-blue-600 transition-colors hover:bg-blue-100"
+                    >
+                      <FaEye size={11} />
+                      Preview
+                    </button>
+                  )}
+                  {!disabled && (
+                    <button
+                      type="button"
+                      disabled={deletingDocumentId === document.id}
+                      onClick={() => onDeleteDocument(document.id)}
+                      className="rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-100 disabled:opacity-50"
+                      aria-label="Delete uploaded photo"
+                    >
+                      <FaTrash size={11} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
       {selectedFiles.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-extrabold uppercase text-slate-500">Selected photos</p>
+          <p className="text-[10px] font-extrabold uppercase text-slate-500">
+            Selected photos
+          </p>
           {selectedFiles.map((file, index) => (
             <div
               key={`${file.name}-${file.size}-${index}`}
@@ -673,22 +1089,37 @@ function PhotoUpload({
               <div className="flex min-w-0 items-center gap-2">
                 <FaFileImage className="shrink-0 text-blue-600" />
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-bold text-slate-700">{file.name}</p>
+                  <p className="truncate text-xs font-bold text-slate-700">
+                    {file.name}
+                  </p>
                   <p className="text-[9px] font-medium text-slate-400">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
               </div>
 
-              {!disabled && (
+              <div className="flex shrink-0 items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => onFilesChange(selectedFiles.filter((_, i) => i !== index))}
-                  className="rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-100"
+                  onClick={() => openSelectedFilePreview(file)}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-bold text-blue-600 transition-colors hover:bg-blue-100"
                 >
-                  <FaTrash size={11} />
+                  <FaEye size={11} />
+                  Preview
                 </button>
-              )}
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onFilesChange(selectedFiles.filter((_, i) => i !== index))
+                    }
+                    className="rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-100"
+                    aria-label="Remove selected photo"
+                  >
+                    <FaTrash size={11} />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -734,24 +1165,46 @@ function CustomerResidenceCard({
           <FaHome size={16} />
         </div>
         <div>
-          <h3 className="text-sm font-extrabold text-[#0f2942]">Customer / Residence Visit</h3>
-          <p className="mt-0.5 text-[10px] font-medium text-slate-400">Verify customer identity and residential stability</p>
+          <h3 className="text-sm font-extrabold text-[#0f2942]">
+            Customer / Residence Visit
+          </h3>
+          <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+            Verify customer identity and residential stability
+          </p>
         </div>
       </div>
 
       <FormField label="Visit Date" required>
         <div className="relative">
-          <input type="date" value={form.visitDate} disabled={disabled} onChange={(e) => onChange("visitDate", e.target.value)} className={inputClass} />
+          <input
+            type="date"
+            value={form.visitDate}
+            disabled={disabled}
+            onChange={(e) => onChange("visitDate", e.target.value)}
+            className={inputClass}
+          />
           <FaCalendarAlt className="pointer-events-none absolute right-4 top-3.5 text-xs text-slate-400" />
         </div>
       </FormField>
 
       <FormField label="Customer Name" required>
-        <input type="text" value={form.customerName} disabled={disabled} onChange={(e) => onChange("customerName", e.target.value)} placeholder="Customer name" className={inputClass} />
+        <input
+          type="text"
+          value={form.customerName}
+          disabled={disabled}
+          onChange={(e) => onChange("customerName", e.target.value)}
+          placeholder="Customer name"
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Person Met" required>
-        <select value={form.personMet} disabled={disabled} onChange={(e) => onChange("personMet", e.target.value)} className={inputClass}>
+        <select
+          value={form.personMet}
+          disabled={disabled}
+          onChange={(e) => onChange("personMet", e.target.value)}
+          className={inputClass}
+        >
           <option value="Customer">Customer</option>
           <option value="Spouse">Spouse</option>
           <option value="Co-Applicant">Co-Applicant</option>
@@ -761,11 +1214,23 @@ function CustomerResidenceCard({
       </FormField>
 
       <FormField label="Residence Address" required>
-        <textarea rows={3} value={form.residenceAddress} disabled={disabled} onChange={(e) => onChange("residenceAddress", e.target.value)} placeholder="Enter residence address" className={textareaClass} />
+        <textarea
+          rows={3}
+          value={form.residenceAddress}
+          disabled={disabled}
+          onChange={(e) => onChange("residenceAddress", e.target.value)}
+          placeholder="Enter residence address"
+          className={textareaClass}
+        />
       </FormField>
 
       <FormField label="Residence Type" required>
-        <select value={form.residenceType} disabled={disabled} onChange={(e) => onChange("residenceType", e.target.value)} className={inputClass}>
+        <select
+          value={form.residenceType}
+          disabled={disabled}
+          onChange={(e) => onChange("residenceType", e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select residence type</option>
           <option value="Owned">Owned</option>
           <option value="Rented">Rented</option>
@@ -776,7 +1241,12 @@ function CustomerResidenceCard({
       </FormField>
 
       <FormField label="Visit Result" required>
-        <select value={form.visitResult} disabled={disabled} onChange={(e) => onChange("visitResult", e.target.value)} className={inputClass}>
+        <select
+          value={form.visitResult}
+          disabled={disabled}
+          onChange={(e) => onChange("visitResult", e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select visit result</option>
           <option value="Positive">Positive</option>
           <option value="Negative">Negative</option>
@@ -785,7 +1255,15 @@ function CustomerResidenceCard({
       </FormField>
 
       <FormField label="Residence Remarks" required>
-        <textarea rows={3} maxLength={500} value={form.remarks} disabled={disabled} onChange={(e) => onChange("remarks", e.target.value)} placeholder="Enter residence visit observations" className={textareaClass} />
+        <textarea
+          rows={3}
+          maxLength={500}
+          value={form.remarks}
+          disabled={disabled}
+          onChange={(e) => onChange("remarks", e.target.value)}
+          placeholder="Enter residence visit observations"
+          className={textareaClass}
+        />
       </FormField>
 
       <PhotoUpload
@@ -801,7 +1279,12 @@ function CustomerResidenceCard({
         blockLabel="Customer Residence"
       />
 
-      <VisitSaveButton label="Save Customer Visit" disabled={disabled} isSaving={isSaving} onSave={onSave} />
+      <VisitSaveButton
+        label="Save Customer Visit"
+        disabled={disabled}
+        isSaving={isSaving}
+        onSave={onSave}
+      />
     </div>
   );
 }
@@ -828,37 +1311,89 @@ function BusinessOfficeCard({
           <FaBuilding size={16} />
         </div>
         <div>
-          <h3 className="text-sm font-extrabold text-[#0f2942]">Business / Office Visit</h3>
-          <p className="mt-0.5 text-[10px] font-medium text-slate-400">Verify income source and business activity</p>
+          <h3 className="text-sm font-extrabold text-[#0f2942]">
+            Business / Office Visit
+          </h3>
+          <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+            Verify income source and business activity
+          </p>
         </div>
       </div>
 
       <FormField label="Visit Date" required>
-        <input type="date" value={form.visitDate} disabled={disabled} onChange={(e) => onChange("visitDate", e.target.value)} className={inputClass} />
+        <input
+          type="date"
+          value={form.visitDate}
+          disabled={disabled}
+          onChange={(e) => onChange("visitDate", e.target.value)}
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Occupation Type" required>
-        <input type="text" value={form.occupationType} disabled={disabled} onChange={(e) => onChange("occupationType", e.target.value)} placeholder="Occupation type" className={inputClass} />
+        <input
+          type="text"
+          value={form.occupationType}
+          disabled={disabled}
+          onChange={(e) => onChange("occupationType", e.target.value)}
+          placeholder="Occupation type"
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Business Name" required>
-        <input type="text" value={form.businessName} disabled={disabled} onChange={(e) => onChange("businessName", e.target.value)} placeholder="Enter business or office name" className={inputClass} />
+        <input
+          type="text"
+          value={form.businessName}
+          disabled={disabled}
+          onChange={(e) => onChange("businessName", e.target.value)}
+          placeholder="Enter business or office name"
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Business Vintage" required>
-        <input type="number" min="0" value={form.businessVintage} disabled={disabled} onChange={(e) => onChange("businessVintage", e.target.value)} placeholder="Business vintage in years" className={inputClass} />
+        <input
+          type="number"
+          min="0"
+          value={form.businessVintage}
+          disabled={disabled}
+          onChange={(e) => onChange("businessVintage", e.target.value)}
+          placeholder="Business vintage in years"
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Business Activity" required>
-        <input type="text" value={form.businessActivity} disabled={disabled} onChange={(e) => onChange("businessActivity", e.target.value)} placeholder="Manufacturing, trading, services, etc." className={inputClass} />
+        <input
+          type="text"
+          value={form.businessActivity}
+          disabled={disabled}
+          onChange={(e) => onChange("businessActivity", e.target.value)}
+          placeholder="Manufacturing, trading, services, etc."
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Employee Count" required>
-        <input type="number" min="0" value={form.employeeCount} disabled={disabled} onChange={(e) => onChange("employeeCount", e.target.value)} placeholder="Enter employee count" className={inputClass} />
+        <input
+          type="number"
+          min="0"
+          value={form.employeeCount}
+          disabled={disabled}
+          onChange={(e) => onChange("employeeCount", e.target.value)}
+          placeholder="Enter employee count"
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Stock / Office Setup" required>
-        <select value={form.stockOfficeSetup} disabled={disabled} onChange={(e) => onChange("stockOfficeSetup", e.target.value)} className={inputClass}>
+        <select
+          value={form.stockOfficeSetup}
+          disabled={disabled}
+          onChange={(e) => onChange("stockOfficeSetup", e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select setup condition</option>
           <option value="Adequate">Adequate</option>
           <option value="Available">Available</option>
@@ -868,7 +1403,12 @@ function BusinessOfficeCard({
       </FormField>
 
       <FormField label="Visit Result" required>
-        <select value={form.visitResult} disabled={disabled} onChange={(e) => onChange("visitResult", e.target.value)} className={inputClass}>
+        <select
+          value={form.visitResult}
+          disabled={disabled}
+          onChange={(e) => onChange("visitResult", e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select visit result</option>
           <option value="Positive">Positive</option>
           <option value="Negative">Negative</option>
@@ -877,7 +1417,15 @@ function BusinessOfficeCard({
       </FormField>
 
       <FormField label="Business Remarks" required>
-        <textarea rows={3} maxLength={500} value={form.remarks} disabled={disabled} onChange={(e) => onChange("remarks", e.target.value)} placeholder="Enter business visit observations" className={textareaClass} />
+        <textarea
+          rows={3}
+          maxLength={500}
+          value={form.remarks}
+          disabled={disabled}
+          onChange={(e) => onChange("remarks", e.target.value)}
+          placeholder="Enter business visit observations"
+          className={textareaClass}
+        />
       </FormField>
 
       <PhotoUpload
@@ -893,7 +1441,12 @@ function BusinessOfficeCard({
         blockLabel="Business Office"
       />
 
-      <VisitSaveButton label="Save Business Visit" disabled={disabled} isSaving={isSaving} onSave={onSave} />
+      <VisitSaveButton
+        label="Save Business Visit"
+        disabled={disabled}
+        isSaving={isSaving}
+        onSave={onSave}
+      />
     </div>
   );
 }
@@ -929,26 +1482,50 @@ function PropertyVisitCard({
             <Icon size={16} />
           </div>
           <div>
-            <h3 className="text-sm font-extrabold text-[#0f2942]">{config.title}</h3>
-            <p className="mt-0.5 text-[10px] font-medium text-slate-400">Verify collateral details and physical condition</p>
+            <h3 className="text-sm font-extrabold text-[#0f2942]">
+              {config.title}
+            </h3>
+            <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+              Verify collateral details and physical condition
+            </p>
           </div>
         </div>
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-extrabold text-blue-700">{propertyCategory}</span>
+        <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-extrabold text-blue-700">
+          {propertyCategory}
+        </span>
       </div>
 
       <FormField label="Visit Date" required>
-        <input type="date" value={form.visitDate} disabled={disabled} onChange={(e) => onChange("visitDate", e.target.value)} className={inputClass} />
+        <input
+          type="date"
+          value={form.visitDate}
+          disabled={disabled}
+          onChange={(e) => onChange("visitDate", e.target.value)}
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Property Category">
-        <input type="text" value={propertyCategory} readOnly className={`${inputClass} cursor-not-allowed bg-slate-100 font-semibold text-slate-600`} />
+        <input
+          type="text"
+          value={propertyCategory}
+          readOnly
+          className={`${inputClass} cursor-not-allowed bg-slate-100 font-semibold text-slate-600`}
+        />
       </FormField>
 
       <FormField label="Property Type" required>
-        <select value={form.propertyType} disabled={disabled} onChange={(e) => onChange("propertyType", e.target.value)} className={inputClass}>
+        <select
+          value={form.propertyType}
+          disabled={disabled}
+          onChange={(e) => onChange("propertyType", e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select {propertyCategory} property type</option>
           {propertyTypes.map((type) => (
-            <option key={type} value={type}>{type}</option>
+            <option key={type} value={type}>
+              {type}
+            </option>
           ))}
           {form.propertyType && !propertyTypes.includes(form.propertyType) && (
             <option value={form.propertyType}>{form.propertyType}</option>
@@ -957,11 +1534,23 @@ function PropertyVisitCard({
       </FormField>
 
       <FormField label="Property Address" required>
-        <textarea rows={3} value={form.propertyAddress} disabled={disabled} onChange={(e) => onChange("propertyAddress", e.target.value)} placeholder="Enter complete property address" className={textareaClass} />
+        <textarea
+          rows={3}
+          value={form.propertyAddress}
+          disabled={disabled}
+          onChange={(e) => onChange("propertyAddress", e.target.value)}
+          placeholder="Enter complete property address"
+          className={textareaClass}
+        />
       </FormField>
 
       <FormField label="Ownership" required>
-        <select value={form.ownership} disabled={disabled} onChange={(e) => onChange("ownership", e.target.value)} className={inputClass}>
+        <select
+          value={form.ownership}
+          disabled={disabled}
+          onChange={(e) => onChange("ownership", e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select ownership</option>
           <option value="Self">Self</option>
           <option value="Joint">Joint</option>
@@ -971,21 +1560,41 @@ function PropertyVisitCard({
       </FormField>
 
       <FormField label={config.usageLabel} required>
-        <select value={form.usage} disabled={disabled} onChange={(e) => onChange("usage", e.target.value)} className={inputClass}>
+        <select
+          value={form.usage}
+          disabled={disabled}
+          onChange={(e) => onChange("usage", e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select usage</option>
           {config.usageOptions.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
           ))}
         </select>
       </FormField>
 
       <FormField label={config.areaLabel} required>
-        <input type="number" min="0" value={form.area} disabled={disabled} onChange={(e) => onChange("area", e.target.value)} placeholder="Enter approximate area" className={inputClass} />
+        <input
+          type="number"
+          min="0"
+          value={form.area}
+          disabled={disabled}
+          onChange={(e) => onChange("area", e.target.value)}
+          placeholder="Enter approximate area"
+          className={inputClass}
+        />
       </FormField>
 
       {propertyCategory !== "Land / Plot" && (
         <FormField label="Occupancy" required>
-          <select value={form.occupancy} disabled={disabled} onChange={(e) => onChange("occupancy", e.target.value)} className={inputClass}>
+          <select
+            value={form.occupancy}
+            disabled={disabled}
+            onChange={(e) => onChange("occupancy", e.target.value)}
+            className={inputClass}
+          >
             <option value="">Select occupancy</option>
             <option value="Self Occupied">Self Occupied</option>
             <option value="Tenanted">Tenanted</option>
@@ -998,7 +1607,12 @@ function PropertyVisitCard({
       {propertyCategory === "Industrial" && (
         <>
           <FormField label="Approach Road" required>
-            <select value={form.approachRoad} disabled={disabled} onChange={(e) => onChange("approachRoad", e.target.value)} className={inputClass}>
+            <select
+              value={form.approachRoad}
+              disabled={disabled}
+              onChange={(e) => onChange("approachRoad", e.target.value)}
+              className={inputClass}
+            >
               <option value="">Select approach road</option>
               <option value="Excellent">Excellent</option>
               <option value="Good">Good</option>
@@ -1007,7 +1621,12 @@ function PropertyVisitCard({
             </select>
           </FormField>
           <FormField label="Machinery Available" required>
-            <select value={form.machineryAvailable} disabled={disabled} onChange={(e) => onChange("machineryAvailable", e.target.value)} className={inputClass}>
+            <select
+              value={form.machineryAvailable}
+              disabled={disabled}
+              onChange={(e) => onChange("machineryAvailable", e.target.value)}
+              className={inputClass}
+            >
               <option value="">Select machinery status</option>
               <option value="Yes">Yes</option>
               <option value="No">No</option>
@@ -1020,7 +1639,12 @@ function PropertyVisitCard({
       {propertyCategory === "Land / Plot" && (
         <>
           <FormField label="Boundary Available" required>
-            <select value={form.boundaryAvailable} disabled={disabled} onChange={(e) => onChange("boundaryAvailable", e.target.value)} className={inputClass}>
+            <select
+              value={form.boundaryAvailable}
+              disabled={disabled}
+              onChange={(e) => onChange("boundaryAvailable", e.target.value)}
+              className={inputClass}
+            >
               <option value="">Select boundary status</option>
               <option value="Fully Demarcated">Fully Demarcated</option>
               <option value="Partially Demarcated">Partially Demarcated</option>
@@ -1028,13 +1652,25 @@ function PropertyVisitCard({
             </select>
           </FormField>
           <FormField label="Survey / Gat / Khasra Number" required>
-            <input type="text" value={form.surveyNumber} disabled={disabled} onChange={(e) => onChange("surveyNumber", e.target.value)} placeholder="Enter survey, gat or khasra number" className={inputClass} />
+            <input
+              type="text"
+              value={form.surveyNumber}
+              disabled={disabled}
+              onChange={(e) => onChange("surveyNumber", e.target.value)}
+              placeholder="Enter survey, gat or khasra number"
+              className={inputClass}
+            />
           </FormField>
         </>
       )}
 
       <FormField label="Property Condition" required>
-        <select value={form.propertyCondition} disabled={disabled} onChange={(e) => onChange("propertyCondition", e.target.value)} className={inputClass}>
+        <select
+          value={form.propertyCondition}
+          disabled={disabled}
+          onChange={(e) => onChange("propertyCondition", e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select property condition</option>
           <option value="Excellent">Excellent</option>
           <option value="Good">Good</option>
@@ -1045,15 +1681,35 @@ function PropertyVisitCard({
       </FormField>
 
       <FormField label="Nearby Landmark" required>
-        <input type="text" value={form.nearbyLandmark} disabled={disabled} onChange={(e) => onChange("nearbyLandmark", e.target.value)} placeholder={config.landmarkPlaceholder} className={inputClass} />
+        <input
+          type="text"
+          value={form.nearbyLandmark}
+          disabled={disabled}
+          onChange={(e) => onChange("nearbyLandmark", e.target.value)}
+          placeholder={config.landmarkPlaceholder}
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Market Value" required>
-        <input type="number" min="0" value={form.marketValue} disabled={disabled} onChange={(e) => onChange("marketValue", e.target.value)} placeholder="Enter approximate market value" className={inputClass} />
+        <input
+          type="number"
+          min="0"
+          value={form.marketValue}
+          disabled={disabled}
+          onChange={(e) => onChange("marketValue", e.target.value)}
+          placeholder="Enter approximate market value"
+          className={inputClass}
+        />
       </FormField>
 
       <FormField label="Visit Result" required>
-        <select value={form.visitResult} disabled={disabled} onChange={(e) => onChange("visitResult", e.target.value)} className={inputClass}>
+        <select
+          value={form.visitResult}
+          disabled={disabled}
+          onChange={(e) => onChange("visitResult", e.target.value)}
+          className={inputClass}
+        >
           <option value="">Select visit result</option>
           <option value="Positive">Positive</option>
           <option value="Negative">Negative</option>
@@ -1062,7 +1718,15 @@ function PropertyVisitCard({
       </FormField>
 
       <FormField label="Property Remarks" required>
-        <textarea rows={3} maxLength={500} value={form.remarks} disabled={disabled} onChange={(e) => onChange("remarks", e.target.value)} placeholder={`Enter observations for the ${propertyCategory.toLowerCase()} property`} className={textareaClass} />
+        <textarea
+          rows={3}
+          maxLength={500}
+          value={form.remarks}
+          disabled={disabled}
+          onChange={(e) => onChange("remarks", e.target.value)}
+          placeholder={`Enter observations for the ${propertyCategory.toLowerCase()} property`}
+          className={textareaClass}
+        />
       </FormField>
 
       <PhotoUpload
@@ -1078,7 +1742,12 @@ function PropertyVisitCard({
         blockLabel={`${propertyCategory} Property`}
       />
 
-      <VisitSaveButton label={`Save ${propertyCategory} Property Visit`} disabled={disabled} isSaving={isSaving} onSave={onSave} />
+      <VisitSaveButton
+        label={`Save ${propertyCategory} Property Visit`}
+        disabled={disabled}
+        isSaving={isSaving}
+        onSave={onSave}
+      />
     </div>
   );
 }
@@ -1090,7 +1759,10 @@ function VisitCardsLoading() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {[1, 2, 3].map((item) => (
-        <div key={item} className="h-[500px] animate-pulse rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div
+          key={item}
+          className="h-[500px] animate-pulse rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
+        >
           <div className="h-5 w-2/3 rounded bg-slate-200" />
           <div className="mt-8 space-y-5">
             {[1, 2, 3, 4, 5].map((field) => (
@@ -1110,7 +1782,9 @@ function VisitHistory({ history, isLoading }) {
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
-        <p className="text-sm font-bold text-slate-500">Loading visit history...</p>
+        <p className="text-sm font-bold text-slate-500">
+          Loading visit history...
+        </p>
       </div>
     );
   }
@@ -1118,25 +1792,42 @@ function VisitHistory({ history, isLoading }) {
     return (
       <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
         <p className="text-sm font-extrabold text-slate-700">Visit History</p>
-        <p className="mt-1 text-xs font-medium text-slate-400">No completed field visits found for this application.</p>
+        <p className="mt-1 text-xs font-medium text-slate-400">
+          No completed field visits found for this application.
+        </p>
       </div>
     );
   }
   return (
     <div className="space-y-4">
       {history.map((visit) => (
-        <div key={visit.id} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div
+          key={visit.id}
+          className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-extrabold text-slate-800">{getBlockLabel(normalizeVisitBlock(visit.visitType))}</p>
-              <p className="mt-1 text-xs font-medium text-slate-400">Visit date: {visit.visitDate || "N/A"}</p>
+              <p className="text-sm font-extrabold text-slate-800">
+                {getBlockLabel(normalizeVisitBlock(visit.visitType))}
+              </p>
+              <p className="mt-1 text-xs font-medium text-slate-400">
+                Visit date: {visit.visitDate || "N/A"}
+              </p>
             </div>
             <div className="flex gap-2">
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-extrabold text-emerald-700">{visit.visitStatus}</span>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-extrabold text-blue-700">{visit.visitResult || "N/A"}</span>
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-extrabold text-emerald-700">
+                {visit.visitStatus}
+              </span>
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-extrabold text-blue-700">
+                {visit.visitResult || "N/A"}
+              </span>
             </div>
           </div>
-          {visit.remarks && <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs font-medium text-slate-600">{visit.remarks}</p>}
+          {visit.remarks && (
+            <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs font-medium text-slate-600">
+              {visit.remarks}
+            </p>
+          )}
         </div>
       ))}
     </div>
@@ -1158,7 +1849,12 @@ export default function FieldVisits() {
   const [selectedPhotos, setSelectedPhotos] = useState({});
 
   /* --- DATA QUERIES --- */
-  const { data: customerProfile, isLoading: isProfileLoading, isError: isProfileError, error: profileError } = useQuery({
+  const {
+    data: customerProfile,
+    isLoading: isProfileLoading,
+    isError: isProfileError,
+    error: profileError,
+  } = useQuery({
     queryKey: ["customer-profile", applicationId],
     queryFn: async () => {
       const response = await rmApi.getCustomerProfile(applicationId);
@@ -1178,7 +1874,14 @@ export default function FieldVisits() {
     retry: false,
   });
 
-  const rawPropertyCategory = customerProfile?.propertyCategory ?? customerProfile?.property_category ?? customerProfile?.propertyDetails?.propertyCategory ?? customerProfile?.propertyDetails?.property_category ?? fieldVisitData?.propertyCategory ?? fieldVisitData?.property_category ?? null;
+  const rawPropertyCategory =
+    customerProfile?.propertyCategory ??
+    customerProfile?.property_category ??
+    customerProfile?.propertyDetails?.propertyCategory ??
+    customerProfile?.propertyDetails?.property_category ??
+    fieldVisitData?.propertyCategory ??
+    fieldVisitData?.property_category ??
+    null;
   const propertyCategory = normalizePropertyCategory(rawPropertyCategory);
 
   const visitBlocks = useMemo(() => {
@@ -1186,20 +1889,27 @@ export default function FieldVisits() {
     return VISIT_BLOCKS_BY_PROPERTY_CATEGORY[propertyCategory] || [];
   }, [propertyCategory]);
 
-  const savedVisits = useMemo(() => normalizeVisits(fieldVisitData), [fieldVisitData]);
+  const savedVisits = useMemo(
+    () => normalizeVisits(fieldVisitData),
+    [fieldVisitData],
+  );
   const isCompleted = Boolean(fieldVisitData?.completionStatus?.completed);
 
-  const { data: fieldVisitDocumentData, isLoading: isDocumentsLoading } = useQuery({
-    queryKey: ["field-visit-documents", applicationId],
-    queryFn: async () => {
-      const response = await rmApi.getFieldVisitDocuments(applicationId);
-      return unwrapResponse(response);
-    },
-    enabled: Boolean(applicationId),
-    retry: false,
-  });
+  const { data: fieldVisitDocumentData, isLoading: isDocumentsLoading } =
+    useQuery({
+      queryKey: ["field-visit-documents", applicationId],
+      queryFn: async () => {
+        const response = await rmApi.getFieldVisitDocuments(applicationId);
+        return unwrapResponse(response);
+      },
+      enabled: Boolean(applicationId),
+      retry: false,
+    });
 
-  const fieldVisitDocuments = useMemo(() => normalizeDocuments(fieldVisitDocumentData), [fieldVisitDocumentData]);
+  const fieldVisitDocuments = useMemo(
+    () => normalizeDocuments(fieldVisitDocumentData),
+    [fieldVisitDocumentData],
+  );
 
   const documentsByBlock = useMemo(() => {
     const grouped = {};
@@ -1230,7 +1940,10 @@ export default function FieldVisits() {
     },
     enabled: Boolean(applicationId) && activeTab === "Visit History",
   });
-  const visitHistory = useMemo(() => normalizeVisits(historyData), [historyData]);
+  const visitHistory = useMemo(
+    () => normalizeVisits(historyData),
+    [historyData],
+  );
 
   /* --- STATE MANAGEMENT SYNC LIFECYCLES --- */
   useEffect(() => {
@@ -1246,15 +1959,33 @@ export default function FieldVisits() {
     if (!customerProfile || !propertyCategory || isVisitsLoading) return;
     if (initializedApplicationRef.current === String(applicationId)) return;
 
-    const initialForms = createInitialVisitForms(customerProfile, propertyCategory);
+    const initialForms = createInitialVisitForms(
+      customerProfile,
+      propertyCategory,
+    );
     setVisitForms(mergeSavedVisits(initialForms, savedVisits));
 
-    const existingChecklist = fieldVisitData?.checklistData || savedVisits.find((v) => v?.checklistData && Object.keys(v.checklistData).length > 0)?.checklistData || {};
+    const existingChecklist =
+      fieldVisitData?.checklistData ||
+      savedVisits.find(
+        (v) => v?.checklistData && Object.keys(v.checklistData).length > 0,
+      )?.checklistData ||
+      {};
     setChecklist({ ...createInitialChecklist(), ...existingChecklist });
 
-    setSelectedPhotos(visitBlocks.reduce((res, b) => ({ ...res, [b]: [] }), {}));
+    setSelectedPhotos(
+      visitBlocks.reduce((res, b) => ({ ...res, [b]: [] }), {}),
+    );
     initializedApplicationRef.current = String(applicationId);
-  }, [applicationId, customerProfile, propertyCategory, savedVisits, fieldVisitData, visitBlocks, isVisitsLoading]);
+  }, [
+    applicationId,
+    customerProfile,
+    propertyCategory,
+    savedVisits,
+    fieldVisitData,
+    visitBlocks,
+    isVisitsLoading,
+  ]);
 
   const updateVisitField = (block, field, value) => {
     setVisitForms((current) => ({
@@ -1269,43 +2000,92 @@ export default function FieldVisits() {
 
   /* --- OPERATIONS & MUTATIONS --- */
   const deleteDocumentMutation = useMutation({
-    mutationFn: ({ documentId }) => rmApi.deleteFieldVisitDocument(applicationId, documentId),
+    mutationFn: ({ documentId }) =>
+      rmApi.deleteFieldVisitDocument(applicationId, documentId),
     onSuccess: async () => {
-      setMessage({ type: "success", text: "Field visit photo deleted successfully." });
-      await queryClient.invalidateQueries({ queryKey: ["field-visit-documents", applicationId] });
+      setMessage({
+        type: "success",
+        text: "Field visit photo deleted successfully.",
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["field-visit-documents", applicationId],
+      });
     },
     onError: (error) => {
-      setMessage({ type: "error", text: getApiErrorMessage(error, "Unable to delete field visit photo.") });
+      setMessage({
+        type: "error",
+        text: getApiErrorMessage(error, "Unable to delete field visit photo."),
+      });
     },
   });
 
   const validateBeforeComplete = () => {
-    if (!propertyCategory) return "Property category is missing from the customer profile.";
+    if (!propertyCategory)
+      return "Property category is missing from the customer profile.";
     const requiredFields = {
-      [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: ["visitDate", "customerName", "personMet", "residenceAddress", "residenceType", "visitResult", "remarks"],
-      [VISIT_BLOCKS.BUSINESS_OFFICE]: ["visitDate", "occupationType", "businessName", "businessVintage", "businessActivity", "employeeCount", "stockOfficeSetup", "visitResult", "remarks"],
+      [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: [
+        "visitDate",
+        "customerName",
+        "personMet",
+        "residenceAddress",
+        "residenceType",
+        "visitResult",
+        "remarks",
+      ],
+      [VISIT_BLOCKS.BUSINESS_OFFICE]: [
+        "visitDate",
+        "occupationType",
+        "businessName",
+        "businessVintage",
+        "businessActivity",
+        "employeeCount",
+        "stockOfficeSetup",
+        "visitResult",
+        "remarks",
+      ],
     };
 
     const propertyBlock = PROPERTY_VISIT_CONFIG[propertyCategory]?.block;
-    requiredFields[propertyBlock] = ["visitDate", "propertyType", "propertyAddress", "ownership", "usage", "area", "propertyCondition", "nearbyLandmark", "marketValue", "visitResult", "remarks"];
+    requiredFields[propertyBlock] = [
+      "visitDate",
+      "propertyType",
+      "propertyAddress",
+      "ownership",
+      "usage",
+      "area",
+      "propertyCondition",
+      "nearbyLandmark",
+      "marketValue",
+      "visitResult",
+      "remarks",
+    ];
 
-    if (propertyCategory !== "Land / Plot") requiredFields[propertyBlock].push("occupancy");
-    if (propertyCategory === "Industrial") requiredFields[propertyBlock].push("approachRoad", "machineryAvailable");
-    if (propertyCategory === "Land / Plot") requiredFields[propertyBlock].push("boundaryAvailable", "surveyNumber");
+    if (propertyCategory !== "Land / Plot")
+      requiredFields[propertyBlock].push("occupancy");
+    if (propertyCategory === "Industrial")
+      requiredFields[propertyBlock].push("approachRoad", "machineryAvailable");
+    if (propertyCategory === "Land / Plot")
+      requiredFields[propertyBlock].push("boundaryAvailable", "surveyNumber");
 
     for (const block of visitBlocks) {
       const form = visitForms[block];
-      if (!form) return `${getBlockLabel(block, propertyCategory)} form is missing.`;
+      if (!form)
+        return `${getBlockLabel(block, propertyCategory)} form is missing.`;
       for (const f of requiredFields[block] || []) {
-        if (!hasValue(form[f])) return `${getBlockLabel(block, propertyCategory)}: ${f} is required.`;
+        if (!hasValue(form[f]))
+          return `${getBlockLabel(block, propertyCategory)}: ${f} is required.`;
       }
       const uploadedCount = documentsByBlock[block]?.length || 0;
       const selectedCount = selectedPhotos[block]?.length || 0;
-      if (uploadedCount + selectedCount === 0) return `${getBlockLabel(block, propertyCategory)}: at least one photo is required.`;
+      if (uploadedCount + selectedCount === 0)
+        return `${getBlockLabel(block, propertyCategory)}: at least one photo is required.`;
     }
 
-    const uncheckedChecklist = CHECKLIST_ITEMS.find((item) => checklist[item.key] !== true);
-    if (uncheckedChecklist) return `Checklist item "${uncheckedChecklist.label}" must be confirmed.`;
+    const uncheckedChecklist = CHECKLIST_ITEMS.find(
+      (item) => checklist[item.key] !== true,
+    );
+    if (uncheckedChecklist)
+      return `Checklist item "${uncheckedChecklist.label}" must be confirmed.`;
     return null;
   };
 
@@ -1314,11 +2094,17 @@ export default function FieldVisits() {
     if (!files.length) return;
 
     const configuredNames = DOCUMENT_NAMES[block] || [];
-    const usedNames = new Set((documentsByBlock[block] || []).map((d) => d.documentName));
-    const availableNames = configuredNames.filter((name) => !usedNames.has(name));
+    const usedNames = new Set(
+      (documentsByBlock[block] || []).map((d) => d.documentName),
+    );
+    const availableNames = configuredNames.filter(
+      (name) => !usedNames.has(name),
+    );
 
     if (files.length > availableNames.length) {
-      throw new Error(`${getBlockLabel(block, propertyCategory)}: maximum photo limit exceeded.`);
+      throw new Error(
+        `${getBlockLabel(block, propertyCategory)}: maximum photo limit exceeded.`,
+      );
     }
 
     for (let index = 0; index < files.length; index += 1) {
@@ -1351,7 +2137,8 @@ export default function FieldVisits() {
     ...(location || {}),
     visits: visitBlocks.map((block) => {
       const form = visitForms[block];
-      const { visitDate, visitResult, remarks, propertyType, ...formData } = form;
+      const { visitDate, visitResult, remarks, propertyType, ...formData } =
+        form;
       return {
         visitType: API_VISIT_TYPES[block],
         visitDate,
@@ -1365,9 +2152,15 @@ export default function FieldVisits() {
   });
 
   const buildSaveVisitPayload = (block, location) => {
-    if (!propertyCategory) throw new Error(`Invalid property category received: ${rawPropertyCategory || "Empty"}`);
+    if (!propertyCategory)
+      throw new Error(
+        `Invalid property category received: ${rawPropertyCategory || "Empty"}`,
+      );
     const form = visitForms[block];
-    if (!form) throw new Error(`${getBlockLabel(block, propertyCategory)} form is missing.`);
+    if (!form)
+      throw new Error(
+        `${getBlockLabel(block, propertyCategory)} form is missing.`,
+      );
     const { visitDate, visitResult, remarks, propertyType, ...formData } = form;
 
     return {
@@ -1392,7 +2185,9 @@ export default function FieldVisits() {
 
       setMessage({ type: "info", text: "Uploading field visit photos..." });
       await uploadSelectedDocuments();
-      await queryClient.invalidateQueries({ queryKey: ["field-visit-documents", applicationId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["field-visit-documents", applicationId],
+      });
 
       setMessage({ type: "info", text: "Completing field visits..." });
       const location = await getBrowserLocation();
@@ -1401,24 +2196,43 @@ export default function FieldVisits() {
       return unwrapResponse(response);
     },
     onSuccess: async () => {
-      setMessage({ type: "success", text: "Field visits completed successfully." });
+      setMessage({
+        type: "success",
+        text: "Field visits completed successfully.",
+      });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["field-visits", applicationId] }),
-        queryClient.invalidateQueries({ queryKey: ["field-visit-documents", applicationId] }),
-        queryClient.invalidateQueries({ queryKey: ["field-visit-history", applicationId] }),
-        queryClient.invalidateQueries({ queryKey: ["rm-workflow", applicationId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["field-visits", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["field-visit-documents", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["field-visit-history", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["rm-workflow", applicationId],
+        }),
         queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] }),
-        queryClient.invalidateQueries({ queryKey: ["customer-profile", applicationId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["customer-profile", applicationId],
+        }),
       ]);
     },
     onError: (error) => {
-      setMessage({ type: "error", text: getApiErrorMessage(error, "Unable to complete field visits.") });
+      setMessage({
+        type: "error",
+        text: getApiErrorMessage(error, "Unable to complete field visits."),
+      });
     },
   });
 
   const saveVisitMutation = useMutation({
     mutationFn: async (block) => {
-      if (!propertyCategory) throw new Error(`Property category is invalid or missing. Received: ${rawPropertyCategory || "Empty"}`);
+      if (!propertyCategory)
+        throw new Error(
+          `Property category is invalid or missing. Received: ${rawPropertyCategory || "Empty"}`,
+        );
       await uploadSelectedDocumentsForBlock(block);
       const location = await getBrowserLocation();
       const payload = buildSaveVisitPayload(block, location);
@@ -1430,32 +2244,51 @@ export default function FieldVisits() {
     onSuccess: async ({ block, response }) => {
       setMessage({
         type: "success",
-        text: response?.message || `${getBlockLabel(block, propertyCategory)} visit saved successfully.`,
+        text:
+          response?.message ||
+          `${getBlockLabel(block, propertyCategory)} visit saved successfully.`,
       });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["field-visits", applicationId] }),
-        queryClient.invalidateQueries({ queryKey: ["field-visit-documents", applicationId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["field-visits", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["field-visit-documents", applicationId],
+        }),
       ]);
     },
     onError: (error, block) => {
       setMessage({
         type: "error",
-        text: getApiErrorMessage(error, `Unable to save ${getBlockLabel(block, propertyCategory)} visit.`),
+        text: getApiErrorMessage(
+          error,
+          `Unable to save ${getBlockLabel(block, propertyCategory)} visit.`,
+        ),
       });
     },
   });
 
   /* --- VIEW RENDER CONTEXTS --- */
-  const tabs = useMemo(() => ["All Visits", ...visitBlocks.map((b) => getBlockLabel(b, propertyCategory)), "Visit History"], [visitBlocks, propertyCategory]);
+  const tabs = useMemo(
+    () => [
+      "All Visits",
+      ...visitBlocks.map((b) => getBlockLabel(b, propertyCategory)),
+      "Visit History",
+    ],
+    [visitBlocks, propertyCategory],
+  );
 
   const visibleBlocks = useMemo(() => {
     if (activeTab === "All Visits") return visitBlocks;
     if (activeTab === "Visit History") return [];
-    return visitBlocks.filter((b) => getBlockLabel(b, propertyCategory) === activeTab);
+    return visitBlocks.filter(
+      (b) => getBlockLabel(b, propertyCategory) === activeTab,
+    );
   }, [activeTab, visitBlocks, propertyCategory]);
 
   const pageLoading = isProfileLoading || isVisitsLoading || isDocumentsLoading;
-  const formDisabled = isCompleted || completeMutation.isPending || saveVisitMutation.isPending;
+  const formDisabled =
+    isCompleted || completeMutation.isPending || saveVisitMutation.isPending;
 
   const renderVisitBlock = (block) => {
     const commonProps = {
@@ -1465,10 +2298,12 @@ export default function FieldVisits() {
       disabled: formDisabled,
       onChange: (field, val) => updateVisitField(block, field, val),
       onFilesChange: (files) => updateSelectedPhotos(block, files),
-      onDeleteDocument: (docId) => deleteDocumentMutation.mutate({ documentId: docId }),
+      onDeleteDocument: (docId) =>
+        deleteDocumentMutation.mutate({ documentId: docId }),
       deletingDocumentId: deleteDocumentMutation.variables?.documentId,
       onSave: () => saveVisitMutation.mutate(block),
-      isSaving: saveVisitMutation.isPending && saveVisitMutation.variables === block,
+      isSaving:
+        saveVisitMutation.isPending && saveVisitMutation.variables === block,
     };
 
     switch (block) {
@@ -1501,9 +2336,12 @@ export default function FieldVisits() {
         <div className="relative z-10 flex flex-col gap-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Field Visits & Verification</h2>
+              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                Field Visits & Verification
+              </h2>
               <p className="mt-1 text-xs font-semibold tracking-wide text-blue-100/90">
-                Application ID: {applicationId || "N/A"} • Residence, business and collateral visit evidence
+                Application ID: {applicationId || "N/A"} • Residence, business
+                and collateral visit evidence
               </p>
               {propertyCategory && (
                 <div className="mt-3 inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-bold backdrop-blur-md">
@@ -1519,11 +2357,23 @@ export default function FieldVisits() {
 
             <button
               type="button"
-              disabled={!applicationId || !propertyCategory || completeMutation.isPending || saveVisitMutation.isPending || pageLoading || isWorkflowLoading || isCompleted}
+              disabled={
+                !applicationId ||
+                !propertyCategory ||
+                completeMutation.isPending ||
+                saveVisitMutation.isPending ||
+                pageLoading ||
+                isWorkflowLoading ||
+                isCompleted
+              }
               onClick={() => completeMutation.mutate()}
               className="rounded-xl bg-white px-5 py-2.5 text-xs font-extrabold text-blue-700 shadow-md transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {completeMutation.isPending ? "Completing..." : isCompleted ? "Visits Completed" : "Complete Field Visits"}
+              {completeMutation.isPending
+                ? "Completing..."
+                : isCompleted
+                  ? "Visits Completed"
+                  : "Complete Field Visits"}
             </button>
           </div>
 
@@ -1532,20 +2382,36 @@ export default function FieldVisits() {
             <div className="overflow-x-auto pb-2">
               <div className="flex min-w-[800px] items-center justify-between">
                 {isWorkflowLoading ? (
-                  <div className="w-full animate-pulse py-2 text-center text-xs font-semibold text-slate-400">Loading workflow tracker timeline...</div>
+                  <div className="w-full animate-pulse py-2 text-center text-xs font-semibold text-slate-400">
+                    Loading workflow tracker timeline...
+                  </div>
                 ) : (
                   leadJourney.map((item, index) => {
-                    const firstPendingIndex = leadJourney.findIndex((step) => !step.completed);
-                    const isCurrent = !item.completed && index === firstPendingIndex;
+                    const firstPendingIndex = leadJourney.findIndex(
+                      (step) => !step.completed,
+                    );
+                    const isCurrent =
+                      !item.completed && index === firstPendingIndex;
                     return (
-                      <div key={item.key || item.label} className="relative flex flex-1 flex-col items-center text-center">
+                      <div
+                        key={item.key || item.label}
+                        className="relative flex flex-1 flex-col items-center text-center"
+                      >
                         {index !== leadJourney.length - 1 && (
-                          <div className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${leadJourney[index + 1]?.completed ? "bg-emerald-500" : "bg-slate-200"}`} />
+                          <div
+                            className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${leadJourney[index + 1]?.completed ? "bg-emerald-500" : "bg-slate-200"}`}
+                          />
                         )}
-                        <div className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${item.completed ? "bg-emerald-500 text-white ring-4 ring-emerald-100" : isCurrent ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-white text-slate-400 ring-2 ring-slate-200"}`}>
+                        <div
+                          className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${item.completed ? "bg-emerald-500 text-white ring-4 ring-emerald-100" : isCurrent ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-white text-slate-400 ring-2 ring-slate-200"}`}
+                        >
                           {item.completed ? "✓" : isCurrent ? "●" : index + 1}
                         </div>
-                        <p className={`mt-2.5 px-2 text-xs font-semibold ${item.completed || isCurrent ? "text-slate-900" : "text-slate-500"}`}>{item.label}</p>
+                        <p
+                          className={`mt-2.5 px-2 text-xs font-semibold ${item.completed || isCurrent ? "text-slate-900" : "text-slate-500"}`}
+                        >
+                          {item.label}
+                        </p>
                       </div>
                     );
                   })
@@ -1563,17 +2429,25 @@ export default function FieldVisits() {
         </div>
       )}
 
-      {!isProfileLoading && !isProfileError && customerProfile && !propertyCategory && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          <p className="font-extrabold">Unsupported or missing property category</p>
-          <p className="mt-1 text-xs font-medium">
-            Received value: {customerProfile?.propertyCategory || "Empty"}. Expected one of: {PROPERTY_CATEGORY.join(", ")}.
-          </p>
-        </div>
-      )}
+      {!isProfileLoading &&
+        !isProfileError &&
+        customerProfile &&
+        !propertyCategory && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <p className="font-extrabold">
+              Unsupported or missing property category
+            </p>
+            <p className="mt-1 text-xs font-medium">
+              Received value: {customerProfile?.propertyCategory || "Empty"}.
+              Expected one of: {PROPERTY_CATEGORY.join(", ")}.
+            </p>
+          </div>
+        )}
 
       {message && (
-        <div className={`rounded-2xl border p-4 text-sm font-semibold ${message.type === "error" ? "border-rose-200 bg-rose-50 text-rose-700" : message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
+        <div
+          className={`rounded-2xl border p-4 text-sm font-semibold ${message.type === "error" ? "border-rose-200 bg-rose-50 text-rose-700" : message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}
+        >
           {message.text}
         </div>
       )}
@@ -1600,7 +2474,9 @@ export default function FieldVisits() {
       ) : activeTab === "Visit History" ? (
         <VisitHistory history={visitHistory} isLoading={isHistoryLoading} />
       ) : propertyCategory ? (
-        <div className={`grid grid-cols-1 gap-6 ${activeTab === "All Visits" ? "lg:grid-cols-3" : "mx-auto max-w-2xl"}`}>
+        <div
+          className={`grid grid-cols-1 gap-6 ${activeTab === "All Visits" ? "lg:grid-cols-3" : "mx-auto max-w-2xl"}`}
+        >
           {visibleBlocks.map(renderVisitBlock)}
         </div>
       ) : null}
@@ -1610,21 +2486,35 @@ export default function FieldVisits() {
         <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
             <span className="h-2 w-2 rounded-full bg-blue-600" />
-            <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#0f2942]">Field control checklist</h3>
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-[#0f2942]">
+              Field control checklist
+            </h3>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {CHECKLIST_ITEMS.map((item) => (
-              <label key={item.key} className={`flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3 ${formDisabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
+              <label
+                key={item.key}
+                className={`flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3 ${formDisabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+              >
                 <input
                   type="checkbox"
                   checked={checklist[item.key] || false}
                   disabled={formDisabled}
-                  onChange={(e) => setChecklist((cur) => ({ ...cur, [item.key]: e.target.checked }))}
+                  onChange={(e) =>
+                    setChecklist((cur) => ({
+                      ...cur,
+                      [item.key]: e.target.checked,
+                    }))
+                  }
                   className="mt-1 h-4 w-4 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
                 />
                 <div>
-                  <div className="text-xs font-bold text-slate-800">{item.label}</div>
-                  <div className="mt-0.5 text-[10px] font-medium text-slate-400">{item.desc}</div>
+                  <div className="text-xs font-bold text-slate-800">
+                    {item.label}
+                  </div>
+                  <div className="mt-0.5 text-[10px] font-medium text-slate-400">
+                    {item.desc}
+                  </div>
                 </div>
               </label>
             ))}

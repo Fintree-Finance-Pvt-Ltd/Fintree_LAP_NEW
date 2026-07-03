@@ -173,11 +173,19 @@ verifyOtp: (payload) =>
       `/applications/${applicationId}/field-visits/history`,
     ),
 
-  getFieldVisitDocuments: (applicationId) =>
+getFieldVisitDocuments:
+  (applicationId) =>
     apiClient.get(
       `/applications/${applicationId}/field-visits/documents`,
     ),
 
+viewFieldVisitDocument: (applicationId, documentId) =>
+  apiClient.get(
+    `/applications/${applicationId}/field-visits/documents/${documentId}/file`,
+    {
+      responseType: "blob",
+    },
+  ),
   /**
    * Do not manually set multipart Content-Type.
    * Axios/browser will add the correct multipart boundary.
@@ -270,4 +278,17 @@ deleteDocument: (documentId) =>
   apiClient.get(
     `/applications/${applicationId}/geo-locations`,
   ),
+
+
+reverseGeocode: (latitude, longitude) =>
+  apiClient.get(
+    "/applications/geo/reverse-geocode",
+    {
+      params: {
+        lat: latitude,
+        lng: longitude,
+      },
+    },
+  ),
 };
+
