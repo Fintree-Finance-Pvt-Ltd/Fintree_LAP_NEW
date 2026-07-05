@@ -99,43 +99,37 @@ const handleViewFieldVisitDocument = async (fieldVisitDocument) => {
     setMessage("");
     setViewingDocumentId(fieldVisitDocument.id);
 
-    const response = await rmApi.viewFieldVisitDocument(
-      selectedId,
-      fieldVisitDocument.id
-    );
+    // If backend already provides a direct URL, open it.
+    const url =
+      fieldVisitDocument.fileUrl ||
+      fieldVisitDocument.documentUrl ||
+      fieldVisitDocument.url;
 
-    const contentType =
-      response.headers?.["content-type"] ||
-      fieldVisitDocument.mimeType ||
-      "application/octet-stream";
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
 
-    const blob =
-      response.data instanceof Blob
-        ? response.data
-        : new Blob([response.data], { type: contentType });
+    // Fallback: open the backend static upload file (document.filePath stored like: uploads/field-visits/<applicationNumber>/....jpg).
+    // Backend serves it at: /uploads/**
+    const filePath = fieldVisitDocument.filePath;
+    const isAbsolute = typeof filePath === "string" && filePath.startsWith("http");
 
-    const blobUrl = URL.createObjectURL(blob);
+    if (filePath) {
+      const url = isAbsolute
+        ? filePath
+        : `${rmApi.baseUrl || ""}/${String(filePath).replace(/^\/+/, "")}`;
 
-    const newWindow = window.open(
-      blobUrl,
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    // Last fallback: open the API endpoint.
+    window.open(
+      `/api/applications/${selectedId}/field-visits/documents/${fieldVisitDocument.id}/file`,
       "_blank",
       "noopener,noreferrer"
     );
-
-    if (!newWindow) {
-      const link = window.document.createElement("a");
-      link.href = blobUrl;
-      link.download =
-        fieldVisitDocument.fileName ||
-        `field-visit-document-${fieldVisitDocument.id}`;
-      window.document.body.appendChild(link);
-      link.click();
-      link.remove();
-    }
-
-    window.setTimeout(() => {
-      URL.revokeObjectURL(blobUrl);
-    }, 60_000);
   } catch (error) {
     console.error(
       "Failed to view field visit document:",

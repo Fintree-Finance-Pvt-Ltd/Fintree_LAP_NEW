@@ -23,17 +23,22 @@ import { ContactPersonsModule } from './modules/contact-persons/contact-persons.
 import { CustomerProfilesModule } from './modules/customer-profiles/customer-profiles.module';
 import { DashboardsModule } from './modules/dashboards/dashboards.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { GeoModule } from './modules/geo/geo.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
+import { VarificationModule } from './modules/varification/varification.module';
 import { FieldVisitsModule } from './modules/visits/field-visits.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
-import { GeoModule } from './modules/geo/geo.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, load: [appConfig, authConfig, fileConfig], validate: validateEnvironment }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [appConfig, authConfig, fileConfig],
+      validate: validateEnvironment,
+    }),
     TypeOrmModule.forRootAsync({ useFactory: databaseConfig }),
     AuthModule,
     OtpModule,
@@ -53,13 +58,15 @@ import { GeoModule } from './modules/geo/geo.module';
     FieldVisitsModule,
     UsersModule,
     GeoModule,
+    VarificationModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
-    { provide: APP_INTERCEPTOR, useClass: RequestIdInterceptor }
-  ]
+    { provide: APP_INTERCEPTOR, useClass: RequestIdInterceptor },
+  ],
 })
 export class AppModule {}
+

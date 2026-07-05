@@ -133,6 +133,7 @@ const [emailOtpModal, setEmailOtpModal] = useState({
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [emailOtpVerified, setEmailOtpVerified] = useState(false);
   const [emailOtpSessionId, setEmailOtpSessionId] = useState(null);
+  const [panVerified, setPanVerified] = useState(false);
   const [otpPopup, setOtpPopup] = useState({
     open: false,
     title: "",
@@ -198,6 +199,7 @@ const [emailOtpModal, setEmailOtpModal] = useState({
       state: application.propertyState || application.state || "",
       pinCode: application.propertyPincode || application.pinCode || "",
     });
+    setPanVerified(Boolean(application.panVerified));
   }, [applicationId, applicationQuery.data, hasPrefilledFromState]);
 useEffect(() => {
   if (
@@ -491,7 +493,60 @@ useEffect(() => {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    setFormData((previous) => ({ ...previous, [name]: value }));
+    const nextValue = name === "panNumber" ? value.toUpperCase() : value;
+
+    if (name === "panNumber") {
+      setPanVerified(false);
+    }
+
+    setFormData((previous) => ({ ...previous, [name]: nextValue }));
+  };
+
+  const verifyPanMutation = useMutation({
+    mutationFn: () =>
+      rmApi.verifyPan({
+        panNumber: formData.panNumber.trim().toUpperCase(),
+        name: formData.customerName.trim().toUpperCase(),
+      }),
+    onSuccess: async (response) => {
+      const result = unwrapResponse(response);
+
+      setPanVerified(true);
+      setMessageType("success");
+      setMessage(result?.message || "PAN verified successfully.");
+    },
+    onError: (error) => {
+      setPanVerified(false);
+      setMessageType("error");
+      setMessage(error?.message || "Unable to verify PAN.");
+    },
+  });
+
+  const handleVerifyPan = () => {
+    const panNumber = formData.panNumber.trim().toUpperCase();
+    const customerName = formData.customerName.trim();
+
+    setMessage("");
+
+    if (!customerName) {
+      setMessageType("error");
+      setMessage("Enter Customer / Entity Name before PAN verification.");
+      return;
+    }
+
+    if (!panNumber) {
+      setMessageType("error");
+      setMessage("Enter PAN number before verification.");
+      return;
+    }
+
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) {
+      setMessageType("error");
+      setMessage("Enter a valid PAN number.");
+      return;
+    }
+
+    verifyPanMutation.mutate();
   };
 
   const handleCategoryChange = (event) => {
@@ -769,7 +824,8 @@ const handleSendEmailOtp = () => {
   const isPending =
     saveNewDraftMutation.isPending ||
     updateDraftMutation.isPending ||
-    submitDraftMutation.isPending;
+    submitDraftMutation.isPending ||
+    verifyPanMutation.isPending;
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
@@ -1373,14 +1429,57 @@ const handleSendEmailOtp = () => {
             onChange={handleInputChange}
           /> */}
 
-          <Field
-            label="PAN Number *"
-            name="panNumber"
-            value={formData.panNumber}
-            onChange={handleInputChange}
-            maxLength={10}
-            placeholder="ABCDE1234F"
-          />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-700">
+              PAN Number *
+            </label>
+
+            <div className="flex gap-2">
+              <input
+                name="panNumber"
+                value={formData.panNumber}
+                onChange={handleInputChange}
+                maxLength={10}
+                placeholder="ABCDE1234F"
+                disabled={panVerified}
+                className={`flex-1 rounded-lg border px-3.5 py-2 text-sm uppercase shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
+                  panVerified
+                    ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-slate-300 bg-white text-slate-900"
+                }`}
+              />
+
+              {formData.panNumber.trim() && (
+                <button
+                  type="button"
+                  onClick={handleVerifyPan}
+                  disabled={panVerified || verifyPanMutation.isPending}
+                  className={`rounded-lg border px-4 text-xs font-bold shadow-xs transition-all ${
+                    panVerified
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  }`}
+                >
+                  {panVerified
+                    ? "Verified"
+                    : verifyPanMutation.isPending
+                      ? "Verifying..."
+                      : "Verify"}
+                </button>
+              )}
+            </div>
+
+            {panVerified && (
+              <div className="mt-2 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+                <span className="text-xs font-medium text-emerald-700">
+                  PAN successfully verified
+                </span>
+                <span className="text-xs font-bold text-emerald-700">
+                  Verified
+                </span>
+              </div>
+            )}
+          </div>
 
           <Field
             label="Aadhaar / OVD Number *"

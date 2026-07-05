@@ -1,3 +1,5 @@
+import axios from "axios";
+
 import { apiClient } from "../../services/apiClient.js";
 
 export const rmApi = {
@@ -63,6 +65,14 @@ export const rmApi = {
       `/customer-profiles/${applicationId}`,
       payload,
     ),
+
+  verifyPan: (payload) =>
+    axios.post("https://sandbox.fintreelms.com/pan/verify", payload, {
+      headers: {
+        "X-api-key": "Fintree@2026",
+        "Content-Type": "application/json",
+      },
+    }),
 
 // =========================
 // OTP
