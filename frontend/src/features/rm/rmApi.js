@@ -21,9 +21,7 @@ export const rmApi = {
       },
     }),
 
-    // for RM Lead create this is call
-
-    
+  // for RM Lead create this is call
   createApplication: (payload) =>
     apiClient.post("/applications", payload),
 
@@ -67,53 +65,44 @@ export const rmApi = {
     ),
 
   verifyPan: (payload) =>
-    axios.post("https://sandbox.fintreelms.com/pan/verify", payload, {
+    apiClient.post("/pan/verify", payload),
+
+  panOcr: (payload) =>
+    axios.post("https://sandbox.fintreelms.com/ocr/v1/pan", payload, {
       headers: {
-        "X-api-key": "Fintree@2026",
-        "Content-Type": "application/json",
+        "X-api-key":
+          import.meta.env?.VITE_X_API_KEY ||
+          import.meta.env?.REACT_APP_X_API_KEY ||
+          "Fintree@2026",
       },
     }),
 
-// =========================
-// OTP
-// =========================
-sendOtp: (payload) =>
-  apiClient.post("/otp/send-otp", payload),
+  // =========================
+  // OTP
+  // =========================
+  sendOtp: (payload) => apiClient.post("/otp/send-otp", payload),
 
-verifyOtp: (payload) =>
-  apiClient.post("/otp/verify-otp", payload),
+  verifyOtp: (payload) => apiClient.post("/otp/verify-otp", payload),
+
   verifyOtpAndCreate(data) {
     return apiClient.post("/otp/verify-and-create", data);
   },
 
-
-
   // Existing mobile OTP APIs
   sendMobileOtp: (payload) =>
-    apiClient.post(
-      "/otp/mobile/send",
-      payload
-    ),
+    apiClient.post("/otp/mobile/send", payload),
 
   verifyMobileOtp: (payload) =>
-    apiClient.post(
-      "/otp/mobile/verify",
-      payload
-    ),
+    apiClient.post("/otp/mobile/verify", payload),
 
   // New email OTP APIs
   sendEmailOtp: (payload) =>
-    apiClient.post(
-      "/otp/email/send",
-      payload
-    ),
+    apiClient.post("/otp/email/send", payload),
 
   verifyEmailOtp: (payload) =>
-    apiClient.post(
-      "/otp/email/verify",
-      payload
-    ),
+    apiClient.post("/otp/email/verify", payload),
 
+  // =========================
   // CONTACT PERSONS
   // =========================
   createContactPerson: (payload) =>
@@ -146,32 +135,20 @@ verifyOtp: (payload) =>
   // =========================
   // FIELD VISITS
   // =========================
-
   getFieldVisits: (applicationId) =>
-    apiClient.get(
-      `/applications/${applicationId}/field-visits`,
-    ),
+    apiClient.get(`/applications/${applicationId}/field-visits`),
 
-  /**
-   * The backend no longer has saveDraft().
-   *
-   * This endpoint must:
-   * 1. Create/update the three visit records.
-   * 2. Save checklist and location data.
-   * 3. Validate all required visits/documents.
-   * 4. Mark the visits COMPLETED.
-   */
   completeFieldVisits: (applicationId, payload) =>
     apiClient.post(
       `/applications/${applicationId}/field-visits/complete`,
       payload,
     ),
-    
-    saveFieldVisit: (applicationId, payload) =>
-  apiClient.post(
-    `/applications/${applicationId}/field-visits/save`,
-    payload,
-  ),
+
+  saveFieldVisit: (applicationId, payload) =>
+    apiClient.post(
+      `/applications/${applicationId}/field-visits/save`,
+      payload,
+    ),
 
   getFieldVisitStatus: (applicationId) =>
     apiClient.get(
@@ -183,33 +160,26 @@ verifyOtp: (payload) =>
       `/applications/${applicationId}/field-visits/history`,
     ),
 
-getFieldVisitDocuments:
-  (applicationId) =>
+  getFieldVisitDocuments: (applicationId) =>
     apiClient.get(
       `/applications/${applicationId}/field-visits/documents`,
     ),
 
-viewFieldVisitDocument: (applicationId, documentId) =>
-  apiClient.get(
-    `/applications/${applicationId}/field-visits/documents/${documentId}/file`,
-    {
-      responseType: "blob",
-    },
-  ),
-  /**
-   * Do not manually set multipart Content-Type.
-   * Axios/browser will add the correct multipart boundary.
-   */
+  viewFieldVisitDocument: (applicationId, documentId) =>
+    apiClient.get(
+      `/applications/${applicationId}/field-visits/documents/${documentId}/file`,
+      {
+        responseType: "blob",
+      },
+    ),
+
   uploadFieldVisitDocument: (applicationId, formData) =>
     apiClient.post(
       `/applications/${applicationId}/field-visits/documents`,
       formData,
     ),
 
-  deleteFieldVisitDocument: (
-    applicationId,
-    documentId,
-  ) =>
+  deleteFieldVisitDocument: (applicationId, documentId) =>
     apiClient.delete(
       `/applications/${applicationId}/field-visits/documents/${documentId}`,
     ),
@@ -218,35 +188,17 @@ viewFieldVisitDocument: (applicationId, documentId) =>
   // DOCUMENTS
   // =========================
   documents: (applicationId) =>
-    apiClient.get(
-      `/applications/${applicationId}/documents`,
-    ),
+    apiClient.get(`/applications/${applicationId}/documents`),
 
-  // uploadDocument: (applicationId, formData) =>
-  //   apiClient.post(
-  //     `/applications/${applicationId}/documents`,
-  //     formData,
-  //   ),
+  uploadDocument: (formData) =>
+    apiClient.post("/documents/upload", formData),
 
+  getDocuments: (applicationId) =>
+    apiClient.get(`/documents/${applicationId}`),
 
- // =========================
-  // DOCUMENTS
-  // =========================
-    uploadDocument: (formData) =>
-  apiClient.post(
-    "/documents/upload",
-    formData,
-  ),
+  deleteDocument: (documentId) =>
+    apiClient.delete(`/documents/${documentId}`),
 
-getDocuments: (applicationId) =>
-  apiClient.get(
-    `/documents/${applicationId}`,
-  ),
-
-deleteDocument: (documentId) =>
-  apiClient.delete(
-    `/documents/${documentId}`,
-  ),
   // =========================
   // WORKFLOW TRANSITIONS
   // =========================
@@ -268,9 +220,7 @@ deleteDocument: (documentId) =>
     ),
 
   workflowStatus: (applicationId) =>
-    apiClient.get(
-      `/applications/${applicationId}/workflow`,
-    ),
+    apiClient.get(`/applications/${applicationId}/workflow`),
 
   recordWorkflowStep: (applicationId, payload) =>
     apiClient.post(
@@ -278,27 +228,24 @@ deleteDocument: (documentId) =>
       payload,
     ),
 
-  saveGeoLocation: (applicationId, payload,) =>
-  apiClient.post(
-    `/applications/${applicationId}/geo-location`,
-    payload,
-  ),
+  saveGeoLocation: (applicationId, payload) =>
+    apiClient.post(
+      `/applications/${applicationId}/geo-location`,
+      payload,
+    ),
 
   getGeoLocations: (applicationId) =>
-  apiClient.get(
-    `/applications/${applicationId}/geo-locations`,
-  ),
+    apiClient.get(`/applications/${applicationId}/geo-locations`),
 
-
-reverseGeocode: (latitude, longitude) =>
-  apiClient.get(
-    "/applications/geo/reverse-geocode",
-    {
-      params: {
-        lat: latitude,
-        lng: longitude,
+  reverseGeocode: (latitude, longitude) =>
+    apiClient.get(
+      "/applications/geo/reverse-geocode",
+      {
+        params: {
+          lat: latitude,
+          lng: longitude,
+        },
       },
-    },
-  ),
+    ),
 };
 

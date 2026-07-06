@@ -41,6 +41,12 @@ const unwrapResponse = (response) => {
   return response ?? {};
 };
 
+const toBoolean = (value) =>
+  value === true ||
+  value === 1 ||
+  value === "1" ||
+  String(value).toLowerCase() === "true";
+
 const normalizePropertyCategory = (value) => {
   const normalized = String(value || "").trim().toLowerCase();
   const categories = {
@@ -134,6 +140,9 @@ const [emailOtpModal, setEmailOtpModal] = useState({
   const [emailOtpVerified, setEmailOtpVerified] = useState(false);
   const [emailOtpSessionId, setEmailOtpSessionId] = useState(null);
   const [panVerified, setPanVerified] = useState(false);
+  const [panFile, setPanFile] = useState(null);
+  const [panOcrData, setPanOcrData] = useState(null);
+  const [panOcrError, setPanOcrError] = useState("");
   const [otpPopup, setOtpPopup] = useState({
     open: false,
     title: "",
@@ -199,7 +208,10 @@ const [emailOtpModal, setEmailOtpModal] = useState({
       state: application.propertyState || application.state || "",
       pinCode: application.propertyPincode || application.pinCode || "",
     });
-    setPanVerified(Boolean(application.panVerified));
+    setPanVerified(
+      toBoolean(application.panVerified) ||
+        toBoolean(application.customerProfile?.panVerified),
+    );
   }, [applicationId, applicationQuery.data, hasPrefilledFromState]);
 useEffect(() => {
   if (
@@ -377,7 +389,30 @@ useEffect(() => {
     };
 
     if (isPatchUpdate) {
-      const allowedPatchFields = ["customerName", "mobile", "pan", "requestedAmount", "monthlyIncome", "businessName"];
+      const allowedPatchFields = [
+        "customerName",
+        "mobile",
+        "email",
+        "pan",
+        "aadhaarNumber",
+        "occupationType",
+        "businessName",
+        "monthlyIncome",
+        "monthlyObligations",
+        "requestedAmount",
+        "requestedTenure",
+        "propertyCategory",
+        "propertyType",
+        "marketValue",
+        "propertyAddress",
+        "propertyCity",
+        "propertyState",
+        "propertyPincode",
+        "foir",
+        "emi",
+        "roi",
+        "tenure",
+      ];
       const filteredPayload = {};
       allowedPatchFields.forEach((field) => {
         if (basePayload[field] !== undefined) {
@@ -502,11 +537,106 @@ useEffect(() => {
     setFormData((previous) => ({ ...previous, [name]: nextValue }));
   };
 
+  const readPanOcrValue = (source, keys) => {
+    if (!source || typeof source !== "object") return "";
+
+    for (const key of keys) {
+      const value = source[key];
+      if (value !== undefined && value !== null && String(value).trim()) {
+        return String(value).trim();
+      }
+    }
+
+    for (const value of Object.values(source)) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          const nestedValue = readPanOcrValue(item, keys);
+          if (nestedValue) return nestedValue;
+        }
+      } else if (value && typeof value === "object") {
+        const nestedValue = readPanOcrValue(value, keys);
+        if (nestedValue) return nestedValue;
+      }
+    }
+
+    return "";
+  };
+
+  const panOcrMutation = useMutation({
+    mutationFn: async () => {
+      if (!panFile) {
+        throw new Error("Please upload PAN image or PDF.");
+      }
+
+      const payload = new FormData();
+      payload.append("imageUrl", panFile);
+      const clientRefId = createdApplicationId ?? applicationId ?? `PAN-${Date.now()}`;
+      payload.append("clientRefId", String(clientRefId));
+
+      return rmApi.panOcr(payload);
+    },
+    onSuccess: (response) => {
+      const result = unwrapResponse(response);
+      const data = result?.data ?? result;
+
+      const extracted = data ?? {};
+      const extractedPan = readPanOcrValue(extracted, [
+        "panNumber",
+        "pan",
+        "pan_number",
+        "idNumber",
+        "documentNumber",
+      ]);
+
+      const extractedName = readPanOcrValue(extracted, [
+        "name",
+        "fullName",
+        "customerName",
+        "applicantName",
+        "nameOnPan",
+        "fatherName",
+      ]);
+
+      const nextPan = String(extractedPan || "").trim().toUpperCase();
+      const nextName = String(extractedName || "").trim();
+
+      if (!nextPan && !nextName) {
+        setPanOcrData(extracted);
+        setPanOcrError("PAN OCR completed, but no PAN number or name was found.");
+        setMessageType("error");
+        setMessage("PAN OCR completed, but no PAN number or name was found.");
+        return;
+      }
+
+      setFormData((previous) => ({
+        ...previous,
+        panNumber: nextPan || previous.panNumber,
+        customerName: nextName || previous.customerName,
+      }));
+      setPanVerified(false);
+      setPanOcrData(extracted);
+      setPanOcrError("");
+      setMessageType("success");
+      setMessage("PAN details extracted successfully. Please verify PAN.");
+    },
+    onError: (error) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to extract details from PAN document.";
+
+      setPanOcrError(Array.isArray(message) ? message.join(", ") : message);
+      setMessageType("error");
+      setMessage(Array.isArray(message) ? message.join(", ") : message);
+    },
+  });
+
   const verifyPanMutation = useMutation({
     mutationFn: () =>
       rmApi.verifyPan({
         panNumber: formData.panNumber.trim().toUpperCase(),
         name: formData.customerName.trim().toUpperCase(),
+        applicationId: Number(createdApplicationId ?? applicationId),
       }),
     onSuccess: async (response) => {
       const result = unwrapResponse(response);
@@ -543,6 +673,12 @@ useEffect(() => {
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) {
       setMessageType("error");
       setMessage("Enter a valid PAN number.");
+      return;
+    }
+
+    if (!(createdApplicationId ?? applicationId)) {
+      setMessageType("error");
+      setMessage("Save the lead before PAN verification so verification can be stored.");
       return;
     }
 
@@ -825,6 +961,7 @@ const handleSendEmailOtp = () => {
     saveNewDraftMutation.isPending ||
     updateDraftMutation.isPending ||
     submitDraftMutation.isPending ||
+    panOcrMutation.isPending ||
     verifyPanMutation.isPending;
 
   return (
@@ -1466,6 +1603,56 @@ const handleSendEmailOtp = () => {
                       ? "Verifying..."
                       : "Verify"}
                 </button>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/70 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <label className="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 shadow-xs transition-all hover:bg-slate-50">
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    disabled={panOcrMutation.isPending}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setPanFile(file);
+                      setPanOcrData(null);
+                      setPanOcrError("");
+                      if (file) {
+                        setPanVerified(false);
+                      }
+                    }}
+                  />
+                  <span className="block truncate">
+                    {panFile ? panFile.name : "Upload PAN image or PDF"}
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  disabled={!panFile || panOcrMutation.isPending}
+                  onClick={() => {
+                    setMessage("");
+                    setPanOcrError("");
+                    panOcrMutation.mutate();
+                  }}
+                  className="rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-400"
+                >
+                  {panOcrMutation.isPending ? "Extracting..." : "Extract PAN"}
+                </button>
+              </div>
+
+              {panOcrError && (
+                <p className="mt-2 text-xs font-semibold text-rose-600">
+                  {panOcrError}
+                </p>
+              )}
+
+              {panOcrData && !panOcrError && (
+                <p className="mt-2 text-xs font-semibold text-emerald-700">
+                  OCR details captured. Review the PAN and name before verification.
+                </p>
               )}
             </div>
 

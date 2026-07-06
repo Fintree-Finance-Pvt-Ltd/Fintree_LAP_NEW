@@ -7,7 +7,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import axios from 'axios';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { CustomerType } from '../../common/enums/customer-profile.enum';
 import { Application } from '../applications/entities/application.entity';
 import { CustomerProfile } from '../customer-profiles/entities/customer-profile.entity';
 
@@ -21,13 +22,20 @@ export class VarificationService {
 
     @InjectRepository(Application)
     private readonly applications: Repository<Application>,
+
+    private readonly dataSource: DataSource,
   ) {}
 
-  async verifyPan(panNumber: string, applicationId: number) {
+  async verifyPan(panNumber: string, name: string | undefined, applicationId: number) {
     const finalPan = String(panNumber || '').trim();
+    const finalName = String(name || '').trim().replace(/\s+/g, ' ');
 
     if (!finalPan) {
       throw new HttpException('panNumber is required', 400);
+    }
+
+    if (!finalName) {
+      throw new HttpException('name is required', 400);
     }
 
     if (!applicationId) {
@@ -40,7 +48,10 @@ export class VarificationService {
     try {
       const response = await axios.post(
         'https://sandbox.fintreelms.com/pan/verify',
-        { panNumber: finalPan },
+        {
+          panNumber: finalPan,
+          name: finalName,
+        },
         {
           headers: {
             'X-api-key': 'Fintree@2026',
@@ -50,25 +61,65 @@ export class VarificationService {
         },
       );
 
-      const exists = await this.applications.exist({ where: { id: applicationId } });
-      if (!exists) {
-        throw new NotFoundException(`Application ${applicationId} was not found.`);
-      }
+      await this.dataSource.transaction(async (manager) => {
+        const application = await manager.findOne(Application, {
+          where: { id: applicationId },
+          lock: { mode: 'pessimistic_write' },
+        });
 
-      const profile = await this.profiles.findOne({ where: { applicationId } });
-      if (!profile) {
-        throw new NotFoundException(`Customer profile for application ${applicationId} was not found.`);
-      }
+        if (!application) {
+          throw new NotFoundException(`Application ${applicationId} was not found.`);
+        }
 
-      profile.panNumber = finalPan;
-      profile.panVerified = true;
-      await this.profiles.save(profile);
+        application.customerName = finalName;
+        application.pan = finalPan;
+        application.panVerified = true;
+        await manager.save(application);
+
+        let profile = await manager.findOne(CustomerProfile, {
+          where: { applicationId },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!profile) {
+          const nameParts = finalName.split(/\s+/).filter(Boolean);
+          const firstName = nameParts[0] || finalName || 'Customer';
+          const lastName =
+            nameParts.length > 1
+              ? nameParts[nameParts.length - 1]
+              : firstName;
+
+          profile = manager.create(CustomerProfile, {
+            applicationId,
+            customerType: CustomerType.INDIVIDUAL,
+            firstName,
+            lastName,
+            mobile: application.mobile,
+          });
+        }
+
+        const nameParts = finalName.split(/\s+/).filter(Boolean);
+        profile.firstName = nameParts[0] || finalName;
+        profile.middleName =
+          nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : undefined;
+        profile.lastName =
+          nameParts.length > 1 ? nameParts[nameParts.length - 1] : profile.firstName;
+        profile.panNumber = finalPan;
+        profile.panVerified = true;
+
+        if (!profile.mobile) {
+          profile.mobile = application.mobile;
+        }
+
+        await manager.save(profile);
+      });
 
       return {
         success: true,
         message: 'PAN verification successful',
         data: {
           panNumber: finalPan,
+          name: finalName,
           panVerified: true,
           upstream: response?.data ?? null,
         },
@@ -89,4 +140,3 @@ export class VarificationService {
     }
   }
 }
-

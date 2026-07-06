@@ -80,7 +80,12 @@ export class ApplicationsService {
 
         existing.customerName = dto.customerName.trim();
         existing.mobile = dto.mobile.trim();
-        existing.pan = dto.pan?.trim();
+        if (dto.pan !== undefined) {
+          const nextPan = dto.pan?.trim();
+          existing.panVerified =
+            Boolean(existing.panVerified) && nextPan === existing.pan;
+          existing.pan = nextPan;
+        }
         existing.requestedAmount = dto.requestedAmount || '0';
         existing.stage = ApplicationStage.RM;
         existing.status = ApplicationStatus.DRAFT;
@@ -174,7 +179,12 @@ export class ApplicationsService {
       }
 
       // Update existing draft
-      existingDraft.pan = dto.pan?.trim();
+      if (dto.pan !== undefined) {
+        const nextPan = dto.pan?.trim();
+        existingDraft.panVerified =
+          Boolean(existingDraft.panVerified) && nextPan === existingDraft.pan;
+        existingDraft.pan = nextPan;
+      }
       existingDraft.requestedAmount = dto.requestedAmount || '0';
       existingDraft.updatedBy = actor.id;
       existingDraft.stage = ApplicationStage.RM;
@@ -211,7 +221,12 @@ export class ApplicationsService {
       // ==========================================
       application.customerName = dto.customerName.trim();
       application.mobile = dto.mobile.trim();
-      application.pan = dto.pan?.trim();
+      if (dto.pan !== undefined) {
+        const nextPan = dto.pan?.trim();
+        application.panVerified =
+          Boolean(application.panVerified) && nextPan === application.pan;
+        application.pan = nextPan;
+      }
       application.requestedAmount = dto.requestedAmount || '0';
       application.status = ApplicationStatus.LEAD_CREATED;
       application.stage = ApplicationStage.RM;
@@ -498,7 +513,7 @@ async findOne(id: number) {
       applicationNumber:
         application.applicationNumber,
 
-      customerName:
+        customerName:
         application.customerName,
 
       mobile:
@@ -508,6 +523,10 @@ async findOne(id: number) {
       pan:
         application.pan ||
         customerProfile.panNumber,
+
+      panVerified:
+        Boolean(application.panVerified) ||
+        Boolean(customerProfile.panVerified),
 
       requestedAmount:
         application.requestedAmount,
@@ -590,8 +609,13 @@ async findOne(id: number) {
         application.mobile =
           dto.mobile ?? application.mobile;
 
-        application.pan =
-          dto.pan ?? application.pan;
+        if (dto.pan !== undefined) {
+          const nextPan = dto.pan?.trim();
+          application.panVerified =
+            Boolean(application.panVerified) &&
+            nextPan === application.pan;
+          application.pan = nextPan;
+        }
 
         if (dto.requestedAmount !== undefined) {
           application.requestedAmount = dto.requestedAmount;
@@ -919,6 +943,7 @@ async recordWorkflowStep(
       businessName: dto.businessName || undefined,
       monthlyIncome: dto.monthlyIncome ?? undefined,
       panNumber: dto.pan || undefined,
+      panVerified: dto.panVerified ?? application.panVerified ?? undefined,
       aadhaarNumber: dto.aadhaarNumber || undefined,
       propertyCategory: dto.propertyCategory || undefined,
       propertyType: dto.propertyType || undefined,

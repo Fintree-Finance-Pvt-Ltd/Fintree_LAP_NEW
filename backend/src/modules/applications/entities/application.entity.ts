@@ -15,6 +15,7 @@ export class Application {
   @Column({ name: 'customer_name', length: 160 }) customerName: string;
   @Column({ length: 20 }) mobile: string;
   @Column({ length: 10, nullable: true }) pan?: string;
+  @Column({ name: 'pan_verified', default: false }) panVerified: boolean;
   @Column({ name: 'requested_amount', type: 'decimal', precision: 15, scale: 2, default: 0 }) requestedAmount: string;
   @Index()
   @Column({ type: 'enum', enum: ApplicationStage, default: ApplicationStage.RM }) stage: ApplicationStage;

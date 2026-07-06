@@ -14,9 +14,12 @@ export class VarificationController {
   @Post('verify')
   @Permissions(PERMISSIONS.CUSTOMER_PROFILE_MANAGE)
   async verifyPan(
-    @Body() body: { panNumber: string; applicationId: number },
+    @Body() body: { panNumber: string; name?: string; applicationId: number },
   ) {
-    return this.service.verifyPan(body?.panNumber, body?.applicationId);
+    return this.service.verifyPan(
+      body?.panNumber,
+      body?.name,
+      body?.applicationId,
+    );
   }
 }
-
