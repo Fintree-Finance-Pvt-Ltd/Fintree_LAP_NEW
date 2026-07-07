@@ -848,14 +848,17 @@ async workflowStatus(
           WorkflowLogAction.CUSTOMER_VISIT_DONE,
         ),
 
+      // Business visit step is tracked independently from the property visit.
+      businessVisit: actions.has(WorkflowLogAction.BUSINESS_VISIT_DONE),
+
+  propertyVisit:
+        actions.has(
+          WorkflowLogAction.PROPERTY_VISIT_DONE,
+        ),
+        
       geoVerification:
         actions.has(
           WorkflowLogAction.GEO_VERIFICATION_DONE,
-        ),
-
-      propertyVisit:
-        actions.has(
-          WorkflowLogAction.PROPERTY_VISIT_DONE,
         ),
 
       documentsUploaded:

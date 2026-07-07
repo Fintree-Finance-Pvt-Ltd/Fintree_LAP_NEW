@@ -51,6 +51,7 @@ const protectedChildren = [
   { path: '/create-lead', element: <CreateLead /> },
   { path: '/create-lead/:applicationId', element: <CreateLead /> },
   { path: '/customer-visit/:applicationId?', element: <FieldVisits /> },
+  { path: '/field-visits/:applicationId', element: <FieldVisits /> },
   { path: '/geo-verification/:applicationId?', element: <GeoVerification /> },
   { path: '/kyc-documents/:applicationId?', element: <KycDocuments /> },
   { path: '/charges-receipts', element: <ChargesReceipts /> },

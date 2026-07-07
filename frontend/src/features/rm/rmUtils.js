@@ -18,18 +18,31 @@ export const workflowSteps = [
   "Lead Submitted",
   "Customer Visit",
   "Business Visit",
-  "Geo Verification",
   "Property Visit",
+  "Geo Verification",
   "Docs Uploaded",
   "Submitted To BM",
+];
+
+
+export const workflowStepsConfig = [
+  { key: "leadCreated", label: "Lead Created" },
+  { key: "leadSubmitted", label: "Lead Submitted" },
+  { key: "customerVisit", label: "Customer Visit" },
+  { key: "businessVisit", label: "Business Visit" },
+  { key: "propertyVisit", label: "Property Visit" },
+  { key: "geoVerification", label: "Geo Verification" },
+  { key: "documentsUploaded", label: "Documents Uploaded" },
+  { key: "submittedToBm", label: "Submitted to BM" }
 ];
 
 export const buildWorkflowTimeline = (status = {}) => [
   { key: "leadCreated", label: "Lead Created", completed: Boolean(status.leadCreated) },
   { key: "leadSubmitted", label: "Lead Submitted", completed: Boolean(status.leadSubmitted) },
   { key: "customerVisit", label: "Customer Visit", completed: Boolean(status.customerVisit) },
-  { key: "geoVerification", label: "Geo Verification", completed: Boolean(status.geoVerification) },
+  { key: "businessVisit", label: "Business Visit", completed: Boolean(status.businessVisit) },
   { key: "propertyVisit", label: "Property Visit", completed: Boolean(status.propertyVisit) },
+    { key: "geoVerification", label: "Geo Verification", completed: Boolean(status.geoVerification) },
   { key: "documentsUploaded", label: "Docs Uploaded", completed: Boolean(status.documentsUploaded) },
   { key: "submittedToBm", label: "Submitted To BM", completed: Boolean(status.submittedToBm) },
 ];
@@ -37,6 +50,8 @@ export const buildWorkflowTimeline = (status = {}) => [
 export const getNextWorkflowStep = (status = {}) => {
   if (!status.leadSubmitted) return "create-lead";
   if (!status.customerVisit) return "customer-visit";
+  if (!status.businessVisit) return "customer-visit";
+  if (!status.propertyVisit) return "customer-visit";
   if (!status.geoVerification) return "geo-verification";
   if (!status.documentsUploaded) return "kyc-documents";
   if (!status.submittedToBm) return "submit-bm";

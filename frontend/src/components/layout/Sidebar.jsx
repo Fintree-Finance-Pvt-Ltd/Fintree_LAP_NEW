@@ -35,16 +35,16 @@ const rolesConfig = {
       items: [
         { to: "/my-leads", label: "My Leads", Icon: FaFileAlt },
         { to: "/create-lead", label: "Create Lead", Icon: FaUserPlus },
-        {
-          to: "/customer-visit",
-          label: "Customer / Business Visit",
-          Icon: FaBriefcase,
-        },
-        {
-          to: "/geo-verification",
-          label: "Geo Verification",
-          Icon: FaMapMarkerAlt,
-        },
+        // {
+        //   to: "/customer-visit",
+        //   label: "Customer / Business Visit",
+        //   Icon: FaBriefcase,
+        // },
+        // {
+        //   to: "/geo-verification",
+        //   label: "Geo Verification",
+        //   Icon: FaMapMarkerAlt,
+        // },
         { to: "/kyc-documents", label: "KYC & Documents", Icon: FaFolderOpen },
         {
           to: "/charges-receipts",
@@ -144,6 +144,7 @@ export default function Sidebar() {
   const nextRoute = useMemo(() => {
     if (!workflowState.leadSubmitted) return "/create-lead";
     if (!workflowState.customerVisit) return "/customer-visit";
+    if (!workflowState.businessVisit) return "/customer-visit";
     if (!workflowState.geoVerification) return "/geo-verification";
     if (!workflowState.documentsUploaded) return "/kyc-documents";
     if (!workflowState.submittedToBm) return "/submit-bm";

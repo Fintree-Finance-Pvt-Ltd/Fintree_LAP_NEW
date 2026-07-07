@@ -208,10 +208,22 @@ const [emailOtpModal, setEmailOtpModal] = useState({
       state: application.propertyState || application.state || "",
       pinCode: application.propertyPincode || application.pinCode || "",
     });
-    setPanVerified(
-      toBoolean(application.panVerified) ||
+      // PAN verified: backend stores verification flags in application or customerProfile
+      setPanVerified(
+        toBoolean(application.panVerified) ||
         toBoolean(application.customerProfile?.panVerified),
-    );
+      );
+
+      // Mobile/email verified: if number exists in verification table, backend returns flags here.
+      // NOTE: field names assumed: mobileVerified / emailVerified (application or customerProfile)
+      setOtpVerified(
+        toBoolean(application.mobileVerified) ||
+        toBoolean(application.customerProfile?.mobileVerified),
+      );
+      setEmailOtpVerified(
+        toBoolean(application.emailVerified) ||
+        toBoolean(application.customerProfile?.emailVerified),
+      );
   }, [applicationId, applicationQuery.data, hasPrefilledFromState]);
 useEffect(() => {
   if (
@@ -316,6 +328,11 @@ useEffect(() => {
         setOtpVerified(true);
         setMessageType("success");
         setMessage("✓ Mobile verified successfully.");
+
+        if (!applicationId) {
+          navigate(`/field-visits/${newId}`, { replace: true });
+          return;
+        }
       }
     },
     onError: (error) => {
@@ -1494,9 +1511,6 @@ const handleSendEmailOtp = () => {
               </div>
             )}
           </div>
-
-
-     
 
       <div className="flex flex-col gap-1.5">
   <label className="text-xs font-semibold text-slate-700">

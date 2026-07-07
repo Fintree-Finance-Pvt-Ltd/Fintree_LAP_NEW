@@ -92,59 +92,84 @@ export default function KycDocuments() {
     ? fieldVisitDocumentPayload
     : (fieldVisitDocumentPayload?.documents ?? []);
 
-const [viewingDocumentId, setViewingDocumentId] = useState(null);
+  const [viewingDocumentId, setViewingDocumentId] = useState(null);
 
-const handleViewFieldVisitDocument = async (fieldVisitDocument) => {
-  try {
-    setMessage("");
-    setViewingDocumentId(fieldVisitDocument.id);
+  const openBlobInNewTab = (blob) => {
+    const objectUrl = URL.createObjectURL(blob);
+    const openedWindow = window.open(objectUrl, "_blank", "noopener,noreferrer");
 
-    // If backend already provides a direct URL, open it.
-    const url =
-      fieldVisitDocument.fileUrl ||
-      fieldVisitDocument.documentUrl ||
-      fieldVisitDocument.url;
+    if (!openedWindow) {
+      setMessage("Please allow pop-ups to view the document.");
+    }
 
-    if (url) {
-      window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  };
+
+  const getUploadUrl = (document) => {
+    const url = document.fileUrl || document.documentUrl || document.url;
+    if (url) return url;
+
+    const filePath = document.filePath;
+    if (!filePath) return "";
+
+    if (String(filePath).startsWith("http")) {
+      return filePath;
+    }
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+    let uploadBaseUrl = "";
+
+    try {
+      uploadBaseUrl = apiBaseUrl ? new URL(apiBaseUrl).origin : "";
+    } catch {
+      uploadBaseUrl = "";
+    }
+
+    return `${uploadBaseUrl}/${String(filePath).replace(/^\/+/, "")}`;
+  };
+
+  const handleViewUploadedDocument = (document) => {
+    const url = getUploadUrl(document);
+
+    if (!url) {
+      setMessage("Document file is not available.");
       return;
     }
 
-    // Fallback: open the backend static upload file (document.filePath stored like: uploads/field-visits/<applicationNumber>/....jpg).
-    // Backend serves it at: /uploads/**
-    const filePath = fieldVisitDocument.filePath;
-    const isAbsolute = typeof filePath === "string" && filePath.startsWith("http");
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
-    if (filePath) {
-      const url = isAbsolute
-        ? filePath
-        : `${rmApi.baseUrl || ""}/${String(filePath).replace(/^\/+/, "")}`;
-
-      window.open(url, "_blank", "noopener,noreferrer");
+  const handleViewFieldVisitDocument = async (fieldVisitDocument) => {
+    if (!selectedId || !fieldVisitDocument?.id) {
+      setMessage("Field visit document file is not available.");
       return;
     }
 
-    // Last fallback: open the API endpoint.
-    window.open(
-      `/api/applications/${selectedId}/field-visits/documents/${fieldVisitDocument.id}/file`,
-      "_blank",
-      "noopener,noreferrer"
-    );
-  } catch (error) {
-    console.error(
-      "Failed to view field visit document:",
-      error?.response?.data || error
-    );
+    try {
+      setMessage("");
+      setViewingDocumentId(fieldVisitDocument.id);
 
-    setMessage(
-      error?.response?.data?.message ||
-        error?.message ||
-        "Unable to open the document."
-    );
-  } finally {
-    setViewingDocumentId(null);
-  }
-};
+      const blob = await rmApi.viewFieldVisitDocument(
+        selectedId,
+        fieldVisitDocument.id,
+      );
+
+      openBlobInNewTab(blob);
+    } catch (error) {
+      console.error(
+        "Failed to view field visit document:",
+        error?.response?.data || error
+      );
+
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to open the document."
+      );
+    } finally {
+      setViewingDocumentId(null);
+    }
+  };
 
 
   const uploadedTypes = useMemo(
@@ -380,15 +405,14 @@ const handleViewFieldVisitDocument = async (fieldVisitDocument) => {
                       </td>
                       <td className="p-4 pr-6">
                         <div className="flex items-center justify-center gap-2">
-                          {uploaded && (latest?.fileUrl || latest?.documentUrl) && (
-                            <a
-                              href={latest.fileUrl || latest.documentUrl}
-                              target="_blank"
-                              rel="noreferrer"
+                          {uploaded && (latest?.fileUrl || latest?.documentUrl || latest?.url || latest?.filePath) && (
+                            <button
+                              type="button"
+                              onClick={() => handleViewUploadedDocument(latest)}
                               className="inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600 transition-all hover:bg-blue-100"
                             >
                               View
-                            </a>
+                            </button>
                           )}
                           <label className="inline-flex cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50">
                             {upload.isPending && uploadingType === type ? "Uploading..." : uploaded ? "Replace" : "Upload"}
@@ -438,15 +462,14 @@ const handleViewFieldVisitDocument = async (fieldVisitDocument) => {
                     <span className="text-[10px] font-semibold text-slate-400">Additional</span>
                   </td>
                   <td className="p-4 pr-6 text-center">
-                    {(document.fileUrl || document.documentUrl) ? (
-                 <button
-  type="button"
-  disabled={viewingDocumentId === document.id}
-  onClick={() => handleViewFieldVisitDocument(document)}
-  className="inline-flex rounded-lg border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-bold text-blue-600 transition-all hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
->
-  {viewingDocumentId === document.id ? "Opening..." : "View"}
-</button>
+                    {(document.fileUrl || document.documentUrl || document.url || document.filePath) ? (
+                      <button
+                        type="button"
+                        onClick={() => handleViewUploadedDocument(document)}
+                        className="inline-flex rounded-lg border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-bold text-blue-600 transition-all hover:bg-blue-100"
+                      >
+                        View
+                      </button>
                     ) : (
                       <span className="text-[10px] font-semibold text-slate-400">-</span>
                     )}
@@ -481,14 +504,14 @@ const handleViewFieldVisitDocument = async (fieldVisitDocument) => {
                       </span>
                     </td>
                     <td className="p-4 pr-6 text-center">
-                      {(document.fileUrl || document.documentUrl) ? (
+                      {document.id ? (
                         <button
                           type="button"
                           disabled={viewingDocumentId === document.id}
                           onClick={() => handleViewFieldVisitDocument(document)}
                           className="inline-flex rounded-lg border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-bold text-blue-600 transition-all hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          View
+                          {viewingDocumentId === document.id ? "Opening..." : "View"}
                         </button>
                       ) : (
                         <span className="text-[10px] font-semibold text-slate-400">Unavailable</span>

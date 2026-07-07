@@ -13,7 +13,7 @@ import {
   FaTrash,
   FaTimes,
 } from "react-icons/fa";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { rmApi } from "../rmApi.js";
 import {
   buildWorkflowTimeline,
@@ -1128,7 +1128,30 @@ function PhotoUpload({
   );
 }
 
-function VisitSaveButton({ label, disabled, isSaving, onSave }) {
+function VisitSaveButton({ label, disabled, isSaving, onSave, saved }) {
+  if (saved) {
+    return (
+      <div className="border-t border-slate-100 pt-4">
+        <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-xs font-extrabold text-emerald-700 shadow-sm ring-1 ring-inset ring-emerald-200">
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={3}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          {label.replace(/^Save\s+/i, "")} Saved
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="border-t border-slate-100 pt-4">
       <button
@@ -1157,6 +1180,7 @@ function CustomerResidenceCard({
   deletingDocumentId,
   onSave,
   isSaving,
+  saved,
 }) {
   return (
     <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -1284,6 +1308,7 @@ function CustomerResidenceCard({
         disabled={disabled}
         isSaving={isSaving}
         onSave={onSave}
+        saved={saved}
       />
     </div>
   );
@@ -1303,6 +1328,7 @@ function BusinessOfficeCard({
   deletingDocumentId,
   onSave,
   isSaving,
+  saved,
 }) {
   return (
     <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -1446,6 +1472,7 @@ function BusinessOfficeCard({
         disabled={disabled}
         isSaving={isSaving}
         onSave={onSave}
+        saved={saved}
       />
     </div>
   );
@@ -1467,6 +1494,7 @@ function PropertyVisitCard({
   deletingDocumentId,
   onSave,
   isSaving,
+  saved,
 }) {
   const config = PROPERTY_VISIT_CONFIG[propertyCategory];
   if (!config) return null;
@@ -1747,6 +1775,7 @@ function PropertyVisitCard({
         disabled={disabled}
         isSaving={isSaving}
         onSave={onSave}
+        saved={saved}
       />
     </div>
   );
@@ -1839,6 +1868,7 @@ function VisitHistory({ history, isLoading }) {
 ========================================================= */
 export default function FieldVisits() {
   const { applicationId } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const initializedApplicationRef = useRef(null);
 
@@ -1931,6 +1961,34 @@ export default function FieldVisits() {
     enabled: Boolean(applicationId),
   });
   const leadJourney = buildWorkflowTimeline(workflowData || {});
+
+  const workflowStatus = workflowData?.data?.data ?? {};
+
+  /*
+   * A visit block is treated as "saved" once its workflow flag is true.
+   * This keeps each card independent: saving the customer visit only
+   * locks/hides the customer card, never the business or property cards.
+   */
+  const savedBlocks = useMemo(() => {
+    const set = new Set();
+    if (workflowStatus.customerVisit) {
+      set.add(VISIT_BLOCKS.CUSTOMER_RESIDENCE);
+    }
+    if (workflowStatus.businessVisit) {
+      set.add(VISIT_BLOCKS.BUSINESS_OFFICE);
+    }
+    if (workflowStatus.propertyVisit) {
+      for (const block of visitBlocks) {
+        if (
+          block !== VISIT_BLOCKS.CUSTOMER_RESIDENCE &&
+          block !== VISIT_BLOCKS.BUSINESS_OFFICE
+        ) {
+          set.add(block);
+        }
+      }
+    }
+    return set;
+  }, [workflowStatus, visitBlocks]);
 
   const { data: historyData, isLoading: isHistoryLoading } = useQuery({
     queryKey: ["field-visit-history", applicationId],
@@ -2269,6 +2327,28 @@ export default function FieldVisits() {
   });
 
   /* --- VIEW RENDER CONTEXTS --- */
+
+  const handleContinueJourney = () => {
+    const pendingVisits = [];
+    if (!workflowStatus.customerVisit) pendingVisits.push("Customer");
+    if (!workflowStatus.businessVisit) pendingVisits.push("Business");
+    if (!workflowStatus.propertyVisit) pendingVisits.push("Property");
+
+    if (pendingVisits.length) {
+      setMessage({
+        type: "error",
+        text: `Complete ${pendingVisits.join(", ")} visit${
+          pendingVisits.length > 1 ? "s" : ""
+        } before continuing the journey.`,
+      });
+      return;
+    }
+
+    if (applicationId) {
+      navigate(`/geo-verification/${applicationId}`, { replace: true });
+    }
+  };
+
   const tabs = useMemo(
     () => [
       "All Visits",
@@ -2304,6 +2384,7 @@ export default function FieldVisits() {
       onSave: () => saveVisitMutation.mutate(block),
       isSaving:
         saveVisitMutation.isPending && saveVisitMutation.variables === block,
+      saved: savedBlocks.has(block),
     };
 
     switch (block) {
@@ -2374,6 +2455,13 @@ export default function FieldVisits() {
                 : isCompleted
                   ? "Visits Completed"
                   : "Complete Field Visits"}
+            </button>
+            <button
+              type="button"
+              onClick={handleContinueJourney}
+              className="rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-extrabold text-white shadow-md transition-all hover:bg-emerald-600"
+            >
+              Continue Journey
             </button>
           </div>
 

@@ -258,6 +258,40 @@ export class FieldVisitsService {
 
       const savedVisit = await visitRepository.save(visit);
 
+      const visitWorkflowAction =
+        visitType === VISIT_TYPE.CUSTOMER_RESIDENCE
+          ? WorkflowLogAction.CUSTOMER_VISIT_DONE
+          : visitType === VISIT_TYPE.BUSINESS_OFFICE
+          ? WorkflowLogAction.BUSINESS_VISIT_DONE
+          : PROPERTY_VISIT_VISIT_TYPES.includes(visitType as any)
+          ? WorkflowLogAction.PROPERTY_VISIT_DONE
+          : null;
+
+      if (visitWorkflowAction) {
+        const workflowLogRepository = manager.getRepository(WorkflowLog);
+
+        const existingWorkflowLog = await workflowLogRepository.findOne({
+          where: {
+            applicationId,
+            action: visitWorkflowAction,
+          },
+        });
+
+        if (!existingWorkflowLog) {
+          await workflowLogRepository.save(
+            workflowLogRepository.create({
+              applicationId,
+              action: visitWorkflowAction,
+              remarks: `${this.formatVisitTypeLabel(
+                visitType,
+              )} visit saved successfully.`,
+              createdBy: userId,
+              updatedBy: userId,
+            }),
+          );
+        }
+      }
+
       return {
         success: true,
 
