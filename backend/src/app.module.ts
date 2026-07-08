@@ -31,6 +31,7 @@ import { UsersModule } from './modules/users/users.module';
 import { VarificationModule } from './modules/varification/varification.module';
 import { FieldVisitsModule } from './modules/visits/field-visits.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
+import { ChargesReceiptsModule } from './modules/charges-receipts/charges-receipts.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     UsersModule,
     GeoModule,
     VarificationModule,
+    ChargesReceiptsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: RateLimitGuard },

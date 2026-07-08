@@ -1,6 +1,55 @@
 import axios from "axios";
-
 import { apiClient } from "../../services/apiClient.js";
+
+const SANDBOX_URL =
+  import.meta.env.VITE_SANDBOX_URL || "https://sandbox.fintreelms.com";
+
+const X_API_KEY =
+  import.meta.env.VITE_X_API_KEY || "Fintree@2026";
+
+const sandboxClient = axios.create({
+  baseURL: SANDBOX_URL,
+  timeout: 30000,
+  withCredentials: false,
+});
+
+sandboxClient.interceptors.request.use((config) => {
+  config.headers = config.headers || {};
+
+  config.headers["x-api-key"] = X_API_KEY;
+  config.headers["X-Request-ID"] =
+    globalThis.crypto?.randomUUID?.() || String(Date.now());
+
+  if (
+    typeof FormData !== "undefined" &&
+    config.data instanceof FormData
+  ) {
+    delete config.headers["Content-Type"];
+    delete config.headers["content-type"];
+  }
+
+  return config;
+});
+
+sandboxClient.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    const responseData = error?.response?.data;
+
+    return Promise.reject({
+      success: false,
+      status: error?.response?.status,
+      errorCode: responseData?.errorCode,
+      message:
+        responseData?.message ||
+        error?.message ||
+        "Sandbox request failed",
+      errors: responseData?.errors || [],
+      requestId: responseData?.requestId,
+    });
+  },
+);
+
 
 export const rmApi = {
   // =========================
@@ -49,7 +98,7 @@ export const rmApi = {
   deleteApplication: (applicationId) =>
     apiClient.delete(`/applications/${applicationId}`),
 
-  // =========================
+   // =========================
   // CUSTOMER PROFILE
   // =========================
   createCustomerProfile: (payload) =>
@@ -64,18 +113,13 @@ export const rmApi = {
       payload,
     ),
 
+
+
   verifyPan: (payload) =>
     apiClient.post("/pan/verify", payload),
 
   panOcr: (payload) =>
-    axios.post("https://sandbox.fintreelms.com/ocr/v1/pan", payload, {
-      headers: {
-        "X-api-key":
-          import.meta.env?.VITE_X_API_KEY ||
-          import.meta.env?.REACT_APP_X_API_KEY ||
-          "Fintree@2026",
-      },
-    }),
+    sandboxClient.post("/ocr/v1/pan", payload),
 
   // =========================
   // OTP
@@ -247,5 +291,85 @@ export const rmApi = {
         },
       },
     ),
+// =========================
+// CHARGES & RECEIPTS
+// =========================
+
+// Customer/application dropdown list for charges page
+getChargeReceiptApplications: (params = {}) =>
+  apiClient.get("/applications", {
+    params: {
+      page: 1,
+      limit: 100,
+      ...params,
+    },
+  }),
+
+// Create one manual charge
+createChargeReceipt: (payload) =>
+  apiClient.post("/charges-receipts", payload),
+
+// Create default charge schedule for selected application
+createDefaultChargeSchedule: (applicationId) =>
+  apiClient.post(
+    `/charges-receipts/application/${applicationId}/default`,
+  ),
+
+// Get complete charge schedule by application id
+getChargeSchedule: (applicationId) =>
+  apiClient.get(
+    `/charges-receipts/application/${applicationId}`,
+  ),
+
+// Schedule actions
+submitChargeSchedule: (applicationId) =>
+  apiClient.patch(
+    `/charges-receipts/application/${applicationId}/submit-schedule`,
+  ),
+
+approveChargeSchedule: (applicationId) =>
+  apiClient.patch(
+    `/charges-receipts/application/${applicationId}/approve-schedule`,
+  ),
+
+rejectChargeSchedule: (applicationId) =>
+  apiClient.patch(
+    `/charges-receipts/application/${applicationId}/reject-schedule`,
+  ),
+
+// Update single charge row
+updateChargeReceipt: (chargeId, payload) =>
+  apiClient.patch(
+    `/charges-receipts/${chargeId}`,
+    payload,
+  ),
+
+// Mark charge paid manually
+markChargePaid: (chargeId, payload) =>
+  apiClient.patch(
+    `/charges-receipts/${chargeId}/mark-paid`,
+    payload,
+  ),
+
+// Waiver
+waiveChargeReceipt: (chargeId, payload) =>
+  apiClient.patch(
+    `/charges-receipts/${chargeId}/waive`,
+    payload,
+  ),
+
+// Refund
+refundChargeReceipt: (chargeId, payload) =>
+  apiClient.patch(
+    `/charges-receipts/${chargeId}/refund`,
+    payload,
+  ),
+
+// Delete charge
+deleteChargeReceipt: (chargeId) =>
+  apiClient.delete(
+    `/charges-receipts/${chargeId}`,
+  ),
+
 };
 

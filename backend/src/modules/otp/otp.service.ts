@@ -234,7 +234,10 @@ export class OtpService {
     }
 
     await this.otpSessions.save(session);
-
+await this.markMobileVerifiedInProfile(
+  session.applicationId ? Number(session.applicationId) : null,
+  cleanedMobile,
+);
     return {
       success: true,
       message: 'Mobile verified and consent saved successfully.',
@@ -328,17 +331,19 @@ export class OtpService {
         : null;
 
     // Create Customer Profile
-    const profile = this.customerProfiles.create({
-      applicationId: saved.id,
-      firstName,
-      middleName: middleName || undefined, // Ensure middleName is undefined if null
-      lastName,
-      mobile,
-    });
+const profile = this.customerProfiles.create({
+  applicationId: saved.id,
+  customerType: CustomerType.INDIVIDUAL,
+  firstName,
+  middleName: middleName || undefined,
+  lastName: lastName || firstName,
+  mobile,
+  mobileVerified: true,
+});
 
     await this.customerProfiles.save(profile);
 
-    await this.customerProfiles.save(profile);
+
 
     // Update OTP Session
     session.applicationId = saved.id;
@@ -355,6 +360,41 @@ export class OtpService {
       },
     };
   }
+
+
+  private async markMobileVerifiedInProfile(
+  applicationId: number | null | undefined,
+  mobile: string,
+) {
+  if (!applicationId) {
+    return;
+  }
+
+  await this.customerProfiles.update(
+    { applicationId },
+    {
+      mobile,
+      mobileVerified: true,
+    },
+  );
+}
+
+private async markEmailVerifiedInProfile(
+  applicationId: number | null | undefined,
+  email: string,
+) {
+  if (!applicationId) {
+    return;
+  }
+
+  await this.customerProfiles.update(
+    { applicationId },
+    {
+      email,
+      emailVerified: true,
+    },
+  );
+}
 
   /* =====================================================
      HELPERS
@@ -652,19 +692,32 @@ export class OtpService {
       );
     }
 
-    if (session.verified) {
-      return {
-        success: true,
-        message: 'Email ID is already verified.',
-        data: {
-          verified: true,
-          sessionId: session.id,
-          emailId: session.emailId,
-          applicationId:
-            session.applicationId || null,
-        },
-      };
-    }
+if (session.verified) {
+  const finalApplicationId =
+    body.applicationId !== undefined &&
+    body.applicationId !== null &&
+    body.applicationId !== ''
+      ? Number(body.applicationId)
+      : session.applicationId
+        ? Number(session.applicationId)
+        : null;
+
+  await this.markEmailVerifiedInProfile(
+    finalApplicationId,
+    email,
+  );
+
+  return {
+    success: true,
+    message: 'Email ID is already verified.',
+    data: {
+      verified: true,
+      sessionId: session.id,
+      emailId: session.emailId,
+      applicationId: finalApplicationId,
+    },
+  };
+}
 
     if (
       new Date(session.expiresAt).getTime() <
@@ -711,6 +764,20 @@ export class OtpService {
     await this.otpSessions.save(
       session,
     );
+
+    const finalApplicationId =
+  body.applicationId !== undefined &&
+  body.applicationId !== null &&
+  body.applicationId !== ''
+    ? Number(body.applicationId)
+    : session.applicationId
+      ? Number(session.applicationId)
+      : null;
+
+await this.markEmailVerifiedInProfile(
+  finalApplicationId,
+  email,
+);
 
     return {
       success: true,

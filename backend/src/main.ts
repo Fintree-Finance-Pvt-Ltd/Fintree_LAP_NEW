@@ -19,10 +19,14 @@ async function bootstrap() {
   app.setGlobalPrefix(config.get<string>("API_PREFIX") ?? "api/");
   app.use(helmet());
   app.use(cookieParser());
-  app.enableCors({
-    origin: config.get<string>("FRONTEND_URL"),
-    credentials: true,
-  });
+app.enableCors({
+  origin: [
+    config.get<string>("FRONTEND_URL"),
+    config.get<string>("SANDBOX_URL"),
+  ].filter(Boolean),
+  credentials: true,
+  optionsSuccessStatus: 204,
+});
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

@@ -10,16 +10,12 @@ import { VarificationService } from './varification.service';
 export class VarificationController {
   constructor(private readonly service: VarificationService) {}
 
-  // POST /pan/verify
   @Post('verify')
-  @Permissions(PERMISSIONS.CUSTOMER_PROFILE_MANAGE)
-  async verifyPan(
-    @Body() body: { panNumber: string; name?: string; applicationId: number },
-  ) {
+  async verifyPan(@Body() body: any) {
     return this.service.verifyPan(
       body?.panNumber,
       body?.name,
-      body?.applicationId,
+      Number(body?.applicationId),
     );
   }
 }
