@@ -54,8 +54,13 @@ const protectedChildren = [
   { path: '/field-visits/:applicationId', element: <FieldVisits /> },
   { path: '/geo-verification/:applicationId?', element: <GeoVerification /> },
   { path: '/kyc-documents/:applicationId?', element: <KycDocuments /> },
-  { path: '/charges-receipts', element: <ChargesReceipts /> },
-  { path: '/payment-management', element: <PaymentManagement /> },
+
+{ path: '/charges-receipts', element: <ChargesReceipts /> },
+{ path: '/charges-receipts/:applicationId', element: <ChargesReceipts /> },
+
+ { path: '/payment-management', element: <PaymentManagement /> },
+{ path: '/payment-management/:applicationId', element: <PaymentManagement /> },
+
   { path: '/submit-bm/:applicationId?', element: <SubmitToBM /> },
 
   ...[

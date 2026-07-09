@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -106,95 +110,6 @@ export class ChargesReceiptsService {
         stage: 'At Login',
         base: 2500,
         gstRate: 18,
-      },
-      {
-        applicationId: appId,
-        name: 'Processing Fee',
-        sub: 'Mandatory · As disclosed in KFS and policy',
-        stage: 'Before Sanction / Disbursement',
-        base: 29500,
-        gstRate: 18,
-      },
-      {
-        applicationId: appId,
-        name: 'Legal Verification Fee',
-        sub: 'Mandatory · Actual service cost; policy based',
-        stage: 'Before Legal Initiation',
-        base: 7500,
-        gstRate: 18,
-      },
-      {
-        applicationId: appId,
-        name: 'Technical / Valuation Fee',
-        sub: 'Mandatory · Actual service cost; policy based',
-        stage: 'Before Valuation Initiation',
-        base: 5500,
-        gstRate: 18,
-      },
-      {
-        applicationId: appId,
-        name: 'Documentation Fee',
-        sub: 'Optional / Conditional · As per KFS',
-        stage: 'Before Agreement',
-        base: 3500,
-        gstRate: 18,
-      },
-      {
-        applicationId: appId,
-        name: 'Stamp Duty / eStamp',
-        sub: 'Mandatory · Government/statutory actual',
-        stage: 'Agreement',
-        base: 6500,
-        gstRate: 0,
-      },
-      {
-        applicationId: appId,
-        name: 'MODT / Mortgage Registration',
-        sub: 'Mandatory · State-specific statutory actual',
-        stage: 'Mortgage',
-        base: 6500,
-        gstRate: 0,
-      },
-      {
-        applicationId: appId,
-        name: 'CERSAI Registration Charge',
-        sub: 'Mandatory · Actual charge',
-        stage: 'Pre/Post Disbursement',
-        base: 500,
-        gstRate: 18,
-      },
-      {
-        applicationId: appId,
-        name: 'NACH / eMandate Setup Fee',
-        sub: 'Optional / Conditional · As per KFS',
-        stage: 'Before Disbursement',
-        base: 300,
-        gstRate: 18,
-      },
-      {
-        applicationId: appId,
-        name: 'Insurance Premium Optional',
-        sub: 'Optional / Conditional · Only with explicit customer choice',
-        stage: 'Before Disbursement',
-        base: 13000,
-        gstRate: 0,
-      },
-      {
-        applicationId: appId,
-        name: 'Broken Period Interest / Advance EMI',
-        sub: 'Optional / Conditional · Calculated from disbursement date',
-        stage: 'At Disbursement',
-        base: 21815,
-        gstRate: 0,
-      },
-      {
-        applicationId: appId,
-        name: 'Other Approved Charge',
-        sub: 'Optional / Conditional · Requires KFS/consent and checker approval',
-        stage: 'As Approved',
-        base: 0,
-        gstRate: 18,
-        noLink: true,
       },
     ];
 
@@ -413,4 +328,114 @@ export class ChargesReceiptsService {
       message: 'Charge receipt deleted successfully',
     };
   }
+
+async createEasebuzzPaymentLink(applicationId: number) {
+  const appId = Number(applicationId);
+
+  if (!Number.isInteger(appId) || appId <= 0) {
+    throw new BadRequestException('Invalid application ID.');
+  }
+
+  const charges: ChargesReceipt[] = await this.chargesReceiptRepo.find({
+    where: {
+      applicationId: appId,
+    },
+    order: {
+      id: 'ASC',
+    },
+  });
+
+  if (!charges.length) {
+    throw new BadRequestException(
+      'No charge schedule found for this application.',
+    );
+  }
+
+  const notApproved = charges.some(
+    (charge: ChargesReceipt) =>
+      charge.scheduleStatus !== ScheduleStatus.APPROVED,
+  );
+
+  if (notApproved) {
+    throw new BadRequestException(
+      'Payment link can be created only after charge schedule is approved.',
+    );
+  }
+
+  const pendingCharges = charges.filter((charge: ChargesReceipt) => {
+    const grossAmount = Number(charge.grossAmount || 0);
+    const paidAmount = Number(charge.paidAmount || 0);
+    const waiverAmount = Number(charge.waiverAmount || 0);
+    const refundAmount = Number(charge.refundAmount || 0);
+
+    const outstanding =
+      grossAmount - paidAmount - waiverAmount + refundAmount;
+
+    return outstanding > 0;
+  });
+
+  if (!pendingCharges.length) {
+    throw new BadRequestException(
+      'No pending charge amount found for payment link.',
+    );
+  }
+
+  const amount = pendingCharges.reduce(
+    (sum: number, charge: ChargesReceipt) => {
+      const grossAmount = Number(charge.grossAmount || 0);
+      const paidAmount = Number(charge.paidAmount || 0);
+      const waiverAmount = Number(charge.waiverAmount || 0);
+      const refundAmount = Number(charge.refundAmount || 0);
+
+      const outstanding =
+        grossAmount - paidAmount - waiverAmount + refundAmount;
+
+      return sum + outstanding;
+    },
+    0,
+  );
+
+  const providerReference = `EBZ-${appId}-${Date.now()}`;
+
+  /*
+    TODO:
+    Connect actual Easebuzz payment-link API here.
+    Do not call Easebuzz directly from React.
+    Keep Easebuzz key/salt only in backend .env.
+  */
+
+  return {
+    success: true,
+    message:
+      'Charge schedule is approved and payment demand is ready for Easebuzz link creation.',
+    data: {
+      applicationId: appId,
+      amount: Number(amount.toFixed(2)),
+      scheduleStatus: ScheduleStatus.APPROVED,
+      provider: 'EASEBUZZ',
+      providerReference,
+      paymentLink: null,
+      charges: pendingCharges.map((charge: ChargesReceipt) => {
+        const grossAmount = Number(charge.grossAmount || 0);
+        const paidAmount = Number(charge.paidAmount || 0);
+        const waiverAmount = Number(charge.waiverAmount || 0);
+        const refundAmount = Number(charge.refundAmount || 0);
+
+        return {
+          id: charge.id,
+          name: charge.name,
+          amount: Number(
+            (
+              grossAmount -
+              paidAmount -
+              waiverAmount +
+              refundAmount
+            ).toFixed(2),
+          ),
+        };
+      }),
+    },
+  };
+}
+
 }

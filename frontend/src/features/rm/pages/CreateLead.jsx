@@ -31,6 +31,18 @@ const emptyForm = {
   pinCode: "",
 };
 
+const emptyCoApplicantForm = {
+  name: "",
+  mobile: "",
+  email: "",
+  panNumber: "",
+  aadhaarNumber: "",
+  relationship: "",
+  occupation: "",
+  monthlyIncome: "",
+};
+
+
 const CONSENT_TEXT =
   "I hereby provide my consent to Fintree Finance Private Limited to verify my mobile number and process my information for the loan application.";
 

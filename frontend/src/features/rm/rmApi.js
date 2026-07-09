@@ -371,5 +371,11 @@ deleteChargeReceipt: (chargeId) =>
     `/charges-receipts/${chargeId}`,
   ),
 
+
+  createEasebuzzPaymentLink: (applicationId) =>
+  apiClient.post(
+    `/charges-receipts/application/${applicationId}/payment-link`,
+  ),
+  
 };
 

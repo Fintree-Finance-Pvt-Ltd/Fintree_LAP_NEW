@@ -114,4 +114,12 @@ export class ChargesReceiptsController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.chargesReceiptsService.remove(id);
   }
+
+
+  @Post('application/:applicationId/payment-link')
+async createPaymentLink(@Param('applicationId') applicationId: string) {
+  return this.chargesReceiptsService.createEasebuzzPaymentLink(
+    Number(applicationId),
+  );
+}
 }
