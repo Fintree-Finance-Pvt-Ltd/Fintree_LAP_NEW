@@ -12,7 +12,7 @@ import {
   FaSyncAlt,
 } from "react-icons/fa";
 
-import { bmReviewApi } from "../bmApi.js";
+import { bmApi } from "../bmApi.js";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-IN", {
@@ -63,7 +63,7 @@ export default function BMReviewQueue() {
       setError("");
 
       const response =
-        await bmReviewApi.getQueue();
+        await bmApi.getQueue();
 
       console.log(
         "BM queue response:",
@@ -90,8 +90,8 @@ export default function BMReviewQueue() {
 
       setError(
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to load cases submitted to BM.",
+        error?.message ||
+        "Unable to load cases submitted to BM.",
       );
     } finally {
       setLoading(false);
@@ -264,7 +264,7 @@ export default function BMReviewQueue() {
 
               <tbody>
                 {filteredApplications.length >
-                0 ? (
+                  0 ? (
                   filteredApplications.map(
                     (application) => (
                       <tr
@@ -294,9 +294,9 @@ export default function BMReviewQueue() {
                               "-"}
                           </p>
                         </td>
-                        
-                    <td className="px-4 py-3">
-                         
+
+                        <td className="px-4 py-3">
+
 
                           <p className="mt-0.5 text-xs text-slate-400">
                             {application.mobileNumber ??

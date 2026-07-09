@@ -29,6 +29,7 @@ import RolesAccess from '../features/ADMIN/pages/rolesAccess.jsx';
 import BmDashboard from '../features/BM/pages/BmDashboard.jsx'
 import BMReview from '../features/BM/pages/BMReview.jsx';
 import BMApproved from '../features/BM/pages/BmApproved.jsx';
+import ChargesApproved from '../features/BM/pages/ChargesApproved.jsx';
 // import BMReviewQueue from '../features/BM/pages/ReviewQueue.jsx';
 
 const protectedChildren = [
@@ -40,11 +41,14 @@ const protectedChildren = [
   // RM routes (wired to Sidebar.jsx)
   { path: '/rmDashboard', element: <RMDashboard /> },
   { path: '/adminDashboard', element: <AdminDashboard /> },
+
+  // BM routes (wired to Sidebar.jsx)
   { path: '/bmDashboard', element: <BmDashboard /> },
   { path: '/bmReview', element: <BMReview /> },
   {path: "/bmReview/:applicationId", element: <BMReview />,},
   { path: '/roles-access', element: <RolesAccess /> },
   {path: "/bmApproved", element: <BMApproved />,},
+  {path: "/chargesApproved", element: <ChargesApproved />,},
 
 
   { path: '/my-leads', element: <MyLeads /> },

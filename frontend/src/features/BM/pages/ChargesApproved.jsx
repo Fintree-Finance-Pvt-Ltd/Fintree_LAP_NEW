@@ -42,7 +42,7 @@ const formatDate = (value) => {
   ).format(date);
 };
 
-export default function BMApproved() {
+export default function ChargesApproved() {
   const navigate = useNavigate();
 
   const [applications, setApplications] =
@@ -65,7 +65,7 @@ export default function BMApproved() {
       setError("");
 
       const response =
-        await bmApi.getApproved();
+        await bmApi.getChargesApproved();
 
       console.log(
         "BM approved response:",
@@ -73,23 +73,17 @@ export default function BMApproved() {
       );
 
       const payload =
-        response?.data?.applications ??
-        response?.data?.data?.applications ??
+        response?.data?.charges ??
+        response?.data?.data?.charges ??
         response?.data?.data ??
         response?.data ??
         [];
 
-      const approvedApplications =
-        Array.isArray(payload)
-          ? payload.filter(
-            (application) =>
-              application.status ===
-              "BM_APPROVED",
-          )
-          : [];
+      const rows = Array.isArray(payload) ? payload : [];
+
 
       setApplications(
-        approvedApplications,
+        rows
       );
     } catch (error) {
       console.error(
@@ -126,12 +120,16 @@ export default function BMApproved() {
       return applications.filter(
         (application) => {
           return [
-            application.applicationNumber,
-            application.customerName,
-            application.mobileNumber,
-            application.panNumber,
-            application.propertyCity,
-            application.propertyState,
+            application.charge_name,
+            application.subText,
+            application.requiredStage,
+            application.baseAmount,
+            application.gstRate,
+            application.gstAmount,
+            application.grossAmount,
+            application.paidAmount,
+            application.waiverAmount,
+            application.scheduleStatus,
           ].some((value) =>
             String(value ?? "")
               .toLowerCase()
@@ -156,6 +154,33 @@ export default function BMApproved() {
     navigate(
       `/bmApproved/${applicationId}`,
     );
+  };
+
+
+  const handleApproveCharges = async (application) => {
+    try {
+      const chargeId = Number(application.id);
+
+      if (!Number.isInteger(chargeId) || chargeId <= 0) {
+        setError("Charge ID is missing.");
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      await bmApi.approveCharge(chargeId);
+
+      await loadApplications();
+    } catch (error) {
+      setError(
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to approve charge.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -244,23 +269,23 @@ export default function BMApproved() {
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold">
-                    Customer
+                    Charge Name
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold">
-                    PAN
+                    Sub Text
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold">
-                    Requested Amount
+                    Required Stage
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold">
-                    Property Location
+                    Base Amount
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold">
-                    Submitted Date
+                    Gst Rate
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold">
@@ -284,7 +309,7 @@ export default function BMApproved() {
                       >
                         <td className="px-4 py-3">
                           <p className="text-sm font-semibold text-[#102552]">
-                            {application.applicationNumber ??
+                            {application.charge_name ??
                               "-"}
                           </p>
 
@@ -296,32 +321,32 @@ export default function BMApproved() {
 
                         <td className="px-4 py-3">
                           <p className="text-sm font-medium text-slate-700">
-                            {application.customerName ??
+                            {application.subText ??
                               "-"}
                           </p>
 
                           <p className="mt-0.5 text-xs text-slate-400">
-                            {application.mobileNumber ??
+                            {application.requiredStage ??
                               "-"}
                           </p>
                         </td>
 
 
                         <td className="px-4 py-3 text-xs font-medium text-slate-600">
-                          {application.panNumber ??
+                          {application.baseAmount ??
                             "-"}
                         </td>
 
                         <td className="px-4 py-3 text-sm font-semibold text-slate-700">
                           {formatCurrency(
-                            application.requestedAmount,
+                            application.gstRate ?? "-",
                           )}
                         </td>
 
                         <td className="px-4 py-3 text-xs text-slate-600">
                           {[
-                            application.propertyCity,
-                            application.propertyState,
+                            application.gstAmount,
+                            application.grossAmount,
                           ]
                             .filter(Boolean)
                             .join(", ") || "-"}
@@ -335,7 +360,7 @@ export default function BMApproved() {
 
                         <td className="px-4 py-3">
                           <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
-                            {application.status ??
+                            {application.scheduleStatus ??
                               "BM_PENDING"}
                           </span>
                         </td>
@@ -343,18 +368,10 @@ export default function BMApproved() {
                         <td className="px-4 py-3 text-right">
                           <button
                             type="button"
-                            onClick={() =>
-                              openReview(
-                                application,
-                              )
-                            }
-                            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#102552] px-3 text-xs font-semibold text-white transition hover:bg-[#18346f]"
+                            onClick={() => handleApproveCharges(application)}
+                            className="inline-flex h-9 items-center rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700"
                           >
-                            Review
-
-                            <FaChevronRight
-                              size={9}
-                            />
+                            Approve
                           </button>
                         </td>
                       </tr>

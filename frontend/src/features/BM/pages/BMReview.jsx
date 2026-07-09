@@ -1476,7 +1476,7 @@ import {
 } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { bmReviewApi } from "../bmApi.js";
+import { bmApi } from "../bmApi.js";
 
 const DEFAULT_STAGES = [
   {
@@ -1787,7 +1787,7 @@ export default function BMReview() {
       setQueueLoading(true);
       setQueueError("");
 
-      const response = await bmReviewApi.getQueue({
+      const response = await bmApi.getQueue({
         signal,
       });
 
@@ -1828,7 +1828,7 @@ export default function BMReview() {
           message: "",
         });
 
-        const response = await bmReviewApi.getByApplicationId(applicationId, {
+        const response = await bmApi.getByApplicationId(applicationId, {
           signal,
         });
 
@@ -1848,10 +1848,10 @@ export default function BMReview() {
 
         const stageRows = Array.isArray(payload?.stages)
           ? payload.stages.map((stage, index) => ({
-              key: stage.key ?? stage.code ?? `STAGE_${index + 1}`,
-              label: stage.label ?? stage.name ?? `Stage ${index + 1}`,
-              status: String(stage.status ?? "pending").toLowerCase(),
-            }))
+            key: stage.key ?? stage.code ?? `STAGE_${index + 1}`,
+            label: stage.label ?? stage.name ?? `Stage ${index + 1}`,
+            status: String(stage.status ?? "pending").toLowerCase(),
+          }))
           : DEFAULT_STAGES;
 
         setStages(stageRows);
@@ -1859,13 +1859,13 @@ export default function BMReview() {
         const checklistRows =
           Array.isArray(payload?.checklist) && payload.checklist.length > 0
             ? payload.checklist.map((item, index) => ({
-                id: item.id ?? item.itemId ?? index + 1,
-                code: item.code ?? item.itemCode ?? item.item_code ?? "",
-                title: item.title ?? item.label ?? "Checklist item",
-                checked: toBoolean(
-                  item.checked ?? item.isChecked ?? item.is_checked,
-                ),
-              }))
+              id: item.id ?? item.itemId ?? index + 1,
+              code: item.code ?? item.itemCode ?? item.item_code ?? "",
+              title: item.title ?? item.label ?? "Checklist item",
+              checked: toBoolean(
+                item.checked ?? item.isChecked ?? item.is_checked,
+              ),
+            }))
             : DEFAULT_CHECKLIST;
 
         setChecklist(checklistRows);
@@ -2057,9 +2057,9 @@ export default function BMReview() {
       previous.map((item) =>
         item.id === id
           ? {
-              ...item,
-              checked: !item.checked,
-            }
+            ...item,
+            checked: !item.checked,
+          }
           : item,
       ),
     );
@@ -2101,7 +2101,7 @@ export default function BMReview() {
       return;
     }
 
-    if (typeof bmReviewApi.saveDraft !== "function") {
+    if (typeof bmApi.saveDraft !== "function") {
       setFeedback({
         type: "error",
         message: "Save draft API is not configured yet.",
@@ -2116,7 +2116,7 @@ export default function BMReview() {
         message: "",
       });
 
-      await bmReviewApi.saveDraft(applicationId, buildReviewPayload());
+      await bmApi.saveDraft(applicationId, buildReviewPayload());
 
       setFeedback({
         type: "success",
@@ -2145,7 +2145,7 @@ export default function BMReview() {
       return;
     }
 
-    if (typeof bmReviewApi.raiseQuery !== "function") {
+    if (typeof bmApi.raiseQuery !== "function") {
       setFeedback({
         type: "error",
         message: "Raise query API is not configured yet.",
@@ -2156,7 +2156,7 @@ export default function BMReview() {
     try {
       setSaving(true);
 
-      await bmReviewApi.raiseQuery(applicationId, {
+      await bmApi.raiseQuery(applicationId, {
         remarks: form.remarks.trim(),
         checklist: buildReviewPayload().checklist,
       });
@@ -2204,7 +2204,7 @@ export default function BMReview() {
       return;
     }
 
-    if (typeof bmReviewApi.approveToCM !== "function") {
+    if (typeof bmApi.approveToCM !== "function") {
       setFeedback({
         type: "error",
         message: "Approve to CM API is not configured yet.",
@@ -2215,7 +2215,7 @@ export default function BMReview() {
     try {
       setSaving(true);
 
-      await bmReviewApi.approveToCM(applicationId, buildReviewPayload());
+      await bmApi.approveToCM(applicationId, buildReviewPayload());
 
       navigate("/bmReview", {
         replace: true,
@@ -2500,7 +2500,7 @@ export default function BMReview() {
     !isEmpty(requestedAmount) &&
     !isEmpty(eligibleAmount) &&
     Number(requestedAmount) <=
-      Number(eligibleAmount);
+    Number(eligibleAmount);
 
   const bureauPassed =
     bureauSummary?.status === "PASS";
@@ -2588,13 +2588,12 @@ export default function BMReview() {
                 >
                   <div className="flex items-center gap-2">
                     <span
-                      className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
-                        completed
+                      className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-bold ${completed
                           ? "bg-emerald-500 text-white"
                           : current
                             ? "bg-[#102552] text-white ring-4 ring-[#102552]/10"
                             : "bg-slate-100 text-slate-400"
-                      }`}
+                        }`}
                     >
                       {completed ? (
                         <FaCheck size={8} />
@@ -2604,13 +2603,12 @@ export default function BMReview() {
                     </span>
 
                     <span
-                      className={`whitespace-nowrap text-[11px] font-semibold ${
-                        current
+                      className={`whitespace-nowrap text-[11px] font-semibold ${current
                           ? "text-[#102552]"
                           : completed
                             ? "text-slate-700"
                             : "text-slate-400"
-                      }`}
+                        }`}
                     >
                       {stage.label}
                     </span>
@@ -2618,11 +2616,10 @@ export default function BMReview() {
 
                   {index < stages.length - 1 && (
                     <div
-                      className={`mx-3 h-px flex-1 ${
-                        completed
+                      className={`mx-3 h-px flex-1 ${completed
                           ? "bg-emerald-300"
                           : "bg-slate-200"
-                      }`}
+                        }`}
                     />
                   )}
                 </div>
@@ -2634,11 +2631,10 @@ export default function BMReview() {
 
       {feedback.message && (
         <div
-          className={`rounded-lg border px-4 py-2.5 text-xs font-semibold ${
-            feedback.type === "error"
+          className={`rounded-lg border px-4 py-2.5 text-xs font-semibold ${feedback.type === "error"
               ? "border-red-200 bg-red-50 text-red-600"
               : "border-emerald-200 bg-emerald-50 text-emerald-700"
-          }`}
+            }`}
         >
           {feedback.message}
         </div>
@@ -2679,11 +2675,10 @@ export default function BMReview() {
                   onClick={() =>
                     setActiveTab(tab.id)
                   }
-                  className={`border-b-2 px-4 py-3 text-xs font-semibold transition ${
-                    selected
+                  className={`border-b-2 px-4 py-3 text-xs font-semibold transition ${selected
                       ? "border-[#102552] text-[#102552]"
                       : "border-transparent text-slate-500 hover:text-[#102552]"
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>

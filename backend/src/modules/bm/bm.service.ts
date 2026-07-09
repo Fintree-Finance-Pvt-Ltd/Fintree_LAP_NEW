@@ -16,7 +16,7 @@ export class BmReviewsService {
 
   constructor(
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   /**
    * Get every case currently pending for BM review.
@@ -102,8 +102,120 @@ export class BmReviewsService {
     }
   }
 
+  async getChargesApprovedToBm() {
+    try {
+      const rows =
+        await this.dataSource.query(`
+          SELECT
+            a.id,
+            a.charge_name AS chargeName,
+            a.sub_text AS subText,
+            a.required_stage AS requiredStage,
+            a.base_amount AS baseAmount,
+            a.gst_rate AS gstRate,
+            a.gst_amount,
+            a.gross_amount,
+            a.paid_amount ,
+            a.waiver_amount,
+            a.schedule_status,
+            a.created_at AS createdAt,
+            a.updated_at AS updatedAt
+          FROM charges_receipts a
 
-    async getApprovedToBmCases() {
+          INNER JOIN applications app
+          ON app.id = a.application_id
+
+          WHERE
+            a.required_stage = 'At Login'
+            AND a.schedule_status = 'submitted'
+          ORDER BY a.updated_at DESC
+        `);
+
+      return rows.map(
+        (row: Record<string, any>) => ({
+          id: Number(row.id),
+
+          chargeName:
+            row.chargeName,
+
+          subText:
+            row.subText,
+
+          requiredStage:
+            row.requiredStage,
+
+          baseAmount: Number(
+            row.baseAmount ?? 0,
+          ),
+
+          gstRate: Number(
+            row.gstRate ?? 0,
+          ),
+
+          gstAmount: Number(
+            row.gstAmount ?? 0,
+          ),
+
+          grossAmount: Number(
+            row.grossAmount ?? 0,
+          ),
+
+          paidAmount: Number(
+            row.paidAmount ?? 0,
+          ),
+
+          waiverAmount: Number(
+            row.waiverAmount ?? 0,
+          ),
+
+          scheduleStatus:
+            row.scheduleStatus,
+
+
+          createdAt:
+            row.createdAt,
+
+          updatedAt:
+            row.updatedAt,
+        }),
+      );
+    } catch (error) {
+      this.logger.error(
+        "Unable to fetch BM charges approved queue",
+        error instanceof Error
+          ? error.stack
+          : String(error),
+      );
+
+      throw new InternalServerErrorException(
+        "Unable to fetch BM charges approved queue.",
+      );
+    }
+  }
+
+  async approveCharge(chargeId: number) {
+    const result = await this.dataSource.query(
+      `
+      UPDATE charges_receipts
+      SET
+        schedule_status = 'approved',
+        updated_at = NOW()
+      WHERE
+        id = ?
+        AND schedule_status = 'submitted'
+    `,
+      [chargeId],
+    );
+
+    return {
+      success: true,
+      message: 'Charge approved successfully.',
+      chargeId,
+    };
+  }
+
+
+  async getApprovedToBmCases() {
     try {
       const rows =
         await this.dataSource.query(`
@@ -337,9 +449,9 @@ export class BmReviewsService {
 
 
   async getReview(applicationId: number) {
-  try {
-    const rows = await this.dataSource.query(
-      `
+    try {
+      const rows = await this.dataSource.query(
+        `
         SELECT
           /* Application */
           a.id,
@@ -437,457 +549,457 @@ export class BmReviewsService {
         WHERE a.id = ?
         LIMIT 1
       `,
-      [applicationId],
-    );
-
-    if (!rows.length) {
-      throw new NotFoundException(
-        `Application ${applicationId} was not found.`,
+        [applicationId],
       );
-    }
 
-    const row = rows[0];
-
-    const toNumberOrNull = (
-      value: unknown,
-    ): number | null => {
-      if (
-        value === null ||
-        value === undefined ||
-        value === ""
-      ) {
-        return null;
+      if (!rows.length) {
+        throw new NotFoundException(
+          `Application ${applicationId} was not found.`,
+        );
       }
 
-      const numberValue = Number(value);
+      const row = rows[0];
 
-      return Number.isFinite(numberValue)
-        ? numberValue
-        : null;
-    };
+      const toNumberOrNull = (
+        value: unknown,
+      ): number | null => {
+        if (
+          value === null ||
+          value === undefined ||
+          value === ""
+        ) {
+          return null;
+        }
 
-    const requestedAmount =
-      toNumberOrNull(row.requestedAmount);
+        const numberValue = Number(value);
 
-    const marketValue =
-      toNumberOrNull(row.marketValue);
+        return Number.isFinite(numberValue)
+          ? numberValue
+          : null;
+      };
 
-    const distressValue =
-      toNumberOrNull(row.distressValue);
+      const requestedAmount =
+        toNumberOrNull(row.requestedAmount);
 
-    const indicativeLtv =
-      requestedAmount !== null &&
-      marketValue !== null &&
-      marketValue > 0
-        ? Number(
+      const marketValue =
+        toNumberOrNull(row.marketValue);
+
+      const distressValue =
+        toNumberOrNull(row.distressValue);
+
+      const indicativeLtv =
+        requestedAmount !== null &&
+          marketValue !== null &&
+          marketValue > 0
+          ? Number(
             (
               (requestedAmount / marketValue) *
               100
             ).toFixed(2),
           )
-        : null;
+          : null;
 
-    const distressLtv =
-      requestedAmount !== null &&
-      distressValue !== null &&
-      distressValue > 0
-        ? Number(
+      const distressLtv =
+        requestedAmount !== null &&
+          distressValue !== null &&
+          distressValue > 0
+          ? Number(
             (
               (requestedAmount / distressValue) *
               100
             ).toFixed(2),
           )
-        : null;
+          : null;
 
-    const fullName = [
-      row.firstName,
-      row.middleName,
-      row.lastName,
-    ]
-      .filter(Boolean)
-      .join(" ");
+      const fullName = [
+        row.firstName,
+        row.middleName,
+        row.lastName,
+      ]
+        .filter(Boolean)
+        .join(" ");
 
-    return {
-      application: {
-        id: Number(row.id),
+      return {
+        application: {
+          id: Number(row.id),
 
-        applicationNumber:
-          row.applicationNumber,
+          applicationNumber:
+            row.applicationNumber,
 
-        customerName:
-          fullName ||
-          row.applicationCustomerName,
+          customerName:
+            fullName ||
+            row.applicationCustomerName,
 
-        mobileNumber:
-          row.customerMobile ||
-          row.applicationMobile,
+          mobileNumber:
+            row.customerMobile ||
+            row.applicationMobile,
 
-        panNumber:
-          row.customerPan ||
-          row.applicationPan,
+          panNumber:
+            row.customerPan ||
+            row.applicationPan,
 
-        requestedAmount,
+          requestedAmount,
 
-        stage: row.stage,
-        status: row.status,
+          stage: row.stage,
+          status: row.status,
 
-        version: Number(
-          row.version ?? 0,
-        ),
-
-        assignedTo:
-          row.assignedTo !== null
-            ? Number(row.assignedTo)
-            : null,
-
-        createdAt:
-          row.applicationCreatedAt,
-
-        updatedAt:
-          row.applicationUpdatedAt,
-      },
-
-      applicant: {
-        fullName,
-
-        customerType:
-          row.customerType,
-
-        firstName:
-          row.firstName,
-
-        middleName:
-          row.middleName,
-
-        lastName:
-          row.lastName,
-
-        mobile:
-          row.customerMobile ||
-          row.applicationMobile,
-
-        email:
-          row.email,
-
-        dob:
-          row.dob,
-
-        gender:
-          row.gender,
-
-        maritalStatus:
-          row.maritalStatus,
-
-        education:
-          row.education,
-
-        occupationType:
-          row.occupationType,
-
-        businessName:
-          row.businessName,
-
-        designation:
-          row.designation,
-      },
-
-      kycSummary: {
-        panNumber:
-          row.customerPan ||
-          row.applicationPan,
-
-        panVerified:
-          Boolean(
-            Number(row.panVerified ?? 0),
+          version: Number(
+            row.version ?? 0,
           ),
 
-        aadhaarNumber:
-          row.aadhaarNumber,
+          assignedTo:
+            row.assignedTo !== null
+              ? Number(row.assignedTo)
+              : null,
 
-        aadhaarVerified:
-          Boolean(
-            Number(
-              row.aadhaarVerified ?? 0,
+          createdAt:
+            row.applicationCreatedAt,
+
+          updatedAt:
+            row.applicationUpdatedAt,
+        },
+
+        applicant: {
+          fullName,
+
+          customerType:
+            row.customerType,
+
+          firstName:
+            row.firstName,
+
+          middleName:
+            row.middleName,
+
+          lastName:
+            row.lastName,
+
+          mobile:
+            row.customerMobile ||
+            row.applicationMobile,
+
+          email:
+            row.email,
+
+          dob:
+            row.dob,
+
+          gender:
+            row.gender,
+
+          maritalStatus:
+            row.maritalStatus,
+
+          education:
+            row.education,
+
+          occupationType:
+            row.occupationType,
+
+          businessName:
+            row.businessName,
+
+          designation:
+            row.designation,
+        },
+
+        kycSummary: {
+          panNumber:
+            row.customerPan ||
+            row.applicationPan,
+
+          panVerified:
+            Boolean(
+              Number(row.panVerified ?? 0),
             ),
-          ),
 
-        ckycNumber:
-          row.ckycNumber,
+          aadhaarNumber:
+            row.aadhaarNumber,
 
-        ckycVerified:
-          Boolean(
-            Number(row.ckycVerified ?? 0),
-          ),
-      },
+          aadhaarVerified:
+            Boolean(
+              Number(
+                row.aadhaarVerified ?? 0,
+              ),
+            ),
 
-      bureauSummary: {
-        score:
-          toNumberOrNull(row.bureauScore),
+          ckycNumber:
+            row.ckycNumber,
 
-        status:
-          row.bureauStatus ??
-          "NOT_PULLED",
-      },
+          ckycVerified:
+            Boolean(
+              Number(row.ckycVerified ?? 0),
+            ),
+        },
 
-      addressSummary: {
-        current: {
+        bureauSummary: {
+          score:
+            toNumberOrNull(row.bureauScore),
+
+          status:
+            row.bureauStatus ??
+            "NOT_PULLED",
+        },
+
+        addressSummary: {
+          current: {
+            address:
+              row.currentAddress,
+
+            city:
+              row.currentCity,
+
+            state:
+              row.currentState,
+
+            pincode:
+              row.currentPincode,
+          },
+
+          permanent: {
+            address:
+              row.permanentAddress,
+
+            city:
+              row.permanentCity,
+
+            state:
+              row.permanentState,
+
+            pincode:
+              row.permanentPincode,
+          },
+        },
+
+        propertySummary: {
+          type:
+            row.propertyType,
+
           address:
-            row.currentAddress,
+            row.propertyAddress,
 
           city:
-            row.currentCity,
+            row.propertyCity,
 
           state:
-            row.currentState,
+            row.propertyState,
 
           pincode:
-            row.currentPincode,
+            row.propertyPincode,
+
+          ownershipType:
+            row.ownershipType,
+
+          marketValue,
+          distressValue,
+          indicativeLtv,
+          distressLtv,
         },
 
-        permanent: {
-          address:
-            row.permanentAddress,
+        financialSummary: {
+          monthlyIncome:
+            toNumberOrNull(
+              row.monthlyIncome,
+            ),
 
-          city:
-            row.permanentCity,
+          annualIncome:
+            toNumberOrNull(
+              row.annualIncome,
+            ),
 
-          state:
-            row.permanentState,
+          averageBalance:
+            toNumberOrNull(
+              row.averageBalance,
+            ),
 
-          pincode:
-            row.permanentPincode,
+          foir:
+            toNumberOrNull(row.foir),
+
+          eligibleAmount:
+            toNumberOrNull(
+              row.eligibleAmount,
+            ),
+
+          roi:
+            toNumberOrNull(row.roi),
+
+          tenure:
+            toNumberOrNull(row.tenure),
+
+          emi:
+            toNumberOrNull(row.emi),
         },
-      },
 
-      propertySummary: {
-        type:
-          row.propertyType,
+        bankSummary: {
+          bankName:
+            row.bankName,
 
-        address:
-          row.propertyAddress,
+          accountNumber:
+            row.accountNumber,
 
-        city:
-          row.propertyCity,
+          ifsc:
+            row.ifsc,
 
-        state:
-          row.propertyState,
+          branchName:
+            row.branchName,
 
-        pincode:
-          row.propertyPincode,
-
-        ownershipType:
-          row.ownershipType,
-
-        marketValue,
-        distressValue,
-        indicativeLtv,
-        distressLtv,
-      },
-
-      financialSummary: {
-        monthlyIncome:
-          toNumberOrNull(
-            row.monthlyIncome,
-          ),
-
-        annualIncome:
-          toNumberOrNull(
-            row.annualIncome,
-          ),
-
-        averageBalance:
-          toNumberOrNull(
-            row.averageBalance,
-          ),
-
-        foir:
-          toNumberOrNull(row.foir),
-
-        eligibleAmount:
-          toNumberOrNull(
-            row.eligibleAmount,
-          ),
-
-        roi:
-          toNumberOrNull(row.roi),
-
-        tenure:
-          toNumberOrNull(row.tenure),
-
-        emi:
-          toNumberOrNull(row.emi),
-      },
-
-      bankSummary: {
-        bankName:
-          row.bankName,
-
-        accountNumber:
-          row.accountNumber,
-
-        ifsc:
-          row.ifsc,
-
-        branchName:
-          row.branchName,
-
-        averageBalance:
-          toNumberOrNull(
-            row.averageBalance,
-          ),
-      },
-
-      rmRecommendation: {
-        recommendedAmount:
-          toNumberOrNull(
-            row.recommendedAmount,
-          ),
-
-        recommendedRoi:
-          toNumberOrNull(
-            row.recommendedRoi,
-          ),
-
-        recommendedTenure:
-          toNumberOrNull(
-            row.recommendedTenure,
-          ),
-
-        recommendation:
-          row.rmRecommendation,
-
-        remarks:
-          row.rmRemarks,
-      },
-
-      stages: [
-        {
-          key: "LEAD",
-          label: "Lead",
-          status: "completed",
+          averageBalance:
+            toNumberOrNull(
+              row.averageBalance,
+            ),
         },
-        {
-          key: "FIELD_VERIFICATION",
-          label: "Field Verification",
-          status: "completed",
-        },
-        {
-          key: "BM_REVIEW",
-          label: "BM Review",
-          status: "current",
-        },
-        {
-          key: "CM_SCREENING",
-          label: "CM Screening",
-          status: "pending",
-        },
-        {
-          key: "CREDIT",
-          label: "Credit",
-          status: "pending",
-        },
-        {
-          key: "LEGAL_VALUATION",
-          label: "Legal & Valuation",
-          status: "pending",
-        },
-        {
-          key: "SANCTION",
-          label: "Sanction",
-          status: "pending",
-        },
-      ],
 
-      checklist: [
-        {
-          id: 1,
-          code: "APPLICANT_REVIEWED",
-          title:
-            "Applicant details reviewed",
-          checked: false,
-        },
-        {
-          id: 2,
-          code: "KYC_REVIEWED",
-          title:
-            "KYC verification reviewed",
-          checked: false,
-        },
-        {
-          id: 3,
-          code: "BUREAU_REVIEWED",
-          title:
-            "Bureau score and status reviewed",
-          checked: false,
-        },
-        {
-          id: 4,
-          code: "PROPERTY_REVIEWED",
-          title:
-            "Property and ownership details reviewed",
-          checked: false,
-        },
-        {
-          id: 5,
-          code: "FINANCIAL_REVIEWED",
-          title:
-            "Income, FOIR and eligibility reviewed",
-          checked: false,
-        },
-        {
-          id: 6,
-          code: "BANKING_REVIEWED",
-          title:
-            "Banking information reviewed",
-          checked: false,
-        },
-        {
-          id: 7,
-          code:
-            "RM_RECOMMENDATION_REVIEWED",
-          title:
-            "RM recommendation reviewed",
-          checked: false,
-        },
-        {
-          id: 8,
-          code: "NO_MAJOR_NEGATIVE",
-          title:
-            "No unresolved major negative finding",
-          checked: false,
-        },
-      ],
+        rmRecommendation: {
+          recommendedAmount:
+            toNumberOrNull(
+              row.recommendedAmount,
+            ),
 
-      review: {
-        sourcingQuality:
-          "Good",
+          recommendedRoi:
+            toNumberOrNull(
+              row.recommendedRoi,
+            ),
 
-        geoDecision:
-          "Within Policy",
+          recommendedTenure:
+            toNumberOrNull(
+              row.recommendedTenure,
+            ),
 
-        preliminaryEligibility:
-          "Eligible",
+          recommendation:
+            row.rmRecommendation,
 
-        remarks: "",
-      },
-    };
-  } catch (error) {
-    if (
-      error instanceof NotFoundException
-    ) {
-      throw error;
+          remarks:
+            row.rmRemarks,
+        },
+
+        stages: [
+          {
+            key: "LEAD",
+            label: "Lead",
+            status: "completed",
+          },
+          {
+            key: "FIELD_VERIFICATION",
+            label: "Field Verification",
+            status: "completed",
+          },
+          {
+            key: "BM_REVIEW",
+            label: "BM Review",
+            status: "current",
+          },
+          {
+            key: "CM_SCREENING",
+            label: "CM Screening",
+            status: "pending",
+          },
+          {
+            key: "CREDIT",
+            label: "Credit",
+            status: "pending",
+          },
+          {
+            key: "LEGAL_VALUATION",
+            label: "Legal & Valuation",
+            status: "pending",
+          },
+          {
+            key: "SANCTION",
+            label: "Sanction",
+            status: "pending",
+          },
+        ],
+
+        checklist: [
+          {
+            id: 1,
+            code: "APPLICANT_REVIEWED",
+            title:
+              "Applicant details reviewed",
+            checked: false,
+          },
+          {
+            id: 2,
+            code: "KYC_REVIEWED",
+            title:
+              "KYC verification reviewed",
+            checked: false,
+          },
+          {
+            id: 3,
+            code: "BUREAU_REVIEWED",
+            title:
+              "Bureau score and status reviewed",
+            checked: false,
+          },
+          {
+            id: 4,
+            code: "PROPERTY_REVIEWED",
+            title:
+              "Property and ownership details reviewed",
+            checked: false,
+          },
+          {
+            id: 5,
+            code: "FINANCIAL_REVIEWED",
+            title:
+              "Income, FOIR and eligibility reviewed",
+            checked: false,
+          },
+          {
+            id: 6,
+            code: "BANKING_REVIEWED",
+            title:
+              "Banking information reviewed",
+            checked: false,
+          },
+          {
+            id: 7,
+            code:
+              "RM_RECOMMENDATION_REVIEWED",
+            title:
+              "RM recommendation reviewed",
+            checked: false,
+          },
+          {
+            id: 8,
+            code: "NO_MAJOR_NEGATIVE",
+            title:
+              "No unresolved major negative finding",
+            checked: false,
+          },
+        ],
+
+        review: {
+          sourcingQuality:
+            "Good",
+
+          geoDecision:
+            "Within Policy",
+
+          preliminaryEligibility:
+            "Eligible",
+
+          remarks: "",
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Unable to fetch BM review for application ${applicationId}`,
+        error instanceof Error
+          ? error.stack
+          : String(error),
+      );
+
+      throw new InternalServerErrorException(
+        "Unable to fetch BM review details.",
+      );
     }
-
-    this.logger.error(
-      `Unable to fetch BM review for application ${applicationId}`,
-      error instanceof Error
-        ? error.stack
-        : String(error),
-    );
-
-    throw new InternalServerErrorException(
-      "Unable to fetch BM review details.",
-    );
   }
-}
 }

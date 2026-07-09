@@ -103,6 +103,12 @@ const rolesConfig = {
           label: "BM Approved",
           Icon: FaReceipt,
         },
+
+        {
+          to:"/chargesApproved",
+          label:"Charges Approved",
+          Icon: FaReceipt,
+        }
       ],
     },
   ],
