@@ -38,8 +38,6 @@ type AuthenticatedRequest = Request & {
 type SaveVisitBody = {
   propertyCategory?: string;
 
-  checklistData?: Record<string, unknown>;
-
   latitude?: number;
   longitude?: number;
   locationAccuracy?: number;
@@ -57,8 +55,6 @@ type SaveVisitBody = {
     remarks?: string;
 
     formData?: Record<string, unknown>;
-
-    checklistData?: Record<string, unknown>;
 
     latitude?: number;
     longitude?: number;

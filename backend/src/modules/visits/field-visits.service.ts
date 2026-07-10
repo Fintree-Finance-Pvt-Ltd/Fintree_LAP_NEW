@@ -25,7 +25,6 @@ import { WorkflowLogAction } from '../../common/enums/workflow-action.enum';
 import {
   DOCUMENT_NAMES,
   DOCUMENT_SOURCE,
-  FIELD_VISIT_CHECKLIST_KEYS,
   getRequiredVisitTypes,
   getVisitTypeFromDocumentName,
   normalizePropertyCategory,
@@ -42,8 +41,6 @@ import { Visit } from "./entities/visit.entity";
 
 type SaveVisitBody = {
   propertyCategory?: string;
-
-  checklistData?: Record<string, unknown>;
 
   latitude?: number;
   longitude?: number;
@@ -65,7 +62,6 @@ type SaveVisitBody = {
     propertyRemarks?: string;
 
     formData?: Record<string, unknown>;
-    checklistData?: Record<string, unknown>;
 
     latitude?: number;
     longitude?: number;
@@ -136,11 +132,6 @@ export class FieldVisitsService {
       this.serializeVisit(visit, documents),
     );
 
-    const checklistData =
-      currentVisits.find(
-        (visit) =>
-          visit.checklistData && Object.keys(visit.checklistData).length > 0,
-      )?.checklistData || {};
 
     const completionStatus = await this.getCompletionStatus(applicationId);
 
@@ -155,8 +146,6 @@ export class FieldVisitsService {
         propertyCategory: completionStatus.propertyCategory,
 
         visits: currentVisits,
-
-        checklistData,
 
         completionStatus,
       },
@@ -267,52 +256,89 @@ export class FieldVisitsService {
           ? WorkflowLogAction.PROPERTY_VISIT_DONE
           : null;
 
-      if (visitWorkflowAction) {
-        const workflowLogRepository = manager.getRepository(WorkflowLog);
+    if (visitWorkflowAction) {
+  const workflowLogRepository = manager.getRepository(WorkflowLog);
 
-        const existingWorkflowLog = await workflowLogRepository.findOne({
-          where: {
-            applicationId,
-            action: visitWorkflowAction,
-          },
-        });
+  const existingWorkflowLog = await workflowLogRepository.findOne({
+    where: {
+      applicationId,
+      action: visitWorkflowAction,
+    },
+  });
 
-        if (!existingWorkflowLog) {
-          await workflowLogRepository.save(
-            workflowLogRepository.create({
-              applicationId,
-              action: visitWorkflowAction,
-              remarks: `${this.formatVisitTypeLabel(
-                visitType,
-              )} visit saved successfully.`,
-              createdBy: userId,
-              updatedBy: userId,
-            }),
-          );
-        }
-      }
-
-      return {
-        success: true,
-
-        message: `${this.formatVisitTypeLabel(
+  if (!existingWorkflowLog) {
+    await workflowLogRepository.save(
+      workflowLogRepository.create({
+        applicationId,
+        action: visitWorkflowAction,
+        remarks: `${this.formatVisitTypeLabel(
           visitType,
-        )} Visit saved successfully.`,
+        )} visit saved successfully.`,
+        createdBy: userId,
+        updatedBy: userId,
+      }),
+    );
+  }
+}
 
-        data: {
-          visitId: Number(savedVisit.id),
+const isPropertyVisit = PROPERTY_VISIT_VISIT_TYPES.includes(
+  visitType as any,
+);
 
-          applicationId,
+let applicationStatus: ApplicationStatus | null = null;
+let nextRoute: string | null = null;
 
-          visitType: savedVisit.visitType,
+if (isPropertyVisit) {
+  const applicationRepository = manager.getRepository(Application);
 
-          visitStatus: savedVisit.visitStatus,
+  const application = await applicationRepository.findOne({
+    where: {
+      id: applicationId,
+    },
+  });
 
-          propertyCategory: savedVisit.propertyCategory,
+  if (!application) {
+    throw new NotFoundException(
+      `Application ${applicationId} was not found.`,
+    );
+  }
 
-          updatedAt: savedVisit.updatedAt,
-        },
-      };
+  application.status = ApplicationStatus.IN_PROGRESS;
+  application.updatedBy = userId;
+
+  await applicationRepository.save(application);
+
+  applicationStatus = ApplicationStatus.IN_PROGRESS;
+  nextRoute = `/geo-verification/${applicationId}`;
+}
+
+  return {
+  success: true,
+
+  message: `${this.formatVisitTypeLabel(
+    visitType,
+  )} Visit saved successfully.`,
+
+  data: {
+    visitId: Number(savedVisit.id),
+
+    applicationId,
+
+    visitType: savedVisit.visitType,
+
+    visitStatus: savedVisit.visitStatus,
+
+    propertyCategory: savedVisit.propertyCategory,
+
+    applicationStatus,
+
+    geoVerificationReady: isPropertyVisit,
+
+    nextRoute,
+
+    updatedAt: savedVisit.updatedAt,
+  },
+};
     });
   }
 
@@ -503,8 +529,6 @@ export class FieldVisitsService {
       for (const visit of savedVisits) {
         this.validateVisitForCompletion(visit, documents, errors);
       }
-
-      this.validateChecklist(savedVisits, errors);
 
       if (errors.length) {
         throw new BadRequestException({
@@ -1110,25 +1134,7 @@ return {
       ...explicitFormData,
     };
 
-    const commonChecklist = this.parseObject(
-      body.checklistData,
-      "checklistData",
-      {},
-    );
 
-    const visitChecklist = this.parseObject(
-      input.checklistData,
-      `${visitType}.checklistData`,
-      {},
-    );
-
-    visit.checklistData = {
-      ...(visit.checklistData || {}),
-
-      ...commonChecklist,
-
-      ...visitChecklist,
-    };
 
     const latitude = input.latitude ?? body.latitude;
 
@@ -1294,19 +1300,7 @@ return {
     }
   }
 
-  private validateChecklist(visits: Visit[], errors: string[]) {
-    const combinedChecklist: Record<string, unknown> = {};
-
-    for (const visit of visits) {
-      Object.assign(combinedChecklist, visit.checklistData || {});
-    }
-
-    for (const key of FIELD_VISIT_CHECKLIST_KEYS) {
-      if (!this.toBoolean(combinedChecklist[key])) {
-        errors.push(`Checklist item "${key}" must be confirmed.`);
-      }
-    }
-  }
+ 
 
   private requireFormFields(visit: Visit, fields: string[], errors: string[]) {
     const formData = visit.formData || {};
@@ -1400,7 +1394,6 @@ return {
 
       formData: visit.formData || {},
 
-      checklistData: visit.checklistData || {},
 
       latitude: visit.latitude ? Number(visit.latitude) : null,
 
@@ -1503,7 +1496,6 @@ return {
       "propertyCategory",
       "propertyType",
       "formData",
-      "checklistData",
       "latitude",
       "longitude",
       "locationAccuracy",
@@ -1619,14 +1611,6 @@ return {
     return true;
   }
 
-  private toBoolean(value: unknown) {
-    return (
-      value === true ||
-      value === 1 ||
-      value === "1" ||
-      String(value).toLowerCase() === "true"
-    );
-  }
 
   private formatVisitTypeLabel(visitType: string) {
     return String(visitType)
