@@ -198,10 +198,7 @@ export default function ChargesApproved() {
               </span>
             </div>
 
-            <p className="mt-1 text-xs text-slate-500">
-              Cases whose status is
-              SUBMITTED_TO_BM
-            </p>
+           
           </div>
 
           <div className="flex gap-2 lg:ml-auto">
@@ -273,19 +270,19 @@ export default function ChargesApproved() {
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold">
-                    Sub Text
-                  </th>
-
-                  <th className="px-4 py-3 text-left text-xs font-semibold">
-                    Required Stage
-                  </th>
-
-                  <th className="px-4 py-3 text-left text-xs font-semibold">
                     Base Amount
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold">
-                    Gst Rate
+                    GST Rate
+                  </th>
+
+                  <th className="px-4 py-3 text-left text-xs font-semibold">
+                    Gst Amount
+                  </th>
+
+                  <th className="px-4 py-3 text-left text-xs font-semibold">
+                    Date
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-semibold">
@@ -309,7 +306,7 @@ export default function ChargesApproved() {
                       >
                         <td className="px-4 py-3">
                           <p className="text-sm font-semibold text-[#102552]">
-                            {application.charge_name ??
+                            {application.id ??
                               "-"}
                           </p>
 
@@ -321,7 +318,7 @@ export default function ChargesApproved() {
 
                         <td className="px-4 py-3">
                           <p className="text-sm font-medium text-slate-700">
-                            {application.subText ??
+                            {application.chargeName ??
                               "-"}
                           </p>
 
@@ -343,14 +340,19 @@ export default function ChargesApproved() {
                           )}
                         </td>
 
-                        <td className="px-4 py-3 text-xs text-slate-600">
+ <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                          {formatCurrency(
+                            application.gstAmount ?? "-",
+                          )}
+                        </td>
+                        {/* <td className="px-4 py-3 text-xs text-slate-600">
                           {[
                             application.gstAmount,
                             application.grossAmount,
                           ]
                             .filter(Boolean)
                             .join(", ") || "-"}
-                        </td>
+                        </td> */}
 
                         <td className="px-4 py-3 text-xs text-slate-600">
                           {formatDate(
