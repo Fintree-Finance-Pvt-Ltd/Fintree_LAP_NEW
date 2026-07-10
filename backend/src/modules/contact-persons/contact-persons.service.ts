@@ -2,8 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Application } from '../applications/entities/application.entity';
-import { CreateContactPersonDto } from './dto/create-contact-person.dto';
-import { UpdateContactPersonDto } from './dto/update-contact-person.dto';
+
 import { ContactPerson } from './entities/contact-person.entity';
 
 @Injectable()
@@ -13,7 +12,7 @@ export class ContactPersonsService {
     @InjectRepository(Application) private readonly applications: Repository<Application>
   ) {}
 
-  async create(dto: CreateContactPersonDto) {
+  async create(dto: any) {
     await this.assertApplication(dto.applicationId);
     return { data: await this.contacts.save(this.contacts.create(dto)) };
   }
@@ -22,7 +21,7 @@ export class ContactPersonsService {
     return { data: await this.contacts.find({ where: { applicationId }, order: { id: 'DESC' } }) };
   }
 
-  async update(id: number, dto: UpdateContactPersonDto) {
+  async update(id: number, dto: any) {
     const entity = await this.contacts.preload({ id, ...dto });
     if (!entity) throw new NotFoundException('Contact person not found');
     return { data: await this.contacts.save(entity) };

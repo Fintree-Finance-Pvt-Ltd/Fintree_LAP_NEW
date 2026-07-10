@@ -177,6 +177,134 @@ export default function CreateLead() {
     resendAfterSeconds: 0,
   });
 
+
+  
+
+
+  const [coApplicants, setCoApplicants] = useState([]);
+
+  // Handler to update specific fields inside a specific co-applicant's index
+  const handleCoApplicantChange = (index, event) => {
+    const { name, value } = event.target;
+    const nextValue = name === "panNumber" ? value.toUpperCase() : value;
+
+    setCoApplicants((prev) =>
+      prev.map((coApp, idx) =>
+        idx === index ? { ...coApp, [name]: nextValue } : coApp
+      )
+    );
+  };
+
+  // Append a new empty co-applicant structure to the array
+  const handleAddCoApplicant = () => {
+    setCoApplicants((prev) => [
+      ...prev,
+      {
+        name: "",
+        mobile: "",
+        email: "",
+        panNumber: "",
+        aadhaarNumber: "",
+        relationship: "SPOUSE",
+        occupation: "SELF_EMPLOYED",
+        monthlyIncome: "",
+      },
+    ]);
+  };
+
+  // Remove a specific co-applicant card by index
+  const handleRemoveCoApplicant = (index) => {
+    setCoApplicants((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+
+  const [contactPersons, setContactPersons] = useState([]);
+
+  const buildCoApplicantsPayload = () => {
+    return coApplicants.map((coApp) => ({
+      name: coApp.name.trim(),
+      mobile: coApp.mobile.trim(),
+      email: coApp.email?.trim() || undefined,
+      panNumber: coApp.panNumber?.trim().toUpperCase() || undefined,
+      aadhaarNumber: coApp.aadhaarNumber?.trim() || undefined,
+      relationship: coApp.relationship,
+      occupation: coApp.occupation || undefined,
+      monthlyIncome: coApp.monthlyIncome ? Number(coApp.monthlyIncome) : undefined,
+    }));
+  };
+
+// Handler to update specific fields inside a specific contact person's index
+const handleContactPersonChange = (index, event) => {
+  const { name, value } = event.target;
+  setContactPersons((prev) =>
+    prev.map((contact, idx) =>
+      idx === index ? { ...contact, [name]: value } : contact
+    )
+  );
+};
+
+const buildContactPersonsPayload = (targetApplicationId) => {
+  return contactPersons
+    .filter((contact) => {
+      return (
+        String(contact.name || "").trim() ||
+        String(contact.mobile || "").trim() ||
+        String(contact.email || "").trim() ||
+        String(contact.designation || "").trim()
+      );
+    })
+    .map((contact) => ({
+      id: contact.id || null,
+      applicationId: Number(targetApplicationId),
+      name: String(contact.name || "").trim(),
+      mobile: String(contact.mobile || "").trim(),
+      email: String(contact.email || "").trim() || undefined,
+      designation: String(contact.designation || "").trim() || undefined,
+      relationship: contact.relationship || "BUSINESS_ASSOCIATE",
+    }));
+};
+
+
+// Append a new empty contact person structure to the array
+const handleAddContactPerson = () => {
+  setContactPersons((prev) => [
+    ...prev,
+    {
+      id: null,
+      name: "",
+      mobile: "",
+      email: "",
+      designation: "",
+      relationship: "BUSINESS_ASSOCIATE",
+    },
+  ]);
+};
+
+// Remove a specific contact person card by index
+const handleRemoveContactPerson = async (index) => {
+  const contact = contactPersons[index];
+
+  if (contact?.id) {
+    try {
+      await rmApi.deleteContactPerson(contact.id);
+    } catch (error) {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to delete contact person.",
+      );
+      return;
+    }
+  }
+
+  setContactPersons((prev) => prev.filter((_, idx) => idx !== index));
+};
+
+
+
+
+
   const applicationQuery = useQuery({
     queryKey: ["application", applicationId],
     queryFn: () => rmApi.getApplication(applicationId),
@@ -193,215 +321,283 @@ export default function CreateLead() {
     retry: false,
   });
 
-useEffect(() => {
-  if (!applicationId || !applicationQuery.data) return;
+  useEffect(() => {
+    if (!applicationId || !applicationQuery.data) return;
 
-  const response = unwrapResponse(applicationQuery.data);
-  const application = response?.data ?? response;
+    const response = unwrapResponse(applicationQuery.data);
+    const application = response?.data ?? response;
 
-  if (!application || typeof application !== "object") return;
+    if (!application || typeof application !== "object") return;
 
-  const profile = application.customerProfile || {};
+    const profile = application.customerProfile || {};
 
-  const categoryFromType = String(
-    application.propertyType ||
+    const categoryFromType = String(
+      application.propertyType ||
       profile.propertyType ||
       ""
-  )
-    .split(" - ")[0]
-    .trim();
+    )
+      .split(" - ")[0]
+      .trim();
 
-  const propertyCategory = normalizePropertyCategory(
-    application.propertyCategory ||
+    const propertyCategory = normalizePropertyCategory(
+      application.propertyCategory ||
       profile.propertyCategory ||
       categoryFromType
-  );
+    );
 
-  const propertyType = normalizePropertyType(
-    application.propertyType ||
+    const propertyType = normalizePropertyType(
+      application.propertyType ||
       profile.propertyType,
-    propertyCategory
-  );
+      propertyCategory
+    );
 
-  setCreatedApplicationId(Number(application.id || applicationId));
-  setApplicationNumber(application.applicationNumber || "");
+    setCreatedApplicationId(Number(application.id || applicationId));
+    setApplicationNumber(application.applicationNumber || "");
 
-  setFormData((previous) => ({
-    ...previous,
+    setFormData((previous) => ({
+      ...previous,
 
-    customerName:
-      application.customerName ||
-      `${profile.firstName || ""} ${profile.middleName || ""} ${profile.lastName || ""}`
-        .replace(/\s+/g, " ")
-        .trim() ||
-      "",
+      customerName:
+        application.customerName ||
+        `${profile.firstName || ""} ${profile.middleName || ""} ${profile.lastName || ""}`
+          .replace(/\s+/g, " ")
+          .trim() ||
+        "",
 
-    mobileNumber:
-      application.mobile ||
-      application.mobileNumber ||
-      profile.mobile ||
-      "",
+      mobileNumber:
+        application.mobile ||
+        application.mobileNumber ||
+        profile.mobile ||
+        "",
 
-    emailId:
-      application.email ||
-      application.emailId ||
-      profile.email ||
-      "",
+      emailId:
+        application.email ||
+        application.emailId ||
+        profile.email ||
+        "",
 
-    panNumber:
-      application.pan ||
-      application.panNumber ||
-      profile.panNumber ||
-      "",
+      panNumber:
+        application.pan ||
+        application.panNumber ||
+        profile.panNumber ||
+        "",
 
-    aadhaarNumber:
-      application.aadhaarNumber ||
-      profile.aadhaarNumber ||
-      "",
+      aadhaarNumber:
+        application.aadhaarNumber ||
+        profile.aadhaarNumber ||
+        "",
 
-    occupation:
-      application.occupationType ||
-      profile.occupationType ||
-      application.occupation ||
-      "SELF_EMPLOYED",
+      occupation:
+        application.occupationType ||
+        profile.occupationType ||
+        application.occupation ||
+        "SELF_EMPLOYED",
 
-    businessName:
-      application.businessName ||
-      profile.businessName ||
-      "",
+      businessName:
+        application.businessName ||
+        profile.businessName ||
+        "",
 
-    monthlyIncome:
-      application.monthlyIncome ??
-      profile.monthlyIncome ??
-      "",
+      monthlyIncome:
+        application.monthlyIncome ??
+        profile.monthlyIncome ??
+        "",
 
-    monthlyObligations:
-      application.monthlyObligations ??
-      profile.monthlyObligations ??
-      "",
+      monthlyObligations:
+        application.monthlyObligations ??
+        profile.monthlyObligations ??
+        "",
 
-    requestedAmount:
-      application.requestedAmount ??
-      "",
+      requestedAmount:
+        application.requestedAmount ??
+        "",
 
-    requestedTenure:
-      String(
-        application.requestedTenure ||
+      requestedTenure:
+        String(
+          application.requestedTenure ||
           application.tenure ||
           profile.tenure ||
           120
-      ),
+        ),
 
-    propertyCategory,
+      propertyCategory,
 
-    propertyType,
+      propertyType,
 
-    propertyValue:
-      application.marketValue ??
-      application.propertyValue ??
-      profile.marketValue ??
-      "",
+      propertyValue:
+        application.marketValue ??
+        application.propertyValue ??
+        profile.marketValue ??
+        "",
 
-    propertyAddress:
-      application.propertyAddress ||
-      profile.propertyAddress ||
-      "",
+      propertyAddress:
+        application.propertyAddress ||
+        profile.propertyAddress ||
+        "",
 
-    city:
-      application.propertyCity ||
-      application.city ||
-      profile.propertyCity ||
-      "",
+      city:
+        application.propertyCity ||
+        application.city ||
+        profile.propertyCity ||
+        "",
 
-    state:
-      application.propertyState ||
-      application.state ||
-      profile.propertyState ||
-      "",
+      state:
+        application.propertyState ||
+        application.state ||
+        profile.propertyState ||
+        "",
 
-    pinCode:
-      application.propertyPincode ||
-      application.pinCode ||
-      profile.propertyPincode ||
-      "",
-  }));
+      pinCode:
+        application.propertyPincode ||
+        application.pinCode ||
+        profile.propertyPincode ||
+        "",
+    }));
 
-  setPanVerified(
-    toBoolean(application.panVerified) ||
+    setPanVerified(
+      toBoolean(application.panVerified) ||
       toBoolean(application.customerProfile?.panVerified) ||
       toBoolean(profile.panVerified)
-  );
+    );
 
-  setOtpVerified(
-    toBoolean(application.mobileVerified) ||
+    setOtpVerified(
+      toBoolean(application.mobileVerified) ||
       toBoolean(application.customerProfile?.mobileVerified) ||
       toBoolean(profile.mobileVerified)
-  );
+    );
 
-  setEmailOtpVerified(
-    toBoolean(application.emailVerified) ||
+    setEmailOtpVerified(
+      toBoolean(application.emailVerified) ||
       toBoolean(application.customerProfile?.emailVerified) ||
       toBoolean(profile.emailVerified)
-  );
-}, [applicationId, applicationQuery.data]);
+    );
+  }, [applicationId, applicationQuery.data]);
 
 
   const hasPrefilledFromState = Boolean(location?.state?.formData);
 
+  useEffect(() => {
+    if (
+      !emailOtpModal.open ||
+      emailOtpModal.resendAfterSeconds <= 0
+    ) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setEmailOtpModal((previous) => ({
+        ...previous,
+        resendAfterSeconds: Math.max(
+          previous.resendAfterSeconds - 1,
+          0,
+        ),
+      }));
+    }, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [
+    emailOtpModal.open,
+    emailOtpModal.resendAfterSeconds,
+  ]);
+
+  useEffect(() => {
+    if (!applicationId) return;
+
+    const applicationResponse = unwrapResponse(applicationQuery.data);
+    const application =
+      applicationResponse?.data ??
+      applicationResponse ??
+      {};
+
+    const profileResponse = unwrapResponse(customerProfileQuery.data);
+    const profile = profileResponse?.data ?? profileResponse ?? {};
+
+    const mobileIsVerified =
+      toBoolean(application.mobileVerified) ||
+      toBoolean(application.customerProfile?.mobileVerified) ||
+      toBoolean(profile.mobileVerified) ||
+      toBoolean(profile.mobile_verified);
+
+    const emailIsVerified =
+      toBoolean(application.emailVerified) ||
+      toBoolean(application.customerProfile?.emailVerified) ||
+      toBoolean(profile.emailVerified) ||
+      toBoolean(profile.email_verified);
+
+    setOtpVerified(mobileIsVerified);
+    setEmailOtpVerified(emailIsVerified);
+  }, [
+    applicationId,
+    applicationQuery.data,
+    customerProfileQuery.data,
+  ]);
+
+ // Automatically load co-applicants from the DB for existing leads
 useEffect(() => {
-  if (
-    !emailOtpModal.open ||
-    emailOtpModal.resendAfterSeconds <= 0
-  ) {
-    return;
-  }
+  if (!applicationId) return;
 
-  const interval = window.setInterval(() => {
-    setEmailOtpModal((previous) => ({
-      ...previous,
-      resendAfterSeconds: Math.max(
-        previous.resendAfterSeconds - 1,
-        0,
-      ),
-    }));
-  }, 1000);
+  const fetchExistingCoApplicants = async () => {
+    try {
+      const response = await rmApi.getCoApplicants(applicationId);
+      const result = unwrapResponse(response);
+      const rows = result?.data ?? result ?? [];
 
-  return () => {
-    window.clearInterval(interval);
+      if (Array.isArray(rows) && rows.length > 0) {
+        setCoApplicants(
+          rows.map((row) => ({
+            name: row.name || "",
+            mobile: row.mobile || "",
+            email: row.email || "",
+            panNumber: row.panNumber || row.pan_number || "",
+            aadhaarNumber: row.aadhaarNumber || row.aadhaar_number || "",
+            relationship: row.relationship || "SPOUSE",
+            occupation: row.occupation || "SELF_EMPLOYED",
+            monthlyIncome: row.monthlyIncome ? String(row.monthlyIncome) : "",
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to recover co-applicant dataset tracking lines:", error);
+    }
   };
-}, [
-  emailOtpModal.open,
-  emailOtpModal.resendAfterSeconds,
-]);
+
+  fetchExistingCoApplicants();
+}, [applicationId]);
+
+// Contact Persons Automatically load contact persons from the existing leads
 
 useEffect(() => {
   if (!applicationId) return;
 
-  const applicationResponse = unwrapResponse(applicationQuery.data);
-  const application = applicationResponse?.data ?? applicationResponse ?? {};
+  const fetchExistingContactPersons = async () => {
+    try {
+      const response = await rmApi.getContactPersons(applicationId);
+      const result = unwrapResponse(response);
+      const rows = result?.data ?? result ?? [];
 
-  const profileResponse = unwrapResponse(customerProfileQuery.data);
-  const profile = profileResponse?.data ?? profileResponse ?? {};
+      if (Array.isArray(rows)) {
+        setContactPersons(
+          rows.map((row) => ({
+            id: row.id,
+            name: row.name || "",
+            mobile: row.mobile || "",
+            email: row.email || "",
+            designation: row.designation || "",
+            relationship: row.relationship || "BUSINESS_ASSOCIATE",
+          })),
+        );
+      }
+    } catch (error) {
+      console.error("Failed to load contact persons:", error);
+    }
+  };
 
-  const mobileIsVerified =
-    toBoolean(application.mobileVerified) ||
-    toBoolean(application.customerProfile?.mobileVerified) ||
-    toBoolean(profile.mobileVerified) ||
-    toBoolean(profile.mobile_verified);
+  fetchExistingContactPersons();
+}, [applicationId]);
 
-  const emailIsVerified =
-    toBoolean(application.emailVerified) ||
-    toBoolean(application.customerProfile?.emailVerified) ||
-    toBoolean(profile.emailVerified) ||
-    toBoolean(profile.email_verified);
 
-  setOtpVerified(mobileIsVerified);
-  setEmailOtpVerified(emailIsVerified);
-}, [
-  applicationId,
-  applicationQuery.data,
-  customerProfileQuery.data,
-]);
 
   const sendOtpMutation = useMutation({
     mutationFn: () =>
@@ -450,85 +646,86 @@ useEffect(() => {
     sendOtpMutation.mutate();
   };
 
-const invalidateVerificationQueries = async (id) => {
-  if (!id) return;
+  const invalidateVerificationQueries = async (id) => {
+    if (!id) return;
 
-  await Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: ["customer-profile", String(id)],
-    }),
-    queryClient.invalidateQueries({
-      queryKey: ["customer-profile", Number(id)],
-    }),
-    queryClient.invalidateQueries({
-      queryKey: ["application", String(id)],
-    }),
-    queryClient.invalidateQueries({
-      queryKey: ["application", Number(id)],
-    }),
-  ]);
-};
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["customer-profile", String(id)],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["customer-profile", Number(id)],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["application", String(id)],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["application", Number(id)],
+      }),
+    ]);
+  };
 
 
-const verifyOtpAndCreateMutation = useMutation({
-  mutationFn: () => {
-    const payload = {
-      customerName: formData.customerName,
-      mobile: formData.mobileNumber,
-      otp: otpCode.join(""),
-      consentText: consentAccepted ? CONSENT_TEXT : "",
-    };
+  const verifyOtpAndCreateMutation = useMutation({
+    mutationFn: () => {
+      const payload = {
+        customerName: formData.customerName,
+        mobile: formData.mobileNumber,
+        otp: otpCode.join(""),
+        consentText: consentAccepted ? CONSENT_TEXT : "",
+      };
 
-    return rmApi.verifyOtpAndCreate(payload);
-  },
+      return rmApi.verifyOtpAndCreate(payload);
+    },
 
-  onSuccess: async (res) => {
-    const result = unwrapResponse(res);
-    const created = result?.data ?? result;
-
-    setMessageType("success");
-    setMessage("✓ Lead created successfully");
-
-    setOtpModal((p) => ({ ...p, open: false }));
-    setConsentAccepted(false);
-    setOtpCode(Array(6).fill(""));
-    setOtpError("");
-
-    const newId =
-      created?.applicationId ??
-      created?.application?.id ??
-      created?.id;
-
-    const newNumber = created?.applicationNumber;
-
-    if (newId) {
-      setCreatedApplicationId(newId);
-      setApplicationNumber(newNumber || "");
-      setOtpVerified(true);
-
-      await invalidateVerificationQueries(newId);
+    onSuccess: async (res) => {
+      const result = unwrapResponse(res);
+      const created = result?.data ?? result;
 
       setMessageType("success");
-      setMessage("✓ Mobile verified successfully.");
+      setMessage("✓ Lead created successfully");
 
-      if (!applicationId) {
-        navigate(`/field-visits/${newId}`, {
-          replace: true,
-        });
-        return;
+      setOtpModal((p) => ({ ...p, open: false }));
+      setConsentAccepted(false);
+      setOtpCode(Array(6).fill(""));
+      setOtpError("");
+
+      const newId =
+        created?.applicationId ??
+        created?.application?.id ??
+        created?.id;
+
+      const newNumber = created?.applicationNumber;
+
+      if (newId) {
+        setCreatedApplicationId(newId);
+        setApplicationNumber(newNumber || "");
+        setOtpVerified(true);
+
+        await invalidateVerificationQueries(newId);
+
+        setMessageType("success");
+        setMessage("✓ Mobile verified successfully.");
+
+if (!applicationId) {
+          // Stay on the same CreateLead page by re-loading it with the newly created applicationId
+          navigate(`/create-lead/${newId}`, {
+            replace: true,
+          });
+          return;
+        }
       }
-    }
-  },
+    },
 
-  onError: (error) => {
-    const msg =
-      error?.response?.data?.message ||
-      error?.message ||
-      "Invalid OTP";
+    onError: (error) => {
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Invalid OTP";
 
-    setOtpError(msg);
-  },
-});
+      setOtpError(msg);
+    },
+  });
 
   const workflowQuery = useQuery({
     queryKey: ["rm-workflow", applicationId],
@@ -654,20 +851,64 @@ const verifyOtpAndCreateMutation = useMutation({
     return true;
   };
 
-  const saveNewDraftMutation = useMutation({
+
+
+const saveContactPersonsForApplication = async (targetApplicationId) => {
+  if (!targetApplicationId) return;
+
+  const payload = buildContactPersonsPayload(targetApplicationId);
+
+  for (const contact of payload) {
+    const finalPayload = {
+      applicationId: Number(targetApplicationId),
+      name: contact.name,
+      mobile: contact.mobile,
+      email: contact.email,
+      designation: contact.designation,
+      relationship: contact.relationship,
+    };
+
+    if (!finalPayload.name || !finalPayload.mobile) {
+      continue;
+    }
+
+    if (contact.id) {
+      await rmApi.updateContactPerson(contact.id, finalPayload);
+    } else {
+      await rmApi.createContactPerson(finalPayload);
+    }
+  }
+};
+
+
+
+ // =========================================================================
+  // UPDATE 1: saveNewDraftMutation
+  // =========================================================================
+ const saveNewDraftMutation = useMutation({
     mutationFn: () => {
-      // If OTP already created an application, update that created one.
       if (createdApplicationId != null) {
         return rmApi.updateApplication(createdApplicationId, buildPayload(true));
       }
-
-      // Otherwise, create initial draft via POST /applications/draft.
       return rmApi.saveDraft(buildPayload(false));
     },
     onSuccess: async (response) => {
       const result = unwrapResponse(response);
       const created = result?.data ?? result;
       const newApplicationId = created?.id || created?.applicationId || created?.application?.id;
+
+      // --- FIXED INTEGRATION ROW ---
+   const targetId = newApplicationId || createdApplicationId || applicationId;
+
+if (targetId) {
+  try {
+    await rmApi.saveCoApplicantsBulk(targetId, buildCoApplicantsPayload());
+    await saveContactPersonsForApplication(targetId);
+  } catch (err) {
+    console.error("Co-applicant/contact person synchronization failed during creation:", err);
+  }
+}
+      // --- END FIXED INTEGRATION ---
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["rm-applications"] }),
@@ -688,13 +929,36 @@ const verifyOtpAndCreateMutation = useMutation({
     },
   });
 
-  const updateDraftMutation = useMutation({
+  // =========================================================================
+  // UPDATE 2: updateDraftMutation
+  // =========================================================================
+ const updateDraftMutation = useMutation({
     mutationFn: () =>
       rmApi.updateApplication(
         createdApplicationId ?? applicationId,
         buildPayload(true),
       ),
-    onSuccess: async () => {
+    onSuccess: async (response) => {
+      const result = unwrapResponse(response);
+      const created = result?.data ?? result;
+
+      // --- FIXED INTEGRATION ROW ---
+      const targetId =
+  created?.id ||
+  created?.applicationId ||
+  createdApplicationId ||
+  applicationId;
+
+if (targetId) {
+  try {
+    await rmApi.saveCoApplicantsBulk(targetId, buildCoApplicantsPayload());
+    await saveContactPersonsForApplication(targetId);
+  } catch (err) {
+    console.error("Co-applicant/contact person synchronization failed during update:", err);
+  }
+}
+      // --- END FIXED INTEGRATION ---
+
       const idToInvalidate = createdApplicationId ?? applicationId;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["application", idToInvalidate] }),
@@ -718,6 +982,17 @@ const verifyOtpAndCreateMutation = useMutation({
       ),
     onSuccess: async () => {
       const idToInvalidate = createdApplicationId ?? applicationId;
+
+      // Save co-applicants + contact persons on final submit as well
+      try {
+        if (idToInvalidate) {
+          await rmApi.saveCoApplicantsBulk(idToInvalidate, buildCoApplicantsPayload());
+          await saveContactPersonsForApplication(idToInvalidate);
+        }
+      } catch (err) {
+        console.error("Co-applicant/contact person sync failed during submitDraft:", err);
+      }
+
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["rm-applications"] }),
         queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] }),
@@ -1016,54 +1291,54 @@ const verifyOtpAndCreateMutation = useMutation({
     },
   });
 
-const verifyEmailOtpMutation = useMutation({
-  mutationFn: (payload) => rmApi.verifyEmailOtp(payload),
+  const verifyEmailOtpMutation = useMutation({
+    mutationFn: (payload) => rmApi.verifyEmailOtp(payload),
 
-  onSuccess: async (response) => {
-    const result = unwrapResponse(response);
-    const data = result?.data ?? result;
+    onSuccess: async (response) => {
+      const result = unwrapResponse(response);
+      const data = result?.data ?? result;
 
-    const idToInvalidate =
-      data?.applicationId ??
-      createdApplicationId ??
-      applicationId;
+      const idToInvalidate =
+        data?.applicationId ??
+        createdApplicationId ??
+        applicationId;
 
-    setEmailOtpVerified(true);
-    setEmailOtpSent(false);
-    setEmailOtpError("");
-    setEmailOtpCode(Array(6).fill(""));
+      setEmailOtpVerified(true);
+      setEmailOtpSent(false);
+      setEmailOtpError("");
+      setEmailOtpCode(Array(6).fill(""));
 
-    setEmailOtpModal((previous) => ({
-      ...previous,
-      open: false,
-    }));
+      setEmailOtpModal((previous) => ({
+        ...previous,
+        open: false,
+      }));
 
-    if (data?.applicationNumber) {
-      setApplicationNumber(data.applicationNumber);
-    }
+      if (data?.applicationNumber) {
+        setApplicationNumber(data.applicationNumber);
+      }
 
-    await invalidateVerificationQueries(idToInvalidate);
+      await invalidateVerificationQueries(idToInvalidate);
 
-    setMessageType("success");
-    setMessage(
-      result?.message ||
+      setMessageType("success");
+      setMessage(
+        result?.message ||
         "Email verified successfully.",
-    );
-  },
+      );
+    },
 
-  onError: (error) => {
-    const message =
-      error?.response?.data?.message ||
-      error?.message ||
-      "Email OTP verification failed.";
+    onError: (error) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Email OTP verification failed.";
 
-    setEmailOtpError(
-      Array.isArray(message)
-        ? message.join(", ")
-        : message,
-    );
-  },
-});
+      setEmailOtpError(
+        Array.isArray(message)
+          ? message.join(", ")
+          : message,
+      );
+    },
+  });
 
   const handleVerifyEmailOtp = () => {
     const email = String(
@@ -1687,8 +1962,8 @@ const verifyEmailOtpMutation = useMutation({
                 onClick={handleSendOtp}
                 disabled={otpVerified || sendOtpMutation.isPending}
                 className={`rounded-lg px-4 text-xs font-bold shadow-xs transition-all border ${otpVerified
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-700 cursor-not-allowed"
-                    : "bg-slate-900 border-slate-900 text-white hover:bg-slate-800"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700 cursor-not-allowed"
+                  : "bg-slate-900 border-slate-900 text-white hover:bg-slate-800"
                   }`}
               >
                 {otpVerified
@@ -1724,8 +1999,8 @@ const verifyEmailOtpMutation = useMutation({
                 required
                 disabled={emailOtpVerified}
                 className={`flex-1 rounded-lg border px-3.5 py-2 text-sm shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${emailOtpVerified
-                    ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500"
-                    : "border-slate-300 bg-white text-slate-900"
+                  ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500"
+                  : "border-slate-300 bg-white text-slate-900"
                   }`}
               />
 
@@ -1734,8 +2009,8 @@ const verifyEmailOtpMutation = useMutation({
                 onClick={handleSendEmailOtp}
                 disabled={emailOtpVerified || sendEmailOtpMutation.isPending}
                 className={`rounded-lg border px-4 text-xs font-bold shadow-xs transition-all ${emailOtpVerified
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 cursor-not-allowed"
-                    : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 cursor-not-allowed"
+                  : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   }`}
               >
                 {emailOtpVerified
@@ -1784,8 +2059,8 @@ const verifyEmailOtpMutation = useMutation({
                 placeholder="ABCDE1234F"
                 disabled={panVerified}
                 className={`flex-1 rounded-lg border px-3.5 py-2 text-sm uppercase shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${panVerified
-                    ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-slate-300 bg-white text-slate-900"
+                  ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-slate-300 bg-white text-slate-900"
                   }`}
               />
 
@@ -1795,8 +2070,8 @@ const verifyEmailOtpMutation = useMutation({
                   onClick={handleVerifyPan}
                   disabled={panVerified || verifyPanMutation.isPending}
                   className={`rounded-lg border px-4 text-xs font-bold shadow-xs transition-all ${panVerified
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                     }`}
                 >
                   {panVerified
@@ -1902,67 +2177,265 @@ const verifyEmailOtpMutation = useMutation({
           />
         </Section>
 
-        <Section title="Loan & Underwriting Metrics Requirement">
-          <Field
-            label="Verified Monthly Income"
-            name="monthlyIncome"
-            type="number"
-            min="0"
-            value={formData.monthlyIncome}
-            onChange={handleInputChange}
-          />
+        {/* Co-Applicants Multi-Card Management Workspace */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3 mt-4">
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                Co-Applicant Details
+              </h4>
+              <p className="text-xs text-slate-500">
+                Add up to 3 joint/co-signing applicants to distribute collateral risk parameters.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddCoApplicant}
+              disabled={coApplicants.length >= 3}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Add Co-Applicant
+            </button>
+          </div>
 
-          <Field
-            label="Existing Monthly Obligations"
-            name="monthlyObligations"
-            type="number"
-            min="0"
-            value={formData.monthlyObligations}
-            onChange={handleInputChange}
-          />
+          {coApplicants.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
+              No co-applicants added. Click the button above to add financial profile verification cards.
+            </div>
+          ) : (
+            coApplicants.map((coApp, index) => (
+              <div key={index} className="relative group">
+                <Section title={`Co-Applicant Details ${index + 1}`}>
+                  <Field
+                    label="Co-Applicant Name *"
+                    name="name"
+                    value={coApp.name}
+                    onChange={(e) => handleCoApplicantChange(index, e)}
+                    placeholder="Enter full legal name"
+                    required
+                  />
 
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Mobile Number *
+                    </label>
+                    <input
+                      name="mobile"
+                      value={coApp.mobile}
+                      onChange={(e) => handleCoApplicantChange(index, e)}
+                      maxLength={10}
+                      inputMode="numeric"
+                      placeholder="Enter 10-digit mobile"
+                      required
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <Field
+                    label="Email Id"
+                    type="email"
+                    name="email"
+                    value={coApp.email}
+                    onChange={(e) => handleCoApplicantChange(index, e)}
+                    placeholder="name@domain.com"
+                  />
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-700">
+                      PAN Number
+                    </label>
+                    <input
+                      name="panNumber"
+                      value={coApp.panNumber}
+                      onChange={(e) => handleCoApplicantChange(index, e)}
+                      maxLength={10}
+                      placeholder="ABCDE1234F"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm uppercase text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Aadhaar / OVD Number
+                    </label>
+                    <input
+                      name="aadhaarNumber"
+                      value={coApp.aadhaarNumber}
+                      onChange={(e) => handleCoApplicantChange(index, e)}
+                      maxLength={12}
+                      inputMode="numeric"
+                      placeholder="0000 0000 0000"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <Field label="Relationship Matrix *">
+                    <select
+                      name="relationship"
+                      value={coApp.relationship}
+                      onChange={(e) => handleCoApplicantChange(index, e)}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="SPOUSE">Spouse</option>
+                      <option value="FATHER">Father</option>
+                      <option value="MOTHER">Mother</option>
+                      <option value="SON">Son</option>
+                      <option value="SIBLING">Sibling</option>
+                    </select>
+                  </Field>
+
+                  <Field label="Occupation Type">
+                    <select
+                      name="occupation"
+                      value={coApp.occupation}
+                      onChange={(e) => handleCoApplicantChange(index, e)}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="SELF_EMPLOYED">Self-employed</option>
+                      <option value="SALARIED">Salaried Sector</option>
+                      <option value="BUSINESS">Corporate Business</option>
+                      <option value="PROFESSIONAL">Licensed Professional</option>
+                    </select>
+                  </Field>
+
+                  <Field
+                    label="Verified Monthly Income"
+                    name="monthlyIncome"
+                    type="number"
+                    min="0"
+                    value={coApp.monthlyIncome}
+                    onChange={(e) => handleCoApplicantChange(index, e)}
+                    placeholder="e.g. 50000"
+                  />
+
+                  {/* Action Row containing structural removal handlers */}
+                  <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-2">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCoApplicant(index)}
+                      className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Remove CoApplicant: {index + 1}
+                    </button>
+                  </div>
+                </Section>
+              </div>
+            ))
+          )}
+        </div>
+
+{/* Contact Persons Multi-Card Management Workspace */}
+<div className="space-y-6">
+  <div className="flex items-center justify-between border-b border-slate-200 pb-3 mt-4">
+    <div>
+      <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
+        Reference / Contact Persons
+      </h4>
+      <p className="text-xs text-slate-500">
+        Add primary organizational or personal references associated with this account lead.
+      </p>
+    </div>
+    <button
+      type="button"
+      onClick={handleAddContactPerson}
+      className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
+    >
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+      </svg>
+      Add Contact Person
+    </button>
+  </div>
+
+  {contactPersons.length === 0 ? (
+    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
+      No contact persons added. Click the button above to add verification reference lines.
+    </div>
+  ) : (
+    contactPersons.map((contact, index) => (
+      <div key={index} className="relative group">
+        <Section title={`Contact Person Reference ${index + 1}`}>
           <Field
-            label="Requested Loan Amount *"
-            name="requestedAmount"
-            type="number"
-            min="0"
-            value={formData.requestedAmount}
-            onChange={handleInputChange}
+            label="Full Name *"
+            name="name"
+            value={contact.name}
+            onChange={(e) => handleContactPersonChange(index, e)}
+            placeholder="Enter contact name"
             required
           />
 
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-700">
+              Mobile Number *
+            </label>
+            <input
+              name="mobile"
+              value={contact.mobile}
+              onChange={(e) => handleContactPersonChange(index, e)}
+              maxLength={10}
+              inputMode="numeric"
+              placeholder="Enter 10-digit mobile"
+              required
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
           <Field
-            label="Requested Tenure (Months)"
-            name="requestedTenure"
-            type="number"
-            min="1"
-            value={formData.requestedTenure}
-            onChange={handleInputChange}
+            label="Email Id"
+            type="email"
+            name="email"
+            value={contact.email}
+            onChange={(e) => handleContactPersonChange(index, e)}
+            placeholder="contact@domain.com"
           />
 
-          {/* Indicators Box customized layout matching image values cleanly */}
-          <div className="grid grid-cols-3 gap-4 bg-slate-900 rounded-xl border border-slate-950 p-4 md:col-span-2 shadow-inner text-white">
-            <div className="flex flex-col justify-center px-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Indicative EMI</span>
-              <span className="mt-1 text-sm md:text-base font-extrabold text-blue-400 tracking-tight">
-                {formatCurrency(calculated.emi)}
-              </span>
-            </div>
-            <div className="flex flex-col justify-center border-x border-slate-800 px-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">FOIR Ratio</span>
-              <span className={`mt-1 text-sm md:text-base font-extrabold tracking-tight ${calculated.foir > 50 ? "text-amber-400" : "text-emerald-400"}`}>
-                {calculated.foir.toFixed(2)}%
-              </span>
-            </div>
-            <div className="flex flex-col justify-center px-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Indicative LTV</span>
-              <span className="mt-1 text-sm md:text-base font-extrabold text-slate-100 tracking-tight">
-                {calculated.ltv.toFixed(2)}%
-              </span>
-            </div>
+          <Field
+            label="Designation / Role"
+            name="designation"
+            value={contact.designation}
+            onChange={(e) => handleContactPersonChange(index, e)}
+            placeholder="e.g. Manager, Director, Partner"
+          />
+
+          <Field label="Relationship Matrix *">
+            <select
+              name="relationship"
+              value={contact.relationship}
+              onChange={(e) => handleContactPersonChange(index, e)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="BUSINESS_ASSOCIATE">Business Associate</option>
+              <option value="EMPLOYEE">Employee</option>
+              <option value="COLLEAGUE">Colleague</option>
+              <option value="FRIEND">Friend</option>
+              <option value="RELATIVE">Relative</option>
+            </select>
+          </Field>
+
+          {/* Action Row containing layout removal button */}
+          <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-1">
+            <button
+              type="button"
+              onClick={() => handleRemoveContactPerson(index)}
+              className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Remove Reference
+            </button>
           </div>
         </Section>
-
+      </div>
+    ))
+  )}
+</div>
         <Section title="Collateral Property Information">
           <Field label="Property Category">
             <select
@@ -2029,6 +2502,69 @@ const verifyEmailOtpMutation = useMutation({
             inputMode="numeric"
           />
         </Section>
+
+
+        <Section title="Loan & Underwriting Metrics Requirement">
+          <Field
+            label="Verified Monthly Income"
+            name="monthlyIncome"
+            type="number"
+            min="0"
+            value={formData.monthlyIncome}
+            onChange={handleInputChange}
+          />
+
+          <Field
+            label="Existing Monthly Obligations"
+            name="monthlyObligations"
+            type="number"
+            min="0"
+            value={formData.monthlyObligations}
+            onChange={handleInputChange}
+          />
+
+          <Field
+            label="Requested Loan Amount *"
+            name="requestedAmount"
+            type="number"
+            min="0"
+            value={formData.requestedAmount}
+            onChange={handleInputChange}
+            required
+          />
+
+          <Field
+            label="Requested Tenure (Months)"
+            name="requestedTenure"
+            type="number"
+            min="1"
+            value={formData.requestedTenure}
+            onChange={handleInputChange}
+          />
+
+          {/* Indicators Box customized layout matching image values cleanly */}
+          <div className="grid grid-cols-3 gap-4 bg-slate-900 rounded-xl border border-slate-950 p-4 md:col-span-2 shadow-inner text-white">
+            <div className="flex flex-col justify-center px-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Indicative EMI</span>
+              <span className="mt-1 text-sm md:text-base font-extrabold text-blue-400 tracking-tight">
+                {formatCurrency(calculated.emi)}
+              </span>
+            </div>
+            <div className="flex flex-col justify-center border-x border-slate-800 px-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">FOIR Ratio</span>
+              <span className={`mt-1 text-sm md:text-base font-extrabold tracking-tight ${calculated.foir > 50 ? "text-amber-400" : "text-emerald-400"}`}>
+                {calculated.foir.toFixed(2)}%
+              </span>
+            </div>
+            <div className="flex flex-col justify-center px-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Indicative LTV</span>
+              <span className="mt-1 text-sm md:text-base font-extrabold text-slate-100 tracking-tight">
+                {calculated.ltv.toFixed(2)}%
+              </span>
+            </div>
+          </div>
+        </Section>
+
       </div>
     </div>
   );

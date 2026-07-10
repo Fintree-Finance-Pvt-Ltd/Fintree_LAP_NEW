@@ -39,8 +39,8 @@ export default function PaymentManagement() {
   const selectedId = applicationId || "";
 
   const [linkLoading, setLinkLoading] = useState(false);
-const [pageError, setPageError] = useState("");
-const [pageSuccess, setPageSuccess] = useState("");
+  const [pageError, setPageError] = useState("");
+  const [pageSuccess, setPageSuccess] = useState("");
 
   const applicationListQuery = useQuery({
     queryKey: ["payment-management-application-list"],
@@ -119,25 +119,25 @@ const [pageSuccess, setPageSuccess] = useState("");
     return result;
   }, [charges]);
 
-const scheduleStatus = String(
-  schedulePayload?.scheduleStatus ||
+  const scheduleStatus = String(
+    schedulePayload?.scheduleStatus ||
     charges?.[0]?.scheduleStatus ||
     "draft",
-).toLowerCase();
+  ).toLowerCase();
 
-const activeCharges = charges.filter((charge) => getOutstanding(charge) > 0);
+  const activeCharges = charges.filter((charge) => getOutstanding(charge) > 0);
 
-const paidTransactions = charges.filter(
-  (charge) => numberValue(charge.paidAmount) > 0,
-);
+  const paidTransactions = charges.filter(
+    (charge) => numberValue(charge.paidAmount) > 0,
+  );
 
-const isScheduleApproved = scheduleStatus === "approved";
+  const isScheduleApproved = scheduleStatus === "approved";
 
-const canCreatePaymentLink =
-  Boolean(applicationId) &&
-  isScheduleApproved &&
-  activeCharges.length > 0 &&
-  !linkLoading;
+  const canCreatePaymentLink =
+    Boolean(applicationId) &&
+    isScheduleApproved &&
+    activeCharges.length > 0 &&
+    !linkLoading;
 
   const steps = [
     { id: 1, title: "Approved charge demand" },
@@ -242,85 +242,84 @@ const canCreatePaymentLink =
     navigate(`/charges-receipts/${applicationId}`);
   };
 
-const createPaymentLink = async () => {
-  if (!applicationId) {
-    setPageError("Please select customer application first.");
-    return;
-  }
+  const createPaymentLink = async () => {
+    if (!applicationId) {
+      setPageError("Please select customer application first.");
+      return;
+    }
 
-  if (!isScheduleApproved) {
-    setPageError(
-      "Charge schedule is not approved. Payment link can be sent only after Checker Approval.",
-    );
-    return;
-  }
+    if (!isScheduleApproved) {
+      setPageError(
+        "Charge schedule is not approved. Payment link can be sent only after Checker Approval.",
+      );
+      return;
+    }
 
-  if (!activeCharges.length) {
-    setPageError("No pending charge demand found for this application.");
-    return;
-  }
+    if (!activeCharges.length) {
+      setPageError("No pending charge demand found for this application.");
+      return;
+    }
 
-  try {
-    setLinkLoading(true);
-    setPageError("");
-    setPageSuccess("");
+    try {
+      setLinkLoading(true);
+      setPageError("");
+      setPageSuccess("");
 
-    const response = await rmApi.createEasebuzzPaymentLink(applicationId);
-    const data = unwrapResponse(response);
+      const response = await rmApi.createEasebuzzPaymentLink(applicationId);
+      const data = unwrapResponse(response);
 
-    setPageSuccess(
-      data?.paymentLink
-        ? `Payment link created successfully: ${data.paymentLink}`
-        : "Payment link created and sent successfully.",
-    );
+      setPageSuccess(
+        data?.paymentLink
+          ? `Payment link created successfully: ${data.paymentLink}`
+          : "Payment link created and sent successfully.",
+      );
 
-    await chargeScheduleQuery.refetch();
-  } catch (error) {
-    setPageError(
-      error?.response?.data?.message ||
+      await chargeScheduleQuery.refetch();
+    } catch (error) {
+      setPageError(
+        error?.response?.data?.message ||
         error?.message ||
         "Unable to create payment link.",
-    );
-  } finally {
-    setLinkLoading(false);
-  }
-};
+      );
+    } finally {
+      setLinkLoading(false);
+    }
+  };
 
   return (
     <div className="p-8 space-y-6 bg-[#f8fafc] min-h-screen text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
 
       {pageError && (
-  <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
-    {pageError}
-  </div>
-)}
+        <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
+          {pageError}
+        </div>
+      )}
 
-{pageSuccess && (
-  <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700">
-    {pageSuccess}
-  </div>
-)}
+      {pageSuccess && (
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700">
+          {pageSuccess}
+        </div>
+      )}
 
-<div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
-  <div>
-    <div className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-      Charge Schedule Status
-    </div>
-    <div className="mt-1 text-sm font-bold capitalize text-slate-800">
-      {scheduleStatus}
-    </div>
-  </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
+        <div>
+          <div className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+            Charge Schedule Status
+          </div>
+          <div className="mt-1 text-sm font-bold capitalize text-slate-800">
+            {scheduleStatus}
+          </div>
+        </div>
 
-  <span
-    className={`rounded-full border px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider ${
-      isScheduleApproved
-        ? "border-emerald-100 bg-emerald-50 text-emerald-600"
-        : "border-amber-100 bg-amber-50 text-amber-600"
-    }`}
-  >
-    {isScheduleApproved ? "Ready for Payment Link" : "Approval Pending"}
-  </span>
-</div>
+        <span
+          className={`rounded-full border px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider ${isScheduleApproved
+              ? "border-emerald-100 bg-emerald-50 text-emerald-600"
+              : "border-amber-100 bg-amber-50 text-amber-600"
+            }`}
+        >
+          {isScheduleApproved ? "Ready for Payment Link" : "Approval Pending"}
+        </span>
+      </div>
       {/* Header Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2575fc] via-[#1a4cb0] to-[#6a11cb] p-8 text-white shadow-xl shadow-blue-900/10">
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
@@ -369,24 +368,14 @@ const createPaymentLink = async () => {
                 Export CSV
               </button>
 
-              {/* <button
-  type="button"
-  onClick={createPaymentLink}
-  disabled={!canCreatePaymentLink}
-  className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-extrabold text-rose-600 shadow-md transition-all hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
->
-  <FaPlus size={10} />
-  {linkLoading ? "Creating Link..." : "Create & Send Payment Link"}
-</button> */}
-
-     <button
-            type="button"
-            onClick={openChargeMaster}
-            disabled={!applicationId}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-lg bg-pink-50 px-4 py-2 text-xs font-semibold text-pink-600 ring-1 ring-inset ring-pink-200/60 transition-all hover:bg-pink-100 hover:text-pink-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
-          >
-            Open Charge Master
-          </button>
+              <button
+                type="button"
+                onClick={openChargeMaster}
+                disabled={!applicationId}
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-lg bg-pink-50 px-4 py-2 text-xs font-semibold text-pink-600 ring-1 ring-inset ring-pink-200/60 transition-all hover:bg-pink-100 hover:text-pink-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+              >
+                Open Charge Master
+              </button>
             </div>
           </div>
         </div>
@@ -428,198 +417,95 @@ const createPaymentLink = async () => {
         ))}
       </div>
 
-      {/* Rule Ribbon */}
-      {/* <div className="rounded-xl border border-pink-100/60 bg-gradient-to-r from-pink-50 to-orange-50/30 p-4 text-xs font-medium leading-relaxed text-slate-600">
-        <span className="mr-1 font-bold uppercase tracking-wide text-pink-700">
-          Automatic update rule:
-        </span>
-        A valid signed gateway or virtual-account webhook creates the payment transaction,
-        allocates it to the selected charges, changes the link to PAID/PARTIALLY PAID,
-        marks charges as paid, generates the receipt, and adds the bank settlement to the
-        monitoring queue. Staff do not manually mark gateway payments as paid.
-      </div> */}
-
-  
-      {/* LAP Flow Smart Cards */}
-     {/* <div className="overflow-hidden rounded-2xl border-2 border-slate-200/80 bg-white shadow-sm"> */}
-        {/* Header Section */}
-        {/* <div className="flex flex-col gap-4 border-b border-slate-100 p-6 sm:flex-row sm:items-center sm:justify-between">
+      {/* Active Demand Links */}
+      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-100 p-6">
           <div>
-            <h3 className="text-base font-bold tracking-tight text-slate-900">
-              LAP Payment Collection Flow
+            <h3 className="text-sm font-extrabold tracking-wide text-[#0f2942]">
+              Customer payment links and demands
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Stage-wise fee collection points before legal, valuation, sanction, agreement, and disbursement.
+            <p className="mt-0.5 text-[11px] font-medium text-slate-400">
+              Each demand has item-level allocation, expiry, delivery evidence, payer activity and current outstanding amount.
             </p>
           </div>
 
-     
-        </div> */}
-
-        {/* Grid Section */}
-        {/* <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2 xl:grid-cols-3">
-          {lapFlowData.map((row) => (
-            <div
-              key={row.seq}
-              className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200/70 bg-white p-5 shadow-xs transition-all hover:border-pink-200 hover:shadow-md"
-            > */}
-              {/* Card Header */}
-              {/* <div>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-pink-50 text-xs font-bold text-pink-600 ring-1 ring-inset ring-pink-100">
-                      {row.seq}
-                    </span>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900">
-                        {row.stage}
-                      </h4>
-                    </div>
-                  </div>
-
-                  <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
-                    {row.owner}
-                  </span>
-                </div> */}
-
-                {/* Body Content */}
-                {/* <div className="mt-4 space-y-3.5"> */}
-                  {/* Charges */}
-                  {/* <div>
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                      Charges
-                    </span>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {String(row.charges)
-                        .split("\n")
-                        .map((charge) => charge.trim())
-                        .filter(Boolean)
-                        .map((charge) => (
-                          <span
-                            key={charge}
-                            className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-[11px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10"
-                          >
-                            {charge}
-                          </span>
-                        ))}
-                    </div>
-                  </div> */}
-
-                  {/* System Gate */}
-                  {/* <div className="rounded-lg border border-slate-100 bg-slate-50/50 p-3">
-                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                      System Gate
-                    </span>
-                    <p className="mt-1 text-xs font-normal leading-relaxed text-slate-600">
-                      {row.gate}
-                    </p>
-                  </div>
-                </div>
-              </div> */}
-
-              {/* Card Footer / Collection */}
-              {/* <div className="mt-4 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-inset ring-slate-200/50">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                  Collection
-                </span>
-                <span className="text-xs font-semibold text-slate-900">
-                  {row.preCollection}
-                </span>
-              </div>
-            </div>
-          ))}
+          <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+            {activeCharges.length} active
+          </span>
         </div>
-      </div> */}
 
-      {/* Active Demand Links */}
-<div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-  <div className="flex items-center justify-between border-b border-slate-100 p-6">
-    <div>
-      <h3 className="text-sm font-extrabold tracking-wide text-[#0f2942]">
-        Customer payment links and demands
-      </h3>
-      <p className="mt-0.5 text-[11px] font-medium text-slate-400">
-        Each demand has item-level allocation, expiry, delivery evidence, payer activity and current outstanding amount.
-      </p>
-    </div>
+        {chargeScheduleQuery.isLoading ? (
+          <div className="border-b border-slate-50 bg-slate-50/10 p-8 text-center text-xs font-medium text-slate-400">
+            Loading payment demands...
+          </div>
+        ) : activeCharges.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="p-4 pl-6">Charge</th>
+                  <th className="p-4">Total</th>
+                  <th className="p-4">Paid</th>
+                  <th className="p-4">Pending</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 pr-6 text-right">Action</th>
+                </tr>
+              </thead>
 
-    <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
-      {activeCharges.length} active
-    </span>
-  </div>
+              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
+                {activeCharges.map((charge) => (
+                  <tr key={charge.id} className="transition-colors hover:bg-slate-50/40">
+                    <td className="p-4 pl-6">
+                      <div className="font-bold text-slate-800">
+                        {charge.name}
+                      </div>
+                      <div className="mt-0.5 text-[10px] font-semibold text-slate-400">
+                        {charge.sub || "Charge demand"}
+                      </div>
+                    </td>
 
-  {chargeScheduleQuery.isLoading ? (
-    <div className="border-b border-slate-50 bg-slate-50/10 p-8 text-center text-xs font-medium text-slate-400">
-      Loading payment demands...
-    </div>
-  ) : activeCharges.length ? (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr className="border-b border-slate-100 bg-slate-50/60 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            <th className="p-4 pl-6">Charge</th>
-            <th className="p-4">Total</th>
-            <th className="p-4">Paid</th>
-            <th className="p-4">Pending</th>
-            <th className="p-4">Status</th>
-            <th className="p-4 pr-6 text-right">Action</th>
-          </tr>
-        </thead>
+                    <td className="p-4 font-semibold text-slate-700">
+                      {formatCurrency(charge.grossAmount)}
+                    </td>
 
-        <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
-          {activeCharges.map((charge) => (
-            <tr key={charge.id} className="transition-colors hover:bg-slate-50/40">
-              <td className="p-4 pl-6">
-                <div className="font-bold text-slate-800">
-                  {charge.name}
-                </div>
-                <div className="mt-0.5 text-[10px] font-semibold text-slate-400">
-                  {charge.sub || "Charge demand"}
-                </div>
-              </td>
+                    <td className="p-4 font-semibold text-emerald-600">
+                      {formatCurrency(charge.paidAmount)}
+                    </td>
 
-              <td className="p-4 font-semibold text-slate-700">
-                {formatCurrency(charge.grossAmount)}
-              </td>
+                    <td className="p-4 font-bold text-amber-600">
+                      {formatCurrency(getOutstanding(charge))}
+                    </td>
 
-              <td className="p-4 font-semibold text-emerald-600">
-                {formatCurrency(charge.paidAmount)}
-              </td>
+                    <td className="p-4">
+                      <span className="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-600">
+                        {charge.collectionStatus || "pending"}
+                      </span>
+                    </td>
 
-              <td className="p-4 font-bold text-amber-600">
-                {formatCurrency(getOutstanding(charge))}
-              </td>
-
-              <td className="p-4">
-                <span className="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-600">
-                  {charge.collectionStatus || "pending"}
-                </span>
-              </td>
-
-              <td className="p-4 pr-6">
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={createPaymentLink}
-                    disabled={!canCreatePaymentLink}
-                    className="flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-[10px] font-extrabold text-white shadow-md transition-all hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <FaPlus size={10} />
-                    {linkLoading ? "Creating..." : "Create & Send Link"}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  ) : (
-    <div className="border-b border-slate-50 bg-slate-50/10 p-8 text-center text-xs font-medium text-slate-400">
-      No payment demand exists. Create an approved payment link to begin collection.
-    </div>
-  )}
-</div>
+                    <td className="p-4 pr-6">
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={createPaymentLink}
+                          disabled={!canCreatePaymentLink}
+                          className="flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-[10px] font-extrabold text-white shadow-md transition-all hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <FaPlus size={10} />
+                          {linkLoading ? "Creating..." : "Create & Send Link"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="border-b border-slate-50 bg-slate-50/10 p-8 text-center text-xs font-medium text-slate-400">
+            No payment demand exists. Create an approved payment link to begin collection.
+          </div>
+        )}
+      </div>
       {/* Transactions Ledger */}
       <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 p-6">

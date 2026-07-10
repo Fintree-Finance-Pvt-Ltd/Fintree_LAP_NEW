@@ -161,14 +161,24 @@ export const rmApi = {
   deleteContactPerson: (id) =>
     apiClient.delete(`/contact-persons/${id}`),
 
+
   // =========================
   // CO-APPLICANTS
   // =========================
+  // Atomic synchronization workflow for multi-card UI layouts
+  saveCoApplicantsBulk: (applicationId, coApplicantsArray) =>
+    apiClient.post("/co-applicants/save-CoApplicants", {
+      applicationId: Number(applicationId),
+      coApplicants: coApplicantsArray,
+    }),
+
+  // Updated to match backend mapping: /co-applicants/application/:applicationId
+  getCoApplicants: (applicationId) =>
+    apiClient.get(`/co-applicants/application/${applicationId}`),
+
+  // Fallback endpoints for single row executions if needed
   createCoApplicant: (payload) =>
     apiClient.post("/co-applicants", payload),
-
-  getCoApplicants: (applicationId) =>
-    apiClient.get(`/co-applicants/${applicationId}`),
 
   updateCoApplicant: (id, payload) =>
     apiClient.put(`/co-applicants/${id}`, payload),
