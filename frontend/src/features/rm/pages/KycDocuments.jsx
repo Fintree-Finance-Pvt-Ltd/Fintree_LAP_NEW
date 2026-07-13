@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { FaCheckCircle, FaInfoCircle, FaShieldAlt } from "react-icons/fa";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { rmApi } from "../rmApi.js";
 import { requiredDocumentTypes } from "../rmUtils.js";
 
@@ -9,10 +9,12 @@ const documentLabels = {
   PAN: "PAN Card",
   AADHAAR: "Aadhaar / OVD",
   PHOTO: "Photograph",
-  BANK_STATEMENT: "Bank Statement",
+  BANK_STATEMENT: "Last 6 Months Bank Statement",
+  ITR: "ITR",
   PROPERTY_DOCUMENT: "Property Document",
   INCOME_PROOF: "Income Proof",
   OTHER: "Other Document",
+  CUSTOMER_CONSENT: "Customer Consent",
 
   // Customer residence visit photos
   CUSTOMER_RESIDENCE_FRONTAGE: "Customer Residence Frontage",
@@ -55,6 +57,7 @@ const documentLabels = {
 
 export default function KycDocuments() {
   const { applicationId: routeApplicationId } = useParams();
+  const navigate = useNavigate();
   const [applicationId, setApplicationId] = useState(routeApplicationId || "");
   const [uploadingType, setUploadingType] = useState("");
   const [message, setMessage] = useState("");
@@ -176,9 +179,21 @@ export default function KycDocuments() {
     () => new Set(uploadedDocuments.map((doc) => doc.documentType)),
     [uploadedDocuments]
   );
-  const verified = requiredDocumentTypes.filter((type) => uploadedTypes.has(type)).length;
-  const completion = Math.round((verified / requiredDocumentTypes.length) * 100);
+ const mandatoryDocumentTypes = requiredDocumentTypes.filter(
+  (type) => type !== "OTHER",
+);
 
+const verified = mandatoryDocumentTypes.filter((type) =>
+  uploadedTypes.has(type),
+).length;
+
+const completion = mandatoryDocumentTypes.length
+  ? Math.round((verified / mandatoryDocumentTypes.length) * 100)
+  : 0;
+
+const allRequiredDocumentsUploaded = mandatoryDocumentTypes.every((type) =>
+  uploadedTypes.has(type),
+);
   const metrics = [
     {
       title: "UPLOADED",
@@ -261,6 +276,44 @@ export default function KycDocuments() {
       setUploadingType("");
     },
   });
+
+const markDocumentsUploadedMutation = useMutation({
+  mutationFn: () =>
+    rmApi.recordWorkflowStep(selectedId, {
+      action: "DOCUMENTS_UPLOADED",
+      remarks: "All required KYC documents uploaded and verified by RM.",
+    }),
+
+  onSuccess: async () => {
+    setMessage("Documents uploaded workflow completed. Redirecting to charges and receipts...");
+
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["rm-workflow", selectedId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["rm-workflow-overview"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["rm-documents", selectedId],
+      }),
+    ]);
+
+    navigate(`/charges-receipts/${selectedId}`, {
+      replace: true,
+    });
+  },
+
+  onError: (error) => {
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Unable to mark documents as uploaded.";
+
+    setMessage(Array.isArray(errorMessage) ? errorMessage.join(", ") : errorMessage);
+  },
+});
+
 
   const handleAddDocument = () => {
     setAddDocumentError("");
@@ -538,14 +591,63 @@ export default function KycDocuments() {
           </div>
         </div>
         <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm xl:col-span-3">
-          <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-wide text-[#0f2942]">
-            <FaShieldAlt className="text-blue-600" /> Document security
-          </h3>
-          <div className="flex items-start gap-2 rounded-xl bg-blue-50 p-4 text-xs font-medium text-blue-800">
-            <FaInfoCircle className="mt-0.5 shrink-0" />
-            Uploaded files are stored through the backend document service with metadata, uploader and workflow linkage.
-          </div>
-        </div>
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-wide text-[#0f2942]">
+      <FaShieldAlt className="text-blue-600" />
+      Document security
+    </h3>
+
+    <span
+      className={`w-fit rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
+        allRequiredDocumentsUploaded
+          ? "bg-emerald-50 text-emerald-700"
+          : "bg-amber-50 text-amber-700"
+      }`}
+    >
+      {allRequiredDocumentsUploaded ? "Ready" : "Pending"}
+    </span>
+  </div>
+
+  <div className="flex items-start gap-2 rounded-xl bg-blue-50 p-4 text-xs font-medium text-blue-800">
+    <FaInfoCircle className="mt-0.5 shrink-0" />
+    Uploaded files are stored through the backend document service with metadata, uploader and workflow linkage.
+  </div>
+
+  <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+    <div className="flex items-center justify-between text-xs font-bold">
+      <span className="text-slate-500">Required documents</span>
+      <span className="text-slate-900">
+      {verified}/{mandatoryDocumentTypes.length}
+      </span>
+    </div>
+
+    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+      <div
+        className={`h-full rounded-full transition-all ${
+          allRequiredDocumentsUploaded ? "bg-emerald-500" : "bg-blue-600"
+        }`}
+        style={{ width: `${completion}%` }}
+      />
+    </div>
+  </div>
+
+  <button
+    type="button"
+    disabled={
+      !selectedId ||
+      !allRequiredDocumentsUploaded ||
+      markDocumentsUploadedMutation.isPending
+    }
+    onClick={() => markDocumentsUploadedMutation.mutate()}
+    className="w-full rounded-xl bg-[#0f2942] px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-[#173b5f] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+  >
+    {markDocumentsUploadedMutation.isPending
+      ? "Updating Workflow..."
+      : allRequiredDocumentsUploaded
+        ? "Proceed to Charges & Receipts"
+        : "Upload All Documents First"}
+  </button>
+</div>
       </div>
 
       {/* Add Document Modal Component */}

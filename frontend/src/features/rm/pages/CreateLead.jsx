@@ -18,10 +18,6 @@ const emptyForm = {
   aadhaarNumber: "",
   occupation: "SELF_EMPLOYED",
   businessName: "",
-  monthlyIncome: "",
-  monthlyObligations: "",
-  requestedAmount: "",
-  requestedTenure: "120",
   propertyCategory: "Residential",
   propertyType: PROPERTY_TYPE.Residential?.[0] || "Independent House",
   propertyValue: "",
@@ -398,28 +394,6 @@ const handleRemoveContactPerson = async (index) => {
         profile.businessName ||
         "",
 
-      monthlyIncome:
-        application.monthlyIncome ??
-        profile.monthlyIncome ??
-        "",
-
-      monthlyObligations:
-        application.monthlyObligations ??
-        profile.monthlyObligations ??
-        "",
-
-      requestedAmount:
-        application.requestedAmount ??
-        "",
-
-      requestedTenure:
-        String(
-          application.requestedTenure ||
-          application.tenure ||
-          profile.tenure ||
-          120
-        ),
-
       propertyCategory,
 
       propertyType,
@@ -739,29 +713,29 @@ if (!applicationId) {
     return buildWorkflowTimeline(response?.data ?? response ?? {});
   }, [workflowQuery.data]);
 
-  const calculated = useMemo(() => {
-    const income = Number(formData.monthlyIncome || 0);
-    const obligations = Number(formData.monthlyObligations || 0);
-    const requested = Number(formData.requestedAmount || 0);
-    const propertyValue = Number(formData.propertyValue || 0);
+  // const calculated = useMemo(() => {
+  //   const income = Number(formData.monthlyIncome || 0);
+  //   const obligations = Number(formData.monthlyObligations || 0);
+  //   const requested = Number(formData.requestedAmount || 0);
+  //   const propertyValue = Number(formData.propertyValue || 0);
 
-    const foir = income > 0 ? (obligations / income) * 100 : 0;
-    const ltv = propertyValue > 0 ? (requested / propertyValue) * 100 : 0;
+  //   const foir = income > 0 ? (obligations / income) * 100 : 0;
+  //   const ltv = propertyValue > 0 ? (requested / propertyValue) * 100 : 0;
 
-    const roi = 10.5;
-    const tenure = Number(formData.requestedTenure || 120);
-    const monthlyRate = roi / 12 / 100;
-    const power = Math.pow(1 + monthlyRate, tenure);
-    const emi = requested > 0 && tenure > 0 ? (requested * monthlyRate * power) / (power - 1) : 0;
+  //   const roi = 10.5;
+  //   const tenure = Number(formData.requestedTenure || 120);
+  //   const monthlyRate = roi / 12 / 100;
+  //   const power = Math.pow(1 + monthlyRate, tenure);
+  //   const emi = requested > 0 && tenure > 0 ? (requested * monthlyRate * power) / (power - 1) : 0;
 
-    return {
-      foir,
-      ltv,
-      roi,
-      tenure,
-      emi: Number.isFinite(emi) ? emi : 0,
-    };
-  }, [formData]);
+  //   return {
+  //     foir,
+  //     ltv,
+  //     roi,
+  //     tenure,
+  //     emi: Number.isFinite(emi) ? emi : 0,
+  //   };
+  // }, [formData]);
 
   const propertyTypeOptions = PROPERTY_TYPE[formData.propertyCategory] || [];
 
@@ -774,10 +748,6 @@ if (!applicationId) {
       aadhaarNumber: formData.aadhaarNumber.trim() || undefined,
       occupationType: formData.occupation,
       businessName: formData.businessName.trim() || undefined,
-      monthlyIncome: formData.monthlyIncome ? Number(formData.monthlyIncome) : undefined,
-      monthlyObligations: formData.monthlyObligations ? Number(formData.monthlyObligations) : undefined,
-      requestedAmount: formData.requestedAmount ? String(formData.requestedAmount) : undefined,
-      requestedTenure: formData.requestedTenure ? Number(formData.requestedTenure) : undefined,
       propertyCategory: formData.propertyCategory || undefined,
       propertyType: formData.propertyType ? `${formData.propertyCategory} - ${formData.propertyType}` : undefined,
       marketValue: formData.propertyValue ? Number(formData.propertyValue) : undefined,
@@ -785,10 +755,6 @@ if (!applicationId) {
       propertyCity: formData.city.trim() || undefined,
       propertyState: formData.state.trim() || undefined,
       propertyPincode: formData.pinCode.trim() || undefined,
-      foir: Number(calculated.foir.toFixed(2)),
-      emi: Number(calculated.emi.toFixed(2)),
-      roi: calculated.roi,
-      tenure: calculated.tenure,
     };
 
     if (isPatchUpdate) {
@@ -800,10 +766,6 @@ if (!applicationId) {
         "aadhaarNumber",
         "occupationType",
         "businessName",
-        "monthlyIncome",
-        "monthlyObligations",
-        "requestedAmount",
-        "requestedTenure",
         "propertyCategory",
         "propertyType",
         "marketValue",
@@ -811,10 +773,7 @@ if (!applicationId) {
         "propertyCity",
         "propertyState",
         "propertyPincode",
-        "foir",
-        "emi",
-        "roi",
-        "tenure",
+        
       ];
       const filteredPayload = {};
       allowedPatchFields.forEach((field) => {
@@ -833,9 +792,7 @@ if (!applicationId) {
     if (!/^[6-9]\d{9}$/.test(formData.mobileNumber.trim())) errors.push("Valid Mobile number is required");
     if (!formData.panNumber.trim()) errors.push("PAN Number is required");
     if (!formData.aadhaarNumber.trim()) errors.push("Aadhaar Number is required");
-    if (!formData.requestedAmount) errors.push("Requested Amount is required");
     if (!formData.occupation) errors.push("Occupation is required");
-    if (formData.monthlyIncome === "" || formData.monthlyIncome === undefined) errors.push("Monthly Income is required");
     if (!formData.propertyType?.trim()) errors.push("Property Type is required");
     if (!formData.propertyValue) errors.push("Property Value is required");
     if (!formData.propertyAddress.trim()) errors.push("Property Address is required");
@@ -2504,67 +2461,7 @@ if (targetId) {
         </Section>
 
 
-        <Section title="Loan & Underwriting Metrics Requirement">
-          <Field
-            label="Verified Monthly Income"
-            name="monthlyIncome"
-            type="number"
-            min="0"
-            value={formData.monthlyIncome}
-            onChange={handleInputChange}
-          />
-
-          <Field
-            label="Existing Monthly Obligations"
-            name="monthlyObligations"
-            type="number"
-            min="0"
-            value={formData.monthlyObligations}
-            onChange={handleInputChange}
-          />
-
-          <Field
-            label="Requested Loan Amount *"
-            name="requestedAmount"
-            type="number"
-            min="0"
-            value={formData.requestedAmount}
-            onChange={handleInputChange}
-            required
-          />
-
-          <Field
-            label="Requested Tenure (Months)"
-            name="requestedTenure"
-            type="number"
-            min="1"
-            value={formData.requestedTenure}
-            onChange={handleInputChange}
-          />
-
-          {/* Indicators Box customized layout matching image values cleanly */}
-          <div className="grid grid-cols-3 gap-4 bg-slate-900 rounded-xl border border-slate-950 p-4 md:col-span-2 shadow-inner text-white">
-            <div className="flex flex-col justify-center px-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Indicative EMI</span>
-              <span className="mt-1 text-sm md:text-base font-extrabold text-blue-400 tracking-tight">
-                {formatCurrency(calculated.emi)}
-              </span>
-            </div>
-            <div className="flex flex-col justify-center border-x border-slate-800 px-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">FOIR Ratio</span>
-              <span className={`mt-1 text-sm md:text-base font-extrabold tracking-tight ${calculated.foir > 50 ? "text-amber-400" : "text-emerald-400"}`}>
-                {calculated.foir.toFixed(2)}%
-              </span>
-            </div>
-            <div className="flex flex-col justify-center px-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Indicative LTV</span>
-              <span className="mt-1 text-sm md:text-base font-extrabold text-slate-100 tracking-tight">
-                {calculated.ltv.toFixed(2)}%
-              </span>
-            </div>
-          </div>
-        </Section>
-
+        
       </div>
     </div>
   );

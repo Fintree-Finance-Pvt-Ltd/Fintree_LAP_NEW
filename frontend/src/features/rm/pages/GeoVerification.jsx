@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { FaExternalLinkAlt } from "react-icons/fa";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useNavigate } from "react-router-dom";
 
 import { rmApi } from "../rmApi.js";
 // Import the new ordered config mapping
@@ -63,10 +63,29 @@ function GeoField({ label, value, placeholder = "—" }) {
   );
 }
 
+const isGeoVerified = (item) => {
+  return (
+    item?.status === "Verified" &&
+    item?.lat !== "" &&
+    item?.lng !== "" &&
+    Number.isFinite(Number(item?.lat)) &&
+    Number.isFinite(Number(item?.lng))
+  );
+};
+
+const isAllGeoVerified = (data) => {
+  return (
+    isGeoVerified(data.residence) &&
+    isGeoVerified(data.business) &&
+    isGeoVerified(data.property)
+  );
+};
+
+
 export default function GeoVerification() {
   const params = useParams();
   const applicationId = params.applicationId || params.id || params.appId;
-
+  const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
   const queryClient = useQueryClient();
@@ -134,36 +153,73 @@ export default function GeoVerification() {
   }, [geoLocationsQuery.data]);
 
   const saveGeoLocationMutation = useMutation({
-    mutationFn: ({ payload }) => rmApi.saveGeoLocation(applicationId, payload),
-    onSuccess: (response, variables) => {
+    mutationFn: ({ payload }) =>
+      rmApi.saveGeoLocation(applicationId, payload),
+
+    onSuccess: async (response, variables) => {
       const result = unwrapResponse(response);
       const saved = result?.data ?? result;
       const locationKey = variables.locationKey;
 
-      setGeoData((previous) => ({
-        ...previous,
+      const nextGeoData = {
+        ...geoData,
         [locationKey]: {
-          ...previous[locationKey],
+          ...geoData[locationKey],
           lat: saved?.latitude != null ? String(saved.latitude) : "",
           lng: saved?.longitude != null ? String(saved.longitude) : "",
           gpsAddress: saved?.gpsAddress || "",
-          accuracyMeters: saved?.accuracyMeters != null ? String(saved.accuracyMeters) : "",
+          accuracyMeters:
+            saved?.accuracyMeters != null
+              ? String(saved.accuracyMeters)
+              : "",
           capturedAt: saved?.capturedAt || new Date().toISOString(),
           status: "Verified",
         },
-      }));
+      };
+
+      setGeoData(nextGeoData);
 
       setMessageType("success");
       setMessage(result?.message || "Live location captured successfully.");
 
-      queryClient.invalidateQueries({ queryKey: ["application-geo-locations", applicationId] });
-      queryClient.invalidateQueries({ queryKey: ["rm-workflow-status", applicationId] });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["application-geo-locations", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["rm-workflow-status", applicationId],
+        }),
+      ]);
+
+      if (locationKey === "residence") {
+        setActiveTab("business");
+        return;
+      }
+
+      if (locationKey === "business") {
+        setActiveTab("property");
+        return;
+      }
+
+      if (locationKey === "property" && isAllGeoVerified(nextGeoData)) {
+        markGeoComplete.mutate();
+      }
     },
+
     onError: (error) => {
-      const errorMessage = error?.response?.data?.message || error?.message || "Unable to store live location.";
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to store live location.";
+
       setMessageType("error");
-      setMessage(Array.isArray(errorMessage) ? errorMessage.join(", ") : errorMessage);
+      setMessage(
+        Array.isArray(errorMessage)
+          ? errorMessage.join(", ")
+          : errorMessage,
+      );
     },
+
     onSettled: () => setCapturingLocationType(""),
   });
 
@@ -171,17 +227,40 @@ export default function GeoVerification() {
     mutationFn: async () =>
       rmApi.recordWorkflowStep(applicationId, {
         action: "GEO_VERIFICATION_DONE",
-        remarks: "Geo verification completed",
+        remarks:
+          "Residence, business and property geo verification completed.",
       }),
+
     onSuccess: async () => {
       setMessageType("success");
-      setMessage("Geo verification workflow step recorded.");
-      await queryClient.invalidateQueries({ queryKey: ["rm-workflow-status", applicationId] });
+      setMessage("Geo verification completed. Redirecting to KYC documents...");
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["rm-workflow-status", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application-geo-locations", applicationId],
+        }),
+      ]);
+
+      navigate(`/kyc-documents/${applicationId}`, {
+        replace: true,
+      });
     },
+
     onError: (error) => {
-      const errorMessage = error?.response?.data?.message || error?.message || "Unable to update workflow state.";
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to complete geo verification.";
+
       setMessageType("error");
-      setMessage(Array.isArray(errorMessage) ? errorMessage.join(", ") : errorMessage);
+      setMessage(
+        Array.isArray(errorMessage)
+          ? errorMessage.join(", ")
+          : errorMessage,
+      );
     },
   });
 
@@ -240,7 +319,7 @@ export default function GeoVerification() {
   const processedSteps = workflowStepsConfig.map((step, idx) => {
     const isCompleted = !!apiWorkflowFlags[step.key];
     let isActive = false;
-    
+
     if (!isCompleted && !contextActiveFound) {
       isActive = true;
       contextActiveFound = true;
@@ -254,7 +333,7 @@ export default function GeoVerification() {
 
   return (
     <div className="min-h-screen space-y-6 bg-[#f8fafc] p-4 text-slate-800 antialiased md:p-8">
-      
+
       {/* PREMIUM HEADER BANNER */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1e3a8a] via-[#2563eb] to-[#3b82f6] p-8 text-white shadow-xl shadow-blue-900/10">
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
@@ -274,13 +353,20 @@ export default function GeoVerification() {
             >
               {capturingLocationType === activeTab ? "Capturing..." : `Capture ${currentTabLabel}`}
             </button>
+
             <button
               type="button"
-              disabled={!applicationId || markGeoComplete.isPending}
+              disabled={
+                !applicationId ||
+                markGeoComplete.isPending ||
+                !isAllGeoVerified(geoData)
+              }
               onClick={() => markGeoComplete.mutate()}
               className="rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-emerald-600 disabled:opacity-50"
             >
-              {markGeoComplete.isPending ? "Saving..." : "Save Verification"}
+              {markGeoComplete.isPending
+                ? "Redirecting..."
+                : "Proceed to KYC Documents"}
             </button>
           </div>
         </div>
@@ -308,17 +394,16 @@ export default function GeoVerification() {
         <div className="relative flex items-center justify-between gap-2 overflow-x-auto pb-4 pt-2 scrollbar-none">
           {processedSteps.map((step, idx) => (
             <div key={step.key} className="flex flex-1 items-center min-w-[125px]">
-              
+
               {/* Step Node */}
               <div className="flex flex-1 flex-col items-center text-center group">
-                <div 
-                  className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 z-10 border ${
-                    step.isCompleted 
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 z-10 border ${step.isCompleted
                       ? "bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100"
-                      : step.isActive 
-                        ? "bg-blue-600 border-blue-600 text-white ring-4 ring-blue-50 font-black" 
+                      : step.isActive
+                        ? "bg-blue-600 border-blue-600 text-white ring-4 ring-blue-50 font-black"
                         : "bg-slate-50 border-slate-200 text-slate-400"
-                  }`}
+                    }`}
                 >
                   {step.isCompleted ? (
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -328,15 +413,14 @@ export default function GeoVerification() {
                     <span>{idx + 1}</span>
                   )}
                 </div>
-                
-                <span 
-                  className={`mt-2.5 text-[11px] font-bold tracking-tight transition-colors truncate max-w-[115px] ${
-                    step.isCompleted 
-                      ? "text-emerald-600" 
-                      : step.isActive 
-                        ? "text-blue-600 font-extrabold" 
+
+                <span
+                  className={`mt-2.5 text-[11px] font-bold tracking-tight transition-colors truncate max-w-[115px] ${step.isCompleted
+                      ? "text-emerald-600"
+                      : step.isActive
+                        ? "text-blue-600 font-extrabold"
                         : "text-slate-400 font-medium"
-                  }`}
+                    }`}
                 >
                   {step.label}
                 </span>
@@ -345,14 +429,13 @@ export default function GeoVerification() {
               {/* Connecting Pipeline Track Bar */}
               {idx < processedSteps.length - 1 && (
                 <div className="mx-2 mt-[-20px] h-[3px] flex-1 min-w-[30px] rounded-full bg-slate-100">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      step.isCompleted 
-                        ? "w-full bg-emerald-500" 
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${step.isCompleted
+                        ? "w-full bg-emerald-500"
                         : step.isActive && processedSteps[idx + 1]?.isCompleted
                           ? "w-full bg-blue-600"
                           : "w-0"
-                    }`} 
+                      }`}
                   />
                 </div>
               )}
@@ -363,9 +446,8 @@ export default function GeoVerification() {
 
       {/* MESSAGES & NOTIFICATIONS */}
       {message && (
-        <div className={`rounded-xl border p-4 text-sm font-semibold ${
-          messageType === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-rose-100 bg-rose-50 text-rose-800"
-        }`}>
+        <div className={`rounded-xl border p-4 text-sm font-semibold ${messageType === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-rose-100 bg-rose-50 text-rose-800"
+          }`}>
           {message}
         </div>
       )}
@@ -383,9 +465,8 @@ export default function GeoVerification() {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`relative flex items-center gap-2 whitespace-nowrap rounded-t-xl px-5 py-3 text-xs font-extrabold uppercase tracking-wide transition-all ${
-                    isActive ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-800"
-                  }`}
+                  className={`relative flex items-center gap-2 whitespace-nowrap rounded-t-xl px-5 py-3 text-xs font-extrabold uppercase tracking-wide transition-all ${isActive ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                    }`}
                 >
                   {tab.label}
                   <span className={`h-1.5 w-1.5 rounded-full ${isVerified ? "bg-emerald-500" : "bg-slate-300"}`} />
@@ -402,9 +483,8 @@ export default function GeoVerification() {
               <h3 className="text-base font-extrabold text-slate-800">{currentTabLabel} Details</h3>
               <p className="mt-0.5 text-xs text-slate-400">Capture the system geolocation coordinates for verification checks.</p>
             </div>
-            <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
-              selectedGeoData.status === "Verified" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
-            }`}>
+            <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${selectedGeoData.status === "Verified" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+              }`}>
               {selectedGeoData.status}
             </span>
           </div>

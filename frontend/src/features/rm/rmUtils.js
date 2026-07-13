@@ -9,8 +9,10 @@ export const requiredDocumentTypes = [
   "AADHAAR",
   "PHOTO",
   "BANK_STATEMENT",
+  "ITR",
   "PROPERTY_DOCUMENT",
   "INCOME_PROOF",
+  "CUSTOMER_CONSENT",
 ];
 
 export const workflowSteps = [
