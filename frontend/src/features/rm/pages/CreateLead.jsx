@@ -120,9 +120,111 @@ export default function CreateLead() {
   const queryClient = useQueryClient();
   const location = useLocation();
 
+  const [customerPhotoFile, setCustomerPhotoFile] = useState(null);
+  const [customerPhotoPreview, setCustomerPhotoPreview] = useState("");
+
+  const [createdApplicationId, setCreatedApplicationId] = useState(null);
+
+  const photoApplicationId = createdApplicationId ?? applicationId;
+
+  const applicantDocumentsQuery = useQuery({
+    queryKey: ["rm-documents", photoApplicationId],
+    queryFn: () => rmApi.documents(photoApplicationId),
+    enabled: Boolean(photoApplicationId),
+    retry: false,
+  });
+
+  const uploadedDocuments = useMemo(() => {
+    const payload =
+      applicantDocumentsQuery.data?.data?.data ??
+      applicantDocumentsQuery.data?.data ??
+      applicantDocumentsQuery.data ??
+      [];
+
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    if (Array.isArray(payload?.documents)) {
+      return payload.documents;
+    }
+
+    return [];
+  }, [applicantDocumentsQuery.data]);
+
+  const customerPhotoDocument = useMemo(() => {
+    return uploadedDocuments.find((doc) => {
+      const documentName = String(
+        doc.documentName ||
+        doc.document_name ||
+        "",
+      )
+        .trim()
+        .toLowerCase();
+
+      return documentName === "customer photo";
+    });
+  }, [uploadedDocuments]);
+
+  const getDocumentImageUrl = (document) => {
+    if (!document) return "";
+
+    const directUrl =
+      document.fileUrl ||
+      document.documentUrl ||
+      document.url;
+
+    if (directUrl) {
+      return directUrl;
+    }
+
+    const rawPath =
+      document.filePath ||
+      document.file_path ||
+      document.fileName ||
+      document.file_name ||
+      "";
+
+    if (!rawPath) {
+      return "";
+    }
+
+    const normalizedPath = String(rawPath).replace(/\\/g, "/");
+
+    if (normalizedPath.startsWith("http")) {
+      return normalizedPath;
+    }
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+    let uploadBaseUrl = "";
+
+    try {
+      uploadBaseUrl = apiBaseUrl ? new URL(apiBaseUrl).origin : "";
+    } catch {
+      uploadBaseUrl = "";
+    }
+
+    if (!uploadBaseUrl) {
+      uploadBaseUrl = "http://localhost:9000";
+    }
+
+    const uploadsIndex = normalizedPath.toLowerCase().indexOf("uploads/");
+
+    if (uploadsIndex >= 0) {
+      return `${uploadBaseUrl}/${normalizedPath.slice(uploadsIndex)}`;
+    }
+
+    return `${uploadBaseUrl}/uploads/documents/${normalizedPath.replace(/^\/+/, "")}`;
+  };
+
+  const customerPhotoUrl = getDocumentImageUrl(customerPhotoDocument);
+
+  const isCustomerPhotoUploaded = Boolean(customerPhotoDocument);
+
+
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [createdApplicationId, setCreatedApplicationId] = useState(null);
+
   const [applicationNumber, setApplicationNumber] = useState("");
   const [formData, setFormData] = useState(
     location?.state?.formData ? { ...emptyForm, ...location.state.formData } : emptyForm,
@@ -174,8 +276,87 @@ export default function CreateLead() {
   });
 
 
-  
 
+  const uploadCustomerPhotoMutation = useMutation({
+    mutationFn: async () => {
+      const targetApplicationId = createdApplicationId ?? applicationId;
+
+      if (!targetApplicationId) {
+        throw new Error("Please save draft before uploading customer photo.");
+      }
+
+      if (!customerPhotoFile) {
+        throw new Error("Please select customer photo.");
+      }
+
+      const payload = new FormData();
+
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "PHOTO");
+      payload.append("documentName", "Customer Photo");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", customerPhotoFile);
+
+      return rmApi.uploadDocument(payload);
+    },
+
+    onSuccess: async () => {
+      setMessageType("success");
+      setMessage("Customer photo uploaded successfully.");
+
+      setCustomerPhotoFile(null);
+      setCustomerPhotoPreview("");
+
+      await Promise.all([
+   queryClient.invalidateQueries({
+  queryKey: ["rm-documents", photoApplicationId],
+}),
+        queryClient.invalidateQueries({
+          queryKey: ["application", createdApplicationId ?? applicationId],
+        }),
+      ]);
+    },
+
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to upload customer photo.",
+      );
+    },
+  });
+
+  const handleCustomerPhotoChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setCustomerPhotoFile(null);
+      setCustomerPhotoPreview("");
+      return;
+    }
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+
+    if (!allowedTypes.includes(file.type)) {
+      setMessageType("error");
+      setMessage("Only JPG and PNG customer photos are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const maximumFileSize = 5 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Customer photo size must not exceed 5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setCustomerPhotoFile(file);
+    setCustomerPhotoPreview(URL.createObjectURL(file));
+  };
 
   const [coApplicants, setCoApplicants] = useState([]);
 
@@ -216,6 +397,7 @@ export default function CreateLead() {
 
   const [contactPersons, setContactPersons] = useState([]);
 
+
   const buildCoApplicantsPayload = () => {
     return coApplicants.map((coApp) => ({
       name: coApp.name.trim(),
@@ -229,73 +411,73 @@ export default function CreateLead() {
     }));
   };
 
-// Handler to update specific fields inside a specific contact person's index
-const handleContactPersonChange = (index, event) => {
-  const { name, value } = event.target;
-  setContactPersons((prev) =>
-    prev.map((contact, idx) =>
-      idx === index ? { ...contact, [name]: value } : contact
-    )
-  );
-};
+  // Handler to update specific fields inside a specific contact person's index
+  const handleContactPersonChange = (index, event) => {
+    const { name, value } = event.target;
+    setContactPersons((prev) =>
+      prev.map((contact, idx) =>
+        idx === index ? { ...contact, [name]: value } : contact
+      )
+    );
+  };
 
-const buildContactPersonsPayload = (targetApplicationId) => {
-  return contactPersons
-    .filter((contact) => {
-      return (
-        String(contact.name || "").trim() ||
-        String(contact.mobile || "").trim() ||
-        String(contact.email || "").trim() ||
-        String(contact.designation || "").trim()
-      );
-    })
-    .map((contact) => ({
-      id: contact.id || null,
-      applicationId: Number(targetApplicationId),
-      name: String(contact.name || "").trim(),
-      mobile: String(contact.mobile || "").trim(),
-      email: String(contact.email || "").trim() || undefined,
-      designation: String(contact.designation || "").trim() || undefined,
-      relationship: contact.relationship || "BUSINESS_ASSOCIATE",
-    }));
-};
+  const buildContactPersonsPayload = (targetApplicationId) => {
+    return contactPersons
+      .filter((contact) => {
+        return (
+          String(contact.name || "").trim() ||
+          String(contact.mobile || "").trim() ||
+          String(contact.email || "").trim() ||
+          String(contact.designation || "").trim()
+        );
+      })
+      .map((contact) => ({
+        id: contact.id || null,
+        applicationId: Number(targetApplicationId),
+        name: String(contact.name || "").trim(),
+        mobile: String(contact.mobile || "").trim(),
+        email: String(contact.email || "").trim() || undefined,
+        designation: String(contact.designation || "").trim() || undefined,
+        relationship: contact.relationship || "BUSINESS_ASSOCIATE",
+      }));
+  };
 
 
-// Append a new empty contact person structure to the array
-const handleAddContactPerson = () => {
-  setContactPersons((prev) => [
-    ...prev,
-    {
-      id: null,
-      name: "",
-      mobile: "",
-      email: "",
-      designation: "",
-      relationship: "BUSINESS_ASSOCIATE",
-    },
-  ]);
-};
+  // Append a new empty contact person structure to the array
+  const handleAddContactPerson = () => {
+    setContactPersons((prev) => [
+      ...prev,
+      {
+        id: null,
+        name: "",
+        mobile: "",
+        email: "",
+        designation: "",
+        relationship: "BUSINESS_ASSOCIATE",
+      },
+    ]);
+  };
 
-// Remove a specific contact person card by index
-const handleRemoveContactPerson = async (index) => {
-  const contact = contactPersons[index];
+  // Remove a specific contact person card by index
+  const handleRemoveContactPerson = async (index) => {
+    const contact = contactPersons[index];
 
-  if (contact?.id) {
-    try {
-      await rmApi.deleteContactPerson(contact.id);
-    } catch (error) {
-      setMessageType("error");
-      setMessage(
-        error?.response?.data?.message ||
+    if (contact?.id) {
+      try {
+        await rmApi.deleteContactPerson(contact.id);
+      } catch (error) {
+        setMessageType("error");
+        setMessage(
+          error?.response?.data?.message ||
           error?.message ||
           "Unable to delete contact person.",
-      );
-      return;
+        );
+        return;
+      }
     }
-  }
 
-  setContactPersons((prev) => prev.filter((_, idx) => idx !== index));
-};
+    setContactPersons((prev) => prev.filter((_, idx) => idx !== index));
+  };
 
 
 
@@ -508,68 +690,68 @@ const handleRemoveContactPerson = async (index) => {
     customerProfileQuery.data,
   ]);
 
- // Automatically load co-applicants from the DB for existing leads
-useEffect(() => {
-  if (!applicationId) return;
+  // Automatically load co-applicants from the DB for existing leads
+  useEffect(() => {
+    if (!applicationId) return;
 
-  const fetchExistingCoApplicants = async () => {
-    try {
-      const response = await rmApi.getCoApplicants(applicationId);
-      const result = unwrapResponse(response);
-      const rows = result?.data ?? result ?? [];
+    const fetchExistingCoApplicants = async () => {
+      try {
+        const response = await rmApi.getCoApplicants(applicationId);
+        const result = unwrapResponse(response);
+        const rows = result?.data ?? result ?? [];
 
-      if (Array.isArray(rows) && rows.length > 0) {
-        setCoApplicants(
-          rows.map((row) => ({
-            name: row.name || "",
-            mobile: row.mobile || "",
-            email: row.email || "",
-            panNumber: row.panNumber || row.pan_number || "",
-            aadhaarNumber: row.aadhaarNumber || row.aadhaar_number || "",
-            relationship: row.relationship || "SPOUSE",
-            occupation: row.occupation || "SELF_EMPLOYED",
-            monthlyIncome: row.monthlyIncome ? String(row.monthlyIncome) : "",
-          }))
-        );
+        if (Array.isArray(rows) && rows.length > 0) {
+          setCoApplicants(
+            rows.map((row) => ({
+              name: row.name || "",
+              mobile: row.mobile || "",
+              email: row.email || "",
+              panNumber: row.panNumber || row.pan_number || "",
+              aadhaarNumber: row.aadhaarNumber || row.aadhaar_number || "",
+              relationship: row.relationship || "SPOUSE",
+              occupation: row.occupation || "SELF_EMPLOYED",
+              monthlyIncome: row.monthlyIncome ? String(row.monthlyIncome) : "",
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to recover co-applicant dataset tracking lines:", error);
       }
-    } catch (error) {
-      console.error("Failed to recover co-applicant dataset tracking lines:", error);
-    }
-  };
+    };
 
-  fetchExistingCoApplicants();
-}, [applicationId]);
+    fetchExistingCoApplicants();
+  }, [applicationId]);
 
-// Contact Persons Automatically load contact persons from the existing leads
+  // Contact Persons Automatically load contact persons from the existing leads
 
-useEffect(() => {
-  if (!applicationId) return;
+  useEffect(() => {
+    if (!applicationId) return;
 
-  const fetchExistingContactPersons = async () => {
-    try {
-      const response = await rmApi.getContactPersons(applicationId);
-      const result = unwrapResponse(response);
-      const rows = result?.data ?? result ?? [];
+    const fetchExistingContactPersons = async () => {
+      try {
+        const response = await rmApi.getContactPersons(applicationId);
+        const result = unwrapResponse(response);
+        const rows = result?.data ?? result ?? [];
 
-      if (Array.isArray(rows)) {
-        setContactPersons(
-          rows.map((row) => ({
-            id: row.id,
-            name: row.name || "",
-            mobile: row.mobile || "",
-            email: row.email || "",
-            designation: row.designation || "",
-            relationship: row.relationship || "BUSINESS_ASSOCIATE",
-          })),
-        );
+        if (Array.isArray(rows)) {
+          setContactPersons(
+            rows.map((row) => ({
+              id: row.id,
+              name: row.name || "",
+              mobile: row.mobile || "",
+              email: row.email || "",
+              designation: row.designation || "",
+              relationship: row.relationship || "BUSINESS_ASSOCIATE",
+            })),
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load contact persons:", error);
       }
-    } catch (error) {
-      console.error("Failed to load contact persons:", error);
-    }
-  };
+    };
 
-  fetchExistingContactPersons();
-}, [applicationId]);
+    fetchExistingContactPersons();
+  }, [applicationId]);
 
 
 
@@ -681,7 +863,7 @@ useEffect(() => {
         setMessageType("success");
         setMessage("✓ Mobile verified successfully.");
 
-if (!applicationId) {
+        if (!applicationId) {
           // Stay on the same CreateLead page by re-loading it with the newly created applicationId
           navigate(`/create-lead/${newId}`, {
             replace: true,
@@ -773,7 +955,7 @@ if (!applicationId) {
         "propertyCity",
         "propertyState",
         "propertyPincode",
-        
+
       ];
       const filteredPayload = {};
       allowedPatchFields.forEach((field) => {
@@ -810,39 +992,39 @@ if (!applicationId) {
 
 
 
-const saveContactPersonsForApplication = async (targetApplicationId) => {
-  if (!targetApplicationId) return;
+  const saveContactPersonsForApplication = async (targetApplicationId) => {
+    if (!targetApplicationId) return;
 
-  const payload = buildContactPersonsPayload(targetApplicationId);
+    const payload = buildContactPersonsPayload(targetApplicationId);
 
-  for (const contact of payload) {
-    const finalPayload = {
-      applicationId: Number(targetApplicationId),
-      name: contact.name,
-      mobile: contact.mobile,
-      email: contact.email,
-      designation: contact.designation,
-      relationship: contact.relationship,
-    };
+    for (const contact of payload) {
+      const finalPayload = {
+        applicationId: Number(targetApplicationId),
+        name: contact.name,
+        mobile: contact.mobile,
+        email: contact.email,
+        designation: contact.designation,
+        relationship: contact.relationship,
+      };
 
-    if (!finalPayload.name || !finalPayload.mobile) {
-      continue;
+      if (!finalPayload.name || !finalPayload.mobile) {
+        continue;
+      }
+
+      if (contact.id) {
+        await rmApi.updateContactPerson(contact.id, finalPayload);
+      } else {
+        await rmApi.createContactPerson(finalPayload);
+      }
     }
-
-    if (contact.id) {
-      await rmApi.updateContactPerson(contact.id, finalPayload);
-    } else {
-      await rmApi.createContactPerson(finalPayload);
-    }
-  }
-};
+  };
 
 
 
- // =========================================================================
+  // =========================================================================
   // UPDATE 1: saveNewDraftMutation
   // =========================================================================
- const saveNewDraftMutation = useMutation({
+  const saveNewDraftMutation = useMutation({
     mutationFn: () => {
       if (createdApplicationId != null) {
         return rmApi.updateApplication(createdApplicationId, buildPayload(true));
@@ -855,16 +1037,16 @@ const saveContactPersonsForApplication = async (targetApplicationId) => {
       const newApplicationId = created?.id || created?.applicationId || created?.application?.id;
 
       // --- FIXED INTEGRATION ROW ---
-   const targetId = newApplicationId || createdApplicationId || applicationId;
+      const targetId = newApplicationId || createdApplicationId || applicationId;
 
-if (targetId) {
-  try {
-    await rmApi.saveCoApplicantsBulk(targetId, buildCoApplicantsPayload());
-    await saveContactPersonsForApplication(targetId);
-  } catch (err) {
-    console.error("Co-applicant/contact person synchronization failed during creation:", err);
-  }
-}
+      if (targetId) {
+        try {
+          await rmApi.saveCoApplicantsBulk(targetId, buildCoApplicantsPayload());
+          await saveContactPersonsForApplication(targetId);
+        } catch (err) {
+          console.error("Co-applicant/contact person synchronization failed during creation:", err);
+        }
+      }
       // --- END FIXED INTEGRATION ---
 
       await Promise.all([
@@ -889,7 +1071,7 @@ if (targetId) {
   // =========================================================================
   // UPDATE 2: updateDraftMutation
   // =========================================================================
- const updateDraftMutation = useMutation({
+  const updateDraftMutation = useMutation({
     mutationFn: () =>
       rmApi.updateApplication(
         createdApplicationId ?? applicationId,
@@ -901,19 +1083,19 @@ if (targetId) {
 
       // --- FIXED INTEGRATION ROW ---
       const targetId =
-  created?.id ||
-  created?.applicationId ||
-  createdApplicationId ||
-  applicationId;
+        created?.id ||
+        created?.applicationId ||
+        createdApplicationId ||
+        applicationId;
 
-if (targetId) {
-  try {
-    await rmApi.saveCoApplicantsBulk(targetId, buildCoApplicantsPayload());
-    await saveContactPersonsForApplication(targetId);
-  } catch (err) {
-    console.error("Co-applicant/contact person synchronization failed during update:", err);
-  }
-}
+      if (targetId) {
+        try {
+          await rmApi.saveCoApplicantsBulk(targetId, buildCoApplicantsPayload());
+          await saveContactPersonsForApplication(targetId);
+        } catch (err) {
+          console.error("Co-applicant/contact person synchronization failed during update:", err);
+        }
+      }
       // --- END FIXED INTEGRATION ---
 
       const idToInvalidate = createdApplicationId ?? applicationId;
@@ -2132,6 +2314,82 @@ if (targetId) {
             value={formData.businessName}
             onChange={handleInputChange}
           />
+
+
+          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  {customerPhotoPreview || customerPhotoUrl ? (
+                    <img
+                      src={customerPhotoPreview || customerPhotoUrl}
+                      alt="Applicant"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-slate-400">
+                      No Photo
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-800">
+                    Applicant Photo
+                  </h4>
+
+                  <div className="mt-2">
+                    {isCustomerPhotoUploaded ? (
+                      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">
+                        Uploaded
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-700">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:min-w-[220px]">
+                <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50">
+                  {customerPhotoFile ? "Change Photo" : "Select Photo"}
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={handleCustomerPhotoChange}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  disabled={
+                    !customerPhotoFile ||
+                    uploadCustomerPhotoMutation.isPending ||
+                    !(createdApplicationId ?? applicationId)
+                  }
+                  onClick={() => uploadCustomerPhotoMutation.mutate()}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                >
+                  {uploadCustomerPhotoMutation.isPending
+                    ? "Uploading..."
+                    : !(createdApplicationId ?? applicationId)
+                      ? "Save Draft First"
+                      : isCustomerPhotoUploaded
+                        ? "Replace Customer Photo"
+                        : "Upload Customer Photo"}
+                </button>
+              </div>
+            </div>
+
+            {customerPhotoFile && (
+              <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                Selected: {customerPhotoFile.name}
+              </div>
+            )}
+          </div>
         </Section>
 
         {/* Co-Applicants Multi-Card Management Workspace */}
@@ -2287,112 +2545,112 @@ if (targetId) {
           )}
         </div>
 
-{/* Contact Persons Multi-Card Management Workspace */}
-<div className="space-y-6">
-  <div className="flex items-center justify-between border-b border-slate-200 pb-3 mt-4">
-    <div>
-      <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
-        Reference / Contact Persons
-      </h4>
-      <p className="text-xs text-slate-500">
-        Add primary organizational or personal references associated with this account lead.
-      </p>
-    </div>
-    <button
-      type="button"
-      onClick={handleAddContactPerson}
-      className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
-    >
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-      </svg>
-      Add Contact Person
-    </button>
-  </div>
-
-  {contactPersons.length === 0 ? (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
-      No contact persons added. Click the button above to add verification reference lines.
-    </div>
-  ) : (
-    contactPersons.map((contact, index) => (
-      <div key={index} className="relative group">
-        <Section title={`Contact Person Reference ${index + 1}`}>
-          <Field
-            label="Full Name *"
-            name="name"
-            value={contact.name}
-            onChange={(e) => handleContactPersonChange(index, e)}
-            placeholder="Enter contact name"
-            required
-          />
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-700">
-              Mobile Number *
-            </label>
-            <input
-              name="mobile"
-              value={contact.mobile}
-              onChange={(e) => handleContactPersonChange(index, e)}
-              maxLength={10}
-              inputMode="numeric"
-              placeholder="Enter 10-digit mobile"
-              required
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
-
-          <Field
-            label="Email Id"
-            type="email"
-            name="email"
-            value={contact.email}
-            onChange={(e) => handleContactPersonChange(index, e)}
-            placeholder="contact@domain.com"
-          />
-
-          <Field
-            label="Designation / Role"
-            name="designation"
-            value={contact.designation}
-            onChange={(e) => handleContactPersonChange(index, e)}
-            placeholder="e.g. Manager, Director, Partner"
-          />
-
-          <Field label="Relationship Matrix *">
-            <select
-              name="relationship"
-              value={contact.relationship}
-              onChange={(e) => handleContactPersonChange(index, e)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="BUSINESS_ASSOCIATE">Business Associate</option>
-              <option value="EMPLOYEE">Employee</option>
-              <option value="COLLEAGUE">Colleague</option>
-              <option value="FRIEND">Friend</option>
-              <option value="RELATIVE">Relative</option>
-            </select>
-          </Field>
-
-          {/* Action Row containing layout removal button */}
-          <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-1">
+        {/* Contact Persons Multi-Card Management Workspace */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3 mt-4">
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                Reference / Contact Persons
+              </h4>
+              <p className="text-xs text-slate-500">
+                Add primary organizational or personal references associated with this account lead.
+              </p>
+            </div>
             <button
               type="button"
-              onClick={() => handleRemoveContactPerson(index)}
-              className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
+              onClick={handleAddContactPerson}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
             >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
               </svg>
-              Remove Reference
+              Add Contact Person
             </button>
           </div>
-        </Section>
-      </div>
-    ))
-  )}
-</div>
+
+          {contactPersons.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
+              No contact persons added. Click the button above to add verification reference lines.
+            </div>
+          ) : (
+            contactPersons.map((contact, index) => (
+              <div key={index} className="relative group">
+                <Section title={`Contact Person Reference ${index + 1}`}>
+                  <Field
+                    label="Full Name *"
+                    name="name"
+                    value={contact.name}
+                    onChange={(e) => handleContactPersonChange(index, e)}
+                    placeholder="Enter contact name"
+                    required
+                  />
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Mobile Number *
+                    </label>
+                    <input
+                      name="mobile"
+                      value={contact.mobile}
+                      onChange={(e) => handleContactPersonChange(index, e)}
+                      maxLength={10}
+                      inputMode="numeric"
+                      placeholder="Enter 10-digit mobile"
+                      required
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <Field
+                    label="Email Id"
+                    type="email"
+                    name="email"
+                    value={contact.email}
+                    onChange={(e) => handleContactPersonChange(index, e)}
+                    placeholder="contact@domain.com"
+                  />
+
+                  <Field
+                    label="Designation / Role"
+                    name="designation"
+                    value={contact.designation}
+                    onChange={(e) => handleContactPersonChange(index, e)}
+                    placeholder="e.g. Manager, Director, Partner"
+                  />
+
+                  <Field label="Relationship Matrix *">
+                    <select
+                      name="relationship"
+                      value={contact.relationship}
+                      onChange={(e) => handleContactPersonChange(index, e)}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="BUSINESS_ASSOCIATE">Business Associate</option>
+                      <option value="EMPLOYEE">Employee</option>
+                      <option value="COLLEAGUE">Colleague</option>
+                      <option value="FRIEND">Friend</option>
+                      <option value="RELATIVE">Relative</option>
+                    </select>
+                  </Field>
+
+                  {/* Action Row containing layout removal button */}
+                  <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-1">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveContactPerson(index)}
+                      className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Remove Reference
+                    </button>
+                  </div>
+                </Section>
+              </div>
+            ))
+          )}
+        </div>
         <Section title="Collateral Property Information">
           <Field label="Property Category">
             <select
@@ -2461,7 +2719,7 @@ if (targetId) {
         </Section>
 
 
-        
+
       </div>
     </div>
   );

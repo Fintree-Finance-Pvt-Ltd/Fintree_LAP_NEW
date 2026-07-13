@@ -11,36 +11,36 @@ import { ApplicationsService } from './applications.service';
 export class ApplicationsController {
   constructor(private readonly service: ApplicationsService) {}
 
-  @Get() @Permissions(PERMISSIONS.APPLICATION_READ)
+  @Get() 
   findAll(@Query() query: any) { return this.service.findAll(query); }
 
-  @Get('search') @Permissions(PERMISSIONS.APPLICATION_READ)
+  @Get('search') 
   search(@Query('q') q = '') { return this.service.search(q); }
 
-  @Get('paginated') @Permissions(PERMISSIONS.APPLICATION_READ)
+  @Get('paginated') 
   paginated(@Query() query: any) { return this.service.findAll(query); }
 
-  @Post() @Permissions(PERMISSIONS.APPLICATION_CREATE)
+  @Post() 
   create(@Body() dto: any, @CurrentUser() user: Actor) { return this.service.create(dto, user); }
 
   // 1. ENDPOINT: POST /applications/draft
   // Used to initialize a brand new lead in the database table with partial data
-  @Post('draft') @Permissions(PERMISSIONS.APPLICATION_CREATE)
+  @Post('draft') 
   draft(@Body() dto: any, @CurrentUser() user: Actor) { 
     return this.service.draft(dto, user); 
   }
 
-  @Post('submit') @Permissions(PERMISSIONS.APPLICATION_CREATE)
+  @Post('submit') 
   submit(@Body() dto: any, @CurrentUser() user: Actor) { return this.service.submit(dto, user); }
 
   // 2. ENDPOINT: POST /applications/submit-draft
   // Used to trigger final validation processing for workflow transitions
-  @Post('submit-draft') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
+  @Post('submit-draft') 
   submitDraft(@Body() dto: any, @CurrentUser() user: Actor) {
     return this.service.submitDraft(dto.applicationId, dto, user);
   }
 
-  @Get(':applicationId') @Permissions(PERMISSIONS.APPLICATION_READ)
+  @Get(':applicationId') 
   findOne(@Param('applicationId', ParseIntPipe) id: number) { return this.service.findOne(id); }
 
   // 3. ENDPOINT: PATCH /applications/:applicationId

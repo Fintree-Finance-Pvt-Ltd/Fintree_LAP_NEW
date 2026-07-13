@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
+
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
@@ -18,6 +21,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OtpModule } from './modules/otp/otp.module';
 
 import { BmModule } from './modules/bm/bm.module';
+import { ChargesReceiptsModule } from './modules/charges-receipts/charges-receipts.module';
 import { CoApplicantsModule } from './modules/co-applicants/co-applicants.module';
 import { ContactPersonsModule } from './modules/contact-persons/contact-persons.module';
 import { CustomerProfilesModule } from './modules/customer-profiles/customer-profiles.module';
@@ -31,7 +35,6 @@ import { UsersModule } from './modules/users/users.module';
 import { VarificationModule } from './modules/varification/varification.module';
 import { FieldVisitsModule } from './modules/visits/field-visits.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
-import { ChargesReceiptsModule } from './modules/charges-receipts/charges-receipts.module';
 
 @Module({
   imports: [
@@ -39,6 +42,16 @@ import { ChargesReceiptsModule } from './modules/charges-receipts/charges-receip
       isGlobal: true,
       load: [appConfig, authConfig, fileConfig],
       validate: validateEnvironment,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'), // Resolves to C:/Fintree_LAP_NEW/backend/uploads
+      serveRoot: '/uploads',
+      serveStaticOptions: {
+        setHeaders: (res) => {
+          res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+        },
+      },
     }),
     TypeOrmModule.forRootAsync({ useFactory: databaseConfig }),
     AuthModule,
@@ -57,7 +70,6 @@ import { ChargesReceiptsModule } from './modules/charges-receipts/charges-receip
     NotificationsModule,
     DashboardsModule,
     FieldVisitsModule,
-    UsersModule,
     GeoModule,
     VarificationModule,
     ChargesReceiptsModule,
@@ -71,4 +83,3 @@ import { ChargesReceiptsModule } from './modules/charges-receipts/charges-receip
   ],
 })
 export class AppModule {}
-

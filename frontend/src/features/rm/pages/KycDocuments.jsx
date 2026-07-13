@@ -175,10 +175,28 @@ export default function KycDocuments() {
   };
 
 
-  const uploadedTypes = useMemo(
-    () => new Set(uploadedDocuments.map((doc) => doc.documentType)),
-    [uploadedDocuments]
-  );
+const uploadedTypes = useMemo(() => {
+  const types = new Set();
+
+  uploadedDocuments.forEach((doc) => {
+    const documentType = String(doc.documentType || "").toUpperCase();
+    const documentName = String(doc.documentName || "").toLowerCase();
+
+    if (documentType) {
+      types.add(documentType);
+    }
+
+    if (
+      documentType === "PHOTO" ||
+      documentName === "customer photo" ||
+      documentName === "applicant photo"
+    ) {
+      types.add("PHOTO");
+    }
+  });
+
+  return types;
+}, [uploadedDocuments]);
  const mandatoryDocumentTypes = requiredDocumentTypes.filter(
   (type) => type !== "OTHER",
 );
