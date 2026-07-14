@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaCheckCircle, FaInfoCircle, FaShieldAlt } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router-dom";
 import { rmApi } from "../rmApi.js";
@@ -55,6 +55,14 @@ const documentLabels = {
   LAND_PLOT_APPROACH_ROAD: "Land / Plot Approach Road",
 };
 
+const unwrapResponse = (response) => {
+  if (response?.data !== undefined) {
+    return response.data;
+  }
+
+  return response ?? {};
+};
+
 export default function KycDocuments() {
   const { applicationId: routeApplicationId } = useParams();
   const navigate = useNavigate();
@@ -63,13 +71,89 @@ export default function KycDocuments() {
   const [message, setMessage] = useState("");
   const queryClient = useQueryClient();
 
-  const applications = useQuery({
-    queryKey: ["rm-applications-documents"],
-    queryFn: () => rmApi.applications({ page: 1, limit: 100 }),
-  });
+const applicationsQuery = useQuery({
+  queryKey: ["rm-applications-documents-pending"],
+  queryFn: async () => {
+    const applicationsResponse = await rmApi.applications({
+      page: 1,
+      limit: 100,
+    });
 
-  const applicationList = applications.data?.data?.data ?? applications.data?.data ?? [];
-  const selectedId = applicationId || routeApplicationId || applicationList?.[0]?.id || "";
+    const applicationsResult = unwrapResponse(applicationsResponse);
+
+    const rows =
+      applicationsResult?.data?.data ??
+      applicationsResult?.data ??
+      applicationsResult ??
+      [];
+
+    const applications = Array.isArray(rows) ? rows : [];
+
+    const applicationsWithWorkflow = await Promise.all(
+      applications.map(async (application) => {
+        try {
+          const workflowResponse = await rmApi.workflowStatus(application.id);
+          const workflowResult = unwrapResponse(workflowResponse);
+          const workflow = workflowResult?.data ?? workflowResult ?? {};
+
+          return {
+            ...application,
+            workflow,
+          };
+        } catch (error) {
+          console.error(
+            "Failed to fetch workflow for application:",
+            application.id,
+            error,
+          );
+
+          return null;
+        }
+      }),
+    );
+
+    return applicationsWithWorkflow.filter((application) => {
+      return (
+        application &&
+        application.workflow?.documentsUploaded === false
+      );
+    });
+  },
+});
+
+const applicationList = applicationsQuery.data ?? [];
+
+const rawSelectedId = applicationId || routeApplicationId || "";
+
+const selectedId = applicationList.some(
+  (item) => String(item.id) === String(rawSelectedId),
+)
+  ? String(rawSelectedId)
+  : applicationList?.[0]?.id
+    ? String(applicationList[0].id)
+    : "";
+
+useEffect(() => {
+  if (applicationsQuery.isLoading) {
+    return;
+  }
+
+  if (!selectedId) {
+    setApplicationId("");
+    return;
+  }
+
+  if (String(applicationId || "") !== String(selectedId)) {
+    setApplicationId(String(selectedId));
+  }
+}, [
+  applicationsQuery.isLoading,
+  selectedId,
+  applicationId,
+]);
+
+  // const applicationList = applications.data?.data?.data ?? applications.data?.data ?? [];
+  // const selectedId = applicationId || routeApplicationId || applicationList?.[0]?.id || "";
 
   const documentsQuery = useQuery({
     queryKey: ["rm-documents", selectedId],
@@ -77,59 +161,246 @@ export default function KycDocuments() {
     enabled: Boolean(selectedId),
   });
 
-  const fieldVisitDocumentsQuery = useQuery({
-    queryKey: ["field-visit-documents", selectedId],
-    queryFn: () => rmApi.getFieldVisitDocuments(selectedId),
-    enabled: Boolean(selectedId),
-  });
+  // const fieldVisitDocumentsQuery = useQuery({
+  //   queryKey: ["field-visit-documents", selectedId],
+  //   queryFn: () => rmApi.getFieldVisitDocuments(selectedId),
+  //   enabled: Boolean(selectedId),
+  // });
 
   const [showAddDocumentModal, setShowAddDocumentModal] = useState(false);
   const [newDocumentName, setNewDocumentName] = useState("");
   const [newDocumentFile, setNewDocumentFile] = useState(null);
   const [addDocumentError, setAddDocumentError] = useState("");
 
-  const uploadedDocuments = documentsQuery.data?.data?.data ?? documentsQuery.data?.data ?? [];
-  const fieldVisitDocumentPayload = fieldVisitDocumentsQuery.data?.data?.data ?? fieldVisitDocumentsQuery.data?.data ?? fieldVisitDocumentsQuery.data ?? {};
+const uploadedDocuments = useMemo(() => {
+  const payload =
+    documentsQuery.data?.data?.data ??
+    documentsQuery.data?.data ??
+    documentsQuery.data ??
+    [];
 
-  const fieldVisitDocuments = Array.isArray(fieldVisitDocumentPayload)
-    ? fieldVisitDocumentPayload
-    : (fieldVisitDocumentPayload?.documents ?? []);
+  const documents = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.documents)
+      ? payload.documents
+      : [];
 
-  const [viewingDocumentId, setViewingDocumentId] = useState(null);
+  return documents.filter(Boolean);
+}, [documentsQuery.data]);
 
-  const openBlobInNewTab = (blob) => {
-    const objectUrl = URL.createObjectURL(blob);
-    const openedWindow = window.open(objectUrl, "_blank", "noopener,noreferrer");
 
-    if (!openedWindow) {
-      setMessage("Please allow pop-ups to view the document.");
+const getUploadUrl = (document) => {
+  if (!document) return "";
+
+  const directUrl =
+    document.fileUrl ||
+    document.file_url ||
+    document.documentUrl ||
+    document.url;
+
+  if (directUrl) return directUrl;
+
+  const filePath =
+    document.filePath ||
+    document.file_path ||
+    "";
+
+  if (!filePath) return "";
+
+  if (String(filePath).startsWith("http")) {
+    return filePath;
+  }
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+  let uploadBaseUrl = "";
+
+  try {
+    uploadBaseUrl = apiBaseUrl ? new URL(apiBaseUrl).origin : "";
+  } catch {
+    uploadBaseUrl = "";
+  }
+
+  if (!uploadBaseUrl) {
+    uploadBaseUrl = "http://localhost:9000";
+  }
+
+  return `${uploadBaseUrl}/${String(filePath).replace(/^\/+/, "")}`;
+};
+
+const getDocumentType = (document) =>
+  String(
+    document?.documentType ||
+      document?.document_type ||
+      "",
+  )
+    .trim()
+    .toUpperCase();
+
+const getDocumentName = (document) =>
+  String(
+    document?.documentName ||
+      document?.document_name ||
+      "",
+  ).trim();
+
+const getFileName = (document) =>
+  String(
+    document?.fileName ||
+      document?.file_name ||
+      "",
+  ).trim();
+
+const getDocumentSource = (document) =>
+  String(
+    document?.documentSource ||
+      document?.document_source ||
+      "RM_PORTAL",
+  )
+    .trim()
+    .toUpperCase();
+
+const normalizeDocumentValue = (value) =>
+  String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/&/g, "AND")
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const getDocumentMatchKeys = (document) => {
+  const documentType = getDocumentType(document);
+  const documentName = normalizeDocumentValue(getDocumentName(document));
+
+  const keys = new Set();
+
+  if (documentType) {
+    keys.add(documentType);
+  }
+
+  if (documentName) {
+    keys.add(documentName);
+  }
+
+  if (
+    documentName === "PAN_CARD" ||
+    documentName.includes("PAN")
+  ) {
+    keys.add("PAN");
+  }
+
+  if (
+    documentName === "AADHAAR_OVD" ||
+    documentName.includes("AADHAAR") ||
+    documentName.includes("OVD")
+  ) {
+    keys.add("AADHAAR");
+  }
+
+  if (
+    documentName === "BANK_STATEMENT" ||
+    documentName.includes("BANK_STATEMENT")
+  ) {
+    keys.add("BANK_STATEMENT");
+  }
+
+  if (
+    documentName === "LAST_6_MONTHS_BANK_STATEMENT" ||
+    documentName.includes("6_MONTHS_BANK")
+  ) {
+    keys.add("BANK_STATEMENT");
+  }
+
+  if (
+    documentName === "ITR" ||
+    documentName.includes("ITR")
+  ) {
+    keys.add("ITR");
+  }
+
+  if (
+    documentName === "PROPERTY_DOCUMENT" ||
+    documentName.includes("PROPERTY_DOCUMENT")
+  ) {
+    keys.add("PROPERTY_DOCUMENT");
+  }
+
+  if (
+    documentName === "INCOME_PROOF" ||
+    documentName.includes("INCOME_PROOF")
+  ) {
+    keys.add("INCOME_PROOF");
+  }
+
+  if (
+    documentName === "CUSTOMER_PHOTO" ||
+    documentName === "APPLICANT_PHOTO" ||
+    documentName === "PHOTOGRAPH"
+  ) {
+    keys.add("PHOTO");
+  }
+
+  if (
+    documentName === "CUSTOMER_CONSENT" ||
+    documentName.includes("CUSTOMER_CONSENT")
+  ) {
+    keys.add("CUSTOMER_CONSENT");
+  }
+
+  if (
+    documentType === "OTHER" ||
+    documentName === "OTHER"
+  ) {
+    keys.add("OTHER");
+  }
+
+  return keys;
+};
+
+
+
+const isImageDocument = (document) => {
+  if (!document) return false;
+
+  const mimeType = String(
+    document?.mimeType ||
+      document?.mime_type ||
+      "",
+  ).toLowerCase();
+
+  const fileName = getFileName(document).toLowerCase();
+
+  return (
+    mimeType.startsWith("image/") ||
+    fileName.endsWith(".jpg") ||
+    fileName.endsWith(".jpeg") ||
+    fileName.endsWith(".png")
+  );
+};
+
+const getLatestDocumentByType = (type) => {
+  return uploadedDocuments.find((doc) => {
+    const keys = getDocumentMatchKeys(doc);
+    const source = getDocumentSource(doc);
+
+    // Important: applicant PHOTO should not be marked uploaded
+    // from field visit photos like BUSINESS_FRONTAGE / PROPERTY_FRONTAGE.
+    if (type === "PHOTO") {
+      const documentName = normalizeDocumentValue(getDocumentName(doc));
+
+      return (
+        source !== "FIELD_VISIT" &&
+        keys.has("PHOTO") &&
+        (
+          documentName === "CUSTOMER_PHOTO" ||
+          documentName === "APPLICANT_PHOTO" ||
+          documentName === "PHOTOGRAPH"
+        )
+      );
     }
 
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-  };
-
-  const getUploadUrl = (document) => {
-    const url = document.fileUrl || document.documentUrl || document.url;
-    if (url) return url;
-
-    const filePath = document.filePath;
-    if (!filePath) return "";
-
-    if (String(filePath).startsWith("http")) {
-      return filePath;
-    }
-
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
-    let uploadBaseUrl = "";
-
-    try {
-      uploadBaseUrl = apiBaseUrl ? new URL(apiBaseUrl).origin : "";
-    } catch {
-      uploadBaseUrl = "";
-    }
-
-    return `${uploadBaseUrl}/${String(filePath).replace(/^\/+/, "")}`;
-  };
+    return keys.has(type);
+  });
+};
 
   const handleViewUploadedDocument = (document) => {
     const url = getUploadUrl(document);
@@ -179,24 +450,34 @@ const uploadedTypes = useMemo(() => {
   const types = new Set();
 
   uploadedDocuments.forEach((doc) => {
-    const documentType = String(doc.documentType || "").toUpperCase();
-    const documentName = String(doc.documentName || "").toLowerCase();
+    const keys = getDocumentMatchKeys(doc);
+    const source = getDocumentSource(doc);
+    const documentName = normalizeDocumentValue(getDocumentName(doc));
 
-    if (documentType) {
-      types.add(documentType);
-    }
+    keys.forEach((key) => {
+      if (key === "PHOTO") {
+        const isApplicantPhoto =
+          source !== "FIELD_VISIT" &&
+          (
+            documentName === "CUSTOMER_PHOTO" ||
+            documentName === "APPLICANT_PHOTO" ||
+            documentName === "PHOTOGRAPH"
+          );
 
-    if (
-      documentType === "PHOTO" ||
-      documentName === "customer photo" ||
-      documentName === "applicant photo"
-    ) {
-      types.add("PHOTO");
-    }
+        if (isApplicantPhoto) {
+          types.add("PHOTO");
+        }
+
+        return;
+      }
+
+      types.add(key);
+    });
   });
 
   return types;
 }, [uploadedDocuments]);
+
  const mandatoryDocumentTypes = requiredDocumentTypes.filter(
   (type) => type !== "OTHER",
 );
@@ -372,8 +653,9 @@ const markDocumentsUploadedMutation = useMutation({
     });
   };
 
-  const additionalDocuments = uploadedDocuments.filter((document) => document.documentType === "OTHER");
-
+const additionalDocuments = uploadedDocuments.filter(
+  (document) => getDocumentType(document) === "OTHER",
+);
   return (
     <div className="min-h-screen space-y-6 bg-[#f8fafc] p-8 text-slate-800 antialiased">
       {/* Top Banner */}
@@ -385,17 +667,28 @@ const markDocumentsUploadedMutation = useMutation({
               Applicant, income, banking and property documents.
             </p>
           </div>
-          <select
-            value={selectedId}
-            onChange={(event) => setApplicationId(event.target.value)}
-            className="rounded-xl border border-white/20 bg-white/20 px-4 py-2.5 text-sm font-bold text-white outline-none"
-          >
-            {applicationList.map((item) => (
-              <option key={item.id} value={item.id} className="text-slate-900">
-                {item.applicationNumber} - {item.customerName}
-              </option>
-            ))}
-          </select>
+       <select
+  value={selectedId}
+  disabled={applicationsQuery.isLoading || applicationList.length === 0}
+  onChange={(event) => setApplicationId(event.target.value)}
+  className="rounded-xl border border-white/20 bg-white/20 px-4 py-2.5 text-sm font-bold text-white outline-none disabled:cursor-not-allowed disabled:opacity-60"
+>
+  {applicationsQuery.isLoading ? (
+    <option value="" className="text-slate-900">
+      Loading pending document cases...
+    </option>
+  ) : applicationList.length === 0 ? (
+    <option value="" className="text-slate-900">
+      No pending document upload cases
+    </option>
+  ) : (
+    applicationList.map((item) => (
+      <option key={item.id} value={item.id} className="text-slate-900">
+        {item.applicationNumber} - {item.customerName}
+      </option>
+    ))
+  )}
+</select>
         </div>
       </div>
 
@@ -457,7 +750,7 @@ const markDocumentsUploadedMutation = useMutation({
               {requiredDocumentTypes
                 .filter((type) => type !== "OTHER")
                 .map((type) => {
-                  const latest = uploadedDocuments.find((doc) => doc.documentType === type);
+                  const latest = getLatestDocumentByType(type);
                   const uploaded = Boolean(latest);
                   return (
                     <tr key={type} className="transition-colors hover:bg-slate-50/40">
@@ -465,7 +758,7 @@ const markDocumentsUploadedMutation = useMutation({
                         <div className="font-bold text-slate-900">{documentLabels[type]}</div>
                         <div className="mt-0.5 text-[10px] text-slate-400">PDF/JPG/PNG, max 15 MB</div>
                       </td>
-                      <td className="p-4 font-semibold text-slate-500">{latest?.fileName || "-"}</td>
+                      <td className="p-4 font-semibold text-slate-500">{getFileName(latest) || "-"}</td>
                       <td className="p-4">
                         <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold border ${uploaded ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-rose-200 bg-rose-50 text-rose-600"}`}>
                           {uploaded ? "Uploaded" : "Pending"}
@@ -476,7 +769,7 @@ const markDocumentsUploadedMutation = useMutation({
                       </td>
                       <td className="p-4 pr-6">
                         <div className="flex items-center justify-center gap-2">
-                          {uploaded && (latest?.fileUrl || latest?.documentUrl || latest?.url || latest?.filePath) && (
+                          {uploaded && getUploadUrl(latest) && (
                             <button
                               type="button"
                               onClick={() => handleViewUploadedDocument(latest)}
@@ -516,12 +809,14 @@ const markDocumentsUploadedMutation = useMutation({
               {additionalDocuments.map((document) => (
                 <tr key={document.id} className="transition-colors hover:bg-slate-50/40">
                   <td className="p-4 pl-6">
-                    <div className="font-bold text-slate-900">{document.documentName || "Additional Document"}</div>
+                   <div className="font-bold text-slate-900">
+  {getDocumentName(document) || "Additional Document"}
+</div>
                     <div className="mt-0.5 text-[10px] text-slate-400">Additional KYC document</div>
                   </td>
                   <td className="p-4">
-                    <p className="max-w-[220px] truncate font-semibold text-slate-500" title={document.fileName || ""}>
-                      {document.fileName || "-"}
+                    <p className="max-w-[220px] truncate font-semibold text-slate-500"title={getFileName(document)}>
+                     {getFileName(document) || "-"}
                     </p>
                   </td>
                   <td className="p-4">
@@ -533,7 +828,7 @@ const markDocumentsUploadedMutation = useMutation({
                     <span className="text-[10px] font-semibold text-slate-400">Additional</span>
                   </td>
                   <td className="p-4 pr-6 text-center">
-                    {(document.fileUrl || document.documentUrl || document.url || document.filePath) ? (
+                  {getUploadUrl(document) ? (
                       <button
                         type="button"
                         onClick={() => handleViewUploadedDocument(document)}
@@ -549,7 +844,7 @@ const markDocumentsUploadedMutation = useMutation({
               ))}
 
               {/* 3. Field visit documents */}
-              {fieldVisitDocuments.map((document) => {
+              {/* {fieldVisitDocuments.map((document) => {
                 const displayName = documentLabels[document.documentName] || formatDocumentName(document.documentName);
                 return (
                   <tr key={`field-visit-${document.id}`} className="transition-colors hover:bg-slate-50/40">
@@ -590,11 +885,144 @@ const markDocumentsUploadedMutation = useMutation({
                     </td>
                   </tr>
                 );
-              })}
+              })} */}
             </tbody>
           </table>
         </div>
       </div>
+
+<div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+  <div className="flex items-center justify-between border-b border-slate-100 p-6">
+    <div>
+      <h3 className="text-sm font-extrabold tracking-wide text-[#0f2942]">
+        All Uploaded Documents
+      </h3>
+      <p className="mt-1 text-[11px] font-medium text-slate-400">
+        Showing all documents fetched from common documents API.
+      </p>
+    </div>
+
+    <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-blue-700">
+      {uploadedDocuments.length} Files
+    </span>
+  </div>
+
+  <div className="overflow-x-auto">
+    <table className="w-full border-collapse text-left">
+      <thead>
+        <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          <th className="p-4 pl-6">Preview</th>
+          <th className="p-4">Document Name</th>
+          <th className="p-4">Type</th>
+          <th className="p-4">File</th>
+          <th className="p-4">Source</th>
+          <th className="p-4">Status</th>
+          <th className="p-4 pr-6 text-center">Action</th>
+        </tr>
+      </thead>
+
+      <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+        {documentsQuery.isLoading ? (
+          <tr>
+            <td colSpan={7} className="p-6 text-center text-slate-400">
+              Loading documents...
+            </td>
+          </tr>
+        ) : uploadedDocuments.length === 0 ? (
+          <tr>
+            <td colSpan={7} className="p-6 text-center text-slate-400">
+              No documents uploaded yet.
+            </td>
+          </tr>
+        ) : (
+          uploadedDocuments.map((document) => {
+            const documentUrl = getUploadUrl(document);
+            const documentName = getDocumentName(document);
+            const documentType = getDocumentType(document);
+            const fileName = getFileName(document);
+            const documentSource = getDocumentSource(document);
+
+            return (
+              <tr
+                key={document.id}
+                className="transition-colors hover:bg-slate-50/40"
+              >
+                <td className="p-4 pl-6">
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    {documentUrl && isImageDocument(document) ? (
+                      <img
+                        src={documentUrl}
+                        alt={documentName || "Document"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-[10px] font-extrabold text-slate-400">
+                        PDF
+                      </span>
+                    )}
+                  </div>
+                </td>
+
+                <td className="p-4">
+                  <div className="font-bold text-slate-900">
+                    {documentName || documentLabels[documentType] || "-"}
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400">
+                    ID: {document.id}
+                  </div>
+                </td>
+
+                <td className="p-4">
+                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                    {documentType || "-"}
+                  </span>
+                </td>
+
+                <td className="p-4">
+                  <p
+                    className="max-w-[240px] truncate font-semibold text-slate-500"
+                    title={fileName}
+                  >
+                    {fileName || "-"}
+                  </p>
+                </td>
+
+                <td className="p-4">
+                  <span className="rounded-md border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600">
+                    {documentSource}
+                  </span>
+                </td>
+
+                <td className="p-4">
+                  <span className="inline-flex rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+                    {document.status || "UPLOADED"}
+                  </span>
+                </td>
+
+                <td className="p-4 pr-6 text-center">
+                  {documentUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => handleViewUploadedDocument(document)}
+                      className="inline-flex rounded-lg border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-bold text-blue-600 transition-all hover:bg-blue-100"
+                    >
+                      View
+                    </button>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      -
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 
       {/* Verification Status Metrics Summary */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">

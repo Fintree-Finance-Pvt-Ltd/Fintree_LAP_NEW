@@ -192,21 +192,31 @@ export class DocumentsController {
     );
   }
 
-  @Get(':applicationId')
-  @Permissions(
-    PERMISSIONS.DOCUMENT_READ,
-  )
-  find(
-    @Param(
-      'applicationId',
-      ParseIntPipe,
-    )
-    applicationId: number,
-  ) {
-    return this.service.findByApplication(
-      applicationId,
-    );
-  }
+@Get('application/:applicationId/all')
+findAllByApplication(
+  @Param('applicationId', ParseIntPipe)
+  applicationId: number,
+) {
+  return this.service.findAllByApplication(applicationId);
+}
+
+@Get('application/:applicationId/customer-photo')
+
+findCustomerPhoto(
+  @Param('applicationId', ParseIntPipe)
+  applicationId: number,
+) {
+  return this.service.findCustomerPhoto(applicationId);
+}
+
+@Get(':applicationId')
+
+find(
+  @Param('applicationId', ParseIntPipe)
+  applicationId: number,
+) {
+  return this.service.findAllByApplication(applicationId);
+}
 
   @Delete(':id')
   @Permissions(

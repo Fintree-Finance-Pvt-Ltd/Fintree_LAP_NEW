@@ -238,21 +238,24 @@ export const rmApi = {
       `/applications/${applicationId}/field-visits/documents/${documentId}`,
     ),
 
-  // =========================
+    // =========================
   // DOCUMENTS
   // =========================
   documents: (applicationId) =>
-    apiClient.get(`/applications/${applicationId}/documents`),
+    apiClient.get(`/documents/application/${applicationId}/all`),
+
+  getDocuments: (applicationId) =>
+    apiClient.get(`/documents/application/${applicationId}/all`),
+
+  getCustomerPhoto: (applicationId) =>
+    apiClient.get(`/documents/application/${applicationId}/customer-photo`),
 
   uploadDocument: (formData) =>
     apiClient.post("/documents/upload", formData),
 
-  getDocuments: (applicationId) =>
-    apiClient.get(`/documents/${applicationId}`),
-
   deleteDocument: (documentId) =>
     apiClient.delete(`/documents/${documentId}`),
-
+  
   // =========================
   // WORKFLOW TRANSITIONS
   // =========================

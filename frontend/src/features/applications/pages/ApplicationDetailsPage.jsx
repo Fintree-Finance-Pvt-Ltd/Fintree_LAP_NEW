@@ -1,362 +1,899 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
-import { Button } from '../../../components/ui/button.jsx';
-import { Separator } from '../../../components/ui/separator.jsx';
+import AppCard from "../../../components/common/AppCard.jsx";
+import AppLoader from "../../../components/common/AppLoader.jsx";
+import PageHeader from "../../../components/common/PageHeader.jsx";
+import WorkflowHistory from "../../../components/workflow/WorkflowHistory.jsx";
 
-import AppCard from '../../../components/common/AppCard.jsx';
-import AppLoader from '../../../components/common/AppLoader.jsx';
-import FileUploader from '../../../components/forms/FileUploader.jsx';
-import FormInput from '../../../components/forms/FormInput.jsx';
-import PageHeader from '../../../components/common/PageHeader.jsx';
-import WorkflowHistory from '../../../components/workflow/WorkflowHistory.jsx';
-import WorkflowStepper from '../../../components/workflow/WorkflowStepper.jsx';
+import { applicationsApi } from "../applicationsApi.js";
+import { rmApi } from "../../rm/rmApi.js";
+import { buildWorkflowTimeline } from "../../rm/rmUtils.js";
 
-import ApplicationForm from '../components/ApplicationForm.jsx';
-import ApplicationSummary from '../components/ApplicationSummary.jsx';
-import { applicationsApi } from '../applicationsApi.js';
+const unwrapPayload = (response) => {
+  if (response?.data?.data !== undefined) {
+    return response.data.data;
+  }
 
-// Import your timeline building utility
-import { buildWorkflowTimeline } from '../../rm/rmUtils.js';
+  if (response?.data !== undefined) {
+    return response.data;
+  }
+
+  return response ?? null;
+};
+
+const unwrapArray = (response) => {
+  const payload =
+    response?.data?.data ??
+    response?.data ??
+    response ??
+    [];
+
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.result)) return payload.result;
+  if (Array.isArray(payload?.coApplicants)) return payload.coApplicants;
+  if (Array.isArray(payload?.contactPersons)) return payload.contactPersons;
+  if (Array.isArray(payload?.documents)) return payload.documents;
+
+  return [];
+};
+
+const readValue = (row, keys) => {
+  for (const key of keys) {
+    const value = row?.[key];
+
+    if (
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ""
+    ) {
+      return value;
+    }
+  }
+
+  return "";
+};
+
+const normalizeCoApplicant = (row) => ({
+  id: readValue(row, [
+    "id",
+    "coApplicantId",
+    "co_applicant_id",
+  ]),
+  name: readValue(row, [
+    "name",
+    "fullName",
+    "full_name",
+    "customerName",
+    "customer_name",
+  ]),
+  mobile: readValue(row, [
+    "mobile",
+    "mobileNumber",
+    "mobile_number",
+    "phone",
+    "phoneNumber",
+  ]),
+  email: readValue(row, [
+    "email",
+    "emailId",
+    "email_id",
+  ]),
+  pan: readValue(row, [
+    "panNumber",
+    "pan_number",
+    "pan",
+  ]),
+  aadhaar: readValue(row, [
+    "aadhaarNumber",
+    "aadhaar_number",
+    "aadharNumber",
+    "aadhar_number",
+  ]),
+  relationship: readValue(row, [
+    "relationship",
+    "relation",
+  ]),
+  occupation: readValue(row, [
+    "occupation",
+    "occupationType",
+    "occupation_type",
+  ]),
+  monthlyIncome: readValue(row, [
+    "monthlyIncome",
+    "monthly_income",
+    "income",
+  ]),
+});
+
+const normalizeContactPerson = (row) => ({
+  id: readValue(row, [
+    "id",
+    "contactPersonId",
+    "contact_person_id",
+  ]),
+  name: readValue(row, [
+    "name",
+    "fullName",
+    "full_name",
+    "contactName",
+    "contact_name",
+  ]),
+  mobile: readValue(row, [
+    "mobile",
+    "mobileNumber",
+    "mobile_number",
+    "phone",
+    "phoneNumber",
+  ]),
+  email: readValue(row, [
+    "email",
+    "emailId",
+    "email_id",
+  ]),
+  designation: readValue(row, [
+    "designation",
+    "role",
+  ]),
+  relationship: readValue(row, [
+    "relationship",
+    "relation",
+  ]),
+});
+
+const valueOrDash = (value) => {
+  const finalValue = String(value ?? "").trim();
+  return finalValue || "—";
+};
+
+const formatLabel = (value) => {
+  if (!value) return "—";
+
+  return String(value)
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const formatAmount = (value) => {
+  const number = Number(value);
+
+  if (!Number.isFinite(number) || number <= 0) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(number);
+};
+
+const formatDateTime = (value) => {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getDocumentUrl = (document) => {
+  if (!document) return "";
+
+  const directUrl =
+    document.fileUrl ||
+    document.file_url ||
+    document.documentUrl ||
+    document.url;
+
+  if (directUrl) return directUrl;
+
+  const filePath =
+    document.filePath ||
+    document.file_path ||
+    "";
+
+  if (!filePath) return "";
+
+  if (String(filePath).startsWith("http")) {
+    return filePath;
+  }
+
+  return `http://localhost:9000/${String(filePath).replace(/^\/+/, "")}`;
+};
+
+function InfoTile({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white p-4">
+      <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-bold text-slate-800">
+        {String(value ?? "").trim() || "—"}
+      </p>
+    </div>
+  );
+}
+
+function SectionTitle({ title, subtitle }) {
+  return (
+    <div className="mb-5">
+      <h3 className="text-sm font-extrabold uppercase tracking-wide text-slate-900">
+        {title}
+      </h3>
+
+      {subtitle && (
+        <p className="mt-1 text-xs font-medium text-slate-400">
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function ApplicationDetailsPage() {
   const { applicationId } = useParams();
-  const [visit, setVisit] = useState({ visitType: 'CUSTOMER', remarks: '' });
 
-  const queryClient = useQueryClient();
+  const [showAllDocuments, setShowAllDocuments] = useState(false);
 
-  // 1. Fetch main application payload
-  const application = useQuery({
-    queryKey: ['application', applicationId],
+  const applicationQuery = useQuery({
+    queryKey: ["application", applicationId],
     queryFn: () => applicationsApi.get(applicationId),
+    enabled: Boolean(applicationId),
   });
 
-  // 2. Fetch history logs
-  const history = useQuery({
-    queryKey: ['workflow-history', applicationId],
-    queryFn: () => applicationsApi.workflowHistory(applicationId),
-  });
-
-  // 3. Fetch live authenticated workflow tracker flags
-  const { data: workflowResponse, isLoading: isLoadingWorkflow } = useQuery({
+  const workflowQuery = useQuery({
     queryKey: ["rm-workflow", applicationId],
-    queryFn: async () => {
-      let token = null;
-      
-      try {
-        const loginDetailsStr = localStorage.getItem("loginDetails");
-        if (loginDetailsStr) {
-          const loginDetails = JSON.parse(loginDetailsStr);
-          token = loginDetails.accessToken;
-        }
-      } catch (err) {
-        console.error("Error parsing loginDetails from localStorage:", err);
-      }
-
-      const res = await fetch(`http://localhost:9000/api/applications/${applicationId}/workflow`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }), 
-        },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          throw new Error("Session expired or unauthorized. Please log in again.");
-        }
-        throw new Error("Network response was not ok");
-      }
-      return res.json();
-    },
-    enabled: !!applicationId,
+    queryFn: () => rmApi.workflowStatus(applicationId),
+    enabled: Boolean(applicationId),
   });
 
-  // Change this variable dynamically depending on your user authentication logic
-  const userRole = 'RM'; 
-
-  const update = useMutation({
-    mutationFn: (payload) => applicationsApi.update(applicationId, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['application', applicationId] }),
+  const historyQuery = useQuery({
+    queryKey: ["workflow-history", applicationId],
+    queryFn: () => rmApi.workflowHistory(applicationId),
+    enabled: Boolean(applicationId),
   });
 
-  const createVisit = useMutation({
-    mutationFn: () => applicationsApi.createVisit(applicationId, visit),
+  const documentsQuery = useQuery({
+    queryKey: ["rm-documents", applicationId],
+    queryFn: () => rmApi.documents(applicationId),
+    enabled: Boolean(applicationId),
   });
 
-  const transition = useMutation({
-    mutationFn: (action) =>
-      applicationsApi.transition(applicationId, {
-        action,
-        remarks: action,
-        expectedVersion: application.data?.data?.version,
-      }),
+  const coApplicantsQuery = useQuery({
+    queryKey: ["co-applicants", applicationId],
+    queryFn: () => rmApi.getCoApplicants(applicationId),
+    enabled: Boolean(applicationId),
   });
 
-  const upload = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const contactPersonsQuery = useQuery({
+    queryKey: ["contact-persons", applicationId],
+    queryFn: () => rmApi.getContactPersons(applicationId),
+    enabled: Boolean(applicationId),
+  });
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('documentType', 'KYC');
-    applicationsApi.uploadDocument(applicationId, formData);
-  };
+  const fieldVisitsQuery = useQuery({
+    queryKey: ["field-visits", applicationId],
+    queryFn: () => rmApi.getFieldVisits(applicationId),
+    enabled: Boolean(applicationId),
+  });
 
-  // Safe layout guards for multi-query state synchronization
-  if (application.isLoading || isLoadingWorkflow) {
+  const geoLocationsQuery = useQuery({
+    queryKey: ["geo-locations", applicationId],
+    queryFn: () => rmApi.getGeoLocations(applicationId),
+    enabled: Boolean(applicationId),
+  });
+
+  const chargesQuery = useQuery({
+    queryKey: ["charges-receipts", applicationId],
+    queryFn: () => rmApi.getChargeSchedule(applicationId),
+    enabled: Boolean(applicationId),
+    retry: false,
+  });
+
+  const isLoading =
+    applicationQuery.isLoading ||
+    workflowQuery.isLoading ||
+    documentsQuery.isLoading;
+
+  if (isLoading) {
     return <AppLoader />;
   }
 
-  if (!application.data?.data) {
+  const application = unwrapPayload(applicationQuery.data);
+
+  if (!application) {
     return <div className="p-6">Application not found</div>;
   }
 
-  const data = application.data.data;
-  
-  // Safely fallback handling wrapper payloads: standard fetch data target or .data container parsing
-  const workflowFlags = workflowResponse?.data ?? workflowResponse ?? {};
-  
-  // Generates timeline mapping using your dynamic API boolean properties
-  const leadJourney = buildWorkflowTimeline(workflowFlags);
+  const workflowFlags = unwrapPayload(workflowQuery.data) ?? {};
+  const workflowSteps = buildWorkflowTimeline(workflowFlags);
+
+  const documents = unwrapArray(documentsQuery.data);
+
+  const coApplicants = unwrapArray(coApplicantsQuery.data)
+    .map(normalizeCoApplicant)
+    .filter(
+      (item) =>
+        item.name ||
+        item.mobile ||
+        item.pan ||
+        item.aadhaar,
+    );
+
+  const contactPersons = unwrapArray(contactPersonsQuery.data)
+    .map(normalizeContactPerson)
+    .filter(
+      (item) =>
+        item.name ||
+        item.mobile ||
+        item.email ||
+        item.designation,
+    );
+
+  const fieldVisits = unwrapArray(fieldVisitsQuery.data);
+  const geoLocations = unwrapArray(geoLocationsQuery.data);
+  const charges = unwrapArray(chargesQuery.data);
+  const historyItems = unwrapArray(historyQuery.data);
+
+  const visibleDocuments = showAllDocuments
+    ? documents
+    : documents.slice(0, 3);
+
+  const hiddenDocumentCount = Math.max(
+    documents.length - 3,
+    0,
+  );
+
+  const completedSteps = workflowSteps.filter(
+    (step) => step.completed,
+  ).length;
+
+  const progress = workflowSteps.length
+    ? Math.round((completedSteps / workflowSteps.length) * 100)
+    : 0;
+
+  const applicant = {
+    name: application.customerName,
+    mobile:
+      application.mobile ||
+      application.mobileNumber ||
+      application.phoneNumber,
+    email:
+      application.email ||
+      application.emailId,
+    pan:
+      application.pan ||
+      application.panNumber,
+    aadhaar:
+      application.aadhaarNumber,
+    occupation:
+      application.occupationType ||
+      application.occupation,
+    businessName:
+      application.businessName,
+  };
 
   return (
-    <div className="space-y-6 p-6 max-w-[1600px] mx-auto bg-slate-50/50 min-h-screen">
-      
-      {/* 1. Premium Dashboard Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-            Premium Deal Profile
+    <div className="min-h-screen bg-[#f6f8fb] p-6 text-slate-800">
+      <div className="mx-auto max-w-[1600px] space-y-6">
+        {/* Header */}
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 text-slate-900 shadow-sm transition-all">
+  <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+    
+    {/* Left Column: Details */}
+    <div className="space-y-4 max-w-xl">
+      <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+        <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
+        Live Case Profile
+      </div>
+
+      <PageHeader
+        title={
+          application.applicationNumber || `Application #${applicationId}`
+        }
+        subtitle={
+          application.customerName || "Applicant case details"
+        }
+        className="text-slate-900 text-2xl font-bold tracking-tight"
+      />
+
+      {/* Badges & Progress Bar */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600">
+            Stage: <strong className="text-slate-900 font-semibold">{formatLabel(application.stage)}</strong>
           </span>
-          <PageHeader title={data.applicationNumber} subtitle={data.customerName} className="mt-2" />
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => transition.mutate('BM_APPROVE')}>
-            BM Approve
-          </Button>
-          <Button variant="contained" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => transition.mutate('SUBMIT_TO_BM')}>
-            Submit to BM
-          </Button>
+
+          <span className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600">
+            Status: <strong className="text-slate-900 font-semibold">{formatLabel(application.status)}</strong>
+          </span>
         </div>
       </div>
+    </div>
 
-      {/* 2. Customer Summary Cards & Progress Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AppCard className="p-4 border-l-4 border-l-indigo-500">
-          <p className="text-xs font-medium text-slate-500 uppercase">Customer Summary</p>
-          <h4 className="text-lg font-bold text-slate-800 mt-1">{data.customerName || 'N/A'}</h4>
-          <p className="text-xs text-slate-400 mt-0.5">Primary Applicant</p>
-        </AppCard>
+    {/* Right Column: Key Metrics Grid */}
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-[480px] shrink-0">
+      {[
+        { label: "Documents", count: documents.length },
+        { label: "Co-Applicants", count: coApplicants.length },
+        { label: "Contacts", count: contactPersons.length },
+        { label: "Visits", count: fieldVisits.length },
+      ].map((metric, i) => (
+        <div
+          key={i}
+          className="group rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/30 hover:shadow-sm"
+        >
+          <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+            {metric.label}
+          </p>
+          <p className="mt-2 text-3xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
+            {metric.count}
+          </p>
+        </div>
+      ))}
+    </div>
 
-        <AppCard className="p-4 border-l-4 border-l-emerald-500">
-          <p className="text-xs font-medium text-slate-500 uppercase">Current Stage</p>
-          <h4 className="text-lg font-bold text-slate-800 mt-1 capitalize">{data.stage?.toLowerCase().replace('_', ' ') || 'Initiated'}</h4>
-          <p className="text-xs text-emerald-600 font-medium mt-0.5">● Active Status</p>
-        </AppCard>
+  </div>
+</div>
 
-        <AppCard className="p-4 border-l-4 border-l-amber-500">
-          <p className="text-xs font-medium text-slate-500 uppercase">RM Workflow Tracker</p>
-          <h4 className="text-lg font-bold text-slate-800 mt-1">Relationship Desk</h4>
-          <p className="text-xs text-slate-400 mt-0.5">Assigned to: {data.rmName || 'Regional Manager'}</p>
-        </AppCard>
-
-        <AppCard className="p-4 border-l-4 border-l-sky-500">
-          <p className="text-xs font-medium text-slate-500 uppercase">Application Progress</p>
-          <div className="w-full bg-slate-100 rounded-full h-2.5 mt-3">
-            <div className="bg-sky-500 h-2.5 rounded-full" style={{ width: '65%' }}></div>
-          </div>
-          <p className="text-xs text-slate-500 text-right mt-1.5 font-semibold">65% Complete</p>
-        </AppCard>
-      </div>
-
-      {/* 3. Full Workflow Timeline (Hidden if role is RM) */}
-      {userRole !== 'RM' && (
-        <AppCard className="p-5">
-          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4">Full Workflow Timeline</h3>
-          <WorkflowStepper activeStage={data.stage} />
-        </AppCard>
-      )}
-
-      {/* Main 2-Column Split Dashboard Core Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Column: 2/3 - Details Sections */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* Conditional Layout Panel */}
-          {userRole === 'RM' ? (
-            /* Horizontal Workflow Stepper populated with dynamic workflow data */
-            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
-              <div className="mb-6 flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">RM Workflow Journey</h3>
-                <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10"> Active Track </span>
-              </div>
-              
-              <div className="overflow-x-auto pb-2">
-                <div className="flex min-w-[800px] items-center justify-between">
-                  {leadJourney.map((item, index) => {
-                    const isCurrent = !item.completed && index === leadJourney.findIndex((step) => !step.completed);
-                    return (
-                      <div key={item.label} className="relative flex flex-1 flex-col items-center text-center">
-                        {index !== leadJourney.length - 1 && (
-                          <div className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${leadJourney[index + 1].completed ? "bg-emerald-500" : "bg-slate-200"}`} />
-                        )}
-                        <div className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
-                          item.completed ? "bg-emerald-500 text-white ring-4 ring-emerald-100" : isCurrent ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-white text-slate-400 ring-2 ring-slate-200"
-                        }`}>
-                          {item.completed ? (
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : isCurrent ? "●" : index + 1}
-                        </div>
-                        <div className="mt-2.5 px-2">
-                          <p className={`text-xs font-semibold ${item.completed || isCurrent ? "text-slate-900" : "text-slate-500"}`}>{item.label}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="mt-6 border-t pt-4">
-                <ApplicationSummary application={data} />
-              </div>
-            </div>
-          ) : (
-            /* Fallback Card Layer */
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          {/* Left */}
+          <div className="space-y-6 xl:col-span-2">
             <AppCard className="p-6">
-              <div className="mb-4">
-                <h3 className="text-base font-bold text-slate-800">Application Core Details</h3>
-                <p className="text-xs text-slate-400">Overview of basic terms and conditions</p>
-              </div>
-              <ApplicationSummary application={data} />
-            </AppCard>
-          )}
+              <SectionTitle
+                title="Collected Applicant Details"
+                subtitle="Primary applicant data fetched from application API."
+              />
 
-          {/* Core Structured Sections Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <AppCard className="p-5">
-              <h4 className="text-sm font-bold text-slate-800 border-b pb-2 mb-3">👤 Applicant Details</h4>
-              <div className="text-sm space-y-2 text-slate-600">
-                <p><span className="font-medium">Full Name:</span> {data.customerName}</p>
-                <p><span className="font-medium">Email:</span> {data.email || 'N/A'}</p>
-                <p><span className="font-medium">Contact:</span> {data.phoneNumber || 'N/A'}</p>
-              </div>
-            </AppCard>
-
-            <AppCard className="p-5">
-              <h4 className="text-sm font-bold text-slate-800 border-b pb-2 mb-3">👥 Co-applicant Details</h4>
-              <div className="text-sm space-y-2 text-slate-600">
-                <p><span className="font-medium">Name:</span> {data.coApplicantName || 'None Added'}</p>
-                <p><span className="font-medium">Relation:</span> {data.coApplicantRelation || 'N/A'}</p>
-                <p><span className="font-medium">Income Source:</span> {data.coApplicantIncome || 'N/A'}</p>
-              </div>
-            </AppCard>
-
-            <AppCard className="p-5">
-              <h4 className="text-sm font-bold text-slate-800 border-b pb-2 mb-3">🏠 Property Details</h4>
-              <div className="text-sm space-y-2 text-slate-600">
-                <p><span className="font-medium">Type:</span> {data.propertyType || 'Residential'}</p>
-                <p><span className="font-medium">Estimated Value:</span> {data.propertyValue || 'Under Evaluation'}</p>
-                <p><span className="font-medium">Location:</span> {data.propertyAddress || 'N/A'}</p>
-              </div>
-            </AppCard>
-
-            <AppCard className="p-5">
-              <h4 className="text-sm font-bold text-slate-800 border-b pb-2 mb-3">🏦 Bank Details</h4>
-              <div className="text-sm space-y-2 text-slate-600">
-                <p><span className="font-medium">Bank Name:</span> {data.bankName || 'N/A'}</p>
-                <p><span className="font-medium">Account No:</span> {data.accountNumber || '•••• •••• ••••'}</p>
-                <p><span className="font-medium">IFSC:</span> {data.ifscCode || 'N/A'}</p>
-              </div>
-            </AppCard>
-
-            <AppCard className="p-5">
-              <h4 className="text-sm font-bold text-slate-800 border-b pb-2 mb-3">📊 Eligibility Metrics</h4>
-              <div className="text-sm space-y-2 text-slate-600">
-                <p><span className="font-medium">Credit Score:</span> <span className="text-emerald-600 font-bold">{data.creditScore || '750+ Verified'}</span></p>
-                <p><span className="font-medium">Max Eligible Limit:</span> {data.eligibleAmount || 'Calculated on verification'}</p>
-                <p><span className="font-medium">DTI Ratio:</span> {data.dtiRatio || 'Optimal'}</p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <InfoTile
+                  label="Applicant Name"
+                  value={applicant.name}
+                />
+                <InfoTile
+                  label="Mobile"
+                  value={applicant.mobile}
+                />
+                <InfoTile
+                  label="Email"
+                  value={applicant.email}
+                />
+                <InfoTile
+                  label="PAN"
+                  value={applicant.pan}
+                />
+                <InfoTile
+                  label="Aadhaar / OVD"
+                  value={applicant.aadhaar}
+                />
+                <InfoTile
+                  label="Occupation"
+                  value={formatLabel(applicant.occupation)}
+                />
+                <InfoTile
+                  label="Business Name"
+                  value={applicant.businessName}
+                />
+                <InfoTile
+                  label="Application Stage"
+                  value={formatLabel(application.stage)}
+                />
+                <InfoTile
+                  label="Application Status"
+                  value={formatLabel(application.status)}
+                />
               </div>
             </AppCard>
 
-            <AppCard className="p-5">
-              <h4 className="text-sm font-bold text-slate-800 border-b pb-2 mb-3">🆔 KYC Checklist</h4>
-              <div className="text-sm space-y-2 text-slate-600">
-                <p><span className="font-medium">Identity Proof:</span> <span className="text-emerald-600 font-semibold">✓ Verified</span></p>
-                <p><span className="font-medium">Address Verification:</span> <span className="text-emerald-600 font-semibold">✓ Verified</span></p>
-                <p><span className="font-medium">Video KYC Status:</span> <span className="text-amber-500 font-semibold">Pending Approval</span></p>
+            <AppCard className="p-6">
+              <SectionTitle
+                title="Address & Property Details"
+                subtitle="Address, collateral and valuation details collected during lead creation."
+              />
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <InfoTile
+                  label="Property Category"
+                  value={application.propertyCategory}
+                />
+                <InfoTile
+                  label="Property Type"
+                  value={application.propertyType}
+                />
+                <InfoTile
+                  label="Property Value"
+                  value={formatAmount(
+                    application.marketValue ||
+                      application.propertyValue,
+                  )}
+                />
+                <InfoTile
+                  label="Property Address"
+                  value={application.propertyAddress}
+                />
+                <InfoTile
+                  label="City"
+                  value={application.propertyCity || application.city}
+                />
+                <InfoTile
+                  label="State"
+                  value={application.propertyState || application.state}
+                />
+                <InfoTile
+                  label="Pincode"
+                  value={
+                    application.propertyPincode ||
+                    application.pinCode
+                  }
+                />
               </div>
+            </AppCard>
+
+            <AppCard className="p-6">
+              <SectionTitle
+                title="Co-Applicant Details"
+                subtitle="Co-applicant details fetched from co-applicant API."
+              />
+
+              {coApplicantsQuery.isLoading ? (
+                <div className="rounded-2xl bg-slate-50 p-6 text-sm font-bold text-slate-400">
+                  Loading co-applicants...
+                </div>
+              ) : coApplicants.length ? (
+                <div className="space-y-4">
+                  {coApplicants.map((item, index) => (
+                    <div
+                      key={item.id || index}
+                      className="rounded-3xl border border-slate-100 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm"
+                    >
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">
+                            Co-Applicant {index + 1}
+                          </p>
+                          <h4 className="mt-1 text-lg font-extrabold text-slate-900">
+                            {valueOrDash(item.name)}
+                          </h4>
+                        </div>
+
+                        <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-extrabold uppercase text-blue-700">
+                          {formatLabel(item.relationship)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <InfoTile
+                          label="Mobile"
+                          value={item.mobile}
+                        />
+                        <InfoTile
+                          label="Email"
+                          value={item.email}
+                        />
+                        <InfoTile
+                          label="PAN"
+                          value={item.pan}
+                        />
+                        <InfoTile
+                          label="Aadhaar / OVD"
+                          value={item.aadhaar}
+                        />
+                        <InfoTile
+                          label="Occupation"
+                          value={formatLabel(item.occupation)}
+                        />
+                        <InfoTile
+                          label="Monthly Income"
+                          value={formatAmount(item.monthlyIncome)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm font-bold text-slate-400">
+                  No co-applicant details found from API.
+                </div>
+              )}
+            </AppCard>
+
+            <AppCard className="p-6">
+              <SectionTitle
+                title="Contact Person Details"
+                subtitle="Contact/reference details fetched from contact person API."
+              />
+
+              {contactPersonsQuery.isLoading ? (
+                <div className="rounded-2xl bg-slate-50 p-6 text-sm font-bold text-slate-400">
+                  Loading contact persons...
+                </div>
+              ) : contactPersons.length ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {contactPersons.map((item, index) => (
+                    <div
+                      key={item.id || index}
+                      className="rounded-3xl border border-slate-100 bg-gradient-to-br from-white to-indigo-50/30 p-5 shadow-sm"
+                    >
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">
+                            Contact Person {index + 1}
+                          </p>
+                          <h4 className="mt-1 text-lg font-extrabold text-slate-900">
+                            {valueOrDash(item.name)}
+                          </h4>
+                        </div>
+
+                        <span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-extrabold uppercase text-indigo-700">
+                          {formatLabel(item.relationship)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3">
+                        <InfoTile
+                          label="Mobile"
+                          value={item.mobile}
+                        />
+                        <InfoTile
+                          label="Email"
+                          value={item.email}
+                        />
+                        <InfoTile
+                          label="Designation"
+                          value={item.designation}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm font-bold text-slate-400">
+                  No contact person details found from API.
+                </div>
+              )}
+            </AppCard>
+
+            <AppCard className="p-6">
+              <SectionTitle
+                title="Verification, Geo & Charges"
+                subtitle="Additional details collected from visits, geo-location and charges APIs."
+              />
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <InfoTile
+                  label="Field Visits"
+                  value={fieldVisits.length}
+                />
+                <InfoTile
+                  label="Geo Locations"
+                  value={geoLocations.length}
+                />
+                <InfoTile
+                  label="Charges / Receipts"
+                  value={charges.length}
+                />
+              </div>
+
+              {geoLocations.length > 0 && (
+                <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/80 p-5">
+                  <h4 className="mb-3 text-sm font-extrabold text-slate-800">
+                    Latest Geo Location
+                  </h4>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <InfoTile
+                      label="Latitude"
+                      value={geoLocations[0]?.latitude}
+                    />
+                    <InfoTile
+                      label="Longitude"
+                      value={geoLocations[0]?.longitude}
+                    />
+                    <InfoTile
+                      label="Captured At"
+                      value={formatDateTime(
+                        geoLocations[0]?.createdAt ||
+                          geoLocations[0]?.created_at,
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
             </AppCard>
           </div>
 
-          <AppCard className="p-6">
-            <h3 className="text-base font-bold text-slate-800 mb-4">Modify Fields</h3>
-            <ApplicationForm
-              value={data}
-              onChange={(next) => update.mutate(next)}
-              onSubmit={(event) => event.preventDefault()}
-              submitLabel="Update application data"
-            />
-          </AppCard>
-        </div>
-
-        {/* Right Column: 1/3 - Actions & Logs */}
-        <div className="space-y-6">
-          <AppCard className="p-5">
-            <div className="mb-4">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Documents & Visits</h3>
-              <p className="text-xs text-slate-400">Upload mandatory files and record dynamic verification runs</p>
-            </div>
-            
-            <div className="space-y-4">
-              <FormInput
-                label="Verification Remarks"
-                value={visit.remarks}
-                onChange={(event) => setVisit({ ...visit, remarks: event.target.value })}
-              />
-              
-              <div className="flex flex-col gap-2">
-                <Button variant="contained" className="w-full bg-slate-800 text-white" onClick={() => createVisit.mutate()}>
-                  Record Verification Visit
-                </Button>
-                <Separator className="my-2" />
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600 block">Upload Mandatory KYC/Asset File</label>
-                  <FileUploader onChange={upload} />
+          {/* Right */}
+          <div className="space-y-6">
+            <AppCard className="p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-extrabold uppercase tracking-wide text-slate-900">
+                    Document Card
+                  </h3>
+                  <p className="mt-1 text-xs font-medium text-slate-400">
+                    Showing {visibleDocuments.length} of{" "}
+                    {documents.length} documents.
+                  </p>
                 </div>
-              </div>
-            </div>
-          </AppCard>
 
-          <AppCard className="p-5">
-            <div className="mb-4">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Audit Logs & History</h3>
-              <p className="text-xs text-slate-400">Complete regulatory tracking and trace reports</p>
-            </div>
-            <Separator className="mb-4" />
-            <WorkflowHistory items={history.data?.data ?? []} />
-          </AppCard>
+                <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-extrabold text-blue-700">
+                  {documents.length} Files
+                </span>
+              </div>
 
-          <AppCard className="p-5">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">Live Activity Timeline</h3>
-            <div className="relative pl-4 border-l-2 border-slate-200 text-xs space-y-4">
-              <div>
-                <span className="absolute -left-1.5 top-1 bg-indigo-500 w-3 h-3 rounded-full border-2 border-white"></span>
-                <p className="font-semibold text-slate-700">File Accessed</p>
-                <p className="text-slate-400">Just now by RM Agent</p>
+              {documents.length ? (
+                <>
+                  <div className="space-y-3">
+                    {visibleDocuments.map((document) => {
+                      const documentUrl = getDocumentUrl(document);
+
+                      return (
+                        <div
+                          key={document.id}
+                          className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-extrabold text-slate-800">
+                                {document.documentName ||
+                                  document.document_name ||
+                                  document.documentType ||
+                                  document.document_type ||
+                                  "Document"}
+                              </p>
+
+                              <p
+                                className="mt-1 truncate text-xs font-semibold text-slate-400"
+                                title={
+                                  document.fileName ||
+                                  document.file_name
+                                }
+                              >
+                                {document.fileName ||
+                                  document.file_name ||
+                                  "—"}
+                              </p>
+
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <span className="rounded-md bg-white px-2 py-1 text-[10px] font-bold text-slate-500 ring-1 ring-slate-200">
+                                  {document.documentType ||
+                                    document.document_type ||
+                                    "OTHER"}
+                                </span>
+
+                                <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+                                  {document.status || "UPLOADED"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {documentUrl ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  window.open(
+                                    documentUrl,
+                                    "_blank",
+                                    "noopener,noreferrer",
+                                  )
+                                }
+                                className="shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-extrabold text-blue-700 transition-all hover:bg-blue-100"
+                              >
+                                View
+                              </button>
+                            ) : (
+                              <span className="text-xs font-bold text-slate-400">
+                                —
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {documents.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowAllDocuments((previous) => !previous)
+                      }
+                      className="mt-4 w-full rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-blue-700 transition-all hover:bg-blue-100"
+                    >
+                      {showAllDocuments
+                        ? "Show Only 3 Documents"
+                        : `Show All Documents (${hiddenDocumentCount} More)`}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm font-bold text-slate-400">
+                  No documents found from API.
+                </div>
+              )}
+            </AppCard>
+
+            <AppCard className="p-6">
+              <SectionTitle
+                title="Live Activity Timeline"
+                subtitle="Generated from live workflow API flags."
+              />
+
+              <div className="relative space-y-5 border-l-2 border-slate-200 pl-5">
+                {workflowSteps.map((item, index) => {
+                  const firstPendingIndex = workflowSteps.findIndex(
+                    (step) => !step.completed,
+                  );
+
+                  const isCurrent =
+                    !item.completed &&
+                    index === firstPendingIndex;
+
+                  return (
+                    <div
+                      key={item.key || item.label}
+                      className="relative"
+                    >
+                      <span
+                        className={`absolute -left-[27px] top-1 h-3 w-3 rounded-full border-2 border-white ${
+                          item.completed
+                            ? "bg-emerald-500"
+                            : isCurrent
+                              ? "bg-blue-600"
+                              : "bg-slate-300"
+                        }`}
+                      />
+
+                      <p
+                        className={`text-sm font-extrabold ${
+                          item.completed || isCurrent
+                            ? "text-slate-800"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {item.label}
+                      </p>
+
+                      <p className="mt-0.5 text-xs font-medium text-slate-400">
+                        {item.completed
+                          ? "Completed"
+                          : isCurrent
+                            ? "Current step"
+                            : "Pending"}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
-              <div>
-                <span className="absolute -left-1.5 top-1 bg-slate-300 w-3 h-3 rounded-full border-2 border-white"></span>
-                <p className="font-semibold text-slate-600">Verification Triggered</p>
-                <p className="text-slate-400">2 hours ago</p>
-              </div>
-            </div>
-          </AppCard>
+            </AppCard>
+
+            <AppCard className="p-6">
+              <SectionTitle
+                title="Audit Logs & History"
+                subtitle="Workflow history fetched from API."
+              />
+
+              <WorkflowHistory items={historyItems} />
+            </AppCard>
+          </div>
         </div>
-
       </div>
     </div>
   );

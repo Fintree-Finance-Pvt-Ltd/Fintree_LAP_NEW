@@ -120,8 +120,7 @@ export default function CreateLead() {
   const queryClient = useQueryClient();
   const location = useLocation();
 
-  const [customerPhotoFile, setCustomerPhotoFile] = useState(null);
-  const [customerPhotoPreview, setCustomerPhotoPreview] = useState("");
+const [customerPhotoFile, setCustomerPhotoFile] = useState(null);
 
   const [createdApplicationId, setCreatedApplicationId] = useState(null);
 
@@ -152,18 +151,55 @@ export default function CreateLead() {
     return [];
   }, [applicantDocumentsQuery.data]);
 
-  const customerPhotoDocument = useMemo(() => {
-    return uploadedDocuments.find((doc) => {
-      const documentName = String(
-        doc.documentName ||
-        doc.document_name ||
-        "",
-      )
-        .trim()
-        .toLowerCase();
+  const normalizeDocumentValue = (value) =>
+    String(value || "")
+      .trim()
+      .toUpperCase()
+      .replace(/&/g, "AND")
+      .replace(/[^A-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
 
-      return documentName === "customer photo";
+  const applicantPhotoDocument = useMemo(() => {
+    const matchedPhotos = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
+
+      const documentSource = normalizeDocumentValue(
+        doc.documentSource || doc.document_source,
+      );
+
+      // Do not pick field visit photos like BUSINESS_FRONTAGE / PROPERTY_FRONTAGE
+      if (documentSource === "FIELD_VISIT") {
+        return false;
+      }
+
+      return (
+        documentName === "APPLICANT_PHOTO" ||
+        documentName === "CUSTOMER_PHOTO" ||
+        documentName === "PHOTOGRAPH" ||
+        documentType === "PHOTO"
+      );
     });
+
+    return (
+      matchedPhotos.find(
+        (doc) =>
+          normalizeDocumentValue(doc.documentName || doc.document_name) ===
+          "APPLICANT_PHOTO",
+      ) ||
+      matchedPhotos.find(
+        (doc) =>
+          normalizeDocumentValue(doc.documentName || doc.document_name) ===
+          "CUSTOMER_PHOTO",
+      ) ||
+      matchedPhotos[0] ||
+      null
+    );
   }, [uploadedDocuments]);
 
   const getDocumentImageUrl = (document) => {
@@ -217,11 +253,19 @@ export default function CreateLead() {
     return `${uploadBaseUrl}/uploads/documents/${normalizedPath.replace(/^\/+/, "")}`;
   };
 
-  const customerPhotoUrl = getDocumentImageUrl(customerPhotoDocument);
+  const applicantPhotoUrl = getDocumentImageUrl(applicantPhotoDocument);
 
-  const isCustomerPhotoUploaded = Boolean(customerPhotoDocument);
+  const isApplicantPhotoUploaded = Boolean(applicantPhotoDocument);
 
+const handleViewApplicantPhoto = () => {
+  if (!applicantPhotoUrl) {
+    setMessageType("error");
+    setMessage("Applicant photo file is not available.");
+    return;
+  }
 
+  window.open(applicantPhotoUrl, "_blank", "noopener,noreferrer");
+};
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
 
@@ -293,7 +337,7 @@ export default function CreateLead() {
 
       payload.append("applicationId", String(Number(targetApplicationId)));
       payload.append("documentType", "PHOTO");
-      payload.append("documentName", "Customer Photo");
+      payload.append("documentName", "Applicant Photo");
       payload.append("documentSource", "RM_PORTAL");
       payload.append("file", customerPhotoFile);
 
@@ -304,13 +348,12 @@ export default function CreateLead() {
       setMessageType("success");
       setMessage("Customer photo uploaded successfully.");
 
-      setCustomerPhotoFile(null);
-      setCustomerPhotoPreview("");
+     setCustomerPhotoFile(null);
 
       await Promise.all([
-   queryClient.invalidateQueries({
-  queryKey: ["rm-documents", photoApplicationId],
-}),
+        queryClient.invalidateQueries({
+          queryKey: ["rm-documents", photoApplicationId],
+        }),
         queryClient.invalidateQueries({
           queryKey: ["application", createdApplicationId ?? applicationId],
         }),
@@ -327,36 +370,34 @@ export default function CreateLead() {
     },
   });
 
-  const handleCustomerPhotoChange = (event) => {
-    const file = event.target.files?.[0] || null;
+ const handleCustomerPhotoChange = (event) => {
+  const file = event.target.files?.[0] || null;
 
-    if (!file) {
-      setCustomerPhotoFile(null);
-      setCustomerPhotoPreview("");
-      return;
-    }
+  if (!file) {
+    setCustomerPhotoFile(null);
+    return;
+  }
 
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+  const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
 
-    if (!allowedTypes.includes(file.type)) {
-      setMessageType("error");
-      setMessage("Only JPG and PNG customer photos are allowed.");
-      event.target.value = "";
-      return;
-    }
+  if (!allowedTypes.includes(file.type)) {
+    setMessageType("error");
+    setMessage("Only JPG and PNG applicant photos are allowed.");
+    event.target.value = "";
+    return;
+  }
 
-    const maximumFileSize = 5 * 1024 * 1024;
+  const maximumFileSize = 5 * 1024 * 1024;
 
-    if (file.size > maximumFileSize) {
-      setMessageType("error");
-      setMessage("Customer photo size must not exceed 5 MB.");
-      event.target.value = "";
-      return;
-    }
+  if (file.size > maximumFileSize) {
+    setMessageType("error");
+    setMessage("Applicant photo size must not exceed 5 MB.");
+    event.target.value = "";
+    return;
+  }
 
-    setCustomerPhotoFile(file);
-    setCustomerPhotoPreview(URL.createObjectURL(file));
-  };
+  setCustomerPhotoFile(file);
+};
 
   const [coApplicants, setCoApplicants] = useState([]);
 
@@ -2318,39 +2359,41 @@ export default function CreateLead() {
 
           <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  {customerPhotoPreview || customerPhotoUrl ? (
-                    <img
-                      src={customerPhotoPreview || customerPhotoUrl}
-                      alt="Applicant"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs font-bold text-slate-400">
-                      No Photo
-                    </span>
-                  )}
-                </div>
+          <div className="flex items-center gap-4">
+  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <span className="text-xs font-extrabold text-slate-400">
+      PHOTO
+    </span>
+  </div>
 
-                <div>
-                  <h4 className="text-sm font-extrabold text-slate-800">
-                    Applicant Photo
-                  </h4>
+  <div>
+    <h4 className="text-sm font-extrabold text-slate-800">
+      Applicant Photo
+    </h4>
 
-                  <div className="mt-2">
-                    {isCustomerPhotoUploaded ? (
-                      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">
-                        Uploaded
-                      </span>
-                    ) : (
-                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-700">
-                        Pending
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      {isApplicantPhotoUploaded ? (
+        <>
+          <span className="inline-flex rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">
+            Uploaded
+          </span>
+
+          <button
+            type="button"
+            onClick={handleViewApplicantPhoto}
+            className="inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-blue-700 transition-all hover:bg-blue-100"
+          >
+            View Applicant Photo
+          </button>
+        </>
+      ) : (
+        <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-700">
+          Pending
+        </span>
+      )}
+    </div>
+  </div>
+</div>
 
               <div className="flex flex-col gap-2 sm:min-w-[220px]">
                 <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50">
@@ -2377,9 +2420,9 @@ export default function CreateLead() {
                     ? "Uploading..."
                     : !(createdApplicationId ?? applicationId)
                       ? "Save Draft First"
-                      : isCustomerPhotoUploaded
-                        ? "Replace Customer Photo"
-                        : "Upload Customer Photo"}
+                      : isApplicantPhotoUploaded
+                        ? "Replace Applicant Photo"
+                        : "Upload Applicant Photo"}
                 </button>
               </div>
             </div>

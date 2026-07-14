@@ -99,30 +99,32 @@ export default function RMDashboard() {
   return (
     <div className="min-h-screen space-y-8 bg-slate-50 p-4 sm:p-6 lg:p-8 font-sans antialiased text-slate-800">
       
-      {/* Premium Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900 p-6 sm:p-8 text-white shadow-xl shadow-slate-900/20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.2),transparent_50%)]" />
-        <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <span className="inline-flex items-center rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-300 backdrop-blur-sm ring-1 ring-inset ring-blue-500/20">
-              Operational View • {user?.spoke || "Central Spoke"}
-            </span>
-            <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">
-              Welcome back, {user?.name || "Relationship Manager"}
-            </h2>
-            <p className="mt-2 text-sm text-slate-300 max-w-xl">
-              Monitor your pipeline performance, track live corporate application cycles, and clear processing hurdles instantly.
-            </p>
-          </div>
-          <Link 
-            to="/create-lead" 
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition-all duration-200 hover:bg-blue-500 hover:translate-y-[-1px] active:translate-y-[1px]"
-          >
-            <FaPlus className="text-xs" />
-            Create New Lead
-          </Link>
-        </div>
-      </div>
+{/* Premium Hero Banner - Vibrant Light */}
+<div className="overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50 p-6 sm:p-8 text-slate-900 shadow-sm">
+  <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-3">
+      <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-600 shadow-2xl border border-blue-200/60">
+        Operational View • {user?.spoke || "Central Spoke"}
+      </span>
+
+      <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+        Welcome back, <span className="text-blue-600">{user?.name || "Relationship Manager"}</span>
+      </h2>
+
+      <p className="max-w-xl text-sm font-medium text-slate-600">
+        Monitor your pipeline performance, track live corporate application cycles, and clear processing hurdles instantly.
+      </p>
+    </div>
+
+    <Link 
+      to="/create-lead" 
+      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-slate-800 active:scale-95 shrink-0"
+    >
+      <FaPlus className="text-xs" />
+      Create New Lead
+    </Link>
+  </div>
+</div>
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

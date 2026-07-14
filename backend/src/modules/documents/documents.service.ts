@@ -27,7 +27,7 @@ export class DocumentsService {
 
     @InjectRepository(Application)
     private readonly applications: Repository<Application>,
-  ) { }
+  ) {}
 
   async upload(
     input: UploadDocumentInput,
@@ -35,40 +35,24 @@ export class DocumentsService {
     actor: Actor,
   ) {
     if (!file) {
-      throw new BadRequestException(
-        'Document file is required',
-      );
+      throw new BadRequestException('Document file is required');
     }
 
-    const applicationId = Number(
-      input.applicationId,
-    );
+    const applicationId = Number(input.applicationId);
 
-    if (
-      !Number.isInteger(applicationId) ||
-      applicationId <= 0
-    ) {
+    if (!Number.isInteger(applicationId) || applicationId <= 0) {
       await this.removeUploadedFile(file.path);
 
-      throw new BadRequestException(
-        'Valid applicationId is required',
-      );
+      throw new BadRequestException('Valid applicationId is required');
     }
 
-    const documentType = String(
-      input.documentType || '',
-    )
+    const documentType = String(input.documentType || '')
       .trim()
       .toUpperCase();
 
-    const allowedDocumentTypes =
-      Object.values(DocumentType);
+    const allowedDocumentTypes = Object.values(DocumentType);
 
-    if (
-      !allowedDocumentTypes.includes(
-        documentType as DocumentType,
-      )
-    ) {
+    if (!allowedDocumentTypes.includes(documentType as DocumentType)) {
       await this.removeUploadedFile(file.path);
 
       throw new BadRequestException(
@@ -76,151 +60,146 @@ export class DocumentsService {
       );
     }
 
-    const applicationExists =
-      await this.applications.exist({
-        where: {
-          id: applicationId,
-        },
-      });
+    const applicationExists = await this.applications.exist({
+      where: {
+        id: applicationId,
+      },
+    });
 
     if (!applicationExists) {
       await this.removeUploadedFile(file.path);
 
-      throw new NotFoundException(
-        'Application not found',
-      );
+      throw new NotFoundException('Application not found');
     }
 
     try {
+      const savedFileName = file.filename || file.originalname;
+
       const document = new Document();
 
-      document.applicationId =
-        applicationId;
+      document.applicationId = applicationId;
 
-      document.documentType =
-        documentType as DocumentType;
+      document.documentType = documentType as DocumentType;
 
-      document.documentName =
-        String(
-          input.documentName ||
-          documentType,
-        ).trim();
+      document.documentName = String(input.documentName || documentType).trim();
 
-      document.documentSource =
-        String(
-          input.documentSource ||
-          'RM_PORTAL',
-        )
-          .trim()
-          .toUpperCase();
+      document.documentSource = String(input.documentSource || 'RM_PORTAL')
+        .trim()
+        .toUpperCase();
 
-      document.fileName =
-        file.originalname;
+      document.fileName = file.originalname;
 
-      document.filePath =
-        file.path.replace(/\\/g, '/');
+      // Important: store public relative path, not full Windows path
+      document.filePath = `uploads/documents/${savedFileName}`;
 
-      document.fileSize =
-        file.size;
+      document.fileSize = file.size;
 
-      document.mimeType =
-        file.mimetype;
+      document.mimeType = file.mimetype;
 
       const actorId = Number(actor?.id);
 
-      if (
-        Number.isInteger(actorId) &&
-        actorId > 0
-      ) {
-        document.uploadedBy =
-          actorId;
-
-        document.createdBy =
-          actorId;
-
-        document.updatedBy =
-          actorId;
+      if (Number.isInteger(actorId) && actorId > 0) {
+        document.uploadedBy = actorId;
+        document.createdBy = actorId;
+        document.updatedBy = actorId;
       }
 
-      const savedDocument =
-        await this.documents.save(document);
+      const savedDocument = await this.documents.save(document);
 
       return {
-        data: savedDocument,
-        message:
-          'Document uploaded successfully',
+        data: this.formatDocumentResponse(savedDocument),
+        message: 'Document uploaded successfully',
       };
     } catch (error) {
       await this.removeUploadedFile(file.path);
 
-      console.error(
-        'Document database save failed:',
-        error,
-      );
+      console.error('Document database save failed:', error);
 
       throw error;
     }
   }
 
-  async findByApplication(
-    applicationId: number,
-  ) {
-    if (
-      !Number.isInteger(applicationId) ||
-      applicationId <= 0
-    ) {
-      throw new BadRequestException(
-        'Valid applicationId is required',
-      );
+  async findAllByApplication(applicationId: number) {
+    if (!Number.isInteger(applicationId) || applicationId <= 0) {
+      throw new BadRequestException('Valid applicationId is required');
     }
 
-    const applicationExists =
-      await this.applications.exist({
-        where: {
-          id: applicationId,
-        },
-      });
+    const applicationExists = await this.applications.exist({
+      where: {
+        id: applicationId,
+      },
+    });
 
     if (!applicationExists) {
-      throw new NotFoundException(
-        'Application not found',
-      );
+      throw new NotFoundException('Application not found');
     }
 
-    const documents =
-      await this.documents.find({
-        where: {
-          applicationId,
-        },
-        order: {
-          id: 'DESC',
-        },
-      });
+    const documents = await this.documents.find({
+      where: {
+        applicationId,
+      },
+      order: {
+        id: 'DESC',
+      },
+    });
 
     return {
-      data: documents,
+      data: documents.map((document) =>
+        this.formatDocumentResponse(document),
+      ),
+      message: 'Documents fetched successfully',
+    };
+  }
+
+  async findCustomerPhoto(applicationId: number) {
+    if (!Number.isInteger(applicationId) || applicationId <= 0) {
+      throw new BadRequestException('Valid applicationId is required');
+    }
+
+    const document = await this.documents
+      .createQueryBuilder('document')
+      .where('document.applicationId = :applicationId', {
+        applicationId,
+      })
+      .andWhere(
+        `
+          (
+            LOWER(TRIM(document.documentName)) = :customerPhoto
+            OR LOWER(TRIM(document.documentName)) = :applicantPhoto
+            OR document.documentType = :photoType
+          )
+        `,
+        {
+          customerPhoto: 'customer photo',
+          applicantPhoto: 'applicant photo',
+          photoType: DocumentType.PHOTO,
+        },
+      )
+      .orderBy('document.id', 'DESC')
+      .getOne();
+
+    return {
+      data: document ? this.formatDocumentResponse(document) : null,
+      message: document
+        ? 'Customer photo fetched successfully'
+        : 'Customer photo not found',
     };
   }
 
   async remove(id: number) {
-    const document =
-      await this.documents.findOne({
-        where: {
-          id,
-        },
-      });
+    const document = await this.documents.findOne({
+      where: {
+        id,
+      },
+    });
 
     if (!document) {
-      throw new NotFoundException(
-        'Document not found',
-      );
+      throw new NotFoundException('Document not found');
     }
 
     await this.documents.delete(id);
 
-    await this.removeUploadedFile(
-      document.filePath,
-    );
+    await this.removeUploadedFile(document.filePath);
 
     return {
       data: null,
@@ -228,9 +207,73 @@ export class DocumentsService {
     };
   }
 
-  private async removeUploadedFile(
-    filePath?: string,
-  ) {
+  private formatDocumentResponse(document: Document) {
+    const filePath = this.normalizePublicFilePath(document.filePath);
+
+    return {
+      id: Number(document.id),
+      applicationId: Number(document.applicationId),
+
+      documentType: document.documentType,
+      documentName: document.documentName,
+      documentSource: document.documentSource,
+
+      fileName: document.fileName,
+      filePath,
+      fileUrl: this.buildFileUrl(filePath),
+
+      fileSize: Number(document.fileSize),
+      mimeType: document.mimeType,
+
+      uploadedBy: document.uploadedBy ? Number(document.uploadedBy) : null,
+      status: document.status,
+
+      createdAt: document.createdAt,
+      updatedAt: document.updatedAt,
+      createdBy: document.createdBy ? Number(document.createdBy) : null,
+      updatedBy: document.updatedBy ? Number(document.updatedBy) : null,
+
+      // also giving snake_case for old frontend compatibility
+      document_name: document.documentName,
+      document_type: document.documentType,
+      file_name: document.fileName,
+      file_path: filePath,
+      file_url: this.buildFileUrl(filePath),
+    };
+  }
+
+  private normalizePublicFilePath(filePath?: string) {
+    if (!filePath) {
+      return '';
+    }
+
+    const normalizedPath = String(filePath).replace(/\\/g, '/');
+
+    const uploadsIndex = normalizedPath.toLowerCase().indexOf('uploads/');
+
+    if (uploadsIndex >= 0) {
+      return normalizedPath.slice(uploadsIndex);
+    }
+
+    return normalizedPath.replace(/^\/+/, '');
+  }
+
+  private buildFileUrl(filePath?: string) {
+    const normalizedPath = this.normalizePublicFilePath(filePath);
+
+    if (!normalizedPath) {
+      return '';
+    }
+
+    const baseUrl =
+      process.env.PUBLIC_API_BASE_URL ||
+      process.env.BACKEND_URL ||
+      `http://localhost:${process.env.PORT || 9000}`;
+
+    return `${baseUrl.replace(/\/+$/, '')}/${normalizedPath.replace(/^\/+/, '')}`;
+  }
+
+  private async removeUploadedFile(filePath?: string) {
     if (!filePath) {
       return;
     }
@@ -239,12 +282,8 @@ export class DocumentsService {
       await unlink(filePath);
     } catch (error: any) {
       if (error?.code !== 'ENOENT') {
-        console.error(
-          'Unable to delete uploaded file:',
-          error,
-        );
+        console.error('Unable to delete uploaded file:', error);
       }
     }
   }
 }
-

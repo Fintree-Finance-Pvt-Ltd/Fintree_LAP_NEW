@@ -117,35 +117,77 @@ export default function ChargesReceipts() {
   const [allocation, setAllocation] = useState({});
 
   const applicationListQuery = useQuery({
-    queryKey: ["charge-receipt-application-list"],
-    queryFn: () =>
-      rmApi.getChargeReceiptApplications({
-        page: 1,
-        limit: 100,
+  queryKey: ["charge-receipt-application-list-documents-uploaded"],
+  queryFn: async () => {
+    const response = await rmApi.getChargeReceiptApplications({
+      page: 1,
+      limit: 100,
+    });
+
+    const payload = unwrapResponse(response);
+
+    const rows = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
+
+    const applicationsWithWorkflow = await Promise.all(
+      rows.map(async (application) => {
+        try {
+          const workflowResponse = await rmApi.workflowStatus(application.id);
+          const workflowPayload = unwrapResponse(workflowResponse);
+          const workflow = workflowPayload?.data ?? workflowPayload ?? {};
+
+          const documentsUploaded =
+            workflow.documentsUploaded === true ||
+            workflow.documentsUploaded === "true" ||
+            workflow.documentsUploaded === 1 ||
+            workflow.documentsUploaded === "1";
+
+          if (!documentsUploaded) {
+            return null;
+          }
+
+          return {
+            ...application,
+            workflow,
+          };
+        } catch (error) {
+          console.error(
+            "Failed to fetch workflow for application:",
+            application.id,
+            error,
+          );
+
+          return null;
+        }
       }),
-    staleTime: 30000,
-    retry: false,
-  });
+    );
 
-  const applicationQuery = useQuery({
-    queryKey: ["application", applicationId],
-    queryFn: () => rmApi.getApplication(applicationId),
-    enabled: Boolean(applicationId),
-    staleTime: 0,
-    retry: false,
-  });
+    return applicationsWithWorkflow.filter(Boolean);
+  },
+  staleTime: 30000,
+  retry: false,
+});
 
-  const applicationListPayload = unwrapResponse(applicationListQuery.data);
+const applicationQuery = useQuery({
+  queryKey: ["application", applicationId],
+  queryFn: () => rmApi.getApplication(applicationId),
+  enabled: Boolean(applicationId),
+  staleTime: 0,
+  retry: false,
+});
 
-  const applicationList = Array.isArray(applicationListPayload)
-    ? applicationListPayload
-    : Array.isArray(applicationListPayload?.data)
-      ? applicationListPayload.data
-      : [];
+const applicationList = applicationListQuery.data ?? [];
 
-  const applicationPayload = unwrapResponse(applicationQuery.data);
-  const application = applicationPayload?.data ?? applicationPayload ?? {};
-  const profile = application?.customerProfile || {};
+const applicationPayload = unwrapResponse(applicationQuery.data);
+const application = applicationPayload?.data ?? applicationPayload ?? {};
+const profile = application?.customerProfile || {};
+
+
+ 
+
 
   const selectedCustomer = {
     customerName:
@@ -765,11 +807,13 @@ export default function ChargesReceipts() {
             disabled={applicationListQuery.isLoading}
             onChange={handleApplicationChange}
           >
-            <option value="">
-              {applicationListQuery.isLoading
-                ? "Loading applications..."
-                : "Select Customer Application"}
-            </option>
+         <option value="">
+  {applicationListQuery.isLoading
+    ? "Loading document completed applications..."
+    : applicationList.length === 0
+      ? "No document completed applications found"
+      : "Select Customer Application"}
+</option>
 
             {applicationList.map((item) => (
               <option key={item.id} value={item.id}>
