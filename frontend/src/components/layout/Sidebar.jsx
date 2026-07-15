@@ -35,28 +35,8 @@ const rolesConfig = {
       items: [
         { to: "/my-leads", label: "My Leads", Icon: FaFileAlt },
         { to: "/create-lead", label: "Create Lead", Icon: FaUserPlus },
-        // {
-        //   to: "/customer-visit",
-        //   label: "Customer / Business Visit",
-        //   Icon: FaBriefcase,
-        // },
-        // {
-        //   to: "/geo-verification",
-        //   label: "Geo Verification",
-        //   Icon: FaMapMarkerAlt,
-        // },
-        { to: "/kyc-documents", label: "KYC & Documents", Icon: FaFolderOpen },
-        {
-          to: "/charges-receipts",
-          label: "Charges & Receipts",
-          Icon: FaReceipt,
-        },
-        {
-          to: "/payment-management",
-          label: "Payment Management",
-          Icon: FaCreditCard,
-        },
-        { to: "/submit-bm", label: "Submit to BM", Icon: FaPaperPlane },
+
+       { to: "/kyc-documents", label: "KYC & Documents", Icon: FaFolderOpen },
       ],
     },
   ],
@@ -79,36 +59,46 @@ const rolesConfig = {
           label: "Payment Management",
           Icon: FaCreditCard,
         },
-        { to: "/submit-bm", label: "Submit to BM", Icon: FaPaperPlane },
+        // { to: "/submit-bm", label: "Submit to BM", Icon: FaPaperPlane },
       ],
     },
   ],
 
 
-    BM: [
+  BM: [
     {
       category: "PRIMARY",
       items: [{ to: "/bmDashboard", label: "My Work", Icon: FaBriefcase }],
     },
+    
     {
       category: "MODULES",
       items: [
-               {
-          to: "/bmReview",
-          label: "BM Review",
-          Icon: FaReceipt,
-        },
-            {
-          to: "/bmApproved",
-          label: "BM Approved",
-          Icon: FaReceipt,
-        },
-
+           { to: "/my-leads", label: "My Leads", Icon: FaFileAlt },
+        { to: "/create-lead", label: "Create Lead", Icon: FaUserPlus },
         {
-          to:"/chargesApproved",
-          label:"Charges Approved",
+          to: "/customer-visit",
+          label: "Customer / Business Visit",
+          Icon: FaBriefcase,
+        },
+        {
+          to: "/geo-verification",
+          label: "Geo Verification",
+          Icon: FaMapMarkerAlt,
+        },
+        { to: "/kyc-documents", label: "KYC & Documents", Icon: FaFolderOpen },
+        {
+          to: "/charges-receipts",
+          label: "Charges & Receipts",
           Icon: FaReceipt,
-        }
+        },
+        {
+          to: "/payment-management",
+
+          label: "Payment Management",
+          Icon: FaCreditCard,
+        },
+       { to: "/submit-bm", label: "Submit to CM", Icon: FaPaperPlane },
       ],
     },
   ],
@@ -133,7 +123,7 @@ export default function Sidebar() {
   const { user } = useAuth();
   const roles = normalizeRoles(user);
   const currentPath = window.location.pathname;
-  
+
   const workflowQuery = useQuery({
     queryKey: ["rm-sidebar-workflow"],
     queryFn: async () => {
@@ -162,7 +152,7 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
-      const roleKeysInOrder = ["RM", "BM","ADMIN"];
+      const roleKeysInOrder = ["RM", "BM", "ADMIN"];
       for (const roleKey of roleKeysInOrder) {
         if (!roles.includes(roleKey)) continue;
         const roleGroups = rolesConfig[roleKey] || [];
@@ -206,10 +196,9 @@ export default function Sidebar() {
                 key={to}
                 to={to}
                 className={({ isActive }) =>
-                  `flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/10 font-semibold border-l-4 border-cyan-400"
-                      : "hover:bg-white/5 hover:text-slate-200"
+                  `flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${isActive
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/10 font-semibold border-l-4 border-cyan-400"
+                    : "hover:bg-white/5 hover:text-slate-200"
                   }`
                 }
               >

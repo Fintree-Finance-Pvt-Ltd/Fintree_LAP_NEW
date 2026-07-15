@@ -18,6 +18,7 @@ const emptyForm = {
   aadhaarNumber: "",
   occupation: "SELF_EMPLOYED",
   businessName: "",
+  gstNumber: "",
   propertyCategory: "Residential",
   propertyType: PROPERTY_TYPE.Residential?.[0] || "Independent House",
   propertyValue: "",
@@ -120,7 +121,7 @@ export default function CreateLead() {
   const queryClient = useQueryClient();
   const location = useLocation();
 
-const [customerPhotoFile, setCustomerPhotoFile] = useState(null);
+  const [customerPhotoFile, setCustomerPhotoFile] = useState(null);
 
   const [createdApplicationId, setCreatedApplicationId] = useState(null);
 
@@ -257,18 +258,18 @@ const [customerPhotoFile, setCustomerPhotoFile] = useState(null);
 
   const isApplicantPhotoUploaded = Boolean(applicantPhotoDocument);
 
-const handleViewApplicantPhoto = () => {
-  if (!applicantPhotoUrl) {
-    setMessageType("error");
-    setMessage("Applicant photo file is not available.");
-    return;
-  }
+  const handleViewApplicantPhoto = () => {
+    if (!applicantPhotoUrl) {
+      setMessageType("error");
+      setMessage("Applicant photo file is not available.");
+      return;
+    }
 
-  window.open(applicantPhotoUrl, "_blank", "noopener,noreferrer");
-};
+    window.open(applicantPhotoUrl, "_blank", "noopener,noreferrer");
+  };
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-
+const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
   const [applicationNumber, setApplicationNumber] = useState("");
   const [formData, setFormData] = useState(
     location?.state?.formData ? { ...emptyForm, ...location.state.formData } : emptyForm,
@@ -294,6 +295,7 @@ const handleViewApplicantPhoto = () => {
   const [emailOtpVerified, setEmailOtpVerified] = useState(false);
   const [emailOtpSessionId, setEmailOtpSessionId] = useState(null);
   const [panVerified, setPanVerified] = useState(false);
+  const [gstVerified, setGstVerified] = useState(false);
   const [panFile, setPanFile] = useState(null);
   const [panOcrData, setPanOcrData] = useState(null);
   const [panOcrError, setPanOcrError] = useState("");
@@ -348,7 +350,7 @@ const handleViewApplicantPhoto = () => {
       setMessageType("success");
       setMessage("Customer photo uploaded successfully.");
 
-     setCustomerPhotoFile(null);
+      setCustomerPhotoFile(null);
 
       await Promise.all([
         queryClient.invalidateQueries({
@@ -370,42 +372,48 @@ const handleViewApplicantPhoto = () => {
     },
   });
 
- const handleCustomerPhotoChange = (event) => {
-  const file = event.target.files?.[0] || null;
+  const handleCustomerPhotoChange = (event) => {
+    const file = event.target.files?.[0] || null;
 
-  if (!file) {
-    setCustomerPhotoFile(null);
-    return;
-  }
+    if (!file) {
+      setCustomerPhotoFile(null);
+      return;
+    }
 
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
 
-  if (!allowedTypes.includes(file.type)) {
-    setMessageType("error");
-    setMessage("Only JPG and PNG applicant photos are allowed.");
-    event.target.value = "";
-    return;
-  }
+    if (!allowedTypes.includes(file.type)) {
+      setMessageType("error");
+      setMessage("Only JPG and PNG applicant photos are allowed.");
+      event.target.value = "";
+      return;
+    }
 
-  const maximumFileSize = 5 * 1024 * 1024;
+    const maximumFileSize = 5 * 1024 * 1024;
 
-  if (file.size > maximumFileSize) {
-    setMessageType("error");
-    setMessage("Applicant photo size must not exceed 5 MB.");
-    event.target.value = "";
-    return;
-  }
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Applicant photo size must not exceed 5 MB.");
+      event.target.value = "";
+      return;
+    }
 
-  setCustomerPhotoFile(file);
-};
+    setCustomerPhotoFile(file);
+  };
 
   const [coApplicants, setCoApplicants] = useState([]);
 
   // Handler to update specific fields inside a specific co-applicant's index
   const handleCoApplicantChange = (index, event) => {
     const { name, value } = event.target;
-    const nextValue = name === "panNumber" ? value.toUpperCase() : value;
+   const nextValue =
+  name === "panNumber" || name === "gstNumber"
+    ? value.toUpperCase()
+    : value;
 
+if (name === "gstNumber") {
+  setGstVerified(false);
+}
     setCoApplicants((prev) =>
       prev.map((coApp, idx) =>
         idx === index ? { ...coApp, [name]: nextValue } : coApp
@@ -615,6 +623,12 @@ const handleViewApplicantPhoto = () => {
       businessName:
         application.businessName ||
         profile.businessName ||
+        "",
+      gstNumber:
+        application.gstNumber ||
+        application.gst_number ||
+        profile.gstNumber ||
+        profile.gst_number ||
         "",
 
       propertyCategory,
@@ -833,6 +847,8 @@ const handleViewApplicantPhoto = () => {
     },
   });
 
+
+
   const handleSendOtp = () => {
     if (otpVerified) return;
     if (!/^[6-9]\d{9}$/.test(formData.mobileNumber)) {
@@ -971,6 +987,7 @@ const handleViewApplicantPhoto = () => {
       aadhaarNumber: formData.aadhaarNumber.trim() || undefined,
       occupationType: formData.occupation,
       businessName: formData.businessName.trim() || undefined,
+      gstNumber: formData.gstNumber.trim() || undefined,
       propertyCategory: formData.propertyCategory || undefined,
       propertyType: formData.propertyType ? `${formData.propertyCategory} - ${formData.propertyType}` : undefined,
       marketValue: formData.propertyValue ? Number(formData.propertyValue) : undefined,
@@ -1312,6 +1329,41 @@ const handleViewApplicantPhoto = () => {
       setMessage(error?.message || "Unable to verify PAN.");
     },
   });
+const verifyGstMutation = useMutation({
+  mutationFn: () =>
+rmApi.verifyGst({
+  gstNumber: formData.gstNumber.trim().toUpperCase(),
+  applicationId: Number(createdApplicationId ?? applicationId),
+}),
+
+  onSuccess: async (response) => {
+    const result = unwrapResponse(response);
+
+    setGstVerified(true);
+    setMessageType("success");
+    setMessage(result?.message || "GST verified successfully.");
+
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["customer-profile", createdApplicationId ?? applicationId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["application", createdApplicationId ?? applicationId],
+      }),
+    ]);
+  },
+
+  onError: (error) => {
+    setGstVerified(false);
+    setMessageType("error");
+    setMessage(
+      error?.response?.data?.message ||
+        error?.message ||
+        "Unable to verify GST.",
+    );
+  },
+});
+
 
   const handleVerifyPan = () => {
     const panNumber = formData.panNumber.trim().toUpperCase();
@@ -1345,6 +1397,81 @@ const handleViewApplicantPhoto = () => {
 
     verifyPanMutation.mutate();
   };
+
+const handleVerifyGst = () => {
+  const gstNumber = formData.gstNumber.trim().toUpperCase();
+
+  setMessage("");
+
+  if (!gstNumber) {
+    setMessageType("error");
+    setMessage("Enter GST number before verification.");
+    return;
+  }
+
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstNumber)) {
+    setMessageType("error");
+    setMessage("Enter a valid GST number.");
+    return;
+  }
+
+  if (!(createdApplicationId ?? applicationId)) {
+    setMessageType("error");
+    setMessage("Save the lead before GST verification so verification can be stored.");
+    return;
+  }
+
+  verifyGstMutation.mutate();
+};
+
+
+const handleInitAadhaar = async () => {
+  const targetApplicationId = createdApplicationId ?? applicationId;
+
+  if (!targetApplicationId) {
+    setMessageType("error");
+    setMessage("Save the lead before sending Aadhaar KYC link.");
+    return;
+  }
+
+  try {
+    setAadhaarLinkSending(true);
+    setMessage("");
+
+    const response = await rmApi.initAadhaarKyc({
+      applicationId: Number(targetApplicationId),
+    });
+
+    const result = unwrapResponse(response);
+    const payload = result?.data ?? result;
+    const kycUrl = payload?.kycUrl || payload?.data?.kycUrl;
+
+    setMessageType("success");
+    setMessage(result?.message || "Aadhaar KYC link generated successfully.");
+
+    if (kycUrl) {
+      window.open(kycUrl, "_blank", "noopener,noreferrer");
+    }
+
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["customer-profile", targetApplicationId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["application", targetApplicationId],
+      }),
+    ]);
+  } catch (error) {
+    setMessageType("error");
+    setMessage(
+      error?.response?.data?.message ||
+        error?.message ||
+        "Unable to send Aadhaar KYC link.",
+    );
+  } finally {
+    setAadhaarLinkSending(false);
+  }
+};
 
   const handleCategoryChange = (event) => {
     const selectedCategory = event.target.value;
@@ -1626,7 +1753,9 @@ const handleViewApplicantPhoto = () => {
     updateDraftMutation.isPending ||
     submitDraftMutation.isPending ||
     panOcrMutation.isPending ||
-    verifyPanMutation.isPending;
+    verifyPanMutation.isPending ||
+    verifyGstMutation.isPending;
+      aadhaarLinkSending;
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
@@ -2112,328 +2241,352 @@ const handleViewApplicantPhoto = () => {
       {/* Main Core Form Inputs Viewport Layout matching image guidelines */}
       <div className="space-y-6">
 
-        <Section title="Primary Applicant Information">
-          <Field
-            label="Customer / Entity Name *"
-            name="customerName"
-            value={formData.customerName}
-            onChange={handleInputChange}
-            required
-          />
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-700">
-              Mobile Number *
-            </label>
-            <div className="flex gap-2">
-              <input
-                name="mobileNumber"
-                value={formData.mobileNumber}
-                onChange={handleInputChange}
-                maxLength={10}
-                inputMode="numeric"
-                required
-                disabled={otpVerified}
-                className={`flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${otpVerified ? "bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200" : ""
-                  }`}
-              />
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                disabled={otpVerified || sendOtpMutation.isPending}
-                className={`rounded-lg px-4 text-xs font-bold shadow-xs transition-all border ${otpVerified
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-700 cursor-not-allowed"
-                  : "bg-slate-900 border-slate-900 text-white hover:bg-slate-800"
-                  }`}
-              >
-                {otpVerified
-                  ? "✓ Verified"
-                  : sendOtpMutation.isPending
-                    ? "Sending..."
-                    : "Send OTP"}
-              </button>
-            </div>
-
-            {otpVerified && (
-              <div className="mt-2 bg-slate-50 rounded-lg p-2.5 border border-slate-200 flex justify-between items-center">
-                <span className="text-xs font-medium text-slate-500">Application Number</span>
-                <span className="text-xs font-bold text-slate-900">{applicationNumber || "—"}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-700">
-              Email Id *
-            </label>
-
-            <div className="flex gap-2">
-              <input
-                type="email"
-                name="emailId"
-                value={formData.emailId || ""}
-                onChange={handleEmailChange}
-                maxLength={255}
-                autoComplete="email"
-                placeholder="Enter email address"
-                required
-                disabled={emailOtpVerified}
-                className={`flex-1 rounded-lg border px-3.5 py-2 text-sm shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${emailOtpVerified
-                  ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500"
-                  : "border-slate-300 bg-white text-slate-900"
-                  }`}
-              />
-
-              <button
-                type="button"
-                onClick={handleSendEmailOtp}
-                disabled={emailOtpVerified || sendEmailOtpMutation.isPending}
-                className={`rounded-lg border px-4 text-xs font-bold shadow-xs transition-all ${emailOtpVerified
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 cursor-not-allowed"
-                  : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  }`}
-              >
-                {emailOtpVerified
-                  ? "✓ Verified"
-                  : sendEmailOtpMutation.isPending
-                    ? "Sending..."
-                    : emailOtpSent
-                      ? "Resend OTP"
-                      : "Send OTP"}
-              </button>
-            </div>
-
-            {emailOtpVerified && (
-              <div className="mt-2 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
-                <span className="text-xs font-medium text-emerald-700">
-                  Email successfully verified
-                </span>
-
-                <span className="text-xs font-bold text-emerald-700">
-                  ✓ Verified
-                </span>
-              </div>
-            )}
-          </div>
-
-
-          {/* <Field
-            label="Email ID Address"
-            name="emailId"
-            type="email"
-            value={formData.emailId}
-            onChange={handleInputChange}
-          /> */}
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-700">
-              PAN Number *
-            </label>
-
-            <div className="flex gap-2">
-              <input
-                name="panNumber"
-                value={formData.panNumber}
-                onChange={handleInputChange}
-                maxLength={10}
-                placeholder="ABCDE1234F"
-                disabled={panVerified}
-                className={`flex-1 rounded-lg border px-3.5 py-2 text-sm uppercase shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${panVerified
-                  ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-slate-300 bg-white text-slate-900"
-                  }`}
-              />
-
-              {formData.panNumber.trim() && (
-                <button
-                  type="button"
-                  onClick={handleVerifyPan}
-                  disabled={panVerified || verifyPanMutation.isPending}
-                  className={`rounded-lg border px-4 text-xs font-bold shadow-xs transition-all ${panVerified
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    }`}
-                >
-                  {panVerified
-                    ? "Verified"
-                    : verifyPanMutation.isPending
-                      ? "Verifying..."
-                      : "Verify"}
-                </button>
-              )}
-            </div>
-
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/70 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <label className="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 shadow-xs transition-all hover:bg-slate-50">
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    disabled={panOcrMutation.isPending}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] || null;
-                      setPanFile(file);
-                      setPanOcrData(null);
-                      setPanOcrError("");
-                      if (file) {
-                        setPanVerified(false);
-                      }
-                    }}
-                  />
-                  <span className="block truncate">
-                    {panFile ? panFile.name : "Upload PAN image or PDF"}
-                  </span>
-                </label>
-
-                <button
-                  type="button"
-                  disabled={!panFile || panOcrMutation.isPending}
-                  onClick={() => {
-                    setMessage("");
-                    setPanOcrError("");
-                    panOcrMutation.mutate();
-                  }}
-                  className="rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-400"
-                >
-                  {panOcrMutation.isPending ? "Extracting..." : "Extract PAN"}
-                </button>
-              </div>
-
-              {panOcrError && (
-                <p className="mt-2 text-xs font-semibold text-rose-600">
-                  {panOcrError}
-                </p>
-              )}
-
-              {panOcrData && !panOcrError && (
-                <p className="mt-2 text-xs font-semibold text-emerald-700">
-                  OCR details captured. Review the PAN and name before verification.
-                </p>
-              )}
-            </div>
-
-            {panVerified && (
-              <div className="mt-2 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
-                <span className="text-xs font-medium text-emerald-700">
-                  PAN successfully verified
-                </span>
-                <span className="text-xs font-bold text-emerald-700">
-                  Verified
-                </span>
-              </div>
-            )}
-          </div>
-
-          <Field
-            label="Aadhaar / OVD Number *"
-            name="aadhaarNumber"
-            value={formData.aadhaarNumber}
-            onChange={handleInputChange}
-            maxLength={12}
-            inputMode="numeric"
-            placeholder="0000 0000 0000"
-          />
-
-          <Field label="Occupation / Constitution">
-            <select
-              name="occupation"
-              value={formData.occupation}
-              onChange={handleInputChange}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            >
-              <option value="SELF_EMPLOYED">Self-employed</option>
-              <option value="SALARIED">Salaried Sector</option>
-              <option value="BUSINESS">Corporate Business</option>
-              <option value="PROFESSIONAL">Licensed Professional</option>
-            </select>
-          </Field>
-
-          <Field
-            label="Employer / Business Name"
-            name="businessName"
-            value={formData.businessName}
-            onChange={handleInputChange}
-          />
-
-
-          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <span className="text-xs font-extrabold text-slate-400">
-      PHOTO
-    </span>
+<Section title="Primary Applicant Information">
+  {/* Row 1: Legal Name */}
+  <div className="col-span-full">
+    <Field
+      label="Customer / Entity Name *"
+      name="customerName"
+      value={formData.customerName}
+      onChange={handleInputChange}
+      required
+      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-900 shadow-2xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+    />
   </div>
 
-  <div>
-    <h4 className="text-sm font-extrabold text-slate-800">
-      Applicant Photo
-    </h4>
+  {/* Row 2: Contact Validations Grid */}
+  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 col-span-full">
+    {/* Mobile Number Block */}
+    <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        Mobile Number *
+      </label>
+      <div className="flex gap-2.5">
+        <input
+          name="mobileNumber"
+          value={formData.mobileNumber}
+          onChange={handleInputChange}
+          maxLength={10}
+          inputMode="numeric"
+          required
+          disabled={otpVerified}
+          placeholder="Enter 10-digit number"
+          className={`flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+            otpVerified ? "bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200" : ""
+          }`}
+        />
+        <button
+          type="button"
+          onClick={handleSendOtp}
+          disabled={otpVerified || sendOtpMutation.isPending}
+          className={`rounded-xl px-5 text-xs font-extrabold uppercase tracking-wider transition-all border whitespace-nowrap shadow-2xs ${
+            otpVerified
+              ? "bg-emerald-50 border-emerald-200 text-emerald-600 cursor-not-allowed"
+              : "bg-slate-900 border-slate-900 text-white hover:bg-slate-800 active:scale-98"
+          }`}
+        >
+          {otpVerified ? "✓ Verified" : sendOtpMutation.isPending ? "Sending..." : "Send OTP"}
+        </button>
+      </div>
 
-    <div className="mt-2 flex flex-wrap items-center gap-2">
-      {isApplicantPhotoUploaded ? (
-        <>
-          <span className="inline-flex rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">
-            Uploaded
-          </span>
+      {otpVerified && (
+        <div className="mt-2.5 flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-2.5 border border-slate-100">
+          <span className="text-xs font-semibold text-slate-400">Application ID</span>
+          <span className="text-xs font-bold tracking-wide text-slate-700">{applicationNumber || "—"}</span>
+        </div>
+      )}
+    </div>
 
-          <button
-            type="button"
-            onClick={handleViewApplicantPhoto}
-            className="inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-blue-700 transition-all hover:bg-blue-100"
-          >
-            View Applicant Photo
-          </button>
-        </>
-      ) : (
-        <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-700">
-          Pending
-        </span>
+    {/* Email Block */}
+    <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        Email Id *
+      </label>
+      <div className="flex gap-2.5">
+        <input
+          type="email"
+          name="emailId"
+          value={formData.emailId || ""}
+          onChange={handleEmailChange}
+          maxLength={255}
+          autoComplete="email"
+          placeholder="name@domain.com"
+          required
+          disabled={emailOtpVerified}
+          className={`flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+            emailOtpVerified ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : ""
+          }`}
+        />
+        <button
+          type="button"
+          onClick={handleSendEmailOtp}
+          disabled={emailOtpVerified || sendEmailOtpMutation.isPending}
+          className={`rounded-xl px-5 text-xs font-extrabold uppercase tracking-wider transition-all border whitespace-nowrap shadow-2xs ${
+            emailOtpVerified
+              ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
+              : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
+          }`}
+        >
+          {emailOtpVerified ? "✓ Verified" : sendEmailOtpMutation.isPending ? "Sending..." : emailOtpSent ? "Resend OTP" : "Send OTP"}
+        </button>
+      </div>
+
+      {emailOtpVerified && (
+        <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-emerald-50/50 px-3.5 py-2.5 border border-emerald-100/60 text-emerald-700">
+          <span className="text-xs font-bold">✓ Email address verified successfully</span>
+        </div>
       )}
     </div>
   </div>
-</div>
 
-              <div className="flex flex-col gap-2 sm:min-w-[220px]">
-                <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50">
-                  {customerPhotoFile ? "Change Photo" : "Select Photo"}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={handleCustomerPhotoChange}
-                  />
-                </label>
+  {/* Row 3: Identity Verification (PAN & Aadhaar + Compact Photo Block) */}
+  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 col-span-full">
+    {/* Left Side Column: PAN Block */}
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+      <div>
+        <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          PAN Number *
+        </label>
+        <div className="flex gap-2.5 mt-1.5">
+          <input
+            name="panNumber"
+            value={formData.panNumber}
+            onChange={handleInputChange}
+            maxLength={10}
+            placeholder="ABCDE1234F"
+            disabled={panVerified}
+            className={`flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+              panVerified ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-600" : ""
+            }`}
+          />
+          {formData.panNumber.trim() && (
+            <button
+              type="button"
+              onClick={handleVerifyPan}
+              disabled={panVerified || verifyPanMutation.isPending}
+              className={`rounded-xl px-5 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
+                panVerified
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
+                  : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
+              }`}
+            >
+              {panVerified ? "Verified" : verifyPanMutation.isPending ? "Verifying..." : "Verify"}
+            </button>
+          )}
+        </div>
+      </div>
 
-                <button
-                  type="button"
-                  disabled={
-                    !customerPhotoFile ||
-                    uploadCustomerPhotoMutation.isPending ||
-                    !(createdApplicationId ?? applicationId)
-                  }
-                  onClick={() => uploadCustomerPhotoMutation.mutate()}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-                >
-                  {uploadCustomerPhotoMutation.isPending
-                    ? "Uploading..."
-                    : !(createdApplicationId ?? applicationId)
-                      ? "Save Draft First"
-                      : isApplicantPhotoUploaded
-                        ? "Replace Applicant Photo"
-                        : "Upload Applicant Photo"}
-                </button>
-              </div>
-            </div>
+      {/* PAN Scan / Extraction Area */}
+      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-3xs hover:bg-slate-50 transition-colors">
+            <input
+              type="file"
+              className="hidden"
+              accept=".jpg,.jpeg,.png,.pdf"
+              disabled={panOcrMutation.isPending}
+              onChange={(event) => {
+                const file = event.target.files?.[0] || null;
+                setPanFile(file);
+                setPanOcrData(null);
+                setPanOcrError("");
+                if (file) setPanVerified(false);
+              }}
+            />
+            <span className="block truncate max-w-[200px]">
+              {panFile ? panFile.name : "Attach card image or PDF"}
+            </span>
+          </label>
+          <button
+            type="button"
+            disabled={!panFile || panOcrMutation.isPending}
+            onClick={() => {
+              setMessage("");
+              setPanOcrError("");
+              panOcrMutation.mutate();
+            }}
+            className="rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+          >
+            {panOcrMutation.isPending ? "Extracting..." : "Auto-Fill"}
+          </button>
+        </div>
+        {panOcrError && <p className="mt-2 text-[11px] font-semibold text-rose-500">{panOcrError}</p>}
+        {panOcrData && !panOcrError && <p className="mt-2 text-[11px] font-medium text-emerald-600">Scan successful. Review mapped data.</p>}
+      </div>
 
-            {customerPhotoFile && (
-              <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
-                Selected: {customerPhotoFile.name}
-              </div>
+      {panVerified && (
+        <div className="flex items-center justify-between rounded-xl bg-emerald-50/50 px-3.5 py-2 border border-emerald-100/60 text-emerald-700">
+          <span className="text-xs font-semibold">Document matches registered identity</span>
+          <span className="text-xs font-bold uppercase tracking-wider">Verified</span>
+        </div>
+      )}
+    </div>
+
+    {/* Right Side Column: Aadhaar Box + Compact Photo Block */}
+    <div className="flex flex-col gap-4 self-start">
+      {/* Aadhaar KYC Link Dispatcher Box */}
+      <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 via-white to-slate-50/50 p-3.5 shadow-2xs flex flex-row items-center justify-between gap-4 h-fit">
+        <div className="flex flex-col gap-1">
+          <span className="inline-flex self-start rounded-md bg-blue-600/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+            DigiLocker KYC
+          </span>
+          <h4 className="text-sm font-bold text-slate-800">Aadhaar Verification Link</h4>
+        </div>
+
+        <div className="shrink-0 min-w-[160px]">
+          <button
+            type="button"
+            onClick={handleInitAadhaar}
+            disabled={aadhaarLinkSending || !(createdApplicationId ?? applicationId)}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/10 transition-all hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+          >
+            {aadhaarLinkSending ? (
+              "Sending..."
+            ) : !(createdApplicationId ?? applicationId) ? (
+              "Save Draft First"
+            ) : (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v7.5A2.25 2.25 0 005.25 18h13.5A2.25 2.25 0 0021 15.75v-4.5M13.5 6L21 3m0 0v7.5M21 3l-7.5 7.5" />
+                </svg>
+                Send Link
+              </>
             )}
+          </button>
+        </div>
+      </div>
+
+      {/* Compact Profile Photo Management Panel */}
+      <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 shadow-3xs">
+            <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
+              IMG
+            </span>
           </div>
-        </Section>
+          <div className="flex flex-col gap-1">
+            <h4 className="text-xs font-bold text-slate-800">Biometric Photo</h4>
+            <div className="flex items-center gap-1.5">
+              {isApplicantPhotoUploaded ? (
+                <>
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantPhoto}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View Photo
+                  </button>
+                </>
+              ) : (
+                <span className="inline-flex rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
+                  Pending
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 min-w-[210px]">
+          <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors whitespace-nowrap">
+            {customerPhotoFile ? "Change" : "Choose File"}
+            <input
+              type="file"
+              className="hidden"
+              accept=".jpg,.jpeg,.png"
+              onChange={handleCustomerPhotoChange}
+            />
+          </label>
+
+          <button
+            type="button"
+            disabled={!customerPhotoFile || uploadCustomerPhotoMutation.isPending || !(createdApplicationId ?? applicationId)}
+            onClick={() => uploadCustomerPhotoMutation.mutate()}
+            className="flex-1 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"
+          >
+            {uploadCustomerPhotoMutation.isPending ? "Uploading..." : "Upload"}
+          </button>
+        </div>
+      </div>
+      
+      {customerPhotoFile && (
+        <div className="rounded-xl bg-blue-50/50 px-3 py-1.5 border border-blue-100 text-[11px] font-medium text-blue-700 truncate max-w-sm">
+          Staged: <span className="font-bold">{customerPhotoFile.name}</span>
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* Row 4: Professional & Corporate Details Grid */}
+  <div className="grid grid-cols-1 gap-5 md:grid-cols-3 col-span-full">
+    <Field label="Occupation / Constitution">
+      <select
+        name="occupation"
+        value={formData.occupation}
+        onChange={handleInputChange}
+        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+      >
+        <option value="SELF_EMPLOYED">Self-employed</option>
+        <option value="SALARIED">Salaried Sector</option>
+        <option value="BUSINESS">Corporate Business</option>
+        <option value="PROFESSIONAL">Licensed Professional</option>
+      </select>
+    </Field>
+
+    <Field
+      label="Employer / Business Name"
+      name="businessName"
+      value={formData.businessName}
+      onChange={handleInputChange}
+      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+    />
+
+    {/* GST Identification Block */}
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        GST Number
+      </label>
+      <div className="flex gap-2.5">
+        <input
+          name="gstNumber"
+          value={formData.gstNumber}
+          onChange={handleInputChange}
+          maxLength={15}
+          placeholder="22AAAAA0000A1Z5"
+          disabled={gstVerified}
+          className={`flex-1 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm uppercase font-semibold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+            gstVerified ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-600" : ""
+          }`}
+        />
+
+        {formData.gstNumber.trim() && (
+          <button
+            type="button"
+            onClick={handleVerifyGst}
+            disabled={gstVerified || verifyGstMutation.isPending}
+            className={`rounded-xl px-4 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
+              gstVerified
+                ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
+                : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
+            }`}
+          >
+            {gstVerified ? "Verified" : verifyGstMutation.isPending ? "Verifying..." : "Verify"}
+          </button>
+        )}
+      </div>
+
+      {gstVerified && (
+        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50/50 px-3.5 py-2 border border-emerald-100/60 text-emerald-700">
+          <span className="text-xs font-semibold">GSTIN validated successfully</span>
+          <span className="text-xs font-bold uppercase tracking-wider">Verified</span>
+        </div>
+      )}
+    </div>
+  </div>
+</Section>
+
 
         {/* Co-Applicants Multi-Card Management Workspace */}
         <div className="space-y-6">

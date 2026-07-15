@@ -114,13 +114,26 @@ export const rmApi = {
     ),
 
 
+// For Gst Verify
+  verifyPan: (payload) =>apiClient.post("/pan/verify", payload),
 
-  verifyPan: (payload) =>
-    apiClient.post("/pan/verify", payload),
+// For Gst Verify
 
+verifyGst: (payload) =>
+  apiClient.post("/gst/verify", {
+    gstNumber: String(payload?.gstNumber || "").trim().toUpperCase(),
+    applicationId: Number(payload?.applicationId),
+  }),
+
+// For Ocr
   panOcr: (payload) =>
     sandboxClient.post("/ocr/v1/pan", payload),
 
+
+// For Aadhaar KYC
+  initAadhaarKyc: (payload) =>
+  apiClient.post("/aadhaar/init", payload),
+  
   // =========================
   // OTP
   // =========================

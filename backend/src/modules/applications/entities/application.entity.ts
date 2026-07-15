@@ -18,6 +18,7 @@ import { CustomerProfile } from '../../customer-profiles/entities/customer-profi
 import { Document } from '../../documents/entities/document.entity';
 import { Workflow } from '../../workflow/entities/workflow.entity';
 import { ChargesReceipt } from '../../charges-receipts/entities/charges-receipt.entity';
+import { KycVerificationStatus } from '../../varification/entities/kyc-verification-status.entity';
 
 @Entity('applications')
 export class Application {
@@ -115,4 +116,11 @@ export class Application {
 
   @OneToMany(() => ChargesReceipt, (chargesReceipt) => chargesReceipt.application)
   chargesReceipts?: ChargesReceipt[];
+
+  @OneToMany(
+  () => KycVerificationStatus,
+  (kycVerificationStatus) => kycVerificationStatus.application,
+)
+kycVerificationStatuses?: KycVerificationStatus[];
+  email: string | undefined;
 }

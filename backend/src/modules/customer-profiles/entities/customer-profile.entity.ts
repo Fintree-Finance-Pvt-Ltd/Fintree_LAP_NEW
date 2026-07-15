@@ -21,9 +21,11 @@ customerType?: CustomerType;
   @Column({ name: 'last_name', length: 80 }) lastName: string;
   @Column({ length: 20 })mobile: string;
   @Column({ name: 'mobile_verified', default: false })mobileVerified: boolean;
-@Column({ length: 180, nullable: true })email?: string;
+ @Column({ length: 180, nullable: true })email?: string;
 @Column({ name: 'email_verified', default: false })emailVerified: boolean;
   @Column({ type: 'date', nullable: true }) dob?: string;
+  
+
   @Column({ type: 'enum', enum: Gender, nullable: true }) gender?: Gender;
   @Column({ name: 'marital_status', type: 'enum', enum: MaritalStatus, nullable: true }) maritalStatus?: MaritalStatus;
   @Column({ length: 120, nullable: true }) education?: string;
@@ -58,6 +60,7 @@ customerType?: CustomerType;
   @Column({ name: 'market_value', type: 'decimal', precision: 15, scale: 2, nullable: true }) marketValue?: string;
   @Column({ name: 'distress_value', type: 'decimal', precision: 15, scale: 2, nullable: true }) distressValue?: string;
   @Column({ name: 'bank_name', length: 140, nullable: true }) bankName?: string;
+  @Column({ name: 'gst_number', length: 20, nullable: true })gstNumber?: string;
   @Column({ name: 'account_number', length: 40, nullable: true }) accountNumber?: string;
   @Column({ length: 11, nullable: true }) ifsc?: string;
   @Column({ name: 'branch_name', length: 140, nullable: true }) branchName?: string;
