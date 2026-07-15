@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery,   useQueryClient, useMutation,
+ } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaDownload, FaPlus } from "react-icons/fa";
 
@@ -35,6 +36,7 @@ const getOutstanding = (charge) =>
 export default function PaymentManagement() {
   const { applicationId } = useParams();
   const navigate = useNavigate();
+const [message, setMessage] = useState("");
 
   const selectedId = applicationId || "";
 
@@ -229,6 +231,39 @@ export default function PaymentManagement() {
     },
   ];
 
+
+
+  const createPaymentLink = useMutation({
+  mutationFn: () => {
+    if (!selectedId) {
+      throw new Error(
+        "Please select application first.",
+      );
+    }
+
+    return rmApi.createLapPaymentLink(selectedId, {
+      // amount: 2500,
+            amount: 1,
+
+      purpose: "LOGIN_FEE",
+    });
+  },
+
+  onSuccess: (response) => {
+    setMessage(
+      response?.data?.message ||
+        "Payment link created and sent to customer.",
+    );
+  },
+
+  onError: (error) => {
+    setMessage(
+      error?.response?.data?.message ||
+        error?.message ||
+        "Unable to create payment link.",
+    );
+  },
+});
   const handleApplicationChange = (event) => {
     const nextApplicationId = event.target.value;
 
@@ -242,49 +277,49 @@ export default function PaymentManagement() {
     navigate(`/charges-receipts/${applicationId}`);
   };
 
-  const createPaymentLink = async () => {
-    if (!applicationId) {
-      setPageError("Please select customer application first.");
-      return;
-    }
+  // const createPaymentLink = async () => {
+  //   if (!applicationId) {
+  //     setPageError("Please select customer application first.");
+  //     return;
+  //   }
 
-    if (!isScheduleApproved) {
-      setPageError(
-        "Charge schedule is not approved. Payment link can be sent only after Checker Approval.",
-      );
-      return;
-    }
+  //   if (!isScheduleApproved) {
+  //     setPageError(
+  //       "Charge schedule is not approved. Payment link can be sent only after Checker Approval.",
+  //     );
+  //     return;
+  //   }
 
-    if (!activeCharges.length) {
-      setPageError("No pending charge demand found for this application.");
-      return;
-    }
+  //   if (!activeCharges.length) {
+  //     setPageError("No pending charge demand found for this application.");
+  //     return;
+  //   }
 
-    try {
-      setLinkLoading(true);
-      setPageError("");
-      setPageSuccess("");
+  //   try {
+  //     setLinkLoading(true);
+  //     setPageError("");
+  //     setPageSuccess("");
 
-      const response = await rmApi.createEasebuzzPaymentLink(applicationId);
-      const data = unwrapResponse(response);
+  //     const response = await rmApi.createEasebuzzPaymentLink(applicationId);
+  //     const data = unwrapResponse(response);
 
-      setPageSuccess(
-        data?.paymentLink
-          ? `Payment link created successfully: ${data.paymentLink}`
-          : "Payment link created and sent successfully.",
-      );
+  //     setPageSuccess(
+  //       data?.paymentLink
+  //         ? `Payment link created successfully: ${data.paymentLink}`
+  //         : "Payment link created and sent successfully.",
+  //     );
 
-      await chargeScheduleQuery.refetch();
-    } catch (error) {
-      setPageError(
-        error?.response?.data?.message ||
-        error?.message ||
-        "Unable to create payment link.",
-      );
-    } finally {
-      setLinkLoading(false);
-    }
-  };
+  //     await chargeScheduleQuery.refetch();
+  //   } catch (error) {
+  //     setPageError(
+  //       error?.response?.data?.message ||
+  //       error?.message ||
+  //       "Unable to create payment link.",
+  //     );
+  //   } finally {
+  //     setLinkLoading(false);
+  //   }
+  // };
 
   return (
     <div className="p-8 space-y-6 bg-[#f8fafc] min-h-screen text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
@@ -485,6 +520,16 @@ export default function PaymentManagement() {
                     <td className="p-4 pr-6">
                       <div className="flex justify-end">
                         <button
+  type="button"
+  disabled={!selectedId || createPaymentLink.isPending}
+  onClick={() => createPaymentLink.mutate()}
+  className="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-extrabold text-white shadow-md transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {createPaymentLink.isPending
+    ? "Creating Link..."
+    : "Create Payment Link"}
+</button>
+                        {/* <button
                           type="button"
                           onClick={createPaymentLink}
                           disabled={!canCreatePaymentLink}
@@ -492,7 +537,7 @@ export default function PaymentManagement() {
                         >
                           <FaPlus size={10} />
                           {linkLoading ? "Creating..." : "Create & Send Link"}
-                        </button>
+                        </button> */}
                       </div>
                     </td>
                   </tr>

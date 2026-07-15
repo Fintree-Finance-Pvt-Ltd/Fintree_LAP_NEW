@@ -73,6 +73,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     GeoModule,
     VarificationModule,
     ChargesReceiptsModule,
+    
   ],
   providers: [
     { provide: APP_GUARD, useClass: RateLimitGuard },

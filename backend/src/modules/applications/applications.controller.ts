@@ -6,10 +6,11 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 
 import type { Actor } from './applications.service';
 import { ApplicationsService } from './applications.service';
-
+import { LapPaymentsService } from './lap-payments.service';
 @Controller('applications')
 export class ApplicationsController {
-  constructor(private readonly service: ApplicationsService) {}
+  constructor(private readonly service: ApplicationsService,
+  private readonly lapPaymentsService: LapPaymentsService,) { }
 
   @Get() 
   findAll(@Query() query: any) { return this.service.findAll(query); }
@@ -45,20 +46,20 @@ export class ApplicationsController {
 
   // 3. ENDPOINT: PATCH /applications/:applicationId
   // FIXED: Changed DTO definition type to accept partial fields from the profile schema layout
-@Patch(':applicationId')
-@Permissions(PERMISSIONS.APPLICATION_UPDATE)
-update(
-  @Param('applicationId', ParseIntPipe) id: number,
-  @Body() dto: any,
-  @CurrentUser() user: Actor,
-) {
-  console.log('PATCH controller hit:', id);
-  return this.service.update(id, dto, user);
-}
+  @Patch(':applicationId')
+  @Permissions(PERMISSIONS.APPLICATION_UPDATE)
+  update(
+    @Param('applicationId', ParseIntPipe) id: number,
+    @Body() dto: any,
+    @CurrentUser() user: Actor,
+  ) {
+    console.log('PATCH controller hit:', id);
+    return this.service.update(id, dto, user);
+  }
 
   @Put(':applicationId') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
-  replace(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: any, @CurrentUser() user: Actor) { 
-    return this.service.update(id, dto, user); 
+  replace(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: any, @CurrentUser() user: Actor) {
+    return this.service.update(id, dto, user);
   }
 
   @Delete(':applicationId') @Permissions(PERMISSIONS.APPLICATION_UPDATE)
@@ -85,7 +86,7 @@ update(
   @Post(':applicationId/transitions') @Permissions(PERMISSIONS.APPLICATION_TRANSITION)
   transition(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: any, @CurrentUser() user: Actor) { return this.service.transition(id, dto, user); }
 
-  @Get(':applicationId/workflow-history') 
+  @Get(':applicationId/workflow-history')
   workflowHistory(@Param('applicationId', ParseIntPipe) id: number) { return this.service.workflowHistory(id); }
 
   @Get(':applicationId/workflow')
@@ -93,4 +94,25 @@ update(
 
   @Post(':applicationId/workflow')
   recordWorkflowStep(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: any, @CurrentUser() user: Actor) { return this.service.recordWorkflowStep(id, dto, user); }
+
+  @Patch(':id/submit-to-bm')
+  submitToBm(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: Actor,
+  ) {
+    return this.service.submitToBm(id, user);
+  }
+
+@Post(':id/easebuzz/create-link')
+createEasebuzzPaymentLink(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() body: any,
+  @CurrentUser() user: Actor,
+) {
+  return this.lapPaymentsService.createPaymentLink(
+    id,
+    body,
+    user,
+  );
+}
 }

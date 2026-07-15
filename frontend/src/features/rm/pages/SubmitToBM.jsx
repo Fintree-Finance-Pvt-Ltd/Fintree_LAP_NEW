@@ -10,14 +10,12 @@ export default function SubmitToBM() {
   const { applicationId: routeApplicationId } = useParams();
   const [applicationId, setApplicationId] = useState(routeApplicationId || "");
   const [recommendation, setRecommendation] = useState("");
-  const [recommendedAmount, setRecommendedAmount] = useState("");
-  const [recommendedRoi, setRecommendedRoi] = useState("10.5");
-  const [recommendedTenure, setRecommendedTenure] = useState("120");
   const [message, setMessage] = useState("");
   const queryClient = useQueryClient();
+  const [submittedIds, setSubmittedIds] = useState([]);
 
   const applications = useQuery({ queryKey: ["rm-submit-applications"], queryFn: () => rmApi.applications({ page: 1, limit: 100 }) });
-  const selectedId = applicationId || routeApplicationId || applications.data?.data?.[0]?.id || "";
+  const selectedId = applicationId || routeApplicationId ||  "";
   const selectedApplication = (applications.data?.data ?? []).find((item) => String(item.id) === String(selectedId));
   const profile = useQuery({ queryKey: ["rm-profile", selectedId], queryFn: () => rmApi.getCustomerProfile(selectedId), enabled: Boolean(selectedId), retry: false });
   const documents = useQuery({ queryKey: ["rm-documents", selectedId], queryFn: () => rmApi.documents(selectedId), enabled: Boolean(selectedId) });
@@ -32,32 +30,75 @@ export default function SubmitToBM() {
       { label: "Aadhaar verified", sub: "Set from customer profile KYC status", passed: Boolean(profileData?.aadhaarVerified) },
       { label: "Eligibility completed", sub: "FOIR, eligible amount, ROI, tenure and EMI required", passed: Boolean(profileData?.foir && profileData?.eligibleAmount && profileData?.roi && profileData?.tenure && profileData?.emi) },
       { label: "Required documents uploaded", sub: requiredDocumentTypes.join(", "), passed: docsComplete },
-      { label: "RM recommendation completed", sub: "Recommended amount, ROI, tenure and remarks required", passed: Boolean(recommendation && recommendedAmount && recommendedRoi && recommendedTenure) },
+     // { label: "RM recommendation completed", sub: "remarks required", passed: Boolean(recommendation ) },
     ];
-  }, [profile.data, documents.data, recommendation, recommendedAmount, recommendedRoi, recommendedTenure]);
+  }, [profile.data, documents.data, recommendation]);
 
   const canSubmit = gateItems.every((item) => item.passed);
 
-  const submit = useMutation({
-    mutationFn: async () => {
-      await rmApi.updateCustomerProfile(selectedId, {
-        recommendedAmount: Number(recommendedAmount),
-        recommendedRoi: Number(recommendedRoi),
-        recommendedTenure: Number(recommendedTenure),
-        rmRecommendation: recommendation,
-      });
-      return rmApi.submitToBm(selectedId, { remarks: recommendation });
-    },
-    onSuccess: async () => {
-      setMessage("Application submitted to BM.");
-      await rmApi.recordWorkflowStep(selectedId, { action: "SUBMITTED_TO_BM", remarks: recommendation }).catch(() => undefined);
-      await queryClient.invalidateQueries({ queryKey: ["rm-submit-applications"] });
-      await queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] });
-      await queryClient.invalidateQueries({ queryKey: ["rm-workflow", selectedId] });
-      await queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] });
-    },
-    onError: (error) => setMessage(error?.message || "Unable to submit to BM"),
-  });
+  // const submit = useMutation({
+  //   mutationFn: async () => {
+  //     await rmApi.updateCustomerProfile(selectedId, {
+  //       recommendedAmount: Number(recommendedAmount),
+  //       recommendedRoi: Number(recommendedRoi),
+  //       recommendedTenure: Number(recommendedTenure),
+  //       rmRecommendation: recommendation,
+  //     });
+  //     return rmApi.submitToBm(selectedId, { remarks: recommendation });
+  //   },
+  //   onSuccess: async () => {
+  //     setMessage("Application submitted to BM.");
+  //     await rmApi.recordWorkflowStep(selectedId, { action: "SUBMITTED_TO_BM", remarks: recommendation }).catch(() => undefined);
+  //     await queryClient.invalidateQueries({ queryKey: ["rm-submit-applications"] });
+  //     await queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] });
+  //     await queryClient.invalidateQueries({ queryKey: ["rm-workflow", selectedId] });
+  //     await queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] });
+  //   },
+  //   onError: (error) => setMessage(error?.message || "Unable to submit to BM"),
+  // });
+
+
+ const submit = useMutation({
+  mutationFn: (id) => {
+    if (!id) {
+      throw new Error("Please select application first.");
+    }
+
+    return rmApi.submitToBm(id);
+  },
+
+  onSuccess: async (response) => {
+    setMessage(
+      response?.data?.message ||
+        "Application submitted to BM successfully.",
+    );
+
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["rm-applications"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["rm-application", selectedId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["rm-workflow", selectedId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["rm-workflow-overview"],
+      }),
+    ]);
+  },
+
+  onError: (error) => {
+    setMessage(
+      error?.response?.data?.message ||
+        error?.message ||
+        "Unable to submit application to BM.",
+    );
+  },
+});
+
+
 
   return (
     <div className="min-h-screen space-y-6 bg-[#f8fafc] p-8 text-slate-800 antialiased">
@@ -70,21 +111,32 @@ export default function SubmitToBM() {
             </p>
           </div>
           <div className="flex gap-3">
-            <select value={selectedId} onChange={(event) => setApplicationId(event.target.value)} className="rounded-xl border border-white/20 bg-white/20 px-4 py-2.5 text-sm font-bold text-white outline-none">
-              {(applications.data?.data ?? []).map((item) => (
-                <option key={item.id} value={item.id} className="text-slate-900">
+            <select value={selectedId} onChange={(event) => setApplicationId(event.target.value)} className="w-[320px] max-w-[320px] truncate rounded-xl border border-white/20 bg-white/20 px-4 py-2.5 text-sm font-bold text-white outline-none">
+              <option value="" className="text-slate-900">
+                Select Application
+              </option>
+              {(applications.data?.data ?? []).filter((item) => item.status === "IMD_COLLECTED").map((item) => (
+                <option key={item.id} value={item.id} className="text-slate-900 ">
                   {item.applicationNumber} - {item.customerName}
+
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              disabled={!canSubmit || submit.isPending}
-              onClick={() => submit.mutate()}
-              className="rounded-xl bg-white px-5 py-2.5 text-xs font-extrabold text-blue-700 shadow-md transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submit.isPending ? "Submitting..." : "Submit to BM"}
-            </button>
+           <button
+  type="button"
+  disabled={!selectedId || submit.isPending}
+  onClick={() => {
+    if (!selectedId) {
+      setMessage("Please select application first.");
+      return;
+    }
+
+    submit.mutate(Number(selectedId));
+  }}
+  className="rounded-xl bg-white px-5 py-2.5 text-xs font-extrabold text-blue-700 shadow-md transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {submit.isPending ? "Submitting..." : "Submit to BM"}
+</button>
           </div>
         </div>
       </div>
@@ -122,15 +174,11 @@ export default function SubmitToBM() {
       </div>
 
       <div className="space-y-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-        <div className="grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
-          <Field label="Recommended Amount" type="number" value={recommendedAmount} onChange={setRecommendedAmount} placeholder={selectedApplication ? formatCurrency(selectedApplication.requestedAmount) : ""} />
-          <Field label="Recommended ROI" type="number" value={recommendedRoi} onChange={setRecommendedRoi} />
-          <Field label="Recommended Tenure" type="number" value={recommendedTenure} onChange={setRecommendedTenure} />
-        </div>
-        <div className="flex flex-col gap-2">
+       
+        {/* <div className="flex flex-col gap-2">
           <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">RM Recommendation</label>
           <textarea value={recommendation} onChange={(event) => setRecommendation(event.target.value)} rows={4} className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:bg-white" />
-        </div>
+        </div> */}
       </div>
     </div>
   );

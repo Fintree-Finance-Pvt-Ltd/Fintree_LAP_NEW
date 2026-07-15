@@ -437,6 +437,42 @@ return {
     });
   }
 
+
+  async submitToBm(
+  applicationId: number,
+  actor: Actor,
+) {
+  const application =
+    await this.applications.findOne({
+      where: {
+        id: applicationId,
+      },
+    });
+
+  if (!application) {
+    throw new NotFoundException(
+      'Application not found',
+    );
+  }
+
+  application.stage = 'BM' as any;
+  application.status =
+    'BM_PENDING' as any;
+
+  application.updatedBy =
+  actor?.id ?? undefined;
+
+  const saved =
+    await this.applications.save(
+      application,
+    );
+
+  return {
+    data: saved,
+    message:
+      'Application submitted to BM successfully.',
+  };
+}
 async findOne(id: number) {
   const application =
     await this.applications.findOne({

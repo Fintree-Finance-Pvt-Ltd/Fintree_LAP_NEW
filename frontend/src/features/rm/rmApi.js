@@ -390,5 +390,17 @@ deleteChargeReceipt: (chargeId) =>
     `/charges-receipts/application/${applicationId}/payment-link`,
   ),
   
+  submitToBm: (applicationId) =>
+  apiClient.patch(
+    `/applications/${applicationId}/submit-to-bm`,
+  ),
+  
+  createLapPaymentLink: (applicationId, payload) =>
+  apiClient.post(
+    `/applications/${applicationId}/easebuzz/create-link`,
+    payload,
+  ),
+
+
 };
 

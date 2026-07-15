@@ -10,11 +10,15 @@ import { Workflow } from '../workflow/entities/workflow.entity';
 import { ApplicationsController } from './applications.controller';
 import { ApplicationsService } from './applications.service';
 import { Application } from './entities/application.entity';
-
+import { LapPaymentWebhookController } from './lap-payment-webhook.controller';
+import { LapPaymentsService } from './lap-payments.service';
 @Module({
-  imports: [TypeOrmModule.forFeature([Application, Visit, Document, WorkflowHistory, Workflow, WorkflowLog, AuditLog, CustomerProfile])],
-  controllers: [ApplicationsController],
-  providers: [ApplicationsService],
-  exports: [ApplicationsService]
+  imports: [TypeOrmModule.forFeature([Application, Visit, Document, WorkflowHistory, Workflow, WorkflowLog, AuditLog, CustomerProfile,
+    LapPaymentsService,
+    LapPaymentWebhookController
+  ])],
+  controllers: [ApplicationsController, LapPaymentWebhookController],
+  providers: [ApplicationsService, LapPaymentsService],
+  exports: [ApplicationsService, LapPaymentsService],
 })
 export class ApplicationsModule {}
