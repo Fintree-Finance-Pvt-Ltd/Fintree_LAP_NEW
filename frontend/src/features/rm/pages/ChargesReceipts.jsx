@@ -282,7 +282,7 @@ const profile = application?.customerProfile || {};
 
     if (loginFeeExists) return charges;
 
-    const amounts = calculateAmounts(2500, 18);
+    const amounts = calculateAmounts(10, 18);
 
     const defaultLoginFee = normalizeCharge({
       id: "DEFAULT_LOGIN_FEE_PREVIEW",

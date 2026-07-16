@@ -122,7 +122,7 @@ export async function createLapEasyCollectLink(input: {
   const udf1 = String(input.applicationId);
   const udf2 = String(input.applicationNumber || '');
   const udf3 = String(input.purpose || '');
-  const udf4 = '';
+  const udf4 = 'LAP';
   const udf5 = '';
 
   const payload: any = {

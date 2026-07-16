@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Headers,ParseIntPipe, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PERMISSIONS } from '../../common/constants/permissions.constant';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -7,6 +7,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import type { Actor } from './applications.service';
 import { ApplicationsService } from './applications.service';
 import { LapPaymentsService } from './lap-payments.service';
+import { Public } from 'src/common/decorators/public.decorator';
 @Controller('applications')
 export class ApplicationsController {
   constructor(private readonly service: ApplicationsService,
@@ -115,4 +116,18 @@ createEasebuzzPaymentLink(
     user,
   );
 }
+@Public()
+@Post('easebuzz/webhook')
+async handleEasebuzzWebhook(
+  @Body() body: any,
+  @Headers() headers: any,
+) {
+  return this.lapPaymentsService.handleEasebuzzWebhook(
+    body,
+    headers,
+  );
+}
+
+
+
 }

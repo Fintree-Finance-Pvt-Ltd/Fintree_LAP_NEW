@@ -108,7 +108,7 @@ export class ChargesReceiptsService {
         name: 'Login / Application Fee',
         sub: 'Mandatory · Non-refundable after login, subject to policy',
         stage: 'At Login',
-        base: 2500,
+        base: 10,
         gstRate: 18,
       },
     ];

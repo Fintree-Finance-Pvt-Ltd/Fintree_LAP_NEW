@@ -408,25 +408,7 @@ async createPaymentLink(
 
     console.log('EXISTING PAYMENT ROWS:', existingRows);
 
-    // if (
-    //   existingRows.length &&
-    //   existingRows[0].paymentLink
-    // ) {
-    //   return {
-    //     success: true,
-    //     message:
-    //       'Active payment link already exists for this application.',
-    //     data: {
-    //       applicationId,
-    //       txnid: existingRows[0].txnid,
-    //       amount: Number(existingRows[0].amount),
-    //       paymentLink: existingRows[0].paymentLink,
-    //       status: existingRows[0].status,
-    //       smsStatus: existingRows[0].smsStatus,
-    //     },
-    //   };
-    // }
-
+   
 if (
   existingRows.length &&
   existingRows[0].paymentLink
@@ -630,47 +612,1205 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     };
   }
 }
-  async handleEasebuzzWebhook(
-    body: any,
-    headers: any,
-  ) {
-   const { merchantTxn, easebuzzId } =
-  extractLapEasebuzzWebhookIds(body);
+//   async handleEasebuzzWebhook(
+//     body: any,
+//     headers: any,
+//   ) {
+//      console.log('Easebuzz LAP webhook received:', {
+//     body,
+//     headers,
+//   });
+//       const source = String(body?.udf4 || '')
+//     .trim()
+//     .toUpperCase();
 
-const normalizedStatus =
-  normalizeLapEasebuzzStatus(body?.status);
+//   if (source !== 'LAP') {
+//     return {
+//       success: false,
+//       message: 'Webhook ignored. Not a LAP payment.',
+//       source,
+//     };
+//   }
+
+//    const { merchantTxn, easebuzzId } =
+//   extractLapEasebuzzWebhookIds(body);
+
+// const normalizedStatus =
+//   normalizeLapEasebuzzStatus(body?.status);
+
+//     if (!merchantTxn) {
+//       throw new BadRequestException(
+//         'Webhook txnid is missing.',
+//       );
+//     }
+
+//     const existingRows = await this.dataSource.query(
+//       `
+//         SELECT
+//           id,
+//           status,
+//           mobile,
+//           customer_name AS customerName,
+//           amount,
+//           application_number AS applicationNumber
+//         FROM lap_payment_links
+//         WHERE txnid = ?
+//         LIMIT 1
+//       `,
+//       [merchantTxn],
+//     );
+
+//     const existingPayment =
+//       existingRows?.[0] || null;
+
+//     const webhookPayload = {
+//       headers,
+//       body,
+//     };
+
+//     if (!existingPayment) {
+//       await this.dataSource.query(
+//         `
+//           INSERT INTO lap_payment_links
+//           (
+//             application_id,
+//             application_number,
+//             customer_name,
+//             mobile,
+//             email,
+//             purpose,
+//             amount,
+//             txnid,
+//             easebuzz_id,
+//             status,
+//             raw_webhook_response,
+//             paid_at
+//           )
+//           VALUES (?, ?, ?, ?, ?, 'OTHER', ?, ?, ?, ?, ?, ?)
+//         `,
+//         [
+//           Number(body?.udf1 || 0),
+//           body?.udf2 || null,
+//           body?.firstname || body?.name || null,
+//           body?.phone || null,
+//           body?.email || null,
+//           body?.amount ? Number(body.amount) : 0,
+//           merchantTxn,
+//           easebuzzId ? String(easebuzzId) : null,
+//           normalizedStatus,
+//           JSON.stringify(webhookPayload),
+//           normalizedStatus === 'SUCCESS'
+//             ? new Date()
+//             : null,
+//         ],
+//       );
+//     } else {
+//       await this.dataSource.query(
+//         `
+//           UPDATE lap_payment_links
+//           SET
+//             status = ?,
+//             easebuzz_id = COALESCE(?, easebuzz_id),
+//             raw_webhook_response = ?,
+//             paid_at = CASE
+//               WHEN ? = 'SUCCESS' THEN CURRENT_TIMESTAMP(6)
+//               ELSE paid_at
+//             END
+//           WHERE txnid = ?
+//         `,
+//         [
+//           normalizedStatus,
+//           easebuzzId ? String(easebuzzId) : null,
+//           JSON.stringify(webhookPayload),
+//           normalizedStatus,
+//           merchantTxn,
+//         ],
+//       );
+//     }
+
+//     const previousStatus =
+//       String(existingPayment?.status || '').toUpperCase();
+
+//     let paymentSuccessSmsSent = false;
+//     let paymentSuccessSmsError: string | null = null;
+
+//     if (
+//       normalizedStatus === 'SUCCESS' &&
+//       previousStatus !== 'SUCCESS'
+//     ) {
+//       try {
+//         paymentSuccessSmsSent =
+//           await this.sendPaymentSuccessSms({
+//             contactNumber:
+//               body?.phone || existingPayment?.mobile,
+//             amount: body?.amount
+//               ? Number(body.amount)
+//               : Number(existingPayment?.amount || 0),
+//             applicationNumber:
+//               body?.udf2 ||
+//               existingPayment?.applicationNumber,
+//             paymentDate: body?.addedon
+//               ? String(body.addedon).split(' ')[0]
+//               : null,
+//           });
+//       } catch (error: any) {
+//         paymentSuccessSmsError =
+//           error?.message ||
+//           'Payment success SMS failed.';
+//       }
+
+//       await this.dataSource.query(
+//         `
+//           UPDATE lap_payment_links
+//           SET raw_webhook_response = ?
+//           WHERE txnid = ?
+//         `,
+//         [
+//           JSON.stringify({
+//             headers,
+//             body,
+//             paymentSuccessSmsSent,
+//             paymentSuccessSmsError,
+//           }),
+//           merchantTxn,
+//         ],
+//       );
+//     }
+
+//     return {
+//       success: true,
+//       message: 'Easebuzz webhook processed.',
+//       paymentStatus: normalizedStatus,
+//       txnid: merchantTxn,
+//       smsSent: paymentSuccessSmsSent,
+//       smsError: paymentSuccessSmsError,
+//     };
+//   }
+
+// async handleEasebuzzWebhook(
+//   body: any,
+//   headers: any,
+// ) {
+//   try {
+//     console.log('Easebuzz LAP webhook received:', {
+//       body,
+//       headers,
+//     });
+
+//     const source = String(body?.data?.udf4 || '')
+//       .trim()
+//       .toUpperCase();
+//     console.log('Webhook source (udf4):', source);
+//     if (source !== 'LAP') {
+//       return {
+//         success: false,
+//         message: 'Webhook ignored. Not a LAP payment.',
+//         source,
+//       };
+//     }
+
+//     const merchantTxn =
+//       body?.merchant_txn ||
+//       body?.txnid ||
+//       body?.referenceId ||
+//       body?.merchantTxn ||
+//       null;
+
+//     const easebuzzId =
+//       body?.easebuzzid ||
+//       body?.payment_id ||
+//       body?.transaction_id ||
+//       body?.easepayid ||
+//       body?.id ||
+//       null;
+
+//     if (!merchantTxn) {
+//       throw new BadRequestException(
+//         'Webhook txnid is missing.',
+//       );
+//     }
+
+//     const paymentStatus = String(body?.status || '')
+//       .trim()
+//       .toLowerCase();
+
+//     let normalizedStatus = 'RECEIVED';
+
+//     if (
+//       [
+//         'success',
+//         'successful',
+//         'captured',
+//         'paid',
+//       ].includes(paymentStatus)
+//     ) {
+//       normalizedStatus = 'SUCCESS';
+//     } else if (
+//       ['failure', 'failed', 'error'].includes(
+//         paymentStatus,
+//       )
+//     ) {
+//       normalizedStatus = 'FAILED';
+//     } else if (
+//       ['pending', 'processing'].includes(
+//         paymentStatus,
+//       )
+//     ) {
+//       normalizedStatus = 'PROCESSING';
+//     }
+
+//     const applicationId = Number(body?.udf1 || 0);
+//     const applicationNumber = body?.udf2 || null;
+//     const purpose = body?.udf3 || 'OTHER';
+
+//     const webhookPayload = {
+//       provider: 'easebuzz',
+//       module: 'lap',
+//       eventType: 'webhook',
+//       direction: 'inbound',
+//       source: 'easebuzz-webhook',
+//       receivedAt: new Date().toISOString(),
+//       merchantTxn,
+//       easebuzzId,
+//       paymentStatus,
+//       normalizedStatus,
+//       udf1: body?.udf1 || null,
+//       udf2: body?.udf2 || null,
+//       udf3: body?.udf3 || null,
+//       udf4: body?.udf4 || null,
+//       udf5: body?.udf5 || null,
+//       headers,
+//       body,
+//     };
+
+//     const rawWebhookResponse =
+//       JSON.stringify(webhookPayload);
+
+//     console.log('LAP WEBHOOK DEBUG:', {
+//       source,
+//       merchantTxn,
+//       easebuzzId,
+//       paymentStatus,
+//       normalizedStatus,
+//       applicationId,
+//       applicationNumber,
+//       purpose,
+//     });
+
+//     const existingRows = await this.dataSource.query(
+//       `
+//         SELECT
+//           id,
+//           application_id AS applicationId,
+//           application_number AS applicationNumber,
+//           status,
+//           mobile,
+//           customer_name AS customerName,
+//           amount
+//         FROM lap_payment_links
+//         WHERE txnid = ?
+//         ORDER BY id DESC
+//         LIMIT 1
+//       `,
+//       [merchantTxn],
+//     );
+
+//     const existingPayment =
+//       existingRows?.[0] || null;
+
+//     if (existingPayment) {
+//       const updateResult = await this.dataSource.query(
+//         `
+//           UPDATE lap_payment_links
+//           SET
+//             status = ?,
+//             easebuzz_id = COALESCE(?, easebuzz_id),
+//             raw_webhook_response = ?,
+//             paid_at = CASE
+//               WHEN ? = 'SUCCESS' THEN CURRENT_TIMESTAMP(6)
+//               ELSE paid_at
+//             END
+//           WHERE txnid = ?
+//         `,
+//         [
+//           normalizedStatus,
+//           easebuzzId ? String(easebuzzId) : null,
+//           rawWebhookResponse,
+//           normalizedStatus,
+//           merchantTxn,
+//         ],
+//       );
+
+//       console.log('LAP WEBHOOK UPDATE RESULT:', {
+//         updateResult,
+//         merchantTxn,
+//         normalizedStatus,
+//       });
+
+//       return {
+//         success: true,
+//         message:
+//           'Easebuzz LAP webhook processed successfully.',
+//         data: {
+//           txnid: merchantTxn,
+//           easebuzzId,
+//           previousStatus: existingPayment.status,
+//           paymentStatus: normalizedStatus,
+//           applicationId:
+//             applicationId ||
+//             Number(existingPayment.applicationId || 0),
+//           applicationNumber:
+//             applicationNumber ||
+//             existingPayment.applicationNumber,
+//         },
+//       };
+//     }
+
+//     if (!applicationId) {
+//       throw new BadRequestException(
+//         'Application ID is missing in webhook udf1.',
+//       );
+//     }
+
+//     const insertResult = await this.dataSource.query(
+//       `
+//         INSERT INTO lap_payment_links
+//         (
+//           application_id,
+//           application_number,
+//           customer_name,
+//           mobile,
+//           email,
+//           purpose,
+//           amount,
+//           txnid,
+//           easebuzz_id,
+//           payment_link,
+//           status,
+//           sms_status,
+//           raw_webhook_response,
+//           paid_at
+//         )
+//         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 'NOT_SENT', ?, ?)
+//       `,
+//       [
+//         applicationId,
+//         applicationNumber,
+//         body?.firstname ||
+//           body?.name ||
+//           body?.customer_name ||
+//           null,
+//         body?.phone || null,
+//         body?.email || null,
+//         purpose,
+//         body?.amount ? Number(body.amount) : 0,
+//         merchantTxn,
+//         easebuzzId ? String(easebuzzId) : null,
+//         normalizedStatus,
+//         rawWebhookResponse,
+//         normalizedStatus === 'SUCCESS'
+//           ? new Date()
+//           : null,
+//       ],
+//     );
+
+//     console.log('LAP WEBHOOK INSERT RESULT:', {
+//       insertResult,
+//       merchantTxn,
+//       normalizedStatus,
+//       applicationId,
+//       applicationNumber,
+//     });
+
+//     return {
+//       success: true,
+//       message:
+//         'Easebuzz LAP webhook stored. New payment row inserted.',
+//       data: {
+//         txnid: merchantTxn,
+//         easebuzzId,
+//         paymentStatus: normalizedStatus,
+//         applicationId,
+//         applicationNumber,
+//       },
+//     };
+//   } catch (error: any) {
+//     console.error('LAP Easebuzz webhook error:', {
+//       message: error?.message,
+//       stack: error?.stack,
+//       code: error?.code,
+//       sqlMessage: error?.sqlMessage,
+//     });
+
+//     return {
+//       success: false,
+//       message:
+//         error?.message ||
+//         'Easebuzz LAP webhook processing failed.',
+//       errorCode: error?.code || 'WEBHOOK_FAILED',
+//       errors: error?.sqlMessage || null,
+//     };
+//   }
+// }
+
+// async handleEasebuzzWebhook(body: any, headers: any) {
+//   try {
+//     console.log('Easebuzz LAP webhook received:', {
+//       body,
+//       headers,
+//     });
+
+//     // Easebuzz response fields are nested under "data".
+//     // Fallback to body so the handler also supports flat webhook payloads.
+//     const data =
+//       body?.data && typeof body.data === 'object'
+//         ? body.data
+//         : body;
+
+//     const source = String(data?.udf4 || '')
+//       .trim()
+//       .toUpperCase();
+
+//     console.log('Webhook source (udf4):', source);
+
+//     if (source !== 'LAP') {
+//       return {
+//         success: false,
+//         message: 'Webhook ignored. Not a LAP payment.',
+//         source,
+//       };
+//     }
+
+//     const merchantTxn =
+//       data?.merchant_txn ||
+//       data?.txnid ||
+//       data?.referenceId ||
+//       data?.merchantTxn ||
+//       null;
+
+//     /*
+//      * transaction_id is "NA" in the link-creation response.
+//      * In that case, use the Easebuzz collection-link ID.
+//      */
+//     const rawTransactionId =
+//       data?.transaction_id ||
+//       data?.payment_id ||
+//       data?.easebuzzid ||
+//       data?.easepayid ||
+//       null;
+
+//     const hasValidTransactionId =
+//       rawTransactionId &&
+//       !['NA', 'N/A', 'NULL'].includes(
+//         String(rawTransactionId).trim().toUpperCase(),
+//       );
+
+//     const easebuzzId = hasValidTransactionId
+//       ? String(rawTransactionId)
+//       : data?.id
+//         ? String(data.id)
+//         : null;
+
+//     if (!merchantTxn) {
+//       throw new BadRequestException(
+//         'Webhook merchant_txn is missing.',
+//       );
+//     }
+
+//     /*
+//      * Do not use body.status because it is boolean:
+//      * {
+//      *   "status": true,
+//      *   "data": { ... }
+//      * }
+//      *
+//      * For this payload:
+//      * payment_made = 0
+//      * state = active
+//      * Therefore the payment is still PROCESSING.
+//      */
+//     const paymentMade = Number(
+//       data?.payment_made ?? 0,
+//     );
+
+//     const rawPaymentStatus =
+//       data?.payment_status ||
+//       data?.transaction_status ||
+//       (typeof data?.status === 'string'
+//         ? data.status
+//         : null) ||
+//       data?.state ||
+//       (typeof body?.status === 'string'
+//         ? body.status
+//         : null) ||
+//       '';
+
+//     const paymentStatus = String(rawPaymentStatus)
+//       .trim()
+//       .toLowerCase();
+
+//     let normalizedStatus = 'RECEIVED';
+
+//     if (
+//       paymentMade === 1 ||
+//       [
+//         'success',
+//         'successful',
+//         'captured',
+//         'paid',
+//         'completed',
+//       ].includes(paymentStatus)
+//     ) {
+//       normalizedStatus = 'SUCCESS';
+//     } else if (
+//       [
+//         'failure',
+//         'failed',
+//         'error',
+//         'cancelled',
+//         'canceled',
+//         'expired',
+//       ].includes(paymentStatus)
+//     ) {
+//       normalizedStatus = 'FAILED';
+//     } else if (
+//       paymentMade === 0 ||
+//       [
+//         'pending',
+//         'processing',
+//         'active',
+//         'initiated',
+//         'created',
+//         'unpaid',
+//       ].includes(paymentStatus)
+//     ) {
+//       normalizedStatus = 'PROCESSING';
+//     }
+
+//     const parsedApplicationId = Number(data?.udf1);
+
+//     const applicationId = Number.isFinite(
+//       parsedApplicationId,
+//     )
+//       ? parsedApplicationId
+//       : 0;
+
+//     const applicationNumber =
+//       data?.udf2 || null;
+
+//     const purpose =
+//       data?.udf3 || 'OTHER';
+
+//     const customerName =
+//       data?.firstname ||
+//       data?.name ||
+//       data?.customer_name ||
+//       null;
+
+//     const mobile =
+//       data?.phone ||
+//       data?.mobile ||
+//       null;
+
+//     const email =
+//       data?.email || null;
+
+//     const parsedAmount = Number(data?.amount);
+
+//     const amount = Number.isFinite(parsedAmount)
+//       ? parsedAmount
+//       : 0;
+
+//     const paymentLink =
+//       data?.payment_url ||
+//       body?.short_url ||
+//       null;
+
+//     const webhookPayload = {
+//       provider: 'easebuzz',
+//       module: 'lap',
+//       eventType: 'webhook',
+//       direction: 'inbound',
+//       source: 'easebuzz-webhook',
+//       receivedAt: new Date().toISOString(),
+
+//       merchantTxn,
+//       easebuzzId,
+//       collectionLinkId: data?.id || null,
+//       transactionId: data?.transaction_id || null,
+
+//       paymentStatus,
+//       paymentMade,
+//       normalizedStatus,
+
+//       applicationId,
+//       applicationNumber,
+//       purpose,
+
+//       customerName,
+//       mobile,
+//       email,
+//       amount,
+//       paymentLink,
+
+//       udf1: data?.udf1 || null,
+//       udf2: data?.udf2 || null,
+//       udf3: data?.udf3 || null,
+//       udf4: data?.udf4 || null,
+//       udf5: data?.udf5 || null,
+
+//       rootStatus: body?.status,
+//       rootMessage: body?.message || null,
+//       acceptPartialPayment:
+//         body?.accept_partial_payment ?? null,
+//       shortUrl: body?.short_url || null,
+
+//       headers,
+//       body,
+//     };
+
+//     const rawWebhookResponse =
+//       JSON.stringify(webhookPayload);
+
+//     console.log('LAP WEBHOOK DEBUG:', {
+//       source,
+//       merchantTxn,
+//       easebuzzId,
+//       paymentStatus,
+//       paymentMade,
+//       normalizedStatus,
+//       applicationId,
+//       applicationNumber,
+//       purpose,
+//       amount,
+//       paymentLink,
+//     });
+
+//     const existingRows =
+//       await this.dataSource.query(
+//         `
+//           SELECT
+//             id,
+//             application_id AS applicationId,
+//             application_number AS applicationNumber,
+//             status,
+//             mobile,
+//             customer_name AS customerName,
+//             amount
+//           FROM lap_payment_links
+//           WHERE txnid = ?
+//           ORDER BY id DESC
+//           LIMIT 1
+//         `,
+//         [merchantTxn],
+//       );
+
+//     const existingPayment =
+//       existingRows?.[0] || null;
+
+//     if (existingPayment) {
+//       /*
+//        * Prevent a later link-status callback from changing an
+//        * already successful payment back to PROCESSING.
+//        */
+//       const nextStatus =
+//         existingPayment.status === 'SUCCESS' &&
+//         normalizedStatus !== 'SUCCESS'
+//           ? 'SUCCESS'
+//           : normalizedStatus;
+
+//       const updateResult =
+//         await this.dataSource.query(
+//           `
+//             UPDATE lap_payment_links
+//             SET
+//               status = ?,
+//               easebuzz_id = COALESCE(?, easebuzz_id),
+//               payment_link = COALESCE(?, payment_link),
+//               raw_webhook_response = ?,
+//               paid_at = CASE
+//                 WHEN ? = 'SUCCESS'
+//                   THEN COALESCE(
+//                     paid_at,
+//                     CURRENT_TIMESTAMP(6)
+//                   )
+//                 ELSE paid_at
+//               END
+//             WHERE txnid = ?
+//           `,
+//           [
+//             nextStatus,
+//             easebuzzId,
+//             paymentLink,
+//             rawWebhookResponse,
+//             nextStatus,
+//             merchantTxn,
+//           ],
+//         );
+
+//       console.log('LAP WEBHOOK UPDATE RESULT:', {
+//         updateResult,
+//         merchantTxn,
+//         normalizedStatus: nextStatus,
+//       });
+
+//       return {
+//         success: true,
+//         message:
+//           'Easebuzz LAP webhook processed successfully.',
+//         data: {
+//           txnid: merchantTxn,
+//           easebuzzId,
+//           previousStatus:
+//             existingPayment.status,
+//           paymentStatus: nextStatus,
+//           applicationId:
+//             applicationId ||
+//             Number(
+//               existingPayment.applicationId || 0,
+//             ),
+//           applicationNumber:
+//             applicationNumber ||
+//             existingPayment.applicationNumber,
+//           paymentLink,
+//         },
+//       };
+//     }
+
+//     if (!applicationId) {
+//       throw new BadRequestException(
+//         'Application ID is missing in webhook data.udf1.',
+//       );
+//     }
+
+//     const insertResult =
+//       await this.dataSource.query(
+//         `
+//           INSERT INTO lap_payment_links
+//           (
+//             application_id,
+//             application_number,
+//             customer_name,
+//             mobile,
+//             email,
+//             purpose,
+//             amount,
+//             txnid,
+//             easebuzz_id,
+//             payment_link,
+//             status,
+//             sms_status,
+//             raw_webhook_response,
+//             paid_at
+//           )
+//           VALUES (
+//             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+//             'NOT_SENT', ?, ?
+//           )
+//         `,
+//         [
+//           applicationId,
+//           applicationNumber,
+//           customerName,
+//           mobile,
+//           email,
+//           purpose,
+//           amount,
+//           merchantTxn,
+//           easebuzzId,
+//           paymentLink,
+//           normalizedStatus,
+//           rawWebhookResponse,
+//           normalizedStatus === 'SUCCESS'
+//             ? new Date()
+//             : null,
+//         ],
+//       );
+
+//     console.log('LAP WEBHOOK INSERT RESULT:', {
+//       insertResult,
+//       merchantTxn,
+//       normalizedStatus,
+//       applicationId,
+//       applicationNumber,
+//     });
+
+//     return {
+//       success: true,
+//       message:
+//         'Easebuzz LAP webhook stored. New payment row inserted.',
+//       data: {
+//         txnid: merchantTxn,
+//         easebuzzId,
+//         paymentStatus: normalizedStatus,
+//         applicationId,
+//         applicationNumber,
+//         paymentLink,
+//       },
+//     };
+//   } catch (error: any) {
+//     console.error('LAP Easebuzz webhook error:', {
+//       message: error?.message,
+//       stack: error?.stack,
+//       code: error?.code,
+//       sqlMessage: error?.sqlMessage,
+//     });
+
+//     return {
+//       success: false,
+//       message:
+//         error?.message ||
+//         'Easebuzz LAP webhook processing failed.',
+//       errorCode:
+//         error?.code || 'WEBHOOK_FAILED',
+//       errors:
+//         error?.sqlMessage || null,
+//     };
+//   }
+// }
+
+
+async handleEasebuzzWebhook(body: any, headers: any) {
+  try {
+    console.log('Easebuzz webhook received:', {
+      body,
+      headers,
+    });
+
+    // Supports both:
+    // 1. Flat Easebuzz webhook: body.txnid
+    // 2. Nested response: body.data.merchant_txn
+    const data =
+      body?.data && typeof body.data === 'object'
+        ? body.data
+        : body;
+
+    const merchantTxn =
+      data?.txnid ||
+      data?.merchant_txn ||
+      data?.merchantTxn ||
+      data?.referenceId ||
+      null;
 
     if (!merchantTxn) {
       throw new BadRequestException(
-        'Webhook txnid is missing.',
+        'Easebuzz transaction ID is missing.',
       );
     }
 
-    const existingRows = await this.dataSource.query(
-      `
-        SELECT
-          id,
-          status,
-          mobile,
-          customer_name AS customerName,
-          amount,
-          application_number AS applicationNumber
-        FROM lap_payment_links
-        WHERE txnid = ?
-        LIMIT 1
-      `,
-      [merchantTxn],
-    );
+    const easebuzzId =
+      data?.easepayid ||
+      data?.easebuzzid ||
+      data?.payment_id ||
+      data?.transaction_id ||
+      data?.id ||
+      null;
 
-    const existingPayment =
-      existingRows?.[0] || null;
+    /*
+     * Only validate udf4 when Easebuzz sends it.
+     * The failure payload provided does not contain udf4.
+     */
+    const source = String(data?.udf4 || '')
+      .trim()
+      .toUpperCase();
+
+    if (source && source !== 'LAP') {
+      return {
+        success: false,
+        message: 'Webhook ignored. Not a LAP payment.',
+        source,
+      };
+    }
+
+    /*
+     * Avoid reading a boolean API status such as:
+     * { status: true, data: {...} }
+     */
+    const rawPaymentStatus =
+      typeof data?.status === 'string'
+        ? data.status
+        : data?.payment_status ||
+          data?.transaction_status ||
+          data?.unmappedstatus ||
+          data?.state ||
+          '';
+
+    const paymentStatus = String(rawPaymentStatus)
+      .trim()
+      .toLowerCase();
+
+    let normalizedStatus:
+      | 'RECEIVED'
+      | 'PROCESSING'
+      | 'SUCCESS'
+      | 'FAILED' = 'RECEIVED';
+
+    if (
+      [
+        'success',
+        'successful',
+        'captured',
+        'paid',
+        'completed',
+      ].includes(paymentStatus)
+    ) {
+      normalizedStatus = 'SUCCESS';
+    } else if (
+      [
+        'failure',
+        'failed',
+        'error',
+        'bounced',
+        'cancelled',
+        'canceled',
+        'expired',
+        'declined',
+      ].includes(paymentStatus)
+    ) {
+      normalizedStatus = 'FAILED';
+    } else if (
+      [
+        'pending',
+        'processing',
+        'active',
+        'initiated',
+        'created',
+        'unpaid',
+      ].includes(paymentStatus)
+    ) {
+      normalizedStatus = 'PROCESSING';
+    }
+
+    const parsedApplicationId = Number(data?.udf1);
+
+    const applicationId = Number.isFinite(
+      parsedApplicationId,
+    )
+      ? parsedApplicationId
+      : 0;
+
+    const applicationNumber =
+      data?.udf2 || null;
+
+    const purpose =
+      data?.udf3 ||
+      data?.productinfo ||
+      'OTHER';
+
+    const customerName =
+      data?.firstname ||
+      data?.name ||
+      data?.customer_name ||
+      null;
+
+    const mobile =
+      data?.phone ||
+      data?.mobile ||
+      null;
+
+    const email =
+      data?.email || null;
+
+    const parsedAmount = Number(data?.amount);
+
+    const amount = Number.isFinite(parsedAmount)
+      ? parsedAmount
+      : 0;
+
+    const paymentLink =
+      data?.payment_url ||
+      body?.short_url ||
+      null;
+
+    const errorMessage =
+      data?.error_Message ||
+      data?.error_message ||
+      data?.message ||
+      null;
 
     const webhookPayload = {
+      provider: 'easebuzz',
+      module: 'lap',
+      eventType: 'payment-webhook',
+      direction: 'inbound',
+      receivedAt: new Date().toISOString(),
+
+      merchantTxn,
+      easebuzzId,
+      paymentStatus,
+      normalizedStatus,
+
+      applicationId: applicationId || null,
+      applicationNumber,
+      purpose,
+
+      customerName,
+      mobile,
+      email,
+      amount,
+      paymentLink,
+
+      bankReferenceNumber:
+        data?.bank_ref_num || null,
+      authorizationReferenceNumber:
+        data?.auth_ref_num || null,
+      upiVirtualAddress:
+        data?.upi_va || null,
+      paymentSource:
+        data?.payment_source || null,
+      paymentGatewayType:
+        data?.PG_TYPE || null,
+
+      errorMessage,
+
+      udf1: data?.udf1 || null,
+      udf2: data?.udf2 || null,
+      udf3: data?.udf3 || null,
+      udf4: data?.udf4 || null,
+      udf5: data?.udf5 || null,
+      udf10: data?.udf10 || null,
+
       headers,
       body,
     };
 
-    if (!existingPayment) {
+    const rawWebhookResponse =
+      JSON.stringify(webhookPayload);
+
+    console.log('Easebuzz webhook mapped:', {
+      merchantTxn,
+      easebuzzId,
+      paymentStatus,
+      normalizedStatus,
+      applicationId,
+      applicationNumber,
+      amount,
+      errorMessage,
+    });
+
+    const existingRows =
+      await this.dataSource.query(
+        `
+          SELECT
+            id,
+            application_id AS applicationId,
+            application_number AS applicationNumber,
+            status,
+            customer_name AS customerName,
+            mobile,
+            amount
+          FROM lap_payment_links
+          WHERE txnid = ?
+          ORDER BY id DESC
+          LIMIT 1
+        `,
+        [merchantTxn],
+      );
+
+    const existingPayment =
+      existingRows?.[0] || null;
+
+    if (existingPayment) {
+      /*
+       * Do not downgrade a successful payment if an older or
+       * duplicate failed/pending callback arrives later.
+       */
+      const nextStatus =
+        existingPayment.status === 'SUCCESS' &&
+        normalizedStatus !== 'SUCCESS'
+          ? 'SUCCESS'
+          : normalizedStatus;
+
+      const updateResult =
+        await this.dataSource.query(
+          `
+            UPDATE lap_payment_links
+            SET
+              status = ?,
+              easebuzz_id = COALESCE(?, easebuzz_id),
+              customer_name = COALESCE(?, customer_name),
+              mobile = COALESCE(?, mobile),
+              email = COALESCE(?, email),
+              amount = CASE
+                WHEN ? > 0 THEN ?
+                ELSE amount
+              END,
+              payment_link = COALESCE(?, payment_link),
+              raw_webhook_response = ?,
+              paid_at = CASE
+                WHEN ? = 'SUCCESS'
+                  THEN COALESCE(
+                    paid_at,
+                    CURRENT_TIMESTAMP(6)
+                  )
+                ELSE paid_at
+              END
+            WHERE txnid = ?
+          `,
+          [
+            nextStatus,
+            easebuzzId
+              ? String(easebuzzId)
+              : null,
+            customerName,
+            mobile,
+            email,
+            amount,
+            amount,
+            paymentLink,
+            rawWebhookResponse,
+            nextStatus,
+            merchantTxn,
+          ],
+        );
+
+      console.log(
+        'Easebuzz webhook update result:',
+        {
+          updateResult,
+          merchantTxn,
+          previousStatus:
+            existingPayment.status,
+          nextStatus,
+        },
+      );
+
+      return {
+        success: true,
+        message:
+          'Easebuzz webhook processed successfully.',
+        data: {
+          txnid: merchantTxn,
+          easebuzzId,
+          previousStatus:
+            existingPayment.status,
+          paymentStatus: nextStatus,
+          providerStatus: paymentStatus,
+          applicationId:
+            applicationId ||
+            Number(
+              existingPayment.applicationId || 0,
+            ),
+          applicationNumber:
+            applicationNumber ||
+            existingPayment.applicationNumber,
+          errorMessage,
+        },
+      };
+    }
+
+    /*
+     * A new row requires udf1 because application_id is mandatory.
+     * Failure callbacks such as the supplied payload usually update
+     * an already-created payment row using txnid.
+     */
+    if (!applicationId) {
+      throw new BadRequestException(
+        `Payment record not found for txnid ${merchantTxn}, and application ID is missing in udf1.`,
+      );
+    }
+
+    const insertResult =
       await this.dataSource.query(
         `
           INSERT INTO lap_payment_links
@@ -684,110 +1824,86 @@ const normalizedStatus =
             amount,
             txnid,
             easebuzz_id,
+            payment_link,
             status,
+            sms_status,
             raw_webhook_response,
             paid_at
           )
-          VALUES (?, ?, ?, ?, ?, 'OTHER', ?, ?, ?, ?, ?, ?)
+          VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            'NOT_SENT', ?, ?
+          )
         `,
         [
-          Number(body?.udf1 || 0),
-          body?.udf2 || null,
-          body?.firstname || body?.name || null,
-          body?.phone || null,
-          body?.email || null,
-          body?.amount ? Number(body.amount) : 0,
+          applicationId,
+          applicationNumber,
+          customerName,
+          mobile,
+          email,
+          purpose,
+          amount,
           merchantTxn,
-          easebuzzId ? String(easebuzzId) : null,
+          easebuzzId
+            ? String(easebuzzId)
+            : null,
+          paymentLink,
           normalizedStatus,
-          JSON.stringify(webhookPayload),
+          rawWebhookResponse,
           normalizedStatus === 'SUCCESS'
             ? new Date()
             : null,
         ],
       );
-    } else {
-      await this.dataSource.query(
-        `
-          UPDATE lap_payment_links
-          SET
-            status = ?,
-            easebuzz_id = COALESCE(?, easebuzz_id),
-            raw_webhook_response = ?,
-            paid_at = CASE
-              WHEN ? = 'SUCCESS' THEN CURRENT_TIMESTAMP(6)
-              ELSE paid_at
-            END
-          WHERE txnid = ?
-        `,
-        [
-          normalizedStatus,
-          easebuzzId ? String(easebuzzId) : null,
-          JSON.stringify(webhookPayload),
-          normalizedStatus,
-          merchantTxn,
-        ],
-      );
-    }
 
-    const previousStatus =
-      String(existingPayment?.status || '').toUpperCase();
-
-    let paymentSuccessSmsSent = false;
-    let paymentSuccessSmsError: string | null = null;
-
-    if (
-      normalizedStatus === 'SUCCESS' &&
-      previousStatus !== 'SUCCESS'
-    ) {
-      try {
-        paymentSuccessSmsSent =
-          await this.sendPaymentSuccessSms({
-            contactNumber:
-              body?.phone || existingPayment?.mobile,
-            amount: body?.amount
-              ? Number(body.amount)
-              : Number(existingPayment?.amount || 0),
-            applicationNumber:
-              body?.udf2 ||
-              existingPayment?.applicationNumber,
-            paymentDate: body?.addedon
-              ? String(body.addedon).split(' ')[0]
-              : null,
-          });
-      } catch (error: any) {
-        paymentSuccessSmsError =
-          error?.message ||
-          'Payment success SMS failed.';
-      }
-
-      await this.dataSource.query(
-        `
-          UPDATE lap_payment_links
-          SET raw_webhook_response = ?
-          WHERE txnid = ?
-        `,
-        [
-          JSON.stringify({
-            headers,
-            body,
-            paymentSuccessSmsSent,
-            paymentSuccessSmsError,
-          }),
-          merchantTxn,
-        ],
-      );
-    }
+    console.log(
+      'Easebuzz webhook insert result:',
+      {
+        insertResult,
+        merchantTxn,
+        normalizedStatus,
+        applicationId,
+      },
+    );
 
     return {
       success: true,
-      message: 'Easebuzz webhook processed.',
-      paymentStatus: normalizedStatus,
-      txnid: merchantTxn,
-      smsSent: paymentSuccessSmsSent,
-      smsError: paymentSuccessSmsError,
+      message:
+        'Easebuzz webhook stored successfully.',
+      data: {
+        txnid: merchantTxn,
+        easebuzzId,
+        paymentStatus: normalizedStatus,
+        providerStatus: paymentStatus,
+        applicationId,
+        applicationNumber,
+        errorMessage,
+      },
+    };
+  } catch (error: any) {
+    console.error(
+      'Easebuzz webhook processing error:',
+      {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        sqlMessage: error?.sqlMessage,
+      },
+    );
+
+    return {
+      success: false,
+      message:
+        error?.message ||
+        'Easebuzz webhook processing failed.',
+      errorCode:
+        error?.code || 'WEBHOOK_FAILED',
+      errors:
+        error?.sqlMessage || null,
     };
   }
+}
+
 
   private async sendPaymentLinkSms(input: {
     contactNumber: string;

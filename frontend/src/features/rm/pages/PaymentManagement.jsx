@@ -242,8 +242,7 @@ const [message, setMessage] = useState("");
     }
 
     return rmApi.createLapPaymentLink(selectedId, {
-      // amount: 2500,
-            amount: 1,
+            amount: 10,
 
       purpose: "LOGIN_FEE",
     });
