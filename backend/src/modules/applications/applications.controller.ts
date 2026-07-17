@@ -96,13 +96,30 @@ export class ApplicationsController {
   @Post(':applicationId/workflow')
   recordWorkflowStep(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: any, @CurrentUser() user: Actor) { return this.service.recordWorkflowStep(id, dto, user); }
 
-  @Patch(':id/submit-to-bm')
-  submitToBm(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: Actor,
-  ) {
-    return this.service.submitToBm(id, user);
-  }
+@Post(':id/submit-to-bm')
+submitToBm(
+  @Param('id', ParseIntPipe) id: number,
+  @CurrentUser() user: Actor,
+) {
+  return this.service.submitToBm(id, user);
+}
+
+@Post(':id/submit-to-cm')
+submitToCm(
+  @Param('id', ParseIntPipe) id: number,
+  @CurrentUser() user: Actor,
+) {
+  return this.service.submitToCm(id, user);
+}
+
+@Post(':id/submit-to-credit')
+submitToCredit(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() body: any,
+  @CurrentUser() user: Actor,
+) {
+  return this.service.submitToCredit(id, body, user);
+}
 
 @Post(':id/easebuzz/create-link')
 createEasebuzzPaymentLink(

@@ -3,7 +3,7 @@ export const ROLES = {
   RM: 'RM',
   BM: 'BM',
   CM: 'CM',
-  CREDIT: 'CREDIT',
+  // CREDIT: 'CREDIT',
   CREDIT_MAKER: 'CREDIT_MAKER',
   CREDIT_CHECKER: 'CREDIT_CHECKER',
   LEGAL: 'LEGAL',

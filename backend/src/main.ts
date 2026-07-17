@@ -11,6 +11,7 @@ import { GlobalExceptionFilter } from "./common/filters/global-exception.filter"
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
 import { TimeoutInterceptor } from "./common/interceptors/timeout.interceptor";
 
+
 async function bootstrap() {
   const logger = new Logger("UserService");
 

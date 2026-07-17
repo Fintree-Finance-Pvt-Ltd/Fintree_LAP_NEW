@@ -37,9 +37,12 @@ const rolesConfig = {
         { to: "/create-lead", label: "Create Lead", Icon: FaUserPlus },
 
        { to: "/kyc-documents", label: "KYC & Documents", Icon: FaFolderOpen },
+
+        // { to: "/submit-bm", label: "Submit to BM", Icon: FaPaperPlane },
       ],
     },
   ],
+  
 
   ADMIN: [
     {
@@ -102,6 +105,158 @@ const rolesConfig = {
       ],
     },
   ],
+
+CM: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/cm-screening",
+        label: "CM Screening",
+        Icon: FaShieldAlt,
+      },
+      
+    ],
+  },
+  {
+    category: "MODULES",
+    items: [
+
+      
+      {
+        to: "/cm-application-data",
+        label: "Application Data",
+        Icon: FaFolderOpen,
+      },
+      {
+        to: "/cm-screening",
+        label: "Credit Screening",
+        Icon: FaShieldAlt,
+      },
+      {
+        to: "/credit-dashboard",
+        label: "Credit Dashboard",
+        Icon: FaChartBar,
+      },
+         { to: "/kyc-documents",
+           label: "KYC & Documents",
+           Icon: FaFolderOpen },
+    ],
+  },
+],
+
+CREDIT_MAKER: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/credit-dashboard",
+        label: "Credit Dashboard",
+        Icon: FaShieldAlt,
+      },
+    ],
+  },
+  {
+    category: "MODULES",
+    items: [
+      {
+        to: "/cm-application-data",
+        label: "Application Data",
+        Icon: FaFolderOpen,
+      },
+      // {
+      //   to: "/cm-screening",
+      //   label: "Credit Screening",
+      //   Icon: FaShieldAlt,
+      // },
+     {
+        to: "/credit-maker",
+        label: "Underwriting Proposal",
+        Icon: FaFileAlt,
+      },
+      {
+        to: "/credit-dashboard",
+        label: "Credit Dashboard",
+        Icon: FaChartBar,
+      },
+         { to: "/kyc-documents",
+           label: "KYC & Documents",
+           Icon: FaFolderOpen },
+          ]
+  },
+],
+
+CREDIT_CHECKER: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/credit-checker",
+        label: "Credit Checker",
+        Icon: FaShieldAlt,
+      },
+    ],
+  },
+  {
+    category: "MODULES",
+    items: [
+      {
+        to: "/credit-checker",
+        label: "Checker Review",
+        Icon: FaFileAlt,
+      },
+      {
+        to: "/credit-dashboard",
+        label: "Credit Dashboard",
+        Icon: FaChartBar,
+      },
+      {
+        to: "/cm-application-data",
+        label: "Application Data",
+        Icon: FaFolderOpen,
+      },
+      {
+        to: "/kyc-documents",
+        label: "KYC & Documents",
+        Icon: FaFolderOpen,
+      },
+    ],
+  },
+],
+
+VALUATION: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/valuation-dashboard",
+        label: "Valuation Dashboard",
+        Icon: FaBriefcase,
+      },
+    ],
+  },
+  {
+    category: "MODULES",
+    items: [
+      {
+        to: "/valuation",
+        label: "Valuation Queue",
+        Icon: FaFolderOpen,
+      },
+      {
+        to: "/valuation",
+        label: "Comparable Analysis",
+        Icon: FaRoute,
+      },
+      {
+        to: "/payment-management",
+        label: "Payment Management",
+        Icon: FaCreditCard,
+      },
+    ],
+  },
+],
+
 };
 
 const groupOrder = [
@@ -152,7 +307,7 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
-      const roleKeysInOrder = ["RM", "BM", "ADMIN"];
+      const roleKeysInOrder = ["RM", "BM", "ADMIN","CM","CREDIT_MAKER","CREDIT_CHECKER","VALUATION"];
       for (const roleKey of roleKeysInOrder) {
         if (!roles.includes(roleKey)) continue;
         const roleGroups = rolesConfig[roleKey] || [];

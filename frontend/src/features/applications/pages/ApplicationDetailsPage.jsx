@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import AppCard from "../../../components/common/AppCard.jsx";
 import AppLoader from "../../../components/common/AppLoader.jsx";
@@ -251,6 +251,39 @@ export default function ApplicationDetailsPage() {
   const { applicationId } = useParams();
 
   const [showAllDocuments, setShowAllDocuments] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
+
+
+  const submitToBm = useMutation({
+    mutationFn: () => rmApi.submitToBm(applicationId),
+
+    onSuccess: async (response) => {
+      setSubmitMessage(
+        response?.data?.message ||
+          "Application submitted to BM successfully.",
+      );
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["application", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["rm-workflow", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["workflow-history", applicationId],
+        }),
+      ]);
+    },
+
+    onError: (error) => {
+      setSubmitMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to submit to BM.",
+      );
+    },
+  });
 
   const applicationQuery = useQuery({
     queryKey: ["application", applicationId],
@@ -426,6 +459,29 @@ export default function ApplicationDetailsPage() {
           </span>
         </div>
       </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+  <button
+    type="button"
+    disabled={
+      submitToBm.isPending ||
+      String(application.status || "").toUpperCase() === "BM_PENDING"
+    }
+    onClick={() => {
+      setSubmitMessage("");
+      submitToBm.mutate();
+    }}
+    className="inline-flex w-fit items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wide text-white shadow-sm transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+  >
+    {submitToBm.isPending ? "Submitting..." : "Submit to BM"}
+  </button>
+
+  {submitMessage && (
+    <span className="text-xs font-bold text-blue-700">
+      {submitMessage}
+    </span>
+  )}
+</div>
     </div>
 
     {/* Right Column: Key Metrics Grid */}

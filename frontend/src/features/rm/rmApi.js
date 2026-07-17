@@ -272,11 +272,7 @@ verifyGst: (payload) =>
   // =========================
   // WORKFLOW TRANSITIONS
   // =========================
-  submitToBm: (applicationId, payload) =>
-    apiClient.post(
-      `/applications/${applicationId}/transitions`,
-      payload,
-    ),
+
 
   transitionApplication: (applicationId, payload) =>
     apiClient.post(
@@ -403,10 +399,11 @@ deleteChargeReceipt: (chargeId) =>
     `/charges-receipts/application/${applicationId}/payment-link`,
   ),
   
-  submitToBm: (applicationId) =>
-  apiClient.patch(
-    `/applications/${applicationId}/submit-to-bm`,
-  ),
+submitToBm: (applicationId) =>
+  apiClient.post(`/applications/${applicationId}/submit-to-bm`),
+
+submitToCm: (applicationId) =>
+  apiClient.post(`/applications/${applicationId}/submit-to-cm`),
   
   createLapPaymentLink: (applicationId, payload) =>
   apiClient.post(

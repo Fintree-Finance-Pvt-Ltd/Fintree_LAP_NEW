@@ -2,12 +2,17 @@ export enum ApplicationStage {
   RM = 'RM',
   BM = 'BM',
   CM = 'CM',
+
   CREDIT = 'CREDIT',
+
   LEGAL = 'LEGAL',
   VALUATION = 'VALUATION',
+
   SANCTION = 'SANCTION',
   AGREEMENT = 'AGREEMENT',
   DISBURSEMENT = 'DISBURSEMENT',
+
   ACTIVE = 'ACTIVE',
-  CLOSED = 'CLOSED'
+  COLLECTION = 'COLLECTION',
+  CLOSED = 'CLOSED',
 }

@@ -21,7 +21,7 @@ import MyLeads from '../features/rm/pages/MyLeads.jsx';
 import PaymentManagement from '../features/rm/pages/PaymentManagement.jsx';
 import RMDashboard from '../features/rm/pages/RMDashboard.jsx';
 import SubmitToBM from '../features/rm/pages/SubmitToBM.jsx';
-
+import RoleDashboardRedirect from '../components/layout/RoleDashboardRedirect.jsx';
 
 import AdminDashboard from '../features/ADMIN/pages/AdminDashboard.jsx';
 import RolesAccess from '../features/ADMIN/pages/rolesAccess.jsx';
@@ -30,10 +30,20 @@ import BmDashboard from '../features/BM/pages/BmDashboard.jsx'
 import BMReview from '../features/BM/pages/BMReview.jsx';
 import BMApproved from '../features/BM/pages/BmApproved.jsx';
 import ChargesApproved from '../features/BM/pages/ChargesApproved.jsx';
+
+import CmPreliminaryCreditScreening from "../features/credit/pages/CmPreliminaryCreditScreening.jsx";
+import CreditManagerDashboard from '../features/credit/pages/CreditManagerDashboard.jsx';
+import CMApplicationData from "../features/credit/pages/CMApplicationData.jsx";
+import CreditMakerProposal from "../features/credit/pages/CreditMakerProposal.jsx";
+import CreditCheckerReview from "../features/credit/pages/CreditCheckerReview.jsx";
+
+import ValuationDashboard from "../features/valuation/pages/ValuationDashboard.jsx";
+import ValuationPage from "../features/valuation/pages/ValuationPage.jsx";
+
 // import BMReviewQueue from '../features/BM/pages/ReviewQueue.jsx';
 
 const protectedChildren = [
-  { path: '/dashboard', element: <DashboardPage /> },
+{ path: '/dashboard', element: <RoleDashboardRedirect /> },
   { path: '/applications', element: <ApplicationsPage /> },
   { path: '/applications/create', element: <CreateApplicationPage /> },
   { path: '/applications/:applicationId', element: <ApplicationDetailsPage /> },
@@ -49,6 +59,28 @@ const protectedChildren = [
   { path: '/roles-access', element: <RolesAccess /> },
   {path: "/bmApproved", element: <BMApproved />,},
   {path: "/chargesApproved", element: <ChargesApproved />,},
+
+  // Credit Manager routes
+
+{ path: '/credit-dashboard', element: <CreditManagerDashboard /> },
+{ path: '/credit/maker', element: <CreditManagerDashboard /> },
+{ path: '/credit/checker', element: <CreditManagerDashboard /> },
+{ path: "/cm-screening", element: <CmPreliminaryCreditScreening /> },
+{ path: "/cm-screening/:applicationId", element: <CmPreliminaryCreditScreening /> },
+{ path: "/cm-application-data", element: <CMApplicationData /> },
+{ path: "/cm-application-data/:applicationId", element: <CMApplicationData /> },
+{ path: "/credit-maker", element: <CreditMakerProposal /> },
+{ path: "/credit-maker/:applicationId", element: <CreditMakerProposal /> },
+{ path: "/credit-checker", element: <CreditCheckerReview /> },
+{ path: "/credit-checker/:applicationId", element: <CreditCheckerReview /> },
+
+
+// valuation 
+{ path: "/valuation-dashboard", element: <ValuationDashboard /> },
+{ path: "/valuation", element: <ValuationPage /> },
+{ path: "/valuation/:applicationId", element: <ValuationPage /> },
+
+
 
 
   { path: '/my-leads', element: <MyLeads /> },

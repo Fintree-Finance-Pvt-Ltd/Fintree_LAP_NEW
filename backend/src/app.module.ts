@@ -35,6 +35,8 @@ import { UsersModule } from './modules/users/users.module';
 import { VarificationModule } from './modules/varification/varification.module';
 import { FieldVisitsModule } from './modules/visits/field-visits.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
+import { CreditModule } from './modules/credit/credit.module';
+import { ValuationModule } from './modules/valuation/valuation.module';
 
 @Module({
   imports: [
@@ -63,6 +65,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     AuditModule,
     ApplicationsModule,
     CustomerProfilesModule,
+    CreditModule,
     ContactPersonsModule,
     CoApplicantsModule,
     DocumentsModule,
@@ -73,6 +76,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     GeoModule,
     VarificationModule,
     ChargesReceiptsModule,
+    ValuationModule,
     
   ],
   providers: [
