@@ -10,6 +10,18 @@ import {
   PROPERTY_TYPE,
 } from "../rmUtils.js";
 
+
+
+const AADHAAR_LINK_COOLDOWN_SECONDS = 5 * 60;
+
+const formatCooldown = (seconds) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+};
+
+
 const emptyForm = {
   customerName: "",
   mobileNumber: "",
@@ -125,7 +137,12 @@ export default function CreateLead() {
 
   const [createdApplicationId, setCreatedApplicationId] = useState(null);
 
-  const photoApplicationId = createdApplicationId ?? applicationId;
+const currentApplicationId = createdApplicationId ?? applicationId;
+const photoApplicationId = currentApplicationId;
+
+const aadhaarCooldownKey = currentApplicationId
+  ? `aadhaar_link_cooldown_${currentApplicationId}`
+  : null;
 
   const applicantDocumentsQuery = useQuery({
     queryKey: ["rm-documents", photoApplicationId],
@@ -270,6 +287,20 @@ export default function CreateLead() {
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
 const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
+const [aadhaarCooldownUntil, setAadhaarCooldownUntil] = useState(0);
+const [aadhaarCooldownSeconds, setAadhaarCooldownSeconds] = useState(0);
+
+const isAadhaarCooldownActive = aadhaarCooldownSeconds > 0;
+
+const startAadhaarCooldown = () => {
+  const until = Date.now() + AADHAAR_LINK_COOLDOWN_SECONDS * 1000;
+
+  setAadhaarCooldownUntil(until);
+
+  if (aadhaarCooldownKey) {
+    localStorage.setItem(aadhaarCooldownKey, String(until));
+  }
+};
   const [applicationNumber, setApplicationNumber] = useState("");
   const [formData, setFormData] = useState(
     location?.state?.formData ? { ...emptyForm, ...location.state.formData } : emptyForm,
@@ -321,7 +352,57 @@ const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
     resendAfterSeconds: 0,
   });
 
+useEffect(() => {
+  if (!aadhaarCooldownKey) {
+    setAadhaarCooldownUntil(0);
+    setAadhaarCooldownSeconds(0);
+    return;
+  }
 
+  const savedUntil = Number(
+    localStorage.getItem(aadhaarCooldownKey) || 0,
+  );
+
+  if (savedUntil > Date.now()) {
+    setAadhaarCooldownUntil(savedUntil);
+  } else {
+    localStorage.removeItem(aadhaarCooldownKey);
+    setAadhaarCooldownUntil(0);
+    setAadhaarCooldownSeconds(0);
+  }
+}, [aadhaarCooldownKey]);
+
+useEffect(() => {
+  if (!aadhaarCooldownUntil) {
+    setAadhaarCooldownSeconds(0);
+    return;
+  }
+
+  const updateRemaining = () => {
+    const remaining = Math.max(
+      0,
+      Math.ceil((aadhaarCooldownUntil - Date.now()) / 1000),
+    );
+
+    setAadhaarCooldownSeconds(remaining);
+
+    if (remaining <= 0) {
+      setAadhaarCooldownUntil(0);
+
+      if (aadhaarCooldownKey) {
+        localStorage.removeItem(aadhaarCooldownKey);
+      }
+    }
+  };
+
+  updateRemaining();
+
+  const interval = window.setInterval(updateRemaining, 1000);
+
+  return () => {
+    window.clearInterval(interval);
+  };
+}, [aadhaarCooldownUntil, aadhaarCooldownKey]);
 
   const uploadCustomerPhotoMutation = useMutation({
     mutationFn: async () => {
@@ -1426,7 +1507,17 @@ const handleVerifyGst = () => {
 
 
 const handleInitAadhaar = async () => {
-  const targetApplicationId = createdApplicationId ?? applicationId;
+  const targetApplicationId = currentApplicationId;
+
+  if (isAadhaarCooldownActive) {
+    setMessageType("error");
+    setMessage(
+      `Aadhaar link already initiated. Please wait ${formatCooldown(
+        aadhaarCooldownSeconds,
+      )}.`,
+    );
+    return;
+  }
 
   if (!targetApplicationId) {
     setMessageType("error");
@@ -1446,8 +1537,13 @@ const handleInitAadhaar = async () => {
     const payload = result?.data ?? result;
     const kycUrl = payload?.kycUrl || payload?.data?.kycUrl;
 
+    startAadhaarCooldown();
+
     setMessageType("success");
-    setMessage(result?.message || "Aadhaar KYC link generated successfully.");
+    setMessage(
+      result?.message ||
+        "Aadhaar KYC link generated successfully. You can resend after 5 minutes.",
+    );
 
     if (kycUrl) {
       window.open(kycUrl, "_blank", "noopener,noreferrer");
@@ -1748,14 +1844,14 @@ const handleInitAadhaar = async () => {
 
 
 
-  const isPending =
-    saveNewDraftMutation.isPending ||
-    updateDraftMutation.isPending ||
-    submitDraftMutation.isPending ||
-    panOcrMutation.isPending ||
-    verifyPanMutation.isPending ||
-    verifyGstMutation.isPending;
-      aadhaarLinkSending;
+ const isPending =
+  saveNewDraftMutation.isPending ||
+  updateDraftMutation.isPending ||
+  submitDraftMutation.isPending ||
+  panOcrMutation.isPending ||
+  verifyPanMutation.isPending ||
+  verifyGstMutation.isPending ||
+  aadhaarLinkSending;
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
@@ -2434,26 +2530,42 @@ const handleInitAadhaar = async () => {
         </div>
 
         <div className="shrink-0 min-w-[160px]">
-          <button
-            type="button"
-            onClick={handleInitAadhaar}
-            disabled={aadhaarLinkSending || !(createdApplicationId ?? applicationId)}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/10 transition-all hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-          >
-            {aadhaarLinkSending ? (
-              "Sending..."
-            ) : !(createdApplicationId ?? applicationId) ? (
-              "Save Draft First"
-            ) : (
-              <>
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v7.5A2.25 2.25 0 005.25 18h13.5A2.25 2.25 0 0021 15.75v-4.5M13.5 6L21 3m0 0v7.5M21 3l-7.5 7.5" />
-                </svg>
-                Send Link
-              </>
-            )}
-          </button>
-        </div>
+  <button
+    type="button"
+    onClick={handleInitAadhaar}
+    disabled={
+      aadhaarLinkSending ||
+      isAadhaarCooldownActive ||
+      !currentApplicationId
+    }
+    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/10 transition-all hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+  >
+    {aadhaarLinkSending ? (
+      "Sending..."
+    ) : isAadhaarCooldownActive ? (
+      `Wait ${formatCooldown(aadhaarCooldownSeconds)}`
+    ) : !currentApplicationId ? (
+      "Save Draft First"
+    ) : (
+      <>
+        <svg
+          className="h-3.5 w-3.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M13.5 6H5.25A2.25 2.25 0 003 8.25v7.5A2.25 2.25 0 005.25 18h13.5A2.25 2.25 0 0021 15.75v-4.5M13.5 6L21 3m0 0v7.5M21 3l-7.5 7.5"
+          />
+        </svg>
+        Send Link
+      </>
+    )}
+  </button>
+</div>
       </div>
 
       {/* Compact Profile Photo Management Panel */}

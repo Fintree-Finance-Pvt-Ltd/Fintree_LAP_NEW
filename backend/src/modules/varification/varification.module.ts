@@ -6,6 +6,8 @@ import { CustomerProfile } from '../customer-profiles/entities/customer-profile.
 import { KycVerificationStatus } from './entities/kyc-verification-status.entity';
 import { VarificationController } from './varification.controller';
 import { VarificationService } from './varification.service';
+import { AadhaarWebhookController } from './aadhaar-webhook.controller';
+
 
 @Module({
   imports: [
@@ -15,7 +17,10 @@ import { VarificationService } from './varification.service';
       KycVerificationStatus,
     ]),
   ],
-  controllers: [VarificationController],
+ controllers: [
+    VarificationController,
+    AadhaarWebhookController,
+  ],
   providers: [VarificationService],
   exports: [VarificationService],
 })
