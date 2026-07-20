@@ -13,12 +13,34 @@ export class PermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+
+    const url = String(
+      request?.originalUrl ||
+        request?.url ||
+        request?.path ||
+        '',
+    );
+
+    if (
+      url.includes('/aadhaar/webhook') ||
+      url.includes('/lap-webhook/v1/digi-aadhaar-webhook')
+    ) {
+      console.log('✅ Aadhaar webhook bypassed by PermissionsGuard:', url);
+      return true;
+    }
+
     const isPublic = this.reflector.getAllAndOverride<boolean>(
       IS_PUBLIC_KEY,
       [context.getHandler(), context.getClass()],
     );
 
+    console.log('PermissionsGuard Route:', context.getHandler().name);
+    console.log('PermissionsGuard URL:', url);
+    console.log('PermissionsGuard isPublic:', isPublic);
+
     if (isPublic) {
+      console.log('✅ Public route skipped by PermissionsGuard');
       return true;
     }
 
@@ -31,7 +53,7 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    const user = context.switchToHttp().getRequest().user;
+    const user = request.user;
 
     if (!user) {
       return false;
