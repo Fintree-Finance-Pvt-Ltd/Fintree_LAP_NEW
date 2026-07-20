@@ -35,14 +35,23 @@ const rolesConfig = {
       items: [
         { to: "/my-leads", label: "My Leads", Icon: FaFileAlt },
         { to: "/create-lead", label: "Create Lead", Icon: FaUserPlus },
-
-       { to: "/kyc-documents", label: "KYC & Documents", Icon: FaFolderOpen },
+{
+          to: "/customer-visit",
+          label: "Customer / Business Visit",
+          Icon: FaBriefcase,
+        },
+        {
+          to: "/geo-verification",
+          label: "Geo Verification",
+          Icon: FaMapMarkerAlt,
+        },
+        { to: "/kyc-documents", label: "KYC & Documents", Icon: FaFolderOpen },
 
         // { to: "/submit-bm", label: "Submit to BM", Icon: FaPaperPlane },
       ],
     },
   ],
-  
+
 
   ADMIN: [
     {
@@ -57,6 +66,8 @@ const rolesConfig = {
           label: "Users & Roles",
           Icon: FaUsers,
         },
+
+        
         {
           to: "/payment-management",
           label: "Payment Management",
@@ -73,22 +84,13 @@ const rolesConfig = {
       category: "PRIMARY",
       items: [{ to: "/bmDashboard", label: "My Work", Icon: FaBriefcase }],
     },
-    
+
     {
       category: "MODULES",
       items: [
-           { to: "/my-leads", label: "My Leads", Icon: FaFileAlt },
+        { to: "/my-leads", label: "My Leads", Icon: FaFileAlt },
         { to: "/create-lead", label: "Create Lead", Icon: FaUserPlus },
-        {
-          to: "/customer-visit",
-          label: "Customer / Business Visit",
-          Icon: FaBriefcase,
-        },
-        {
-          to: "/geo-verification",
-          label: "Geo Verification",
-          Icon: FaMapMarkerAlt,
-        },
+        
         { to: "/kyc-documents", label: "KYC & Documents", Icon: FaFolderOpen },
         {
           to: "/charges-receipts",
@@ -101,161 +103,164 @@ const rolesConfig = {
           label: "Payment Management",
           Icon: FaCreditCard,
         },
-       { to: "/submit-bm", label: "Submit to CM", Icon: FaPaperPlane },
+        { to: "/submit-bm", label: "Submit to CM", Icon: FaPaperPlane },
       ],
     },
   ],
 
-CM: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/cm-screening",
-        label: "CM Screening",
-        Icon: FaShieldAlt,
-      },
-      
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
+  CM: [
+    {
+      category: "PRIMARY",
+      items: [
 
-      
-      {
-        to: "/cm-application-data",
-        label: "Application Data",
-        Icon: FaFolderOpen,
-      },
-      {
-        to: "/cm-screening",
-        label: "Credit Screening",
-        Icon: FaShieldAlt,
-      },
-      {
-        to: "/credit-dashboard",
-        label: "Credit Dashboard",
-        Icon: FaChartBar,
-      },
-         { to: "/kyc-documents",
-           label: "KYC & Documents",
-           Icon: FaFolderOpen },
-    ],
-  },
-],
+         {
+          to: "/credit-dashboard",
+          label: "Credit Dashboard",
+          Icon: FaChartBar,
+        },
+        
 
-CREDIT_MAKER: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/credit-dashboard",
-        label: "Credit Dashboard",
-        Icon: FaShieldAlt,
-      },
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
-      {
-        to: "/cm-application-data",
-        label: "Application Data",
-        Icon: FaFolderOpen,
-      },
-      // {
-      //   to: "/cm-screening",
-      //   label: "Credit Screening",
-      //   Icon: FaShieldAlt,
-      // },
-     {
-        to: "/credit-maker",
-        label: "Underwriting Proposal",
-        Icon: FaFileAlt,
-      },
-      {
-        to: "/credit-dashboard",
-        label: "Credit Dashboard",
-        Icon: FaChartBar,
-      },
-         { to: "/kyc-documents",
-           label: "KYC & Documents",
-           Icon: FaFolderOpen },
-          ]
-  },
-],
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
 
-CREDIT_CHECKER: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/credit-checker",
-        label: "Credit Checker",
-        Icon: FaShieldAlt,
-      },
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
-      {
-        to: "/credit-checker",
-        label: "Checker Review",
-        Icon: FaFileAlt,
-      },
-      {
-        to: "/credit-dashboard",
-        label: "Credit Dashboard",
-        Icon: FaChartBar,
-      },
-      {
-        to: "/cm-application-data",
-        label: "Application Data",
-        Icon: FaFolderOpen,
-      },
-      {
-        to: "/kyc-documents",
-        label: "KYC & Documents",
-        Icon: FaFolderOpen,
-      },
-    ],
-  },
-],
+        {
+          to: "/cm-screening",
+          label: "CM Screening",
+          Icon: FaShieldAlt,
+        },
+        {
+          to: "/cm-application-data",
+          label: "Application Data",
+          Icon: FaFolderOpen,
+        },
+        {
+          to: "/cm-screening",
+          label: "Credit Screening",
+          Icon: FaShieldAlt,
+        },
+       
+        {
+          to: "/kyc-documents",
+          label: "KYC & Documents",
+          Icon: FaFolderOpen
+        },
+      ],
+    },
+  ],
 
-VALUATION: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/valuation-dashboard",
-        label: "Valuation Dashboard",
-        Icon: FaBriefcase,
+  CREDIT_MAKER: [
+    {
+      category: "PRIMARY",
+      items: [
+        {
+          to: "/credit-dashboard",
+          label: "Credit Dashboard",
+          Icon: FaShieldAlt,
+        },
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
+        {
+          to: "/cm-application-data",
+          label: "Application Data",
+          Icon: FaFolderOpen,
+        },
+       
+        {
+          to: "/credit-maker",
+          label: "Underwriting Proposal",
+          Icon: FaFileAlt,
+        },
+        
+        {
+          to: "/kyc-documents",
+          label: "KYC & Documents",
+          Icon: FaFolderOpen
+        },
+      ]
+    },
+  ],
+
+  CREDIT_CHECKER: [
+    {
+      category: "PRIMARY",
+      items: [
+       {
+          to: "/credit-dashboard",
+          label: "Credit Dashboard",
+          Icon: FaChartBar,
+        },
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
+        {
+          to: "/credit-checker",
+          label: "Checker Review",
+          Icon: FaFileAlt,
+        },
+        
+        {
+          to: "/cm-application-data",
+          label: "Application Data",
+          Icon: FaFolderOpen,
+        },
+        {
+          to: "/kyc-documents",
+          label: "KYC & Documents",
+          Icon: FaFolderOpen,
+        },
+      ],
+    },
+  ],
+
+  VALUATION: [
+    {
+      category: "PRIMARY",
+      items: [
+        {
+          to: "/valuation-dashboard",
+          label: "Valuation Dashboard",
+          Icon: FaBriefcase,
+        },
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
+        
+        {
+          to: "/field-visits",
+          label: "Visit Photo Upload",
+          Icon: FaFolderOpen,
+        },
+         {
+        to: "/geo-verification",
+        label: "Geo Verification",
+        Icon: FaMapMarkerAlt,
       },
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
-      {
-        to: "/valuation",
-        label: "Valuation Queue",
-        Icon: FaFolderOpen,
-      },
-      {
-        to: "/valuation",
-        label: "Comparable Analysis",
-        Icon: FaRoute,
-      },
-      {
-        to: "/payment-management",
-        label: "Payment Management",
-        Icon: FaCreditCard,
-      },
-    ],
-  },
-],
+        {
+          to: "/valuation",
+          label: "Comparable Analysis",
+          Icon: FaRoute,
+        },
+        {
+          to: "/payment-management",
+          label: "Payment Management",
+          Icon: FaCreditCard,
+        },
+
+
+      ],
+    },
+  ],
+
 
 };
 
@@ -307,7 +312,7 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
-      const roleKeysInOrder = ["RM", "BM", "ADMIN","CM","CREDIT_MAKER","CREDIT_CHECKER","VALUATION"];
+      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION"];
       for (const roleKey of roleKeysInOrder) {
         if (!roles.includes(roleKey)) continue;
         const roleGroups = rolesConfig[roleKey] || [];

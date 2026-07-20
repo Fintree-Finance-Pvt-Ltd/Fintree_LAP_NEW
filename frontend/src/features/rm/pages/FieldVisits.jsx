@@ -14,6 +14,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../../hooks/useAuth.js";
 import { rmApi } from "../rmApi.js";
 import {
   buildWorkflowTimeline,
@@ -255,7 +256,7 @@ function GeoCameraModal({ isOpen, onClose, onCapture, blockName }) {
         const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 12000 }));
         const address = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
         setCaptureLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy, locationName: address });
-        
+
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
@@ -280,7 +281,7 @@ function GeoCameraModal({ isOpen, onClose, onCapture, blockName }) {
     canvas.height = videoRef.current.videoHeight || 720;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-    
+
     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
     ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
     ctx.font = "16px Arial"; ctx.fillStyle = "#fff";
@@ -342,40 +343,138 @@ function FormField({ label, required = false, children }) {
   );
 }
 
-function PhotoUpload({ block, title, description, selectedFiles, uploadedDocuments, disabled, onFilesChange, onDeleteDocument, deletingDocumentId, blockLabel }) {
+function PhotoUpload({
+  block,
+  title,
+  description,
+  selectedFiles,
+  uploadedDocuments,
+  disabled,
+  allowExtraFiles = false,
+  onFilesChange,
+  onDeleteDocument,
+  deletingDocumentId,
+  blockLabel,
+}) {
   const maxFiles = DOCUMENT_NAMES[block]?.length || 0;
-  const remainingSlots = Math.max(maxFiles - (selectedFiles.length + uploadedDocuments.length), 0);
+  const usedCount = selectedFiles.length + uploadedDocuments.length;
+  const remainingSlots = allowExtraFiles
+    ? Math.max(99 - selectedFiles.length, 0)
+    : Math.max(maxFiles - usedCount, 0);
+
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [preview, setPreview] = useState(null);
 
+  const canCapture = !disabled && remainingSlots > 0;
+
   return (
     <div className="space-y-3">
-      <div onClick={() => !disabled && remainingSlots > 0 && setIsCameraOpen(true)} className={`rounded-xl border-2 border-dashed p-4 text-center ${disabled || remainingSlots === 0 ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed" : "border-blue-200 bg-blue-50/30 cursor-pointer hover:border-blue-400"}`}>
+      <div
+        onClick={() => canCapture && setIsCameraOpen(true)}
+        className={`rounded-xl border-2 border-dashed p-4 text-center ${
+          !canCapture
+            ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60"
+            : "cursor-pointer border-blue-200 bg-blue-50/30 hover:border-blue-400"
+        }`}
+      >
         <FaCamera className="mx-auto mb-1 text-slate-400" size={16} />
         <div className="text-xs font-bold text-slate-700">{title}</div>
         <div className="text-[10px] text-slate-400">{description}</div>
-        <div className="mt-1 text-[10px] font-bold text-blue-600">{remainingSlots > 0 ? `${remainingSlots} slots remaining` : "Limits reached"}</div>
+        <div className="mt-1 text-[10px] font-bold text-blue-600">
+          {allowExtraFiles
+            ? "Valuation can upload additional revisit photos"
+            : remainingSlots > 0
+              ? `${remainingSlots} slots remaining`
+              : "Limits reached"}
+        </div>
       </div>
 
-      <GeoCameraModal isOpen={isCameraOpen} onClose={() => setIsCameraOpen(false)} onCapture={(f) => onFilesChange([...selectedFiles, f])} blockName={blockLabel} />
-      <ImagePreviewModal imageUrl={preview?.url} title={preview?.title} onClose={() => setPreview(null)} />
+      <GeoCameraModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={(file) => onFilesChange([...selectedFiles, file])}
+        blockName={blockLabel}
+      />
 
-      {uploadedDocuments.map(doc => (
-        <div key={doc.id} className="flex justify-between items-center border border-emerald-100 bg-emerald-50/40 px-3 py-1.5 rounded-xl text-xs">
-          <span className="truncate font-bold text-slate-700">{doc.fileName || doc.documentName}</span>
+      <ImagePreviewModal
+        imageUrl={preview?.url}
+        title={preview?.title}
+        onClose={() => setPreview(null)}
+      />
+
+      {uploadedDocuments.map((doc) => (
+        <div
+          key={doc.id}
+          className="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/40 px-3 py-1.5 text-xs"
+        >
+          <span className="truncate font-bold text-slate-700">
+            {doc.fileName || doc.documentName}
+          </span>
+
           <div className="flex gap-2">
-            <button onClick={() => setPreview({ url: doc.fileUrl || doc.documentUrl || doc.url, title: doc.documentName })} className="text-blue-600 font-bold"><FaEye /></button>
-            {!disabled && <button disabled={deletingDocumentId === doc.id} onClick={() => onDeleteDocument(doc.id)} className="text-rose-500"><FaTrash /></button>}
+            <button
+              type="button"
+              onClick={() =>
+                setPreview({
+                  url: doc.fileUrl || doc.documentUrl || doc.url,
+                  title: doc.documentName,
+                })
+              }
+              className="font-bold text-blue-600"
+            >
+              <FaEye />
+            </button>
+
+            {!disabled && (
+              <button
+                type="button"
+                disabled={deletingDocumentId === doc.id}
+                onClick={() => onDeleteDocument(doc.id)}
+                className="text-rose-500 disabled:opacity-40"
+              >
+                <FaTrash />
+              </button>
+            )}
           </div>
         </div>
       ))}
 
-      {selectedFiles.map((file, i) => (
-        <div key={i} className="flex justify-between items-center border border-blue-100 bg-blue-50/40 px-3 py-1.5 rounded-xl text-xs">
-          <span className="truncate font-bold text-slate-700">{file.name}</span>
+      {selectedFiles.map((file, index) => (
+        <div
+          key={`${file.name}-${index}`}
+          className="flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/40 px-3 py-1.5 text-xs"
+        >
+          <span className="truncate font-bold text-slate-700">
+            {file.name}
+          </span>
+
           <div className="flex gap-2">
-            <button onClick={() => setPreview({ url: URL.createObjectURL(file), title: file.name })} className="text-blue-600 font-bold"><FaEye /></button>
-            {!disabled && <button onClick={() => onFilesChange(selectedFiles.filter((_, idx) => idx !== i))} className="text-rose-500"><FaTrash /></button>}
+            <button
+              type="button"
+              onClick={() =>
+                setPreview({
+                  url: URL.createObjectURL(file),
+                  title: file.name,
+                })
+              }
+              className="font-bold text-blue-600"
+            >
+              <FaEye />
+            </button>
+
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() =>
+                  onFilesChange(
+                    selectedFiles.filter((_, idx) => idx !== index),
+                  )
+                }
+                className="text-rose-500"
+              >
+                <FaTrash />
+              </button>
+            )}
           </div>
         </div>
       ))}
@@ -383,17 +482,31 @@ function PhotoUpload({ block, title, description, selectedFiles, uploadedDocumen
   );
 }
 
-function VisitSaveButton({ label, disabled, isSaving, onSave, saved }) {
-  if (saved) {
+function VisitSaveButton({
+  label,
+  updateLabel,
+  disabled,
+  isSaving,
+  onSave,
+  saved,
+  savedLocked,
+}) {
+  if (saved && savedLocked) {
     return (
-      <div className="w-full text-center py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-md">
+      <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-center text-xs font-extrabold text-white shadow-md">
         <FaCheckCircle size={14} /> Done
       </div>
     );
   }
+
   return (
-    <button type="button" disabled={disabled || isSaving} onClick={onSave} className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-extrabold text-white shadow-md hover:bg-blue-700 disabled:opacity-40">
-      {isSaving ? "Saving..." : label}
+    <button
+      type="button"
+      disabled={disabled || isSaving}
+      onClick={onSave}
+      className="w-full rounded-xl bg-blue-600 py-2.5 text-xs font-extrabold text-white shadow-md hover:bg-blue-700 disabled:opacity-40"
+    >
+      {isSaving ? "Saving..." : saved ? updateLabel || "Update Visit" : label}
     </button>
   );
 }
@@ -401,7 +514,9 @@ function VisitSaveButton({ label, disabled, isSaving, onSave, saved }) {
 /* =========================================================
    CONTAINER CARD MODULES (RESIDENCE, BUSINESS, COLLATERAL)
 ========================================================= */
-function CustomerResidenceCard({ form, selectedFiles, uploadedDocuments, disabled, onChange, onFilesChange, onDeleteDocument, deletingDocumentId, onSave, isSaving, saved, isTranslucent }) {
+function CustomerResidenceCard({ form, selectedFiles, uploadedDocuments, disabled, allowSavedEdit = false, allowExtraPhotos = false, onChange, onFilesChange, onDeleteDocument, deletingDocumentId, onSave, isSaving, saved, isTranslucent }) {
+  const isSavedLocked = saved && !allowSavedEdit;
+
   return (
     <div className={`space-y-4 rounded-2xl border p-6 transition-all shadow-sm ${saved ? "border-emerald-200 bg-emerald-50/30 ring-2 ring-emerald-500" : "border-slate-100 bg-white"} ${isTranslucent ? "opacity-40 pointer-events-none select-none" : ""}`}>
       <div className="flex justify-between items-start border-b pb-2">
@@ -411,15 +526,15 @@ function CustomerResidenceCard({ form, selectedFiles, uploadedDocuments, disable
         </div>
         {saved && <span className="bg-emerald-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Completed</span>}
       </div>
-      
+
       <FormField label="Visit Date" required>
-        <input type="date" value={form.visitDate} disabled={disabled || saved} onChange={e => onChange("visitDate", e.target.value)} className={inputClass} />
+        <input type="date" value={form.visitDate} disabled={disabled || isSavedLocked} onChange={e => onChange("visitDate", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Customer Name" required>
-        <input type="text" value={form.customerName} disabled={disabled || saved} onChange={e => onChange("customerName", e.target.value)} className={inputClass} />
+        <input type="text" value={form.customerName} disabled={disabled || isSavedLocked} onChange={e => onChange("customerName", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Person Met" required>
-        <select value={form.personMet} disabled={disabled || saved} onChange={e => onChange("personMet", e.target.value)} className={inputClass}>
+        <select value={form.personMet} disabled={disabled || isSavedLocked} onChange={e => onChange("personMet", e.target.value)} className={inputClass}>
           <option value="Customer">Customer</option>
           <option value="Spouse">Spouse</option>
           <option value="Co-Applicant">Co-Applicant</option>
@@ -427,10 +542,10 @@ function CustomerResidenceCard({ form, selectedFiles, uploadedDocuments, disable
         </select>
       </FormField>
       <FormField label="Residence Address" required>
-        <textarea rows={2} value={form.residenceAddress} disabled={disabled || saved} onChange={e => onChange("residenceAddress", e.target.value)} className={textareaClass} />
+        <textarea rows={2} value={form.residenceAddress} disabled={disabled || isSavedLocked} onChange={e => onChange("residenceAddress", e.target.value)} className={textareaClass} />
       </FormField>
       <FormField label="Residence Type" required>
-        <select value={form.residenceType} disabled={disabled || saved} onChange={e => onChange("residenceType", e.target.value)} className={inputClass}>
+        <select value={form.residenceType} disabled={disabled || isSavedLocked} onChange={e => onChange("residenceType", e.target.value)} className={inputClass}>
           <option value="">Select option</option>
           <option value="Owned">Owned</option>
           <option value="Rented">Rented</option>
@@ -438,23 +553,25 @@ function CustomerResidenceCard({ form, selectedFiles, uploadedDocuments, disable
         </select>
       </FormField>
       <FormField label="Visit Result" required>
-        <select value={form.visitResult} disabled={disabled || saved} onChange={e => onChange("visitResult", e.target.value)} className={inputClass}>
+        <select value={form.visitResult} disabled={disabled || isSavedLocked} onChange={e => onChange("visitResult", e.target.value)} className={inputClass}>
           <option value="">Select option</option>
           <option value="Positive">Positive</option>
           <option value="Negative">Negative</option>
         </select>
       </FormField>
       <FormField label="Remarks" required>
-        <textarea rows={2} value={form.remarks} disabled={disabled || saved} onChange={e => onChange("remarks", e.target.value)} className={textareaClass} />
+        <textarea rows={2} value={form.remarks} disabled={disabled || isSavedLocked} onChange={e => onChange("remarks", e.target.value)} className={textareaClass} />
       </FormField>
 
-      <PhotoUpload block={VISIT_BLOCKS.CUSTOMER_RESIDENCE} title="Residence Photos" description="Frontage, internal setup" selectedFiles={selectedFiles} uploadedDocuments={uploadedDocuments} disabled={disabled || saved} onFilesChange={onFilesChange} onDeleteDocument={onDeleteDocument} deletingDocumentId={deletingDocumentId} blockLabel="Residence" />
-      <VisitSaveButton label="Save Customer Visit" disabled={disabled} isSaving={isSaving} onSave={onSave} saved={saved} />
+      <PhotoUpload block={VISIT_BLOCKS.CUSTOMER_RESIDENCE} title="Residence Photos" description="Frontage, internal setup" selectedFiles={selectedFiles} uploadedDocuments={uploadedDocuments} disabled={disabled || isSavedLocked} onFilesChange={onFilesChange} onDeleteDocument={onDeleteDocument} deletingDocumentId={deletingDocumentId} blockLabel="Residence" allowExtraFiles={allowExtraPhotos} />
+      <VisitSaveButton label="Save Customer Visit" updateLabel="Update Customer Visit" disabled={disabled} isSaving={isSaving} onSave={onSave} saved={saved} savedLocked={isSavedLocked} />
     </div>
   );
 }
 
-function BusinessOfficeCard({ form, selectedFiles, uploadedDocuments, disabled, onChange, onFilesChange, onDeleteDocument, deletingDocumentId, onSave, isSaving, saved, isTranslucent }) {
+function BusinessOfficeCard({ form, selectedFiles, uploadedDocuments, disabled, allowSavedEdit = false, allowExtraPhotos = false, onChange, onFilesChange, onDeleteDocument, deletingDocumentId, onSave, isSaving, saved, isTranslucent }) {
+  const isSavedLocked = saved && !allowSavedEdit;
+
   return (
     <div className={`space-y-4 rounded-2xl border p-6 transition-all shadow-sm ${saved ? "border-emerald-200 bg-emerald-50/30 ring-2 ring-emerald-500" : "border-slate-100 bg-white"} ${isTranslucent ? "opacity-40 pointer-events-none select-none" : ""}`}>
       <div className="flex justify-between items-start border-b pb-2">
@@ -466,25 +583,25 @@ function BusinessOfficeCard({ form, selectedFiles, uploadedDocuments, disabled, 
       </div>
 
       <FormField label="Visit Date" required>
-        <input type="date" value={form.visitDate} disabled={disabled || saved} onChange={e => onChange("visitDate", e.target.value)} className={inputClass} />
+        <input type="date" value={form.visitDate} disabled={disabled || isSavedLocked} onChange={e => onChange("visitDate", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Occupation Type" required>
-        <input type="text" value={form.occupationType} disabled={disabled || saved} onChange={e => onChange("occupationType", e.target.value)} className={inputClass} />
+        <input type="text" value={form.occupationType} disabled={disabled || isSavedLocked} onChange={e => onChange("occupationType", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Business Name" required>
-        <input type="text" value={form.businessName} disabled={disabled || saved} onChange={e => onChange("businessName", e.target.value)} className={inputClass} />
+        <input type="text" value={form.businessName} disabled={disabled || isSavedLocked} onChange={e => onChange("businessName", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Business Vintage (Years)" required>
-        <input type="number" value={form.businessVintage} disabled={disabled || saved} onChange={e => onChange("businessVintage", e.target.value)} className={inputClass} />
+        <input type="number" value={form.businessVintage} disabled={disabled || isSavedLocked} onChange={e => onChange("businessVintage", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Business Activity" required>
-        <input type="text" value={form.businessActivity} disabled={disabled || saved} onChange={e => onChange("businessActivity", e.target.value)} className={inputClass} />
+        <input type="text" value={form.businessActivity} disabled={disabled || isSavedLocked} onChange={e => onChange("businessActivity", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Employee Count" required>
-        <input type="number" value={form.employeeCount} disabled={disabled || saved} onChange={e => onChange("employeeCount", e.target.value)} className={inputClass} />
+        <input type="number" value={form.employeeCount} disabled={disabled || isSavedLocked} onChange={e => onChange("employeeCount", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Stock Setup" required>
-        <select value={form.stockOfficeSetup} disabled={disabled || saved} onChange={e => onChange("stockOfficeSetup", e.target.value)} className={inputClass}>
+        <select value={form.stockOfficeSetup} disabled={disabled || isSavedLocked} onChange={e => onChange("stockOfficeSetup", e.target.value)} className={inputClass}>
           <option value="">Select position</option>
           <option value="Adequate">Adequate</option>
           <option value="Available">Available</option>
@@ -492,27 +609,28 @@ function BusinessOfficeCard({ form, selectedFiles, uploadedDocuments, disabled, 
         </select>
       </FormField>
       <FormField label="Visit Result" required>
-        <select value={form.visitResult} disabled={disabled || saved} onChange={e => onChange("visitResult", e.target.value)} className={inputClass}>
+        <select value={form.visitResult} disabled={disabled || isSavedLocked} onChange={e => onChange("visitResult", e.target.value)} className={inputClass}>
           <option value="">Select option</option>
           <option value="Positive">Positive</option>
           <option value="Negative">Negative</option>
         </select>
       </FormField>
       <FormField label="Remarks" required>
-        <textarea rows={2} value={form.remarks} disabled={disabled || saved} onChange={e => onChange("remarks", e.target.value)} className={textareaClass} />
+        <textarea rows={2} value={form.remarks} disabled={disabled || isSavedLocked} onChange={e => onChange("remarks", e.target.value)} className={textareaClass} />
       </FormField>
 
-      <PhotoUpload block={VISIT_BLOCKS.BUSINESS_OFFICE} title="Business Photos" description="Office signage, interior workspace" selectedFiles={selectedFiles} uploadedDocuments={uploadedDocuments} disabled={disabled || saved} onFilesChange={onFilesChange} onDeleteDocument={onDeleteDocument} deletingDocumentId={deletingDocumentId} blockLabel="Business" />
-      <VisitSaveButton label="Save Business Visit" disabled={disabled} isSaving={isSaving} onSave={onSave} saved={saved} />
+      <PhotoUpload block={VISIT_BLOCKS.BUSINESS_OFFICE} title="Business Photos" description="Office signage, interior workspace" selectedFiles={selectedFiles} uploadedDocuments={uploadedDocuments} disabled={disabled || isSavedLocked} onFilesChange={onFilesChange} onDeleteDocument={onDeleteDocument} deletingDocumentId={deletingDocumentId} blockLabel="Business" allowExtraFiles={allowExtraPhotos} />
+      <VisitSaveButton label="Save Business Visit" updateLabel="Update Business Visit" disabled={disabled} isSaving={isSaving} onSave={onSave} saved={saved} savedLocked={isSavedLocked} />
     </div>
   );
 }
 
-function PropertyVisitCard({ block, form, propertyCategory, selectedFiles, uploadedDocuments, disabled, onChange, onFilesChange, onDeleteDocument, deletingDocumentId, onSave, isSaving, saved, isTranslucent }) {
+function PropertyVisitCard({ block, form, propertyCategory, selectedFiles, uploadedDocuments, disabled, allowSavedEdit = false, allowExtraPhotos = false, onChange, onFilesChange, onDeleteDocument, deletingDocumentId, onSave, isSaving, saved, isTranslucent }) {
   const config = PROPERTY_VISIT_CONFIG[propertyCategory];
   if (!config) return null;
   const Icon = config.icon;
   const propertyTypes = PROPERTY_TYPE[propertyCategory] || [];
+  const isSavedLocked = saved && !allowSavedEdit;
 
   return (
     <div className={`space-y-4 rounded-2xl border p-6 transition-all shadow-sm ${saved ? "border-emerald-200 bg-emerald-50/30 ring-2 ring-emerald-500" : "border-slate-100 bg-white"} ${isTranslucent ? "opacity-40 pointer-events-none select-none" : ""}`}>
@@ -525,53 +643,73 @@ function PropertyVisitCard({ block, form, propertyCategory, selectedFiles, uploa
       </div>
 
       <FormField label="Visit Date" required>
-        <input type="date" value={form.visitDate} disabled={disabled || saved} onChange={e => onChange("visitDate", e.target.value)} className={inputClass} />
+        <input type="date" value={form.visitDate} disabled={disabled || isSavedLocked} onChange={e => onChange("visitDate", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Property Type" required>
-        <select value={form.propertyType} disabled={disabled || saved} onChange={e => onChange("propertyType", e.target.value)} className={inputClass}>
+        <select value={form.propertyType} disabled={disabled || isSavedLocked} onChange={e => onChange("propertyType", e.target.value)} className={inputClass}>
           <option value="">Select Option</option>
           {propertyTypes.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </FormField>
       <FormField label="Property Address" required>
-        <textarea rows={2} value={form.propertyAddress} disabled={disabled || saved} onChange={e => onChange("propertyAddress", e.target.value)} className={textareaClass} />
+        <textarea rows={2} value={form.propertyAddress} disabled={disabled || isSavedLocked} onChange={e => onChange("propertyAddress", e.target.value)} className={textareaClass} />
       </FormField>
       <FormField label="Ownership Status" required>
-        <select value={form.ownership} disabled={disabled || saved} onChange={e => onChange("ownership", e.target.value)} className={inputClass}>
+        <select value={form.ownership} disabled={disabled || isSavedLocked} onChange={e => onChange("ownership", e.target.value)} className={inputClass}>
           <option value="">Select option</option>
           <option value="Self">Self Owned</option>
           <option value="Joint">Joint Ownership</option>
         </select>
       </FormField>
       <FormField label={config.usageLabel} required>
-        <select value={form.usage} disabled={disabled || saved} onChange={e => onChange("usage", e.target.value)} className={inputClass}>
+        <select value={form.usage} disabled={disabled || isSavedLocked} onChange={e => onChange("usage", e.target.value)} className={inputClass}>
           <option value="">Select option</option>
           {config.usageOptions.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       </FormField>
       <FormField label={config.areaLabel} required>
-        <input type="number" value={form.area} disabled={disabled || saved} onChange={e => onChange("area", e.target.value)} className={inputClass} />
+        <input type="number" value={form.area} disabled={disabled || isSavedLocked} onChange={e => onChange("area", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Market Value Estimate" required>
-        <input type="number" value={form.marketValue} disabled={disabled || saved} onChange={e => onChange("marketValue", e.target.value)} className={inputClass} />
+        <input type="number" value={form.marketValue} disabled={disabled || isSavedLocked} onChange={e => onChange("marketValue", e.target.value)} className={inputClass} />
       </FormField>
       <FormField label="Visit Result" required>
-        <select value={form.visitResult} disabled={disabled || saved} onChange={e => onChange("visitResult", e.target.value)} className={inputClass}>
+        <select value={form.visitResult} disabled={disabled || isSavedLocked} onChange={e => onChange("visitResult", e.target.value)} className={inputClass}>
           <option value="">Select option</option>
           <option value="Positive">Positive</option>
           <option value="Negative">Negative</option>
         </select>
       </FormField>
       <FormField label="Remarks" required>
-        <textarea rows={2} value={form.remarks} disabled={disabled || saved} onChange={e => onChange("remarks", e.target.value)} className={textareaClass} />
+        <textarea rows={2} value={form.remarks} disabled={disabled || isSavedLocked} onChange={e => onChange("remarks", e.target.value)} className={textareaClass} />
       </FormField>
 
-      <PhotoUpload block={block} title="Collateral Assets Photos" description={config.photoText} selectedFiles={selectedFiles} uploadedDocuments={uploadedDocuments} disabled={disabled || saved} onFilesChange={onFilesChange} onDeleteDocument={onDeleteDocument} deletingDocumentId={deletingDocumentId} blockLabel="Property" />
-      <VisitSaveButton label="Save Property Visit" disabled={disabled} isSaving={isSaving} onSave={onSave} saved={saved} />
+      <PhotoUpload block={block} title="Collateral Assets Photos" description={config.photoText} selectedFiles={selectedFiles} uploadedDocuments={uploadedDocuments} disabled={disabled || isSavedLocked} onFilesChange={onFilesChange} onDeleteDocument={onDeleteDocument} deletingDocumentId={deletingDocumentId} blockLabel="Property" allowExtraFiles={allowExtraPhotos} />
+      <VisitSaveButton label="Save Property Visit" updateLabel="Update Property Visit" disabled={disabled} isSaving={isSaving} onSave={onSave} saved={saved} savedLocked={isSavedLocked} />
     </div>
   );
+
 }
 
+
+function normalizeRoles(user) {
+  const roles = user?.roles;
+
+  if (!roles) return [];
+
+  return Array.isArray(roles)
+    ? roles.map((role) => String(role).toUpperCase())
+    : [String(roles).toUpperCase()];
+}
+
+function unwrapApplicationList(response) {
+  const payload = response?.data?.data ?? response?.data ?? [];
+
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+
+  return [];
+}
 /* =========================================================
    CORE COMPONENT MODULE EXPORT
 ========================================================= */
@@ -581,10 +719,71 @@ export default function FieldVisits() {
   const queryClient = useQueryClient();
   const initializedApplicationRef = useRef(null);
 
+  const { user } = useAuth();
+  const roles = normalizeRoles(user);
+
+  const isRM = roles.includes("RM");
+  const isValuation = roles.includes("VALUATION") || roles.includes("VALUTION");
+
+  const canSelectApplication = isRM || isValuation;
+
   const [message, setMessage] = useState(null);
   const [visitForms, setVisitForms] = useState({});
   const [checklist, setChecklist] = useState(createInitialChecklist());
   const [selectedPhotos, setSelectedPhotos] = useState({});
+
+  const applicationsQuery = useQuery({
+    queryKey: ["field-visit-application-list", roles.join("_")],
+    queryFn: async () => rmApi.applications({ page: 1, limit: 200 }),
+    enabled: canSelectApplication,
+    retry: false,
+  });
+
+  const applicationList = useMemo(() => {
+    const rows = unwrapApplicationList(applicationsQuery.data);
+
+    if (isValuation) {
+      return rows.filter((item) => {
+        const stage = String(item.stage || "").toUpperCase();
+        const status = String(item.status || "").toUpperCase();
+
+        return (
+          stage === "VALUATION" ||
+          status === "VALUATION_PENDING" ||
+          status === "VALUATION_QUERY"
+        );
+      });
+    }
+
+    return rows;
+  }, [applicationsQuery.data, isValuation]);
+
+  const selectedApplicationSummary = useMemo(() => {
+    if (!applicationId) return null;
+
+    return applicationList.find(
+      (item) => String(item.id) === String(applicationId),
+    );
+  }, [applicationId, applicationList]);
+
+  const handleApplicationChange = (event) => {
+    const selectedId = event.target.value;
+
+    setMessage(null);
+
+    if (!selectedId) {
+      navigate("/field-visits", { replace: true });
+      return;
+    }
+
+    initializedApplicationRef.current = null;
+    setVisitForms({});
+    setSelectedPhotos({});
+
+    navigate(`/field-visits/${selectedId}`, {
+      replace: true,
+    });
+  };
 
   const { data: customerProfile, isLoading: isProfileLoading } = useQuery({
     queryKey: ["customer-profile", applicationId],
@@ -636,13 +835,13 @@ export default function FieldVisits() {
   const leadJourney = buildWorkflowTimeline(workflowData || {});
   const workflowStatus = workflowData?.data?.data ?? {};
 
-/* --- COMPUTED BLOCKS FOR SEQUENTIAL ACCORDION FLOW --- */
+  /* --- COMPUTED BLOCKS FOR SEQUENTIAL ACCORDION FLOW --- */
   const savedBlocks = useMemo(() => {
     const activeSet = new Set();
 
     // 1. Properly isolate the array of completed elements from response payload
-    const actualSavedVisits = Array.isArray(fieldVisitData) 
-      ? fieldVisitData 
+    const actualSavedVisits = Array.isArray(fieldVisitData)
+      ? fieldVisitData
       : fieldVisitData?.visits || [];
 
     // 2. Strict Check: Customer Residence (must match API string exactly)
@@ -666,7 +865,7 @@ export default function FieldVisits() {
       const type = String(v?.visitType).toUpperCase();
       return type !== "CUSTOMER_RESIDENCE" && type !== "BUSINESS_OFFICE" && type !== "UNDEFINED";
     });
-    
+
     if (workflowStatus.propertyVisit || hasPropertyVisitData) {
       visitBlocks.forEach(b => {
         if (b !== VISIT_BLOCKS.CUSTOMER_RESIDENCE && b !== VISIT_BLOCKS.BUSINESS_OFFICE) {
@@ -678,7 +877,7 @@ export default function FieldVisits() {
     return activeSet;
   }, [workflowStatus, visitBlocks, fieldVisitData]);
 
-  
+
 
   useEffect(() => {
     if (!customerProfile || !propertyCategory || isVisitsLoading) return;
@@ -703,15 +902,20 @@ export default function FieldVisits() {
       const files = selectedPhotos[block] || [];
       const configuredNames = DOCUMENT_NAMES[block] || [];
       const usedNames = new Set((documentsByBlock[block] || []).map(d => d.documentName));
-      const slots = configuredNames.filter(n => !usedNames.has(n));
+      const slots = configuredNames.filter((name) => !usedNames.has(name));
 
       for (let i = 0; i < files.length; i++) {
+        const documentName =
+          slots[i] ||
+          `${API_VISIT_TYPES[block]}_${isValuation ? "VALUATION_REVISIT" : "EXTRA"}_${Date.now()}_${i + 1}`;
+
         const formData = new FormData();
         formData.append("file", files[i]);
         formData.append("visitType", API_VISIT_TYPES[block]);
         formData.append("documentType", "PHOTO");
         formData.append("documentSource", "FIELD_VISIT");
-        formData.append("documentName", slots[i]);
+        formData.append("documentName", documentName);
+
         await rmApi.uploadFieldVisitDocument(applicationId, formData);
       }
 
@@ -720,54 +924,60 @@ export default function FieldVisits() {
       const form = visitForms[block];
       const { visitDate, visitResult, remarks, propertyType, ...formData } = form;
 
-  const payload = {
-  propertyCategory,
-  visit: {
-    visitType: API_VISIT_TYPES[block],
-    visitDate,
-    visitResult,
-    remarks,
-    propertyType: propertyType ?? null,
-    formData,
-    ...(loc || {}),
-  },
-};
+      const payload = {
+        propertyCategory,
+        visit: {
+          visitType: API_VISIT_TYPES[block],
+          visitDate,
+          visitResult,
+          remarks,
+          propertyType: propertyType ?? null,
+          formData,
+          ...(loc || {}),
+        },
+      };
       return rmApi.saveFieldVisit(applicationId, payload);
     },
-onSuccess: async (response, savedBlock) => {
-  setMessage({
-    type: "success",
-    text: "Visit saved successfully.",
-  });
+    onSuccess: async (response, savedBlock) => {
+      setMessage({
+        type: "success",
+        text: "Visit saved successfully.",
+      });
 
-  await Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: ["field-visits", applicationId],
-    }),
-    queryClient.invalidateQueries({
-      queryKey: ["field-visit-documents", applicationId],
-    }),
-    queryClient.invalidateQueries({
-      queryKey: ["rm-workflow", applicationId],
-    }),
-    queryClient.invalidateQueries({
-      queryKey: ["application", applicationId],
-    }),
-  ]);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["field-visits", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["field-visit-documents", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["rm-workflow", applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", applicationId],
+        }),
+      ]);
 
-  const result = unwrapResponse(response);
-  const data = result?.data ?? result;
+      const result = unwrapResponse(response);
+      const data = result?.data ?? result;
 
-  const isPropertyVisit =
-    savedBlock !== VISIT_BLOCKS.CUSTOMER_RESIDENCE &&
-    savedBlock !== VISIT_BLOCKS.BUSINESS_OFFICE;
+      const isPropertyVisit =
+        savedBlock !== VISIT_BLOCKS.CUSTOMER_RESIDENCE &&
+        savedBlock !== VISIT_BLOCKS.BUSINESS_OFFICE;
 
-  if (data?.geoVerificationReady || isPropertyVisit) {
-    navigate(data?.nextRoute || `/geo-verification/${applicationId}`, {
-      replace: true,
-    });
-  }
-},
+      // if (data?.geoVerificationReady || isPropertyVisit) {
+      //   navigate(data?.nextRoute || `/geo-verification/${applicationId}`, {
+      //     replace: true,
+      //   });
+      // }
+
+      if (!isValuation && (data?.geoVerificationReady || isPropertyVisit)) {
+        navigate(data?.nextRoute || `/geo-verification/${applicationId}`, {
+          replace: true,
+        });
+      }
+    },
   });
 
   // const handleContinueJourney = () => {
@@ -786,10 +996,51 @@ onSuccess: async (response, savedBlock) => {
       {/* Upper Presentation Panel */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2575fc] to-[#6a11cb] p-6 text-white shadow-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Field Visits Processing Pipeline</h2>
-            <p className="mt-1 text-xs text-blue-100">Application File ID: {applicationId || "N/A"}</p>
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Field Visits Processing Pipeline
+            </h2>
+
+            <p className="mt-1 text-xs text-blue-100">
+              Application File ID: {applicationId || "Please select application"}
+            </p>
+
+            {selectedApplicationSummary && (
+              <p className="mt-1 text-xs font-semibold text-blue-50">
+                {selectedApplicationSummary.applicationNumber} ·{" "}
+                {selectedApplicationSummary.customerName} ·{" "}
+                {selectedApplicationSummary.mobile}
+              </p>
+            )}
           </div>
+
+          {canSelectApplication && (
+            <div className="w-full sm:w-[420px]">
+              <label className="mb-1 block text-[10px] font-extrabold uppercase tracking-wider text-blue-100">
+                Select Application
+              </label>
+
+              <select
+                value={applicationId || ""}
+                onChange={handleApplicationChange}
+                className="h-11 w-full rounded-xl border border-white/20 bg-white px-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-white/20"
+              >
+                <option value="">
+                  {applicationsQuery.isLoading
+                    ? "Loading applications..."
+                    : "Select application"}
+                </option>
+
+                {applicationList.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.applicationNumber || `APP-${item.id}`} -{" "}
+                    {item.customerName || "No Name"} -{" "}
+                    {item.mobile || "No Mobile"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {/* <button onClick={handleContinueJourney} className="rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-extrabold text-white shadow-md hover:bg-emerald-600">
             Continue Journey
           </button> */}
@@ -816,25 +1067,76 @@ onSuccess: async (response, savedBlock) => {
         </div>
       )}
 
+      {!applicationId && (
+        <div className="rounded-2xl border border-blue-100 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+            <FaCamera size={22} />
+          </div>
+
+          <h3 className="mt-4 text-lg font-extrabold text-slate-800">
+            Select application to start visit upload
+          </h3>
+
+          <p className="mx-auto mt-2 max-w-lg text-sm font-medium text-slate-500">
+            Select an application from the header dropdown. After selecting, customer,
+            business and property visit photo upload sections will load automatically.
+          </p>
+        </div>
+      )}
+
       {/* Grid Allocation Layout with Structural Control Mapping */}
-      {isProfileLoading || isVisitsLoading ? (
-        <div className="text-center py-10 font-bold text-slate-400">Loading Configuration Streams...</div>
-      ) : (
+      {applicationId && (isProfileLoading || isVisitsLoading) ? (
+        <div className="py-10 text-center font-bold text-slate-400">
+          Loading Configuration Streams...
+        </div>
+      ) : applicationId ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          
           {/* Card Module 1: Customer Residence */}
           {visitBlocks.includes(VISIT_BLOCKS.CUSTOMER_RESIDENCE) && (
             <CustomerResidenceCard
               form={visitForms[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || {}}
-              selectedFiles={selectedPhotos[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || []}
-              uploadedDocuments={documentsByBlock[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || []}
+              selectedFiles={
+                selectedPhotos[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || []
+              }
+              uploadedDocuments={
+                documentsByBlock[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || []
+              }
               disabled={saveVisitMutation.isPending}
-              onChange={(f, v) => setVisitForms(c => ({ ...c, [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: { ...c[VISIT_BLOCKS.CUSTOMER_RESIDENCE], [f]: v } }))}
-              onFilesChange={(files) => setSelectedPhotos(c => ({ ...c, [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: files }))}
-              onDeleteDocument={(docId) => deleteDocumentMutation.mutate({ documentId: docId })}
-              deletingDocumentId={deleteDocumentMutation.variables?.documentId}
-              onSave={() => saveVisitMutation.mutate(VISIT_BLOCKS.CUSTOMER_RESIDENCE)}
-              isSaving={saveVisitMutation.isPending && saveVisitMutation.variables === VISIT_BLOCKS.CUSTOMER_RESIDENCE}
+              allowSavedEdit={isValuation}
+              allowExtraPhotos={isValuation}
+              onChange={(field, value) =>
+                setVisitForms((current) => ({
+                  ...current,
+                  [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: {
+                    ...current[VISIT_BLOCKS.CUSTOMER_RESIDENCE],
+                    [field]: value,
+                  },
+                }))
+              }
+              onFilesChange={(files) =>
+                setSelectedPhotos((current) => ({
+                  ...current,
+                  [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: files,
+                }))
+              }
+              onDeleteDocument={(documentId) =>
+                deleteDocumentMutation.mutate({
+                  documentId,
+                })
+              }
+              deletingDocumentId={
+                deleteDocumentMutation.variables?.documentId
+              }
+              onSave={() =>
+                saveVisitMutation.mutate(
+                  VISIT_BLOCKS.CUSTOMER_RESIDENCE,
+                )
+              }
+              isSaving={
+                saveVisitMutation.isPending &&
+                saveVisitMutation.variables ===
+                  VISIT_BLOCKS.CUSTOMER_RESIDENCE
+              }
               saved={isCustomerDone}
               isTranslucent={false}
             />
@@ -844,24 +1146,64 @@ onSuccess: async (response, savedBlock) => {
           {visitBlocks.includes(VISIT_BLOCKS.BUSINESS_OFFICE) && (
             <BusinessOfficeCard
               form={visitForms[VISIT_BLOCKS.BUSINESS_OFFICE] || {}}
-              selectedFiles={selectedPhotos[VISIT_BLOCKS.BUSINESS_OFFICE] || []}
-              uploadedDocuments={documentsByBlock[VISIT_BLOCKS.BUSINESS_OFFICE] || []}
-              disabled={saveVisitMutation.isPending || !isCustomerDone}
-              onChange={(f, v) => setVisitForms(c => ({ ...c, [VISIT_BLOCKS.BUSINESS_OFFICE]: { ...c[VISIT_BLOCKS.BUSINESS_OFFICE], [f]: v } }))}
-              onFilesChange={(files) => setSelectedPhotos(c => ({ ...c, [VISIT_BLOCKS.BUSINESS_OFFICE]: files }))}
-              onDeleteDocument={(docId) => deleteDocumentMutation.mutate({ documentId: docId })}
-              deletingDocumentId={deleteDocumentMutation.variables?.documentId}
-              onSave={() => saveVisitMutation.mutate(VISIT_BLOCKS.BUSINESS_OFFICE)}
-              isSaving={saveVisitMutation.isPending && saveVisitMutation.variables === VISIT_BLOCKS.BUSINESS_OFFICE}
+              selectedFiles={
+                selectedPhotos[VISIT_BLOCKS.BUSINESS_OFFICE] || []
+              }
+              uploadedDocuments={
+                documentsByBlock[VISIT_BLOCKS.BUSINESS_OFFICE] || []
+              }
+              disabled={
+                saveVisitMutation.isPending ||
+                (!isValuation && !isCustomerDone)
+              }
+              allowSavedEdit={isValuation}
+              allowExtraPhotos={isValuation}
+              onChange={(field, value) =>
+                setVisitForms((current) => ({
+                  ...current,
+                  [VISIT_BLOCKS.BUSINESS_OFFICE]: {
+                    ...current[VISIT_BLOCKS.BUSINESS_OFFICE],
+                    [field]: value,
+                  },
+                }))
+              }
+              onFilesChange={(files) =>
+                setSelectedPhotos((current) => ({
+                  ...current,
+                  [VISIT_BLOCKS.BUSINESS_OFFICE]: files,
+                }))
+              }
+              onDeleteDocument={(documentId) =>
+                deleteDocumentMutation.mutate({
+                  documentId,
+                })
+              }
+              deletingDocumentId={
+                deleteDocumentMutation.variables?.documentId
+              }
+              onSave={() =>
+                saveVisitMutation.mutate(VISIT_BLOCKS.BUSINESS_OFFICE)
+              }
+              isSaving={
+                saveVisitMutation.isPending &&
+                saveVisitMutation.variables ===
+                  VISIT_BLOCKS.BUSINESS_OFFICE
+              }
               saved={isBusinessDone}
-              isTranslucent={!isCustomerDone}
+              isTranslucent={!isValuation && !isCustomerDone}
             />
           )}
 
           {/* Card Module 3: Structural Real Estate Assets Verification */}
           {(() => {
-            const block = visitBlocks.find(b => b !== VISIT_BLOCKS.CUSTOMER_RESIDENCE && b !== VISIT_BLOCKS.BUSINESS_OFFICE);
+            const block = visitBlocks.find(
+              (item) =>
+                item !== VISIT_BLOCKS.CUSTOMER_RESIDENCE &&
+                item !== VISIT_BLOCKS.BUSINESS_OFFICE,
+            );
+
             if (!block) return null;
+
             return (
               <PropertyVisitCard
                 block={block}
@@ -869,39 +1211,47 @@ onSuccess: async (response, savedBlock) => {
                 propertyCategory={propertyCategory}
                 selectedFiles={selectedPhotos[block] || []}
                 uploadedDocuments={documentsByBlock[block] || []}
-                disabled={saveVisitMutation.isPending || !isBusinessDone}
-                onChange={(f, v) => setVisitForms(c => ({ ...c, [block]: { ...c[block], [f]: v } }))}
-                onFilesChange={(files) => setSelectedPhotos(c => ({ ...c, [block]: files }))}
-                onDeleteDocument={(docId) => deleteDocumentMutation.mutate({ documentId: docId })}
-                deletingDocumentId={deleteDocumentMutation.variables?.documentId}
+                disabled={
+                  saveVisitMutation.isPending ||
+                  (!isValuation && !isBusinessDone)
+                }
+                allowSavedEdit={isValuation}
+                allowExtraPhotos={isValuation}
+                onChange={(field, value) =>
+                  setVisitForms((current) => ({
+                    ...current,
+                    [block]: {
+                      ...current[block],
+                      [field]: value,
+                    },
+                  }))
+                }
+                onFilesChange={(files) =>
+                  setSelectedPhotos((current) => ({
+                    ...current,
+                    [block]: files,
+                  }))
+                }
+                onDeleteDocument={(documentId) =>
+                  deleteDocumentMutation.mutate({
+                    documentId,
+                  })
+                }
+                deletingDocumentId={
+                  deleteDocumentMutation.variables?.documentId
+                }
                 onSave={() => saveVisitMutation.mutate(block)}
-                isSaving={saveVisitMutation.isPending && saveVisitMutation.variables === block}
+                isSaving={
+                  saveVisitMutation.isPending &&
+                  saveVisitMutation.variables === block
+                }
                 saved={savedBlocks.has(block)}
-                isTranslucent={!isBusinessDone}
+                isTranslucent={!isValuation && !isBusinessDone}
               />
             );
           })()}
-
         </div>
-      )}
-
-      {/* Compliance Field Controls Section */}
-      {/* {propertyCategory && (
-        <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Internal Checklist Controls</h3>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {CHECKLIST_ITEMS.map(item => (
-              <label key={item.key} className="flex items-start gap-3 rounded-xl bg-slate-50 p-3 text-xs cursor-pointer">
-                <input type="checkbox" checked={checklist[item.key] || false} onChange={e => setChecklist(c => ({ ...c, [item.key]: e.target.checked }))} className="mt-0.5 h-4 w-4 text-blue-600 rounded" />
-                <div>
-                  <div className="font-bold text-slate-800">{item.label}</div>
-                  <div className="text-[10px] text-slate-400">{item.desc}</div>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
-      )} */}
+      ) : null}
     </div>
-  );
+  )
 }

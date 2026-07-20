@@ -10,6 +10,7 @@ import WorkflowHistory from "../../../components/workflow/WorkflowHistory.jsx";
 import { applicationsApi } from "../applicationsApi.js";
 import { rmApi } from "../../rm/rmApi.js";
 import { buildWorkflowTimeline } from "../../rm/rmUtils.js";
+import { useAuth } from "../../../hooks/useAuth.js";
 
 const unwrapPayload = (response) => {
   if (response?.data?.data !== undefined) {
@@ -247,8 +248,23 @@ function SectionTitle({ title, subtitle }) {
   );
 }
 
+function normalizeRoles(user) {
+  const roles = user?.roles;
+
+  if (!roles) return [];
+
+  return Array.isArray(roles)
+    ? roles.map((role) => String(role).toUpperCase())
+    : [String(roles).toUpperCase()];
+}
+
 export default function ApplicationDetailsPage() {
   const { applicationId } = useParams();
+  const queryClient = useQueryClient();
+
+  const { user } = useAuth();
+  const roles = normalizeRoles(user);
+  const isRM = roles.includes("RM");
 
   const [showAllDocuments, setShowAllDocuments] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
@@ -460,28 +476,33 @@ export default function ApplicationDetailsPage() {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-  <button
-    type="button"
-    disabled={
-      submitToBm.isPending ||
-      String(application.status || "").toUpperCase() === "BM_PENDING"
-    }
-    onClick={() => {
-      setSubmitMessage("");
-      submitToBm.mutate();
-    }}
-    className="inline-flex w-fit items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wide text-white shadow-sm transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-  >
-    {submitToBm.isPending ? "Submitting..." : "Submit to BM"}
-  </button>
+{isRM && (
+  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+    <button
+      type="button"
+      disabled={
+        submitToBm.isPending ||
+        String(application.status || "").toUpperCase() === "BM_PENDING" ||
+        String(application.stage || "").toUpperCase() !== "RM"
+      }
+      onClick={() => {
+        setSubmitMessage("");
+        submitToBm.mutate();
+      }}
+      className="inline-flex w-fit items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wide text-white shadow-sm transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+    >
+      {submitToBm.isPending ? "Submitting..." : "Submit to BM"}
+    </button>
 
-  {submitMessage && (
-    <span className="text-xs font-bold text-blue-700">
-      {submitMessage}
-    </span>
-  )}
-</div>
+    {submitMessage && (
+      <span className="text-xs font-bold text-blue-700">
+        {submitMessage}
+      </span>
+    )}
+  </div>
+)}
+
+
     </div>
 
     {/* Right Column: Key Metrics Grid */}

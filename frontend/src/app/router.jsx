@@ -60,6 +60,15 @@ const protectedChildren = [
   {path: "/bmApproved", element: <BMApproved />,},
   {path: "/chargesApproved", element: <ChargesApproved />,},
 
+
+{ path: "/field-visits", element: <FieldVisits /> },
+{ path: "/field-visits/:applicationId", element: <FieldVisits /> },
+{ path: "/field-visits/:applicationId", element: <FieldVisits /> },
+
+{ path: "/geo-verification", element: <GeoVerification /> },
+{ path: "/geo-verification/:applicationId", element: <GeoVerification /> },
+
+{ path: "/geo-verification/:applicationId?", element: <GeoVerification /> },
   // Credit Manager routes
 
 { path: '/credit-dashboard', element: <CreditManagerDashboard /> },
