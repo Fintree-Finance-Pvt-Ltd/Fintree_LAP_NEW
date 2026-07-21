@@ -133,6 +133,9 @@ verifyGst: (payload) =>
 // For Aadhaar KYC
   initAadhaarKyc: (payload) =>
   apiClient.post("/aadhaar/init", payload),
+
+  getAadhaarKycStatus: (applicationId) =>
+  apiClient.get(`/aadhaar/status/${applicationId}`),
   
   // =========================
   // OTP
@@ -313,6 +316,32 @@ verifyGst: (payload) =>
         },
       },
     ),
+
+
+
+verifyCoApplicantPan: (coApplicantId, payload) =>
+  apiClient.post(`/co-applicants/${coApplicantId}/pan/verify`, payload),
+
+sendCoApplicantMobileOtp: (coApplicantId, payload) =>
+  apiClient.post(`/co-applicants/${coApplicantId}/mobile/send-otp`, payload),
+
+verifyCoApplicantMobileOtp: (coApplicantId, payload) =>
+  apiClient.post(`/co-applicants/${coApplicantId}/mobile/verify-otp`, payload),
+
+sendCoApplicantEmailOtp: (coApplicantId, payload) =>
+  apiClient.post(`/co-applicants/${coApplicantId}/email/send-otp`, payload),
+
+verifyCoApplicantEmailOtp: (coApplicantId, payload) =>
+  apiClient.post(`/co-applicants/${coApplicantId}/email/verify-otp`, payload),
+
+initCoApplicantAadhaar: (coApplicantId, payload = {}) =>
+  apiClient.post(`/co-applicants/${coApplicantId}/aadhaar/init`, payload),
+
+getCoApplicantAadhaarStatus: (coApplicantId) =>
+  apiClient.get(`/co-applicants/${coApplicantId}/aadhaar/status`),
+
+
+
 // =========================
 // CHARGES & RECEIPTS
 // =========================

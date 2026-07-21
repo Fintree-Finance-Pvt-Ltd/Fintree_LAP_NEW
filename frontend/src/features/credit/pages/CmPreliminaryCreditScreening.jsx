@@ -46,6 +46,7 @@ export default function CmPreliminaryCreditScreening() {
   const [message, setMessage] = useState("");
 
   const queryClient = useQueryClient();
+  
 
   const applicationsQuery = useQuery({
     queryKey: ["cm-screening-applications"],
@@ -77,54 +78,87 @@ export default function CmPreliminaryCreditScreening() {
 
   const application = unwrapPayload(applicationQuery.data);
 
-  const submitMutation = useMutation({
-    mutationFn: (payload) => {
-      if (!finalSelectedId) {
-        throw new Error("Please select application first.");
-      }
+const submitMutation = useMutation({
+  mutationFn: (payload) => {
+    if (!finalSelectedId) {
+      throw new Error("Please select application first.");
+    }
 
-      return creditApi.submitToCredit(finalSelectedId, payload);
-    },
+    return creditApi.cmRecommendToCreditMaker(finalSelectedId, payload);
+  },
 
-    onSuccess: async (response) => {
-      setMessage(
-        response?.data?.message ||
-          "Application submitted successfully.",
-      );
+  onSuccess: async (response) => {
+    setMessage(
+      response?.data?.message ||
+        "CM screening decision saved successfully.",
+    );
 
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["cm-screening-applications"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["cm-screening-application", finalSelectedId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["credit-manager-dashboard"],
-        }),
-      ]);
-    },
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["cm-screening-applications"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["cm-screening-application", finalSelectedId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["credit-assessment", finalSelectedId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["credit-manager-dashboard"],
+      }),
+    ]);
+  },
 
-    onError: (error) => {
-      setMessage(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Unable to submit CM screening decision.",
-      );
-    },
+  onError: (error) => {
+    setMessage(
+      error?.response?.data?.message ||
+        error?.message ||
+        "Unable to save CM screening decision.",
+    );
+  },
+});
+
+const handleDecisionSubmit = (nextDecision) => {
+  setMessage("");
+
+  if (!finalSelectedId) {
+    setMessage("Please select CM case first.");
+    return;
+  }
+
+  const finalRecommendedAmount = Number(
+    recommendedAmount || application?.requestedAmount || 0,
+  );
+
+  submitMutation.mutate({
+    decision: nextDecision,
+
+    recommendedAmount: finalRecommendedAmount,
+    cmRecommendedAmount: finalRecommendedAmount,
+
+    riskScore: 72,
+    cmRiskScore: 72,
+    preliminaryRiskScore: 72,
+
+    remarks,
+    cmRemarks: remarks,
+
+    verifiedIncome: Number(verifiedIncome || 0),
+    existingObligations: 115000,
+    foir: Number(foir || 0),
+    propertyValue: Number(propertyValue || 0),
+    requestedLoan: Number(requestedAmount || 0),
+    requestedAmount: Number(requestedAmount || 0),
+    indicativeLtv: Number(ltv || 0),
+
+    bureauScore: 719,
+    currentDpd: 0,
+    dpd30In12m: 0,
+    writtenOffSettled: "None",
+    recentEnquiries: 2,
+    commercialBureau: "Satisfactory",
   });
-
-  const handleDecisionSubmit = (nextDecision) => {
-    setMessage("");
-
-    submitMutation.mutate({
-      decision: nextDecision,
-      recommendedAmount:
-        Number(recommendedAmount || application?.requestedAmount || 0),
-      riskScore: 72,
-      remarks,
-    });
-  };
+};
 
   const requestedAmount = application?.requestedAmount || 0;
   const verifiedIncome =
@@ -173,7 +207,7 @@ export default function CmPreliminaryCreditScreening() {
               <button
                 type="button"
                 disabled={submitMutation.isPending}
-                onClick={() => handleDecisionSubmit("HOLD_QUERY")}
+           onClick={() => handleDecisionSubmit("HOLD_QUERY")}
                 className="rounded-2xl bg-white px-6 py-3 text-sm font-black text-indigo-700 shadow-sm transition-all hover:bg-indigo-50 disabled:opacity-50"
               >
                 Hold / Query
@@ -182,20 +216,20 @@ export default function CmPreliminaryCreditScreening() {
               <button
                 type="button"
                 disabled={submitMutation.isPending}
-                onClick={() => handleDecisionSubmit("REJECTED")}
+               onClick={() => handleDecisionSubmit("REJECT")}
                 className="rounded-2xl bg-white px-6 py-3 text-sm font-black text-indigo-700 shadow-sm transition-all hover:bg-indigo-50 disabled:opacity-50"
               >
                 Reject
               </button>
 
               <button
-                type="button"
-                disabled={submitMutation.isPending}
-                onClick={() => handleDecisionSubmit("RECOMMENDED")}
-                className="rounded-2xl bg-white px-6 py-3 text-sm font-black text-indigo-700 shadow-sm transition-all hover:bg-indigo-50 disabled:opacity-50"
-              >
-                {submitMutation.isPending ? "Submitting..." : "Recommend"}
-              </button>
+  type="button"
+  disabled={submitMutation.isPending}
+  onClick={() => handleDecisionSubmit(decision)}
+  className="w-full rounded-xl bg-blue-600 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200"
+>
+  {submitMutation.isPending ? "Saving..." : "Save CM Decision"}
+</button>
             </div>
           </div>
         </div>
@@ -348,9 +382,9 @@ export default function CmPreliminaryCreditScreening() {
                   onChange={(event) => setDecision(event.target.value)}
                   className="mt-2 h-12 w-full rounded-xl border border-blue-100 bg-white px-4 text-sm font-bold text-slate-700 outline-none focus:border-blue-500"
                 >
-                  <option value="RECOMMENDED">Recommended</option>
-                  <option value="HOLD_QUERY">Hold / Query</option>
-                  <option value="REJECTED">Reject</option>
+<option value="RECOMMEND">Recommended</option>
+<option value="HOLD_QUERY">Hold / Query</option>
+<option value="REJECT">Reject</option>
                 </select>
               </div>
 

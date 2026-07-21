@@ -1,3 +1,5 @@
+
+
 import {
   Body,
   Controller,
@@ -13,31 +15,43 @@ import { ValuationService } from './valuation.service';
 
 @Controller('valuation')
 export class ValuationController {
-  constructor(private readonly valuationService: ValuationService) {}
+  constructor(private readonly service: ValuationService) {}
 
   @Get('cases')
-  getValuationCases() {
-    return this.valuationService.getValuationCases();
+  getCases() {
+    return this.service.getCases();
   }
 
   @Get(':applicationId')
-  getValuationApplication(
+  getApplication(
     @Param('applicationId', ParseIntPipe) applicationId: number,
   ) {
-    return this.valuationService.getValuationApplication(applicationId);
+    return this.service.getApplication(applicationId);
   }
 
-  @Post(':applicationId/raise-query')
-  raiseTechnicalQuery(
+  @Get(':applicationId/assessment')
+  getAssessment(
+    @Param('applicationId', ParseIntPipe) applicationId: number,
+  ) {
+    return this.service.getAssessment(applicationId);
+  }
+
+  @Post(':applicationId/save-draft')
+  saveDraft(
     @Param('applicationId', ParseIntPipe) applicationId: number,
     @Body() body: any,
     @CurrentUser() user: Actor,
   ) {
-    return this.valuationService.raiseTechnicalQuery(
-      applicationId,
-      body,
-      user,
-    );
+    return this.service.saveDraft(applicationId, body, user);
+  }
+
+  @Post(':applicationId/raise-query')
+  raiseQuery(
+    @Param('applicationId', ParseIntPipe) applicationId: number,
+    @Body() body: any,
+    @CurrentUser() user: Actor,
+  ) {
+    return this.service.raiseQuery(applicationId, body, user);
   }
 
   @Post(':applicationId/mark-negative')
@@ -46,23 +60,15 @@ export class ValuationController {
     @Body() body: any,
     @CurrentUser() user: Actor,
   ) {
-    return this.valuationService.markNegative(
-      applicationId,
-      body,
-      user,
-    );
+    return this.service.markNegative(applicationId, body, user);
   }
 
   @Post(':applicationId/approve')
-  approveAndSendToLegal(
+  approveToLegal(
     @Param('applicationId', ParseIntPipe) applicationId: number,
     @Body() body: any,
     @CurrentUser() user: Actor,
   ) {
-    return this.valuationService.approveAndSendToLegal(
-      applicationId,
-      body,
-      user,
-    );
+    return this.service.approveToLegal(applicationId, body, user);
   }
 }

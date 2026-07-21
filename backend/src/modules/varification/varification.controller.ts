@@ -1,10 +1,13 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseIntPipe,
   Post,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { VarificationService } from './varification.service';
@@ -39,4 +42,12 @@ export class VarificationController {
   async initAadhaarKyc(@Body() body: any) {
     return this.service.initAadhaarKyc(Number(body?.applicationId));
   }
+
+  @Get("aadhaar/status/:applicationId")
+@HttpCode(HttpStatus.OK)
+async getAadhaarKycStatus(
+  @Param("applicationId", ParseIntPipe) applicationId: number,
+) {
+  return this.service.getAadhaarKycStatus(applicationId);
+}
 }

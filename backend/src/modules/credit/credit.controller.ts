@@ -27,6 +27,41 @@ export class CreditController {
     return this.creditService.getCreditCheckerCases();
   }
 
+
+
+
+  // CM SAVE DRAFT
+@Post(':applicationId/cm/save-draft')
+cmSaveDraft(
+  @Param('applicationId', ParseIntPipe) applicationId: number,
+  @Body() body: any,
+  @CurrentUser() user: Actor,
+) {
+  return this.creditService.cmSaveDraft(applicationId, body, user);
+}
+
+// CM RECOMMEND AND SEND TO CREDIT MAKER
+@Post(':applicationId/cm/recommend')
+cmRecommendToCreditMaker(
+  @Param('applicationId', ParseIntPipe) applicationId: number,
+  @Body() body: any,
+  @CurrentUser() user: Actor,
+) {
+  return this.creditService.cmRecommendToCreditMaker(
+    applicationId,
+    body,
+    user,
+  );
+}
+
+// GET CREDIT ASSESSMENT
+@Get(':applicationId/assessment')
+getCreditAssessment(
+  @Param('applicationId', ParseIntPipe) applicationId: number,
+) {
+  return this.creditService.getCreditAssessment(applicationId);
+}
+
   // GET ONE APPLICATION FOR CREDIT SCREEN
   @Get(':applicationId')
   getCreditApplication(

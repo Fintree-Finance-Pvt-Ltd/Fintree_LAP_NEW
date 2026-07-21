@@ -113,6 +113,8 @@ const rolesConfig = {
       ],
     },
   ],
+
+
 // Legal
 LEGAL: [
   {
@@ -133,13 +135,6 @@ LEGAL: [
         label: "Legal Queue",
         Icon: FaBalanceScale,
       },
-      
-      {
-        to: "/legal-reports",
-        label: "MIS & Reports",
-        Icon: FaClipboardList,
-      },
-      
       {
           to: "/kyc-documents",
           label: "KYC & Documents",
@@ -147,16 +142,7 @@ LEGAL: [
         },
     ],
   },
-  {
-    category: "REFERENCE",
-    items: [
-      {
-        to: "/legal-journey",
-        label: "Journey",
-        Icon: FaRoute,
-      },
-    ],
-  },
+ 
 ],
   CM: [
     {
@@ -255,12 +241,6 @@ LEGAL: [
           label: "Checker Review",
           Icon: FaFileAlt,
         },
-        
-        {
-          to: "/cm-application-data",
-          label: "Application Data",
-          Icon: FaFolderOpen,
-        },
         {
           to: "/kyc-documents",
           label: "KYC & Documents",
@@ -284,6 +264,12 @@ LEGAL: [
     {
       category: "MODULES",
       items: [
+
+         {
+          to: "/valuation",
+          label: "Comparable Analysis",
+          Icon: FaRoute,
+        },
         
         {
           to: "/field-visits",
@@ -295,16 +281,20 @@ LEGAL: [
         label: "Geo Verification",
         Icon: FaMapMarkerAlt,
       },
+       
+
         {
-          to: "/valuation",
-          label: "Comparable Analysis",
-          Icon: FaRoute,
+          to: "/kyc-documents",
+          label: "KYC & Documents",
+          Icon: FaFolderOpen
         },
+
         {
           to: "/payment-management",
           label: "Payment Management",
           Icon: FaCreditCard,
         },
+
 
 
       ],
@@ -371,43 +361,6 @@ COMMON: [
 
 }
 
-
-//   {
-//     category: "MODULES",
-//     items: [
-//       {
-//         to: "/ops-maker",
-//         label: "Ops Maker",
-//         Icon: FaPlayCircle,
-//       },
-//       {
-//         to: "/ops-checker",
-//         label: "Ops Checker",
-//         Icon: FaShieldAlt,
-//       },
-//       {
-//         to: "/pdd-checklist",
-//         label: "PDD Checklist",
-//         Icon: FaFileAlt,
-//       },
-//       {
-//         to: "/disbursement",
-//         label: "Disbursement",
-//         Icon: FaCreditCard,
-//       },
-//       {
-//         to: "/bank-utr",
-//         label: "Bank & UTR",
-//         Icon: FaLink,
-//       },
-//       {
-//         to: "/operations-documents",
-//         label: "Documents",
-//         Icon: FaFolderOpen,
-//       },
-//     ],
-//   },
-// ]
 
 const groupOrder = [
   "PRIMARY",

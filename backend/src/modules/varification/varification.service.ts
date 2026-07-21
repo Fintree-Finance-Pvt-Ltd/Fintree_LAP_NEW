@@ -1096,6 +1096,45 @@ export class VarificationService {
     };
   }
 
+async getAadhaarKycStatus(applicationId: number) {
+  const rows = await this.dataSource.query(
+    `
+      SELECT
+        application_id AS applicationId,
+        aadhaar_status AS aadhaarStatus,
+        aadhaar_transaction_id AS aadhaarTransactionId,
+        aadhaar_unique_id AS aadhaarUniqueId,
+        aadhaar_name AS aadhaarName,
+        aadhaar_masked_number AS aadhaarMaskedNumber,
+        aadhaar_dob AS aadhaarDob,
+        aadhaar_address AS aadhaarAddress,
+        updated_at AS updatedAt
+      FROM kyc_verification_status
+      WHERE application_id = ?
+      ORDER BY id DESC
+      LIMIT 1
+    `,
+    [applicationId],
+  );
+
+  if (!rows.length) {
+    return {
+      success: true,
+      message: "Aadhaar KYC status not initiated.",
+      data: {
+        applicationId,
+        aadhaarStatus: "NOT_INITIATED",
+      },
+    };
+  }
+
+  return {
+    success: true,
+    message: "Aadhaar KYC status fetched successfully.",
+    data: rows[0],
+  };
+}
+
   private async findAadhaarKycStatusForWebhook(
     transactionId: string | null,
     uniqueId: string | null,

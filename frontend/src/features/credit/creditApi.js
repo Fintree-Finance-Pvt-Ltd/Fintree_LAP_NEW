@@ -61,4 +61,13 @@ creditCheckerReturnToMaker: (applicationId, payload = {}) =>
 creditCheckerReject: (applicationId, payload = {}) =>
   apiClient.post(`/credit/${applicationId}/checker/reject`, payload),
 
+
+getCreditAssessment: (applicationId) =>
+  apiClient.get(`/credit/${applicationId}/assessment`),
+
+cmSaveDraft: (applicationId, payload = {}) =>
+  apiClient.post(`/credit/${applicationId}/cm/save-draft`, payload),
+
+cmRecommendToCreditMaker: (applicationId, payload = {}) =>
+  apiClient.post(`/credit/${applicationId}/cm/recommend`, payload),
 };

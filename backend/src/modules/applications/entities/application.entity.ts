@@ -123,4 +123,6 @@ export class Application {
 )
 kycVerificationStatuses?: KycVerificationStatus[];
   email: string | undefined;
+  marketValue: any;
+  propertyValue: any;
 }

@@ -1,10 +1,17 @@
 import { apiClient } from "../../services/apiClient.js";
 
 export const valuationApi = {
-  cases: () => apiClient.get("/valuation/cases"),
+  cases: () =>
+    apiClient.get("/valuation/cases"),
 
   getApplication: (applicationId) =>
     apiClient.get(`/valuation/${applicationId}`),
+
+  getAssessment: (applicationId) =>
+    apiClient.get(`/valuation/${applicationId}/assessment`),
+
+  saveDraft: (applicationId, payload = {}) =>
+    apiClient.post(`/valuation/${applicationId}/save-draft`, payload),
 
   raiseQuery: (applicationId, payload = {}) =>
     apiClient.post(`/valuation/${applicationId}/raise-query`, payload),

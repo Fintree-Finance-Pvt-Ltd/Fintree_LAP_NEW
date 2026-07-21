@@ -691,9 +691,8 @@ function PropertyVisitCard({ block, form, propertyCategory, selectedFiles, uploa
 
 }
 
-
 function normalizeRoles(user) {
-  const roles = user?.roles;
+  const roles = user?.roles || user?.role || [];
 
   if (!roles) return [];
 
@@ -710,6 +709,50 @@ function unwrapApplicationList(response) {
 
   return [];
 }
+
+const VALUATION_ALLOWED_STAGES = [
+  "CM",
+  "CREDIT",
+  "VALUATION",
+];
+
+const VALUATION_ALLOWED_STATUSES = [
+  // BM approved cases
+  "BM_APPROVED",
+
+  // CM cases
+  "CM_PENDING",
+  "CM_QUERY",
+  "CM_APPROVED",
+
+  // Credit Maker cases
+  "CREDIT_MAKER_PENDING",
+  "CREDIT_MAKER_QUERY",
+  "CREDIT_MAKER_RECOMMENDED",
+  "CREDIT_MAKER_REJECTED",
+
+  // Credit Checker cases
+  "CREDIT_CHECKER_PENDING",
+  "CREDIT_CHECKER_QUERY",
+  "CREDIT_CHECKER_APPROVED",
+  "CREDIT_CHECKER_REJECTED",
+
+  // Valuation cases
+  "VALUATION_PENDING",
+  "VALUATION_QUERY",
+  "VALUATION_APPROVED",
+  "VALUATION_REJECTED",
+];
+
+const isValuationAllowedApplication = (application) => {
+  const stage = String(application?.stage || "").toUpperCase();
+  const status = String(application?.status || "").toUpperCase();
+
+  return (
+    VALUATION_ALLOWED_STAGES.includes(stage) ||
+    VALUATION_ALLOWED_STATUSES.includes(status)
+  );
+};
 /* =========================================================
    CORE COMPONENT MODULE EXPORT
 ========================================================= */
@@ -723,7 +766,8 @@ export default function FieldVisits() {
   const roles = normalizeRoles(user);
 
   const isRM = roles.includes("RM");
-  const isValuation = roles.includes("VALUATION") || roles.includes("VALUTION");
+  const isValuation =
+    roles.includes("VALUATION") || roles.includes("VALUTION");
 
   const canSelectApplication = isRM || isValuation;
 
@@ -734,7 +778,11 @@ export default function FieldVisits() {
 
   const applicationsQuery = useQuery({
     queryKey: ["field-visit-application-list", roles.join("_")],
-    queryFn: async () => rmApi.applications({ page: 1, limit: 200 }),
+    queryFn: async () =>
+      rmApi.applications({
+        page: 1,
+        limit: 500,
+      }),
     enabled: canSelectApplication,
     retry: false,
   });
@@ -743,133 +791,214 @@ export default function FieldVisits() {
     const rows = unwrapApplicationList(applicationsQuery.data);
 
     if (isValuation) {
-      return rows.filter((item) => {
-        const stage = String(item.stage || "").toUpperCase();
-        const status = String(item.status || "").toUpperCase();
+      return rows.filter(isValuationAllowedApplication);
+    }
 
-        return (
-          stage === "VALUATION" ||
-          status === "VALUATION_PENDING" ||
-          status === "VALUATION_QUERY"
-        );
-      });
+    if (isRM) {
+      return rows;
     }
 
     return rows;
-  }, [applicationsQuery.data, isValuation]);
+  }, [applicationsQuery.data, isValuation, isRM]);
 
-  const selectedApplicationSummary = useMemo(() => {
-    if (!applicationId) return null;
+  const selectedApplicationId = useMemo(() => {
+    const routeId = applicationId ? String(applicationId) : "";
 
-    return applicationList.find(
-      (item) => String(item.id) === String(applicationId),
-    );
+    if (routeId) {
+      const routeExists = applicationList.some(
+        (item) => String(item.id) === routeId,
+      );
+
+      if (routeExists) {
+        return routeId;
+      }
+    }
+
+    return applicationList?.[0]?.id
+      ? String(applicationList[0].id)
+      : "";
   }, [applicationId, applicationList]);
 
-  const handleApplicationChange = (event) => {
-    const selectedId = event.target.value;
+  const selectedApplicationSummary = useMemo(() => {
+    if (!selectedApplicationId) return null;
 
-    setMessage(null);
+    return applicationList.find(
+      (item) => String(item.id) === String(selectedApplicationId),
+    );
+  }, [selectedApplicationId, applicationList]);
 
-    if (!selectedId) {
-      navigate("/field-visits", { replace: true });
+  useEffect(() => {
+    if (!canSelectApplication || applicationsQuery.isLoading) return;
+
+    if (!selectedApplicationId) {
+      if (applicationId) {
+        navigate("/field-visits", {
+          replace: true,
+        });
+      }
+
       return;
     }
 
+    if (String(applicationId || "") !== String(selectedApplicationId)) {
+      navigate(`/field-visits/${selectedApplicationId}`, {
+        replace: true,
+      });
+    }
+  }, [
+    canSelectApplication,
+    applicationsQuery.isLoading,
+    selectedApplicationId,
+    applicationId,
+    navigate,
+  ]);
+
+  const handleApplicationChange = (event) => {
+    const nextApplicationId = event.target.value;
+
+    setMessage(null);
     initializedApplicationRef.current = null;
     setVisitForms({});
     setSelectedPhotos({});
 
-    navigate(`/field-visits/${selectedId}`, {
+    if (!nextApplicationId) {
+      navigate("/field-visits", {
+        replace: true,
+      });
+      return;
+    }
+
+    navigate(`/field-visits/${nextApplicationId}`, {
       replace: true,
     });
   };
 
+  const activeApplicationId = selectedApplicationId || applicationId || "";
+
   const { data: customerProfile, isLoading: isProfileLoading } = useQuery({
-    queryKey: ["customer-profile", applicationId],
-    queryFn: async () => unwrapResponse(await rmApi.getCustomerProfile(applicationId)),
-    enabled: !!applicationId,
+    queryKey: ["customer-profile", activeApplicationId],
+    queryFn: async () =>
+      unwrapResponse(await rmApi.getCustomerProfile(activeApplicationId)),
+    enabled: Boolean(activeApplicationId),
+    retry: false,
   });
 
   const { data: fieldVisitData, isLoading: isVisitsLoading } = useQuery({
-    queryKey: ["field-visits", applicationId],
-    queryFn: async () => unwrapResponse(await rmApi.getFieldVisits(applicationId)),
-    enabled: !!applicationId,
+    queryKey: ["field-visits", activeApplicationId],
+    queryFn: async () =>
+      unwrapResponse(await rmApi.getFieldVisits(activeApplicationId)),
+    enabled: Boolean(activeApplicationId),
+    retry: false,
   });
 
   const propertyCategory = useMemo(() => {
-    return normalizePropertyCategory(customerProfile?.propertyCategory ?? fieldVisitData?.propertyCategory);
-  }, [customerProfile, fieldVisitData]);
+    return normalizePropertyCategory(
+      customerProfile?.propertyCategory ??
+        fieldVisitData?.propertyCategory ??
+        selectedApplicationSummary?.propertyCategory,
+    );
+  }, [customerProfile, fieldVisitData, selectedApplicationSummary]);
 
   const visitBlocks = useMemo(() => {
-    return propertyCategory ? VISIT_BLOCKS_BY_PROPERTY_CATEGORY[propertyCategory] || [] : [];
+    return propertyCategory
+      ? VISIT_BLOCKS_BY_PROPERTY_CATEGORY[propertyCategory] || []
+      : [];
   }, [propertyCategory]);
 
   const { data: fieldVisitDocumentData } = useQuery({
-    queryKey: ["field-visit-documents", applicationId],
-    queryFn: async () => unwrapResponse(await rmApi.getFieldVisitDocuments(applicationId)),
-    enabled: !!applicationId,
+    queryKey: ["field-visit-documents", activeApplicationId],
+    queryFn: async () =>
+      unwrapResponse(
+        await rmApi.getFieldVisitDocuments(activeApplicationId),
+      ),
+    enabled: Boolean(activeApplicationId),
+    retry: false,
   });
 
   const fieldVisitDocuments = useMemo(() => {
     if (!fieldVisitDocumentData) return [];
-    return Array.isArray(fieldVisitDocumentData) ? fieldVisitDocumentData : fieldVisitDocumentData?.documents || [];
+
+    return Array.isArray(fieldVisitDocumentData)
+      ? fieldVisitDocumentData
+      : fieldVisitDocumentData?.documents || [];
   }, [fieldVisitDocumentData]);
 
   const documentsByBlock = useMemo(() => {
     const grouped = {};
-    for (const b of visitBlocks) grouped[b] = [];
-    for (const doc of fieldVisitDocuments) {
-      const b = getDocumentBlock(doc);
-      if (b && grouped[b]) grouped[b].push(doc);
+
+    for (const block of visitBlocks) {
+      grouped[block] = [];
     }
+
+    for (const document of fieldVisitDocuments) {
+      const block = getDocumentBlock(document);
+
+      if (block && grouped[block]) {
+        grouped[block].push(document);
+      }
+    }
+
     return grouped;
   }, [fieldVisitDocuments, visitBlocks]);
 
   const { data: workflowData, isLoading: isWorkflowLoading } = useQuery({
-    queryKey: ["rm-workflow", applicationId],
-    queryFn: async () => unwrapResponse(await rmApi.workflowStatus(applicationId)),
-    enabled: !!applicationId,
+    queryKey: ["rm-workflow", activeApplicationId],
+    queryFn: async () =>
+      unwrapResponse(await rmApi.workflowStatus(activeApplicationId)),
+    enabled: Boolean(activeApplicationId),
+    retry: false,
   });
 
-  const leadJourney = buildWorkflowTimeline(workflowData || {});
-  const workflowStatus = workflowData?.data?.data ?? {};
+  const workflowStatus =
+    workflowData?.data?.data ??
+    workflowData?.data ??
+    workflowData ??
+    {};
 
-  /* --- COMPUTED BLOCKS FOR SEQUENTIAL ACCORDION FLOW --- */
+  const leadJourney = buildWorkflowTimeline(workflowStatus || {});
+
   const savedBlocks = useMemo(() => {
     const activeSet = new Set();
 
-    // 1. Properly isolate the array of completed elements from response payload
     const actualSavedVisits = Array.isArray(fieldVisitData)
       ? fieldVisitData
       : fieldVisitData?.visits || [];
 
-    // 2. Strict Check: Customer Residence (must match API string exactly)
     const hasCustomerVisitData = actualSavedVisits.some(
-      (v) => String(v?.visitType).toUpperCase() === "CUSTOMER_RESIDENCE"
+      (visit) =>
+        String(visit?.visitType).toUpperCase() === "CUSTOMER_RESIDENCE",
     );
+
     if (workflowStatus.customerVisit || hasCustomerVisitData) {
       activeSet.add(VISIT_BLOCKS.CUSTOMER_RESIDENCE);
     }
 
-    // 3. Strict Check: Business Office (must match API string exactly)
     const hasBusinessVisitData = actualSavedVisits.some(
-      (v) => String(v?.visitType).toUpperCase() === "BUSINESS_OFFICE"
+      (visit) =>
+        String(visit?.visitType).toUpperCase() === "BUSINESS_OFFICE",
     );
+
     if (workflowStatus.businessVisit || hasBusinessVisitData) {
       activeSet.add(VISIT_BLOCKS.BUSINESS_OFFICE);
     }
 
-    // 4. Strict Check: Asset Property Visit types
-    const hasPropertyVisitData = actualSavedVisits.some((v) => {
-      const type = String(v?.visitType).toUpperCase();
-      return type !== "CUSTOMER_RESIDENCE" && type !== "BUSINESS_OFFICE" && type !== "UNDEFINED";
+    const hasPropertyVisitData = actualSavedVisits.some((visit) => {
+      const type = String(visit?.visitType).toUpperCase();
+
+      return (
+        type !== "CUSTOMER_RESIDENCE" &&
+        type !== "BUSINESS_OFFICE" &&
+        type !== "UNDEFINED"
+      );
     });
 
     if (workflowStatus.propertyVisit || hasPropertyVisitData) {
-      visitBlocks.forEach(b => {
-        if (b !== VISIT_BLOCKS.CUSTOMER_RESIDENCE && b !== VISIT_BLOCKS.BUSINESS_OFFICE) {
-          activeSet.add(b);
+      visitBlocks.forEach((block) => {
+        if (
+          block !== VISIT_BLOCKS.CUSTOMER_RESIDENCE &&
+          block !== VISIT_BLOCKS.BUSINESS_OFFICE
+        ) {
+          activeSet.add(block);
         }
       });
     }
@@ -877,52 +1006,131 @@ export default function FieldVisits() {
     return activeSet;
   }, [workflowStatus, visitBlocks, fieldVisitData]);
 
-
-
   useEffect(() => {
+    if (!activeApplicationId) return;
     if (!customerProfile || !propertyCategory || isVisitsLoading) return;
-    if (initializedApplicationRef.current === String(applicationId)) return;
 
-    const saved = Array.isArray(fieldVisitData) ? fieldVisitData : fieldVisitData?.visits || [];
-    setVisitForms(mergeSavedVisits(createInitialVisitForms(customerProfile, propertyCategory), saved));
-    setSelectedPhotos(visitBlocks.reduce((res, b) => ({ ...res, [b]: [] }), {}));
-    initializedApplicationRef.current = String(applicationId);
-  }, [applicationId, customerProfile, propertyCategory, fieldVisitData, visitBlocks, isVisitsLoading]);
+    if (
+      initializedApplicationRef.current === String(activeApplicationId)
+    ) {
+      return;
+    }
+
+    const saved = Array.isArray(fieldVisitData)
+      ? fieldVisitData
+      : fieldVisitData?.visits || [];
+
+    setVisitForms(
+      mergeSavedVisits(
+        createInitialVisitForms(customerProfile, propertyCategory),
+        saved,
+      ),
+    );
+
+    setSelectedPhotos(
+      visitBlocks.reduce(
+        (result, block) => ({
+          ...result,
+          [block]: [],
+        }),
+        {},
+      ),
+    );
+
+    initializedApplicationRef.current = String(activeApplicationId);
+  }, [
+    activeApplicationId,
+    customerProfile,
+    propertyCategory,
+    fieldVisitData,
+    visitBlocks,
+    isVisitsLoading,
+  ]);
 
   const deleteDocumentMutation = useMutation({
-    mutationFn: ({ documentId }) => rmApi.deleteFieldVisitDocument(applicationId, documentId),
+    mutationFn: ({ documentId }) =>
+      rmApi.deleteFieldVisitDocument(activeApplicationId, documentId),
+
     onSuccess: () => {
-      setMessage({ type: "success", text: "Photo removed successfully." });
-      queryClient.invalidateQueries({ queryKey: ["field-visit-documents", applicationId] });
+      setMessage({
+        type: "success",
+        text: "Photo removed successfully.",
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["field-visit-documents", activeApplicationId],
+      });
+    },
+
+    onError: (error) => {
+      setMessage({
+        type: "error",
+        text:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Unable to remove photo.",
+      });
     },
   });
 
   const saveVisitMutation = useMutation({
     mutationFn: async (block) => {
-      const files = selectedPhotos[block] || [];
-      const configuredNames = DOCUMENT_NAMES[block] || [];
-      const usedNames = new Set((documentsByBlock[block] || []).map(d => d.documentName));
-      const slots = configuredNames.filter((name) => !usedNames.has(name));
-
-      for (let i = 0; i < files.length; i++) {
-        const documentName =
-          slots[i] ||
-          `${API_VISIT_TYPES[block]}_${isValuation ? "VALUATION_REVISIT" : "EXTRA"}_${Date.now()}_${i + 1}`;
-
-        const formData = new FormData();
-        formData.append("file", files[i]);
-        formData.append("visitType", API_VISIT_TYPES[block]);
-        formData.append("documentType", "PHOTO");
-        formData.append("documentSource", "FIELD_VISIT");
-        formData.append("documentName", documentName);
-
-        await rmApi.uploadFieldVisitDocument(applicationId, formData);
+      if (!activeApplicationId) {
+        throw new Error("Please select an application first.");
       }
 
-      setSelectedPhotos(curr => ({ ...curr, [block]: [] }));
-      const loc = await getBrowserLocation();
-      const form = visitForms[block];
-      const { visitDate, visitResult, remarks, propertyType, ...formData } = form;
+      const files = selectedPhotos[block] || [];
+      const configuredNames = DOCUMENT_NAMES[block] || [];
+
+      const usedNames = new Set(
+        (documentsByBlock[block] || []).map(
+          (document) => document.documentName,
+        ),
+      );
+
+      const slots = configuredNames.filter(
+        (name) => !usedNames.has(name),
+      );
+
+      for (let index = 0; index < files.length; index += 1) {
+        const documentName =
+          slots[index] ||
+          `${API_VISIT_TYPES[block]}_${
+            isValuation ? "VALUATION_REVISIT" : "EXTRA"
+          }_${Date.now()}_${index + 1}`;
+
+        const formData = new FormData();
+
+        formData.append("file", files[index]);
+        formData.append("visitType", API_VISIT_TYPES[block]);
+        formData.append("documentType", "PHOTO");
+        formData.append(
+          "documentSource",
+          isValuation ? "VALUATION_FIELD_VISIT" : "FIELD_VISIT",
+        );
+        formData.append("documentName", documentName);
+
+        await rmApi.uploadFieldVisitDocument(
+          activeApplicationId,
+          formData,
+        );
+      }
+
+      setSelectedPhotos((current) => ({
+        ...current,
+        [block]: [],
+      }));
+
+      const location = await getBrowserLocation();
+      const form = visitForms[block] || {};
+
+      const {
+        visitDate,
+        visitResult,
+        remarks,
+        propertyType,
+        ...formData
+      } = form;
 
       const payload = {
         propertyCategory,
@@ -933,29 +1141,37 @@ export default function FieldVisits() {
           remarks,
           propertyType: propertyType ?? null,
           formData,
-          ...(loc || {}),
+          source: isValuation ? "VALUATION" : "RM",
+          ...(location || {}),
         },
       };
-      return rmApi.saveFieldVisit(applicationId, payload);
+
+      return rmApi.saveFieldVisit(activeApplicationId, payload);
     },
+
     onSuccess: async (response, savedBlock) => {
       setMessage({
         type: "success",
-        text: "Visit saved successfully.",
+        text: isValuation
+          ? "Valuation visit / revisit saved successfully."
+          : "Visit saved successfully.",
       });
 
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["field-visits", applicationId],
+          queryKey: ["field-visits", activeApplicationId],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["field-visit-documents", applicationId],
+          queryKey: ["field-visit-documents", activeApplicationId],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["rm-workflow", applicationId],
+          queryKey: ["rm-workflow", activeApplicationId],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["application", applicationId],
+          queryKey: ["application", activeApplicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["field-visit-application-list", roles.join("_")],
         }),
       ]);
 
@@ -966,108 +1182,155 @@ export default function FieldVisits() {
         savedBlock !== VISIT_BLOCKS.CUSTOMER_RESIDENCE &&
         savedBlock !== VISIT_BLOCKS.BUSINESS_OFFICE;
 
-      // if (data?.geoVerificationReady || isPropertyVisit) {
-      //   navigate(data?.nextRoute || `/geo-verification/${applicationId}`, {
-      //     replace: true,
-      //   });
-      // }
-
       if (!isValuation && (data?.geoVerificationReady || isPropertyVisit)) {
-        navigate(data?.nextRoute || `/geo-verification/${applicationId}`, {
-          replace: true,
-        });
+        navigate(
+          data?.nextRoute || `/geo-verification/${activeApplicationId}`,
+          {
+            replace: true,
+          },
+        );
       }
     },
-  });
 
-  // const handleContinueJourney = () => {
-  //   if (!workflowStatus.customerVisit || !workflowStatus.businessVisit || !workflowStatus.propertyVisit) {
-  //     setMessage({ type: "error", text: "Complete all verification checkpoints down the chain first." });
-  //     return;
-  //   }
-  //   navigate(`/geo-verification/${applicationId}`, { replace: true });
-  // };
+    onError: (error) => {
+      setMessage({
+        type: "error",
+        text:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Unable to save visit.",
+      });
+    },
+  });
 
   const isCustomerDone = savedBlocks.has(VISIT_BLOCKS.CUSTOMER_RESIDENCE);
   const isBusinessDone = savedBlocks.has(VISIT_BLOCKS.BUSINESS_OFFICE);
 
   return (
     <div className="min-h-screen space-y-6 bg-[#f8fafc] p-4 text-slate-800 sm:p-6 lg:p-8">
-      {/* Upper Presentation Panel */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2575fc] to-[#6a11cb] p-6 text-white shadow-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex-1">
             <h2 className="text-2xl font-bold tracking-tight">
-              Field Visits Processing Pipeline
+              {isValuation
+                ? "Valuation Field Visit / Revisit"
+                : "Field Visits Processing Pipeline"}
             </h2>
 
             <p className="mt-1 text-xs text-blue-100">
-              Application File ID: {applicationId || "Please select application"}
+              Application File ID:{" "}
+              {activeApplicationId || "Please select application"}
             </p>
 
+            {isValuation && (
+              <p className="mt-1 text-[11px] font-bold text-blue-50">
+                Valuation role loads BM Approved and Valuation Pending cases.
+              </p>
+            )}
+
             {selectedApplicationSummary && (
-              <p className="mt-1 text-xs font-semibold text-blue-50">
+              <p className="mt-2 text-xs font-semibold text-blue-50">
                 {selectedApplicationSummary.applicationNumber} ·{" "}
                 {selectedApplicationSummary.customerName} ·{" "}
-                {selectedApplicationSummary.mobile}
+                {selectedApplicationSummary.mobile} ·{" "}
+                {selectedApplicationSummary.stage} /{" "}
+                {selectedApplicationSummary.status}
               </p>
             )}
           </div>
 
           {canSelectApplication && (
-            <div className="w-full sm:w-[420px]">
+            <div className="w-full sm:w-[460px]">
               <label className="mb-1 block text-[10px] font-extrabold uppercase tracking-wider text-blue-100">
-                Select Application
+                {isValuation
+                  ? "Select BM Approved / Valuation Pending Application"
+                  : "Select Application"}
               </label>
 
               <select
-                value={applicationId || ""}
+                value={activeApplicationId || ""}
                 onChange={handleApplicationChange}
-                className="h-11 w-full rounded-xl border border-white/20 bg-white px-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-white/20"
+                disabled={
+                  applicationsQuery.isLoading || applicationList.length === 0
+                }
+                className="h-11 w-full rounded-xl border border-white/20 bg-white px-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                <option value="">
-                  {applicationsQuery.isLoading
-                    ? "Loading applications..."
-                    : "Select application"}
-                </option>
-
-                {applicationList.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.applicationNumber || `APP-${item.id}`} -{" "}
-                    {item.customerName || "No Name"} -{" "}
-                    {item.mobile || "No Mobile"}
+                {applicationsQuery.isLoading ? (
+                  <option value="">
+                    {isValuation
+                      ? "Loading BM Approved / Valuation Pending cases..."
+                      : "Loading applications..."}
                   </option>
-                ))}
+                ) : applicationList.length === 0 ? (
+                  <option value="">
+                    {isValuation
+                      ? "No BM Approved / Valuation Pending cases found"
+                      : "No applications found"}
+                  </option>
+                ) : (
+                  <>
+                    <option value="">Select application</option>
+
+                    {applicationList.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.applicationNumber || `APP-${item.id}`} -{" "}
+                        {item.customerName || "No Name"} -{" "}
+                        {item.mobile || "No Mobile"} -{" "}
+                        {item.status || "No Status"}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
           )}
-          {/* <button onClick={handleContinueJourney} className="rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-extrabold text-white shadow-md hover:bg-emerald-600">
-            Continue Journey
-          </button> */}
         </div>
 
-        {/* Dynamic Workflow Bar */}
         <div className="mt-6 rounded-2xl bg-white/95 p-4 text-slate-800 backdrop-blur-sm">
           <div className="flex items-center justify-between overflow-x-auto">
-            {isWorkflowLoading ? <div className="text-xs text-slate-400">Syncing status...</div> : leadJourney.map((step, index) => (
-              <div key={index} className="flex flex-col items-center flex-1 text-center relative">
-                <div className={`h-7 w-7 rounded-full text-xs font-bold flex items-center justify-center ${step.completed ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-500"}`}>
-                  {step.completed ? "✓" : index + 1}
-                </div>
-                <p className="mt-1 text-[11px] font-semibold">{step.label}</p>
+            {isWorkflowLoading ? (
+              <div className="text-xs text-slate-400">
+                Syncing status...
               </div>
-            ))}
+            ) : (
+              leadJourney.map((step, index) => (
+                <div
+                  key={index}
+                  className="relative flex flex-1 flex-col items-center text-center"
+                >
+                  <div
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                      step.completed
+                        ? "bg-emerald-500 text-white"
+                        : "bg-slate-200 text-slate-500"
+                    }`}
+                  >
+                    {step.completed ? "✓" : index + 1}
+                  </div>
+
+                  <p className="mt-1 text-[11px] font-semibold">
+                    {step.label}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
 
       {message && (
-        <div className={`p-4 text-sm font-semibold rounded-2xl border ${message.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-rose-50 border-rose-200 text-rose-700"}`}>
+        <div
+          className={`rounded-2xl border p-4 text-sm font-semibold ${
+            message.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-rose-200 bg-rose-50 text-rose-700"
+          }`}
+        >
           {message.text}
         </div>
       )}
 
-      {!applicationId && (
+      {!activeApplicationId && (
         <div className="rounded-2xl border border-blue-100 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
             <FaCamera size={22} />
@@ -1078,150 +1341,44 @@ export default function FieldVisits() {
           </h3>
 
           <p className="mx-auto mt-2 max-w-lg text-sm font-medium text-slate-500">
-            Select an application from the header dropdown. After selecting, customer,
-            business and property visit photo upload sections will load automatically.
+            {isValuation
+              ? "Valuation role will show BM Approved and Valuation Pending cases only."
+              : "Select an application from the header dropdown. Customer, business and property visit sections will load automatically."}
           </p>
         </div>
       )}
 
-      {/* Grid Allocation Layout with Structural Control Mapping */}
-      {applicationId && (isProfileLoading || isVisitsLoading) ? (
+      {activeApplicationId && (isProfileLoading || isVisitsLoading) ? (
         <div className="py-10 text-center font-bold text-slate-400">
           Loading Configuration Streams...
         </div>
-      ) : applicationId ? (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Card Module 1: Customer Residence */}
-          {visitBlocks.includes(VISIT_BLOCKS.CUSTOMER_RESIDENCE) && (
-            <CustomerResidenceCard
-              form={visitForms[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || {}}
-              selectedFiles={
-                selectedPhotos[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || []
-              }
-              uploadedDocuments={
-                documentsByBlock[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || []
-              }
-              disabled={saveVisitMutation.isPending}
-              allowSavedEdit={isValuation}
-              allowExtraPhotos={isValuation}
-              onChange={(field, value) =>
-                setVisitForms((current) => ({
-                  ...current,
-                  [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: {
-                    ...current[VISIT_BLOCKS.CUSTOMER_RESIDENCE],
-                    [field]: value,
-                  },
-                }))
-              }
-              onFilesChange={(files) =>
-                setSelectedPhotos((current) => ({
-                  ...current,
-                  [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: files,
-                }))
-              }
-              onDeleteDocument={(documentId) =>
-                deleteDocumentMutation.mutate({
-                  documentId,
-                })
-              }
-              deletingDocumentId={
-                deleteDocumentMutation.variables?.documentId
-              }
-              onSave={() =>
-                saveVisitMutation.mutate(
-                  VISIT_BLOCKS.CUSTOMER_RESIDENCE,
-                )
-              }
-              isSaving={
-                saveVisitMutation.isPending &&
-                saveVisitMutation.variables ===
-                  VISIT_BLOCKS.CUSTOMER_RESIDENCE
-              }
-              saved={isCustomerDone}
-              isTranslucent={false}
-            />
+      ) : activeApplicationId ? (
+        <>
+          {!propertyCategory && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+              Property category is missing. Please update customer profile
+              property category first.
+            </div>
           )}
 
-          {/* Card Module 2: Business Workspace Verification */}
-          {visitBlocks.includes(VISIT_BLOCKS.BUSINESS_OFFICE) && (
-            <BusinessOfficeCard
-              form={visitForms[VISIT_BLOCKS.BUSINESS_OFFICE] || {}}
-              selectedFiles={
-                selectedPhotos[VISIT_BLOCKS.BUSINESS_OFFICE] || []
-              }
-              uploadedDocuments={
-                documentsByBlock[VISIT_BLOCKS.BUSINESS_OFFICE] || []
-              }
-              disabled={
-                saveVisitMutation.isPending ||
-                (!isValuation && !isCustomerDone)
-              }
-              allowSavedEdit={isValuation}
-              allowExtraPhotos={isValuation}
-              onChange={(field, value) =>
-                setVisitForms((current) => ({
-                  ...current,
-                  [VISIT_BLOCKS.BUSINESS_OFFICE]: {
-                    ...current[VISIT_BLOCKS.BUSINESS_OFFICE],
-                    [field]: value,
-                  },
-                }))
-              }
-              onFilesChange={(files) =>
-                setSelectedPhotos((current) => ({
-                  ...current,
-                  [VISIT_BLOCKS.BUSINESS_OFFICE]: files,
-                }))
-              }
-              onDeleteDocument={(documentId) =>
-                deleteDocumentMutation.mutate({
-                  documentId,
-                })
-              }
-              deletingDocumentId={
-                deleteDocumentMutation.variables?.documentId
-              }
-              onSave={() =>
-                saveVisitMutation.mutate(VISIT_BLOCKS.BUSINESS_OFFICE)
-              }
-              isSaving={
-                saveVisitMutation.isPending &&
-                saveVisitMutation.variables ===
-                  VISIT_BLOCKS.BUSINESS_OFFICE
-              }
-              saved={isBusinessDone}
-              isTranslucent={!isValuation && !isCustomerDone}
-            />
-          )}
-
-          {/* Card Module 3: Structural Real Estate Assets Verification */}
-          {(() => {
-            const block = visitBlocks.find(
-              (item) =>
-                item !== VISIT_BLOCKS.CUSTOMER_RESIDENCE &&
-                item !== VISIT_BLOCKS.BUSINESS_OFFICE,
-            );
-
-            if (!block) return null;
-
-            return (
-              <PropertyVisitCard
-                block={block}
-                form={visitForms[block] || {}}
-                propertyCategory={propertyCategory}
-                selectedFiles={selectedPhotos[block] || []}
-                uploadedDocuments={documentsByBlock[block] || []}
-                disabled={
-                  saveVisitMutation.isPending ||
-                  (!isValuation && !isBusinessDone)
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {visitBlocks.includes(VISIT_BLOCKS.CUSTOMER_RESIDENCE) && (
+              <CustomerResidenceCard
+                form={visitForms[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || {}}
+                selectedFiles={
+                  selectedPhotos[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || []
                 }
+                uploadedDocuments={
+                  documentsByBlock[VISIT_BLOCKS.CUSTOMER_RESIDENCE] || []
+                }
+                disabled={saveVisitMutation.isPending}
                 allowSavedEdit={isValuation}
                 allowExtraPhotos={isValuation}
                 onChange={(field, value) =>
                   setVisitForms((current) => ({
                     ...current,
-                    [block]: {
-                      ...current[block],
+                    [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: {
+                      ...current[VISIT_BLOCKS.CUSTOMER_RESIDENCE],
                       [field]: value,
                     },
                   }))
@@ -1229,7 +1386,7 @@ export default function FieldVisits() {
                 onFilesChange={(files) =>
                   setSelectedPhotos((current) => ({
                     ...current,
-                    [block]: files,
+                    [VISIT_BLOCKS.CUSTOMER_RESIDENCE]: files,
                   }))
                 }
                 onDeleteDocument={(documentId) =>
@@ -1240,18 +1397,130 @@ export default function FieldVisits() {
                 deletingDocumentId={
                   deleteDocumentMutation.variables?.documentId
                 }
-                onSave={() => saveVisitMutation.mutate(block)}
+                onSave={() =>
+                  saveVisitMutation.mutate(
+                    VISIT_BLOCKS.CUSTOMER_RESIDENCE,
+                  )
+                }
                 isSaving={
                   saveVisitMutation.isPending &&
-                  saveVisitMutation.variables === block
+                  saveVisitMutation.variables ===
+                    VISIT_BLOCKS.CUSTOMER_RESIDENCE
                 }
-                saved={savedBlocks.has(block)}
-                isTranslucent={!isValuation && !isBusinessDone}
+                saved={isCustomerDone}
+                isTranslucent={false}
               />
-            );
-          })()}
-        </div>
+            )}
+
+            {visitBlocks.includes(VISIT_BLOCKS.BUSINESS_OFFICE) && (
+              <BusinessOfficeCard
+                form={visitForms[VISIT_BLOCKS.BUSINESS_OFFICE] || {}}
+                selectedFiles={
+                  selectedPhotos[VISIT_BLOCKS.BUSINESS_OFFICE] || []
+                }
+                uploadedDocuments={
+                  documentsByBlock[VISIT_BLOCKS.BUSINESS_OFFICE] || []
+                }
+                disabled={
+                  saveVisitMutation.isPending ||
+                  (!isValuation && !isCustomerDone)
+                }
+                allowSavedEdit={isValuation}
+                allowExtraPhotos={isValuation}
+                onChange={(field, value) =>
+                  setVisitForms((current) => ({
+                    ...current,
+                    [VISIT_BLOCKS.BUSINESS_OFFICE]: {
+                      ...current[VISIT_BLOCKS.BUSINESS_OFFICE],
+                      [field]: value,
+                    },
+                  }))
+                }
+                onFilesChange={(files) =>
+                  setSelectedPhotos((current) => ({
+                    ...current,
+                    [VISIT_BLOCKS.BUSINESS_OFFICE]: files,
+                  }))
+                }
+                onDeleteDocument={(documentId) =>
+                  deleteDocumentMutation.mutate({
+                    documentId,
+                  })
+                }
+                deletingDocumentId={
+                  deleteDocumentMutation.variables?.documentId
+                }
+                onSave={() =>
+                  saveVisitMutation.mutate(VISIT_BLOCKS.BUSINESS_OFFICE)
+                }
+                isSaving={
+                  saveVisitMutation.isPending &&
+                  saveVisitMutation.variables ===
+                    VISIT_BLOCKS.BUSINESS_OFFICE
+                }
+                saved={isBusinessDone}
+                isTranslucent={!isValuation && !isCustomerDone}
+              />
+            )}
+
+            {(() => {
+              const block = visitBlocks.find(
+                (item) =>
+                  item !== VISIT_BLOCKS.CUSTOMER_RESIDENCE &&
+                  item !== VISIT_BLOCKS.BUSINESS_OFFICE,
+              );
+
+              if (!block) return null;
+
+              return (
+                <PropertyVisitCard
+                  block={block}
+                  form={visitForms[block] || {}}
+                  propertyCategory={propertyCategory}
+                  selectedFiles={selectedPhotos[block] || []}
+                  uploadedDocuments={documentsByBlock[block] || []}
+                  disabled={
+                    saveVisitMutation.isPending ||
+                    (!isValuation && !isBusinessDone)
+                  }
+                  allowSavedEdit={isValuation}
+                  allowExtraPhotos={isValuation}
+                  onChange={(field, value) =>
+                    setVisitForms((current) => ({
+                      ...current,
+                      [block]: {
+                        ...current[block],
+                        [field]: value,
+                      },
+                    }))
+                  }
+                  onFilesChange={(files) =>
+                    setSelectedPhotos((current) => ({
+                      ...current,
+                      [block]: files,
+                    }))
+                  }
+                  onDeleteDocument={(documentId) =>
+                    deleteDocumentMutation.mutate({
+                      documentId,
+                    })
+                  }
+                  deletingDocumentId={
+                    deleteDocumentMutation.variables?.documentId
+                  }
+                  onSave={() => saveVisitMutation.mutate(block)}
+                  isSaving={
+                    saveVisitMutation.isPending &&
+                    saveVisitMutation.variables === block
+                  }
+                  saved={savedBlocks.has(block)}
+                  isTranslucent={!isValuation && !isBusinessDone}
+                />
+              );
+            })()}
+          </div>
+        </>
       ) : null}
     </div>
-  )
+  );
 }

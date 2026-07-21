@@ -22,6 +22,111 @@ const formatCooldown = (seconds) => {
 };
 
 
+const normalizeAadhaarKycStatus = (value) => {
+  const status = String(value || "")
+    .trim()
+    .toUpperCase();
+
+  if (
+    status === "VERIFIED" ||
+    status === "SUCCESS" ||
+    status === "COMPLETED" ||
+    status === "APPROVED"
+  ) {
+    return "VERIFIED";
+  }
+
+  if (
+    status === "INITIATED" ||
+    status === "LINK_SENT" ||
+    status === "SENT" ||
+    status === "PENDING" ||
+    status === "PROCESSING" ||
+    status === "IN_PROGRESS"
+  ) {
+    return "INITIATED";
+  }
+
+  if (
+    status === "FAILED" ||
+    status === "FAILURE" ||
+    status === "REJECTED" ||
+    status === "EXPIRED"
+  ) {
+    return "FAILED";
+  }
+
+  return "NOT_INITIATED";
+};
+
+const getAadhaarStatusMeta = (status) => {
+  if (status === "VERIFIED") {
+    return {
+      label: "Verified",
+      badgeClass:
+        "border-emerald-200 bg-emerald-50 text-emerald-700",
+      boxClass:
+        "border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-slate-50",
+      helper:
+        "Aadhaar KYC completed successfully.",
+    };
+  }
+
+  if (status === "INITIATED") {
+    return {
+      label: "Link Sent / Pending",
+      badgeClass:
+        "border-blue-200 bg-blue-50 text-blue-700",
+      boxClass:
+        "border-blue-200 bg-gradient-to-br from-blue-50/70 via-white to-slate-50",
+      helper:
+        "Aadhaar link has been initiated. Waiting for customer completion.",
+    };
+  }
+
+  if (status === "FAILED") {
+    return {
+      label: "Failed / Expired",
+      badgeClass:
+        "border-rose-200 bg-rose-50 text-rose-700",
+      boxClass:
+        "border-rose-200 bg-gradient-to-br from-rose-50/70 via-white to-slate-50",
+      helper:
+        "Aadhaar verification failed or expired. You can resend link.",
+    };
+  }
+
+  return {
+    label: "Not Initiated",
+    badgeClass:
+      "border-slate-200 bg-slate-50 text-slate-600",
+    boxClass:
+      "border-blue-100 bg-gradient-to-br from-blue-50/60 via-white to-slate-50/50",
+    helper:
+      "Send Aadhaar DigiLocker KYC link to customer.",
+  };
+};
+
+const readAadhaarStatusFromRecord = (record) => {
+  if (!record || typeof record !== "object") return "";
+
+  return (
+    record.aadhaarStatus ||
+    record.aadhaar_status ||
+    record.aadhaarKycStatus ||
+    record.aadhaar_kyc_status ||
+    record.kycAadhaarStatus ||
+    record.kyc_aadhaar_status ||
+    record?.kyc?.aadhaarStatus ||
+    record?.kyc?.aadhaar_status ||
+    record?.customerProfile?.aadhaarStatus ||
+    record?.customerProfile?.aadhaar_status ||
+    record?.customerProfile?.aadhaarKycStatus ||
+    record?.customerProfile?.aadhaar_kyc_status ||
+    ""
+  );
+};
+
 const emptyForm = {
   customerName: "",
   mobileNumber: "",
@@ -289,6 +394,7 @@ const aadhaarCooldownKey = currentApplicationId
 const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
 const [aadhaarCooldownUntil, setAadhaarCooldownUntil] = useState(0);
 const [aadhaarCooldownSeconds, setAadhaarCooldownSeconds] = useState(0);
+const [localAadhaarStatus, setLocalAadhaarStatus] = useState("");
 
 const isAadhaarCooldownActive = aadhaarCooldownSeconds > 0;
 
@@ -628,6 +734,57 @@ if (name === "gstNumber") {
     staleTime: 0,
     retry: false,
   });
+
+
+  const aadhaarStatusQuery = useQuery({
+  queryKey: ["aadhaar-kyc-status", currentApplicationId],
+  queryFn: () => rmApi.getAadhaarKycStatus(currentApplicationId),
+  enabled: Boolean(currentApplicationId),
+  retry: false,
+  refetchInterval: (query) => {
+    const response = unwrapResponse(query?.state?.data);
+    const data = response?.data ?? response ?? {};
+    const status = normalizeAadhaarKycStatus(
+      readAadhaarStatusFromRecord(data),
+    );
+
+    return status === "INITIATED" ? 10000 : false;
+  },
+});
+
+const aadhaarStatusResponse = unwrapResponse(aadhaarStatusQuery.data);
+const aadhaarStatusData =
+  aadhaarStatusResponse?.data ??
+  aadhaarStatusResponse ??
+  {};
+
+const applicationResponseForAadhaar = unwrapResponse(applicationQuery.data);
+const applicationForAadhaar =
+  applicationResponseForAadhaar?.data ??
+  applicationResponseForAadhaar ??
+  {};
+
+const profileResponseForAadhaar = unwrapResponse(customerProfileQuery.data);
+const profileForAadhaar =
+  profileResponseForAadhaar?.data ??
+  profileResponseForAadhaar ??
+  {};
+
+const backendAadhaarStatus = normalizeAadhaarKycStatus(
+  readAadhaarStatusFromRecord(aadhaarStatusData) ||
+    readAadhaarStatusFromRecord(applicationForAadhaar) ||
+    readAadhaarStatusFromRecord(profileForAadhaar),
+);
+
+const aadhaarKycStatus =
+  backendAadhaarStatus !== "NOT_INITIATED"
+    ? backendAadhaarStatus
+    : localAadhaarStatus || backendAadhaarStatus;
+
+const aadhaarStatusMeta = getAadhaarStatusMeta(aadhaarKycStatus);
+
+const isAadhaarVerified = aadhaarKycStatus === "VERIFIED";
+const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
   useEffect(() => {
     if (!applicationId || !applicationQuery.data) return;
@@ -1538,6 +1695,7 @@ const handleInitAadhaar = async () => {
     const kycUrl = payload?.kycUrl || payload?.data?.kycUrl;
 
     startAadhaarCooldown();
+setLocalAadhaarStatus("INITIATED");
 
     setMessageType("success");
     setMessage(
@@ -1549,14 +1707,17 @@ const handleInitAadhaar = async () => {
       window.open(kycUrl, "_blank", "noopener,noreferrer");
     }
 
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["customer-profile", targetApplicationId],
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ["application", targetApplicationId],
-      }),
-    ]);
+ await Promise.all([
+  queryClient.invalidateQueries({
+    queryKey: ["customer-profile", targetApplicationId],
+  }),
+  queryClient.invalidateQueries({
+    queryKey: ["application", targetApplicationId],
+  }),
+  queryClient.invalidateQueries({
+    queryKey: ["aadhaar-kyc-status", targetApplicationId],
+  }),
+]);
   } catch (error) {
     setMessageType("error");
     setMessage(
@@ -2520,53 +2681,79 @@ const handleInitAadhaar = async () => {
 
     {/* Right Side Column: Aadhaar Box + Compact Photo Block */}
     <div className="flex flex-col gap-4 self-start">
-      {/* Aadhaar KYC Link Dispatcher Box */}
-      <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 via-white to-slate-50/50 p-3.5 shadow-2xs flex flex-row items-center justify-between gap-4 h-fit">
-        <div className="flex flex-col gap-1">
-          <span className="inline-flex self-start rounded-md bg-blue-600/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
-            DigiLocker KYC
-          </span>
-          <h4 className="text-sm font-bold text-slate-800">Aadhaar Verification Link</h4>
-        </div>
+{/* Aadhaar KYC Link Dispatcher Box */}
+<div
+  className={`rounded-2xl border p-3.5 shadow-2xs flex flex-row items-center justify-between gap-4 h-fit ${aadhaarStatusMeta.boxClass}`}
+>
+  <div className="flex flex-col gap-1">
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="inline-flex self-start rounded-md bg-blue-600/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+        DigiLocker KYC
+      </span>
 
-        <div className="shrink-0 min-w-[160px]">
-  <button
-    type="button"
-    onClick={handleInitAadhaar}
-    disabled={
-      aadhaarLinkSending ||
-      isAadhaarCooldownActive ||
-      !currentApplicationId
-    }
-    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/10 transition-all hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-  >
-    {aadhaarLinkSending ? (
-      "Sending..."
-    ) : isAadhaarCooldownActive ? (
-      `Wait ${formatCooldown(aadhaarCooldownSeconds)}`
-    ) : !currentApplicationId ? (
-      "Save Draft First"
-    ) : (
-      <>
-        <svg
-          className="h-3.5 w-3.5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M13.5 6H5.25A2.25 2.25 0 003 8.25v7.5A2.25 2.25 0 005.25 18h13.5A2.25 2.25 0 0021 15.75v-4.5M13.5 6L21 3m0 0v7.5M21 3l-7.5 7.5"
-          />
-        </svg>
-        Send Link
-      </>
-    )}
-  </button>
+      <span
+        className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${aadhaarStatusMeta.badgeClass}`}
+      >
+        {aadhaarStatusQuery.isFetching && isAadhaarInitiated
+          ? "Refreshing..."
+          : aadhaarStatusMeta.label}
+      </span>
+    </div>
+
+    <h4 className="text-sm font-bold text-slate-800">
+      Aadhaar Verification Link
+    </h4>
+
+    <p className="max-w-md text-[11px] font-semibold text-slate-500">
+      {aadhaarStatusMeta.helper}
+    </p>
+  </div>
+
+  <div className="shrink-0 min-w-[160px]">
+    <button
+      type="button"
+      onClick={handleInitAadhaar}
+      disabled={
+        aadhaarLinkSending ||
+        isAadhaarCooldownActive ||
+        isAadhaarVerified ||
+        !currentApplicationId
+      }
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/10 transition-all hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+    >
+      {aadhaarLinkSending ? (
+        "Sending..."
+      ) : isAadhaarVerified ? (
+        "✓ Verified"
+      ) : isAadhaarCooldownActive ? (
+        `Wait ${formatCooldown(aadhaarCooldownSeconds)}`
+      ) : !currentApplicationId ? (
+        "Save Draft First"
+      ) : aadhaarKycStatus === "FAILED" ? (
+        "Resend Link"
+      ) : isAadhaarInitiated ? (
+        "Resend Link"
+      ) : (
+        <>
+          <svg
+            className="h-3.5 w-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M13.5 6H5.25A2.25 2.25 0 003 8.25v7.5A2.25 2.25 0 005.25 18h13.5A2.25 2.25 0 0021 15.75v-4.5M13.5 6L21 3m0 0v7.5M21 3l-7.5 7.5"
+            />
+          </svg>
+          Send Link
+        </>
+      )}
+    </button>
+  </div>
 </div>
-      </div>
 
       {/* Compact Profile Photo Management Panel */}
       <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-row items-center justify-between gap-4">

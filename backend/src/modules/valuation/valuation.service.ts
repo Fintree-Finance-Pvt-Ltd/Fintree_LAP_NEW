@@ -1,361 +1,400 @@
+
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
 
-import { DataSource } from 'typeorm';
-
-import type { Actor } from '../applications/applications.service';
 import { Application } from '../applications/entities/application.entity';
-import { Workflow } from '../workflow/entities/workflow.entity';
-import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
-import { AuditLog } from '../audit/entities/audit-log.entity';
+import {
+  ValuationAssessment,
+  ValuationAssessmentStatus,
+} from './entities/valuation-assessment.entity';
 
-import { ApplicationStage } from '../../common/enums/application-stage.enum';
-import { ApplicationStatus } from '../../common/enums/application-status.enum';
+type ActorLike = {
+  id?: number;
+  roles?: string[];
+};
 
 @Injectable()
 export class ValuationService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectRepository(Application)
+    private readonly applicationsRepo: Repository<Application>,
 
-  private getActorRoles(actor: Actor) {
-    return (actor?.roles || []).map((role) =>
-      String(role).toUpperCase(),
-    );
-  }
+    @InjectRepository(ValuationAssessment)
+    private readonly valuationRepo: Repository<ValuationAssessment>,
+  ) {}
 
-  private ensureValuationUser(actor: Actor) {
-    const roles = this.getActorRoles(actor);
-
-    if (!roles.includes('VALUATION')) {
-      throw new ForbiddenException(
-        'Only Valuation team can perform this action.',
-      );
-    }
-  }
-
-  private ensureValuationCase(application: Application) {
-    const stage = String(application.stage || '').toUpperCase();
-    const status = String(application.status || '').toUpperCase();
-
-    if (
-      stage !== ApplicationStage.VALUATION ||
-      ![
-        ApplicationStatus.VALUATION_PENDING,
-        ApplicationStatus.VALUATION_QUERY,
-      ].includes(status as ApplicationStatus)
-    ) {
-      throw new BadRequestException(
-        'Application must be in Valuation stage.',
-      );
-    }
-  }
-
-  async getValuationCases() {
-    const rows = await this.dataSource
-      .getRepository(Application)
-      .createQueryBuilder('a')
-      .where('a.stage = :stage', {
-        stage: ApplicationStage.VALUATION,
-      })
-      .andWhere('a.status IN (:...statuses)', {
-        statuses: [
-          ApplicationStatus.VALUATION_PENDING,
-          ApplicationStatus.VALUATION_QUERY,
-        ],
-      })
-      .orderBy('a.updatedAt', 'DESC')
-      .getMany();
+  async getCases() {
+    const data = await this.applicationsRepo.find({
+      where: [
+        {
+          stage: 'VALUATION' as any,
+        },
+        {
+          status: In([
+            'CREDIT_CHECKER_APPROVED',
+            'VALUATION_PENDING',
+            'VALUATION_QUERY',
+            'VALUATION_APPROVED',
+            'VALUATION_REJECTED',
+          ] as any),
+        },
+      ],
+      order: {
+        updatedAt: 'DESC' as any,
+      },
+    });
 
     return {
       success: true,
-      data: rows,
+      data,
     };
   }
 
-  async getValuationApplication(applicationId: number) {
-    const application = await this.dataSource
-      .getRepository(Application)
-      .findOne({
-        where: {
-          id: applicationId,
-        },
-      });
+  async getApplication(applicationId: number) {
+    const application = await this.applicationsRepo.findOne({
+      where: {
+        id: applicationId,
+      },
+    });
 
     if (!application) {
-      throw new NotFoundException('Application not found');
+      throw new NotFoundException('Application not found.');
     }
+
+    const valuationAssessment = await this.valuationRepo.findOne({
+      where: {
+        applicationId,
+      },
+    });
 
     return {
       success: true,
-      data: application,
+      data: {
+        application,
+        valuationAssessment,
+      },
     };
   }
 
-  async raiseTechnicalQuery(
-    applicationId: number,
-    dto: any,
-    actor: Actor,
-  ) {
-    this.ensureValuationUser(actor);
-
-    return this.dataSource.transaction(async (manager) => {
-      const application = await manager.findOne(Application, {
-        where: { id: applicationId },
-        lock: { mode: 'pessimistic_write' },
-      });
-
-      if (!application) {
-        throw new NotFoundException('Application not found');
-      }
-
-      this.ensureValuationCase(application);
-
-      application.stage = ApplicationStage.VALUATION;
-      application.status = ApplicationStatus.VALUATION_QUERY;
-      application.updatedBy = actor?.id ?? undefined;
-
-      const saved = await manager.save(application);
-
-      const remarks =
-        dto?.remarks ||
-        'Technical valuation query raised.';
-
-      const workflowPayload = {
-        applicationId,
-        currentStage: saved.stage,
-        currentStatus: saved.status,
-        assignedTo: 'VALUATION',
-        currentOwner: actor.id,
-        lastAction: 'VALUATION_QUERY_RAISED' as any,
-        lastRemarks: remarks,
-      };
-
-      let workflow = await manager.findOne(Workflow, {
-        where: { applicationId },
-      });
-
-      if (workflow) {
-        Object.assign(workflow, workflowPayload);
-        await manager.save(workflow);
-      } else {
-        workflow = manager.create(Workflow, workflowPayload);
-        await manager.save(workflow);
-      }
-
-      await manager.save(
-        WorkflowHistory,
-        manager.create(WorkflowHistory, {
-          applicationId,
-          fromRole: ApplicationStage.VALUATION,
-          toRole: ApplicationStage.VALUATION,
-          action: 'VALUATION_QUERY_RAISED' as any,
-          remarks,
-          actionBy: actor.id,
-        }),
-      );
-
-      await manager.save(
-        AuditLog,
-        manager.create(AuditLog, {
-          action: 'VALUATION_QUERY_RAISED',
-          entityName: 'applications',
-          entityId: applicationId,
-          snapshot: {
-            stage: saved.stage,
-            status: saved.status,
-            valuation: dto,
-          },
-          createdBy: actor.id,
-        }),
-      );
-
-      return {
-        success: true,
-        message: 'Technical valuation query raised successfully.',
-        data: saved,
-      };
+  async getAssessment(applicationId: number) {
+    const application = await this.applicationsRepo.findOne({
+      where: {
+        id: applicationId,
+      },
     });
+
+    if (!application) {
+      throw new NotFoundException('Application not found.');
+    }
+
+    const valuationAssessment = await this.valuationRepo.findOne({
+      where: {
+        applicationId,
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        application,
+        valuationAssessment,
+      },
+    };
   }
 
-  async markNegative(
-    applicationId: number,
-    dto: any,
-    actor: Actor,
-  ) {
-    this.ensureValuationUser(actor);
+  async saveDraft(applicationId: number, body: any, actor: ActorLike) {
+    const application = await this.getApplicationOrFail(applicationId);
 
-    return this.dataSource.transaction(async (manager) => {
-      const application = await manager.findOne(Application, {
-        where: { id: applicationId },
-        lock: { mode: 'pessimistic_write' },
-      });
+    const valuationAssessment = await this.saveAssessment(
+      application,
+      body,
+      actor,
+      ValuationAssessmentStatus.DRAFT,
+    );
 
-      if (!application) {
-        throw new NotFoundException('Application not found');
-      }
-
-      this.ensureValuationCase(application);
-
-      application.stage = ApplicationStage.VALUATION;
-      application.status = ApplicationStatus.VALUATION_REJECTED;
-      application.updatedBy = actor?.id ?? undefined;
-
-      const saved = await manager.save(application);
-
-      const remarks =
-        dto?.remarks ||
-        'Valuation marked negative.';
-
-      const workflowPayload = {
-        applicationId,
-        currentStage: saved.stage,
-        currentStatus: saved.status,
-        assignedTo: 'VALUATION',
-        currentOwner: actor.id,
-        lastAction: 'VALUATION_NEGATIVE' as any,
-        lastRemarks: remarks,
-      };
-
-      let workflow = await manager.findOne(Workflow, {
-        where: { applicationId },
-      });
-
-      if (workflow) {
-        Object.assign(workflow, workflowPayload);
-        await manager.save(workflow);
-      } else {
-        workflow = manager.create(Workflow, workflowPayload);
-        await manager.save(workflow);
-      }
-
-      await manager.save(
-        WorkflowHistory,
-        manager.create(WorkflowHistory, {
-          applicationId,
-          fromRole: ApplicationStage.VALUATION,
-          toRole: ApplicationStage.VALUATION,
-          action: 'VALUATION_NEGATIVE' as any,
-          remarks,
-          actionBy: actor.id,
-        }),
-      );
-
-      await manager.save(
-        AuditLog,
-        manager.create(AuditLog, {
-          action: 'VALUATION_NEGATIVE',
-          entityName: 'applications',
-          entityId: applicationId,
-          snapshot: {
-            stage: saved.stage,
-            status: saved.status,
-            valuation: dto,
-          },
-          createdBy: actor.id,
-        }),
-      );
-
-      return {
-        success: true,
-        message: 'Application marked negative by Valuation.',
-        data: saved,
-      };
-    });
+    return {
+      success: true,
+      message: 'Valuation draft saved successfully.',
+      data: {
+        application,
+        valuationAssessment,
+      },
+    };
   }
 
-  async approveAndSendToLegal(
-    applicationId: number,
-    dto: any,
-    actor: Actor,
-  ) {
-    this.ensureValuationUser(actor);
+  async raiseQuery(applicationId: number, body: any, actor: ActorLike) {
+    const application = await this.getApplicationOrFail(applicationId);
 
-    return this.dataSource.transaction(async (manager) => {
-      const application = await manager.findOne(Application, {
-        where: { id: applicationId },
-        lock: { mode: 'pessimistic_write' },
-      });
+    application.stage = 'VALUATION' as any;
+    application.status = 'VALUATION_QUERY' as any;
+    application.updatedBy = actor?.id ?? undefined;
 
-      if (!application) {
-        throw new NotFoundException('Application not found');
-      }
+    const savedApplication = await this.applicationsRepo.save(application);
 
-      this.ensureValuationCase(application);
+    const valuationAssessment = await this.saveAssessment(
+      savedApplication,
+      {
+        ...body,
+        valuationStatus: 'Query',
+      },
+      actor,
+      ValuationAssessmentStatus.QUERY,
+    );
 
-      const fromStage = application.stage;
-      const fromStatus = application.status;
+    return {
+      success: true,
+      message: 'Technical valuation query raised successfully.',
+      data: {
+        application: savedApplication,
+        valuationAssessment,
+      },
+    };
+  }
 
-      application.stage = ApplicationStage.LEGAL;
-      application.status = ApplicationStatus.LEGAL_PENDING;
-      application.updatedBy = actor?.id ?? undefined;
+  async markNegative(applicationId: number, body: any, actor: ActorLike) {
+    const application = await this.getApplicationOrFail(applicationId);
 
-      const saved = await manager.save(application);
+    application.stage = 'VALUATION' as any;
+    application.status = 'VALUATION_REJECTED' as any;
+    application.updatedBy = actor?.id ?? undefined;
 
-      const remarks =
-        dto?.remarks ||
-        'Valuation accepted and sent to Legal.';
+    const savedApplication = await this.applicationsRepo.save(application);
 
-      const workflowPayload = {
-        applicationId,
-        currentStage: saved.stage,
-        currentStatus: saved.status,
-        assignedTo: 'LEGAL',
-        currentOwner: actor.id,
-        lastAction: 'VALUATION_APPROVED_SENT_TO_LEGAL' as any,
-        lastRemarks: remarks,
-      };
+    const valuationAssessment = await this.saveAssessment(
+      savedApplication,
+      {
+        ...body,
+        valuationStatus: 'Negative',
+      },
+      actor,
+      ValuationAssessmentStatus.NEGATIVE,
+    );
 
-      let workflow = await manager.findOne(Workflow, {
-        where: { applicationId },
-      });
+    return {
+      success: true,
+      message: 'Application marked negative by Valuation.',
+      data: {
+        application: savedApplication,
+        valuationAssessment,
+      },
+    };
+  }
 
-      if (workflow) {
-        Object.assign(workflow, workflowPayload);
-        await manager.save(workflow);
-      } else {
-        workflow = manager.create(Workflow, workflowPayload);
-        await manager.save(workflow);
-      }
+  async approveToLegal(applicationId: number, body: any, actor: ActorLike) {
+    const application = await this.getApplicationOrFail(applicationId);
 
-      await manager.save(
-        WorkflowHistory,
-        manager.create(WorkflowHistory, {
-          applicationId,
-          fromRole: fromStage,
-          toRole: saved.stage,
-          action: 'VALUATION_APPROVED_SENT_TO_LEGAL' as any,
-          remarks,
-          actionBy: actor.id,
-        }),
-      );
+    application.stage = 'LEGAL' as any;
+    application.status = 'LEGAL_PENDING' as any;
+    application.updatedBy = actor?.id ?? undefined;
 
-      await manager.save(
-        AuditLog,
-        manager.create(AuditLog, {
-          action: 'VALUATION_APPROVED_SENT_TO_LEGAL',
-          entityName: 'applications',
-          entityId: applicationId,
-          snapshot: {
-            fromStage,
-            fromStatus,
-            toStage: saved.stage,
-            toStatus: saved.status,
-            assignedTo: 'LEGAL',
-            valuation: dto,
-          },
-          createdBy: actor.id,
-        }),
-      );
+    const savedApplication = await this.applicationsRepo.save(application);
 
-      return {
-        success: true,
-        message:
-          'Valuation accepted and application sent to Legal successfully.',
-        data: saved,
-      };
+    const valuationAssessment = await this.saveAssessment(
+      savedApplication,
+      {
+        ...body,
+        valuationStatus: 'Positive',
+      },
+      actor,
+      ValuationAssessmentStatus.APPROVED_TO_LEGAL,
+    );
+
+    return {
+      success: true,
+      message: 'Valuation accepted and case sent to Legal successfully.',
+      data: {
+        application: savedApplication,
+        valuationAssessment,
+      },
+    };
+  }
+
+  private async getApplicationOrFail(applicationId: number) {
+    if (!applicationId) {
+      throw new BadRequestException('applicationId is required.');
+    }
+
+    const application = await this.applicationsRepo.findOne({
+      where: {
+        id: applicationId,
+      },
     });
+
+    if (!application) {
+      throw new NotFoundException('Application not found.');
+    }
+
+    return application;
+  }
+
+  private async getOrCreateAssessment(applicationId: number) {
+    let assessment = await this.valuationRepo.findOne({
+      where: {
+        applicationId,
+      },
+    });
+
+    if (!assessment) {
+      assessment = this.valuationRepo.create({
+        applicationId,
+        assessmentStatus: ValuationAssessmentStatus.DRAFT,
+      });
+
+      assessment = await this.valuationRepo.save(assessment);
+    }
+
+    return assessment;
+  }
+
+  private toDecimalString(value: any): string | undefined {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+      return undefined;
+    }
+
+    return number.toFixed(2);
+  }
+
+  private toDate(value: any): Date | undefined {
+    if (!value) return undefined;
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return undefined;
+    }
+
+    return date;
+  }
+
+  private toJson(value: any): string {
+    try {
+      return JSON.stringify(value || {});
+    } catch {
+      return '{}';
+    }
+  }
+
+  private async saveAssessment(
+    application: Application,
+    body: any,
+    actor: ActorLike,
+    status: ValuationAssessmentStatus,
+  ) {
+    const applicationId = Number(application.id);
+
+    const assessment = await this.getOrCreateAssessment(applicationId);
+
+    const requestedLoan =
+      body?.requestedLoan ||
+      body?.requestedAmount ||
+      application?.requestedAmount;
+
+    const marketValue =
+      body?.marketValue ||
+      application?.marketValue ||
+      application?.propertyValue;
+
+    const recommendedValue =
+      body?.recommendedValue ||
+      body?.realisableValue ||
+      marketValue;
+
+    const indicativeLtv =
+      body?.indicativeLtv ||
+      this.calculateLtv(requestedLoan, marketValue);
+
+    const ltvOnRecommendedValue =
+      body?.ltvOnRecommendedValue ||
+      this.calculateLtv(requestedLoan, recommendedValue);
+
+    assessment.assessmentStatus = status;
+
+    assessment.valuer = body?.valuer || assessment.valuer;
+    assessment.visitDate = this.toDate(body?.visitDate) || assessment.visitDate;
+    assessment.propertyArea = body?.propertyArea || assessment.propertyArea;
+    assessment.occupancy = body?.occupancy || assessment.occupancy;
+    assessment.constructionQuality =
+      body?.constructionQuality || assessment.constructionQuality;
+    assessment.residualLife = body?.residualLife || assessment.residualLife;
+    assessment.marketability = body?.marketability || assessment.marketability;
+    assessment.propertyRiskGrade =
+      body?.propertyRiskGrade || assessment.propertyRiskGrade;
+
+    assessment.marketValue =
+      this.toDecimalString(marketValue) || assessment.marketValue;
+    assessment.distressValue =
+      this.toDecimalString(body?.distressValue) || assessment.distressValue;
+    assessment.realisableValue =
+      this.toDecimalString(body?.realisableValue) || assessment.realisableValue;
+    assessment.recommendedValue =
+      this.toDecimalString(recommendedValue) || assessment.recommendedValue;
+    assessment.requestedLoan =
+      this.toDecimalString(requestedLoan) || assessment.requestedLoan;
+    assessment.indicativeLtv =
+      this.toDecimalString(indicativeLtv) || assessment.indicativeLtv;
+    assessment.ltvOnRecommendedValue =
+      this.toDecimalString(ltvOnRecommendedValue) ||
+      assessment.ltvOnRecommendedValue;
+
+    assessment.valuationStatus =
+      body?.valuationStatus || assessment.valuationStatus;
+    assessment.technicalRemarks =
+      body?.technicalRemarks || body?.remarks || assessment.technicalRemarks;
+    assessment.queryRemarks =
+      body?.queryRemarks || assessment.queryRemarks;
+    assessment.negativeRemarks =
+      body?.negativeRemarks || assessment.negativeRemarks;
+    assessment.legalInstructions =
+      body?.legalInstructions || assessment.legalInstructions;
+
+    assessment.comparablesJson = this.toJson(body?.comparables || []);
+    assessment.customerSnapshot = this.toJson({
+      customerName: application?.customerName,
+      mobile: application?.mobile,
+      email: (application as any)?.email,
+      pan: application?.pan,
+      applicationNumber: application?.applicationNumber,
+      requestedAmount: application?.requestedAmount,
+      stage: application?.stage,
+      status: application?.status,
+    });
+
+    assessment.propertySnapshot = this.toJson({
+      propertyCategory: (application as any)?.propertyCategory,
+      propertyType: (application as any)?.propertyType,
+      propertyAddress: (application as any)?.propertyAddress,
+      propertyCity: (application as any)?.propertyCity,
+      propertyState: (application as any)?.propertyState,
+      propertyPincode: (application as any)?.propertyPincode,
+      marketValue: (application as any)?.marketValue,
+    });
+
+    assessment.valuationPayload = this.toJson(body);
+    assessment.submittedBy = actor?.id ?? assessment.submittedBy;
+    assessment.submittedAt = new Date();
+
+    return this.valuationRepo.save(assessment);
+  }
+
+  private calculateLtv(loanAmount: any, propertyValue: any) {
+    const loan = Number(loanAmount || 0);
+    const property = Number(propertyValue || 0);
+
+    if (!loan || !property) {
+      return undefined;
+    }
+
+    return ((loan / property) * 100).toFixed(2);
   }
 }

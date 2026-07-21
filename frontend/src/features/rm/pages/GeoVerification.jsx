@@ -14,8 +14,8 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { useAuth } from "../../../hooks/useAuth.js";
 
+import { useAuth } from "../../../hooks/useAuth.js";
 import { rmApi } from "../rmApi.js";
 import { workflowStepsConfig } from "../rmUtils.js";
 
@@ -75,27 +75,79 @@ const GEO_TABS = [
   },
 ];
 
+const VALUATION_ALLOWED_STAGES = [
+  "CM",
+  "CREDIT",
+  "VALUATION",
+  "LEGAL",
+  "SANCTION",
+];
+
+const VALUATION_ALLOWED_STATUSES = [
+  "BM_APPROVED",
+
+  "CM_PENDING",
+  "CM_QUERY",
+  "CM_APPROVED",
+  "CM_REJECTED",
+
+  "CREDIT_PENDING",
+  "CREDIT_MAKER_PENDING",
+  "CREDIT_MAKER_QUERY",
+  "CREDIT_MAKER_RECOMMENDED",
+  "CREDIT_MAKER_REJECTED",
+
+  "CREDIT_CHECKER_PENDING",
+  "CREDIT_CHECKER_QUERY",
+  "CREDIT_CHECKER_APPROVED",
+  "CREDIT_CHECKER_REJECTED",
+
+  "VALUATION_PENDING",
+  "VALUATION_QUERY",
+  "VALUATION_APPROVED",
+  "VALUATION_REJECTED",
+
+  "LEGAL_PENDING",
+  "LEGAL_QUERY",
+  "LEGAL_APPROVED",
+  "LEGAL_REJECTED",
+
+  "SANCTION_PENDING",
+  "SANCTION_APPROVED",
+  "SANCTION_REJECTED",
+];
+
 const unwrapResponse = (response) =>
   response?.data !== undefined ? response.data : response ?? {};
 
-function unwrapApplicationList(response) {
+const unwrapApplicationList = (response) => {
   const payload = response?.data?.data ?? response?.data ?? [];
 
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
 
   return [];
-}
+};
 
-function normalizeRoles(user) {
-  const roles = user?.roles;
+const normalizeRoles = (user) => {
+  const roles = user?.roles || user?.role || [];
 
   if (!roles) return [];
 
   return Array.isArray(roles)
     ? roles.map((role) => String(role).toUpperCase())
     : [String(roles).toUpperCase()];
-}
+};
+
+const isValuationAllowedApplication = (application) => {
+  const stage = String(application?.stage || "").toUpperCase();
+  const status = String(application?.status || "").toUpperCase();
+
+  return (
+    VALUATION_ALLOWED_STAGES.includes(stage) ||
+    VALUATION_ALLOWED_STATUSES.includes(status)
+  );
+};
 
 const formatCapturedAt = (value) => {
   if (!value) return "Not captured";
@@ -161,7 +213,7 @@ export default function GeoVerification() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const applicationId =
+  const routeApplicationId =
     params.applicationId ||
     params.id ||
     params.appId ||
@@ -186,14 +238,12 @@ export default function GeoVerification() {
   const [capturingLocationType, setCapturingLocationType] =
     useState("");
 
-  const numericApplicationId = Number(applicationId);
-
   const applicationsQuery = useQuery({
     queryKey: ["geo-application-list", roles.join("_")],
     queryFn: async () =>
       rmApi.applications({
         page: 1,
-        limit: 200,
+        limit: 500,
       }),
     enabled: canSelectApplication,
     retry: false,
@@ -203,29 +253,65 @@ export default function GeoVerification() {
     const rows = unwrapApplicationList(applicationsQuery.data);
 
     if (isValuation) {
-      return rows.filter((item) => {
-        const stage = String(item.stage || "").toUpperCase();
-        const status = String(item.status || "").toUpperCase();
-
-        return (
-          stage === "VALUATION" ||
-          status === "VALUATION_PENDING" ||
-          status === "VALUATION_QUERY" ||
-          status === "LEGAL_PENDING"
-        );
-      });
+      return rows.filter(isValuationAllowedApplication);
     }
 
     return rows;
   }, [applicationsQuery.data, isValuation]);
 
+  const activeApplicationId = useMemo(() => {
+    const routeId = routeApplicationId ? String(routeApplicationId) : "";
+
+    if (routeId) {
+      const routeExists = applicationList.some(
+        (item) => String(item.id) === routeId,
+      );
+
+      if (routeExists) {
+        return routeId;
+      }
+    }
+
+    return applicationList?.[0]?.id
+      ? String(applicationList[0].id)
+      : "";
+  }, [routeApplicationId, applicationList]);
+
+  const numericApplicationId = Number(activeApplicationId);
+
   const selectedApplicationSummary = useMemo(() => {
-    if (!applicationId) return null;
+    if (!activeApplicationId) return null;
 
     return applicationList.find(
-      (item) => String(item.id) === String(applicationId),
+      (item) => String(item.id) === String(activeApplicationId),
     );
-  }, [applicationId, applicationList]);
+  }, [activeApplicationId, applicationList]);
+
+  useEffect(() => {
+    if (!canSelectApplication || applicationsQuery.isLoading) return;
+
+    if (!activeApplicationId) {
+      if (routeApplicationId) {
+        navigate("/geo-verification", {
+          replace: true,
+        });
+      }
+
+      return;
+    }
+
+    if (String(routeApplicationId || "") !== String(activeApplicationId)) {
+      navigate(`/geo-verification/${activeApplicationId}`, {
+        replace: true,
+      });
+    }
+  }, [
+    canSelectApplication,
+    applicationsQuery.isLoading,
+    activeApplicationId,
+    routeApplicationId,
+    navigate,
+  ]);
 
   const handleApplicationChange = (event) => {
     const selectedId = event.target.value;
@@ -250,33 +336,38 @@ export default function GeoVerification() {
     setMessage("");
     setGeoData(createEmptyGeoData());
     setActiveTab("residence");
-  }, [applicationId]);
+  }, [activeApplicationId]);
 
   const workflowData = useQuery({
-    queryKey: ["rm-workflow-status", applicationId],
-    queryFn: () => rmApi.workflowStatus(applicationId),
-    enabled: Boolean(applicationId),
+    queryKey: ["rm-workflow-status", activeApplicationId],
+    queryFn: () => rmApi.workflowStatus(activeApplicationId),
+    enabled: Boolean(activeApplicationId),
+    retry: false,
   });
 
   const workflowResponse = unwrapResponse(workflowData.data);
+
   const apiWorkflowFlags =
-    workflowResponse?.data ?? workflowResponse ?? {};
+    workflowResponse?.data?.data ??
+    workflowResponse?.data ??
+    workflowResponse ??
+    {};
 
   const geoPrerequisitesMet =
-    !Boolean(applicationId) ||
+    !Boolean(activeApplicationId) ||
     (Boolean(apiWorkflowFlags.customerVisit) &&
       Boolean(apiWorkflowFlags.businessVisit));
 
   const geoBlocked =
     !isValuation &&
-    Boolean(applicationId) &&
+    Boolean(activeApplicationId) &&
     workflowData.isSuccess &&
     !geoPrerequisitesMet;
 
   const geoLocationsQuery = useQuery({
-    queryKey: ["application-geo-locations", applicationId],
-    queryFn: () => rmApi.getGeoLocations(applicationId),
-    enabled: Boolean(applicationId),
+    queryKey: ["application-geo-locations", activeApplicationId],
+    queryFn: () => rmApi.getGeoLocations(activeApplicationId),
+    enabled: Boolean(activeApplicationId),
     retry: false,
   });
 
@@ -336,7 +427,7 @@ export default function GeoVerification() {
 
   const markGeoComplete = useMutation({
     mutationFn: async () =>
-      rmApi.recordWorkflowStep(applicationId, {
+      rmApi.recordWorkflowStep(activeApplicationId, {
         action: "GEO_VERIFICATION_DONE",
         remarks:
           "Residence, business and property geo verification completed.",
@@ -346,21 +437,24 @@ export default function GeoVerification() {
       setMessageType("success");
       setMessage(
         isValuation
-          ? "Geo verification updated successfully."
-          : "Geo verification completed. Redirecting to KYC documents...",
+          ? "Geo verification saved successfully for valuation case."
+          : "Geo verification completed. Redirecting to KYC documents.",
       );
 
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["rm-workflow-status", applicationId],
+          queryKey: ["rm-workflow-status", activeApplicationId],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["application-geo-locations", applicationId],
+          queryKey: ["application-geo-locations", activeApplicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["geo-application-list", roles.join("_")],
         }),
       ]);
 
       if (!isValuation) {
-        navigate(`/kyc-documents/${applicationId}`, {
+        navigate(`/kyc-documents/${activeApplicationId}`, {
           replace: true,
         });
       }
@@ -383,7 +477,7 @@ export default function GeoVerification() {
 
   const saveGeoLocationMutation = useMutation({
     mutationFn: ({ payload }) =>
-      rmApi.saveGeoLocation(applicationId, payload),
+      rmApi.saveGeoLocation(activeApplicationId, payload),
 
     onSuccess: async (response, variables) => {
       const result = unwrapResponse(response);
@@ -421,10 +515,10 @@ export default function GeoVerification() {
 
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["application-geo-locations", applicationId],
+          queryKey: ["application-geo-locations", activeApplicationId],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["rm-workflow-status", applicationId],
+          queryKey: ["rm-workflow-status", activeApplicationId],
         }),
       ]);
 
@@ -507,6 +601,7 @@ export default function GeoVerification() {
             longitude,
             accuracyMeters: accuracy,
             gpsAddress: coordinateAddress,
+            source: isValuation ? "VALUATION" : "RM",
           },
         });
       },
@@ -552,7 +647,7 @@ export default function GeoVerification() {
 
   let contextActiveFound = false;
 
-  const processedSteps = workflowStepsConfig.map((step, idx) => {
+  const processedSteps = workflowStepsConfig.map((step, index) => {
     const isCompleted = Boolean(apiWorkflowFlags[step.key]);
 
     let isActive = false;
@@ -566,7 +661,7 @@ export default function GeoVerification() {
       ...step,
       isCompleted,
       isActive,
-      displayIndex: idx + 1,
+      displayIndex: index + 1,
     };
   });
 
@@ -582,48 +677,78 @@ export default function GeoVerification() {
         <div className="relative z-10 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex-1">
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              Geo Verification
+              {isValuation
+                ? "Valuation Geo Verification"
+                : "Geo Verification"}
             </h2>
 
             <p className="mt-1 text-xs font-medium text-blue-100/90">
               Application #
-              {applicationId || "Please select application"} •
+              {activeApplicationId || "Please select application"} •
               Real-time field parameter checks.
             </p>
 
+            {isValuation && (
+              <p className="mt-1 text-[11px] font-bold text-blue-50">
+                Valuation role loads BM Approved, CM, Credit Maker, Credit Checker and Valuation cases.
+              </p>
+            )}
+
             {selectedApplicationSummary && (
-              <p className="mt-1 text-xs font-semibold text-blue-50">
+              <p className="mt-2 text-xs font-semibold text-blue-50">
                 {selectedApplicationSummary.applicationNumber} ·{" "}
                 {selectedApplicationSummary.customerName} ·{" "}
-                {selectedApplicationSummary.mobile}
+                {selectedApplicationSummary.mobile} ·{" "}
+                {selectedApplicationSummary.stage} /{" "}
+                {selectedApplicationSummary.status}
               </p>
             )}
           </div>
 
           {canSelectApplication && (
-            <div className="w-full xl:w-[420px]">
+            <div className="w-full xl:w-[520px]">
               <label className="mb-1 block text-[10px] font-extrabold uppercase tracking-wider text-blue-100">
-                Select Application
+                {isValuation
+                  ? "Select BM Approved / CM / Credit / Valuation Case"
+                  : "Select Application"}
               </label>
 
               <select
-                value={applicationId || ""}
+                value={activeApplicationId || ""}
                 onChange={handleApplicationChange}
-                className="h-11 w-full rounded-xl border border-white/20 bg-white px-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-white/20"
+                disabled={
+                  applicationsQuery.isLoading ||
+                  applicationList.length === 0
+                }
+                className="h-11 w-full rounded-xl border border-white/20 bg-white px-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                <option value="">
-                  {applicationsQuery.isLoading
-                    ? "Loading applications..."
-                    : "Select application"}
-                </option>
-
-                {applicationList.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.applicationNumber || `APP-${item.id}`} -{" "}
-                    {item.customerName || "No Name"} -{" "}
-                    {item.mobile || "No Mobile"}
+                {applicationsQuery.isLoading ? (
+                  <option value="">
+                    {isValuation
+                      ? "Loading BM Approved / CM / Credit / Valuation cases..."
+                      : "Loading applications..."}
                   </option>
-                ))}
+                ) : applicationList.length === 0 ? (
+                  <option value="">
+                    {isValuation
+                      ? "No BM Approved / CM / Credit / Valuation cases found"
+                      : "No applications found"}
+                  </option>
+                ) : (
+                  <>
+                    <option value="">Select application</option>
+
+                    {applicationList.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.applicationNumber || `APP-${item.id}`} -{" "}
+                        {item.customerName || "No Name"} -{" "}
+                        {item.mobile || "No Mobile"} -{" "}
+                        {item.stage || "No Stage"} /{" "}
+                        {item.status || "No Status"}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
           )}
@@ -632,7 +757,7 @@ export default function GeoVerification() {
             <button
               type="button"
               onClick={handleCaptureLiveLocation}
-              disabled={!applicationId || isCapturing}
+              disabled={!activeApplicationId || isCapturing}
               className="rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-xs font-bold backdrop-blur-md transition-all hover:bg-white/20 disabled:opacity-50"
             >
               {capturingLocationType === activeTab
@@ -643,7 +768,7 @@ export default function GeoVerification() {
             <button
               type="button"
               disabled={
-                !applicationId ||
+                !activeApplicationId ||
                 markGeoComplete.isPending ||
                 !isAllGeoVerified(geoData)
               }
@@ -672,7 +797,7 @@ export default function GeoVerification() {
         </div>
       )}
 
-      {!applicationId && (
+      {!activeApplicationId && (
         <div className="rounded-2xl border border-blue-100 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-600">
             📍
@@ -683,14 +808,14 @@ export default function GeoVerification() {
           </h3>
 
           <p className="mx-auto mt-2 max-w-lg text-sm font-medium text-slate-500">
-            Select an application from the header dropdown. Residence,
-            business and property geo verification data will load
-            automatically.
+            {isValuation
+              ? "Valuation role will show BM Approved, CM, Credit Maker, Credit Checker and Valuation cases."
+              : "Select an application from the header dropdown. Residence, business and property geo verification data will load automatically."}
           </p>
         </div>
       )}
 
-      {applicationId && (
+      {activeApplicationId && (
         <>
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center justify-between">
@@ -702,7 +827,7 @@ export default function GeoVerification() {
                 <p className="text-sm font-extrabold text-slate-800">
                   Pipeline Tracking ID:{" "}
                   <span className="text-blue-600">
-                    #{applicationId || "Unselected"}
+                    #{activeApplicationId || "Unselected"}
                   </span>
                 </p>
               </div>
@@ -715,7 +840,7 @@ export default function GeoVerification() {
             </div>
 
             <div className="scrollbar-none relative flex items-center justify-between gap-2 overflow-x-auto pb-4 pt-2">
-              {processedSteps.map((step, idx) => (
+              {processedSteps.map((step, index) => (
                 <div
                   key={step.key}
                   className="flex min-w-[125px] flex-1 items-center"
@@ -745,7 +870,7 @@ export default function GeoVerification() {
                           />
                         </svg>
                       ) : (
-                        <span>{idx + 1}</span>
+                        <span>{index + 1}</span>
                       )}
                     </div>
 
@@ -762,7 +887,7 @@ export default function GeoVerification() {
                     </span>
                   </div>
 
-                  {idx < processedSteps.length - 1 && (
+                  {index < processedSteps.length - 1 && (
                     <div className="mx-2 mt-[-20px] h-[3px] min-w-[30px] flex-1 rounded-full bg-slate-100">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
@@ -824,8 +949,7 @@ export default function GeoVerification() {
                   </h3>
 
                   <p className="mt-0.5 text-xs text-slate-400">
-                    Capture the system geolocation coordinates for
-                    verification checks.
+                    Capture the system geolocation coordinates for verification checks.
                   </p>
                 </div>
 
@@ -956,8 +1080,7 @@ export default function GeoVerification() {
                     </p>
 
                     <p className="mt-1 text-xs text-slate-400">
-                      Please capture data using the browser action
-                      handlers above.
+                      Please capture data using the browser action handlers above.
                     </p>
                   </>
                 )}
@@ -1003,6 +1126,24 @@ export default function GeoVerification() {
                       {selectedGeoData.status}
                     </span>
                   </div>
+
+                  {selectedApplicationSummary && (
+                    <>
+                      <div className="flex justify-between border-b border-slate-50 pb-2">
+                        <span>Stage</span>
+                        <span className="font-bold text-slate-800">
+                          {selectedApplicationSummary.stage || "—"}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between border-b border-slate-50 pb-2">
+                        <span>Status</span>
+                        <span className="font-bold text-slate-800">
+                          {selectedApplicationSummary.status || "—"}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
