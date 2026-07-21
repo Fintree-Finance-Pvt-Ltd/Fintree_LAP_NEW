@@ -41,7 +41,7 @@ import ValuationDashboard from "../features/valuation/pages/ValuationDashboard.j
 import ValuationPage from "../features/valuation/pages/ValuationPage.jsx";
 
 // Legal Dashboard
-import LegalDashboard from "../features/Legal/pages/LegalDashboard.jsx";  
+import LegalDashboard from "../features/Legal/pages/LegalDashboard.jsx";
 import LegalQueue from "../features/Legal/pages/LegalQueue.jsx";
 
 // import BMReviewQueue from '../features/BM/pages/ReviewQueue.jsx';
@@ -52,9 +52,10 @@ import OpsChecker from "../features/OPERATION/pages/OpsChecker.jsx";
 import OpsMaker from "../features/OPERATION/pages/OpsMaker.jsx";
 // MIS Reports
 import MISReports from "../features/applications/pages/MISReports.jsx";
+import OPSReview from '../features/Operation/pages/OpsReview.jsx';
 
 const protectedChildren = [
-{ path: '/dashboard', element: <RoleDashboardRedirect /> },
+  { path: '/dashboard', element: <RoleDashboardRedirect /> },
   { path: '/applications', element: <ApplicationsPage /> },
   { path: '/applications/create', element: <CreateApplicationPage /> },
   { path: '/applications/:applicationId', element: <ApplicationDetailsPage /> },
@@ -66,61 +67,50 @@ const protectedChildren = [
   // BM routes (wired to Sidebar.jsx)
   { path: '/bmDashboard', element: <BmDashboard /> },
   { path: '/bmReview', element: <BMReview /> },
-  {path: "/bmReview/:applicationId", element: <BMReview />,},
+  { path: "/bmReview/:applicationId", element: <BMReview />, },
   { path: '/roles-access', element: <RolesAccess /> },
-  {path: "/bmApproved", element: <BMApproved />,},
-  {path: "/chargesApproved", element: <ChargesApproved />,},
+  { path: "/bmApproved", element: <BMApproved />, },
+  { path: "/chargesApproved", element: <ChargesApproved />, },
 
-// Operations routes
-{
-  path: "/operationsDashboard",
-  element: <OperationsDashboard />,
-},
-{
-  path: "/operations/maker",
-  element: <OpsMaker />,
-},
-{
-  path: "/operations/checker",
-  element: <OpsChecker />,
-},
+  // Operations routes
+  {path: "/operationsDashboard", element: <OperationsDashboard />,},
+  {path: "/operations/maker", element: <OpsMaker />,},
+  {path: "/operations/checker/:applicationId", element: <OpsChecker />,},
+  // Common MIS and reports route
+  { path: "/reports",element: <MISReports />, },
 
-// Common MIS and reports route
-{
-  path: "/reports",
-  element: <MISReports />,
-},
+  {path: "/operations-review", element: <OPSReview />, },
 
-{ path: "/field-visits", element: <FieldVisits /> },
-{ path: "/field-visits/:applicationId", element: <FieldVisits /> },
-{ path: "/field-visits/:applicationId", element: <FieldVisits /> },
+  { path: "/field-visits", element: <FieldVisits /> },
+  { path: "/field-visits/:applicationId", element: <FieldVisits /> },
+  { path: "/field-visits/:applicationId", element: <FieldVisits /> },
 
-{ path: "/geo-verification", element: <GeoVerification /> },
-{ path: "/geo-verification/:applicationId", element: <GeoVerification /> },
+  { path: "/geo-verification", element: <GeoVerification /> },
+  { path: "/geo-verification/:applicationId", element: <GeoVerification /> },
 
-{ path: "/geo-verification/:applicationId?", element: <GeoVerification /> },
+  { path: "/geo-verification/:applicationId?", element: <GeoVerification /> },
   // Credit Manager routes
 
-{ path: '/credit-dashboard', element: <CreditManagerDashboard /> },
-{ path: '/credit/maker', element: <CreditManagerDashboard /> },
-{ path: '/credit/checker', element: <CreditManagerDashboard /> },
-{ path: "/cm-screening", element: <CmPreliminaryCreditScreening /> },
-{ path: "/cm-screening/:applicationId", element: <CmPreliminaryCreditScreening /> },
-{ path: "/cm-application-data", element: <CMApplicationData /> },
-{ path: "/cm-application-data/:applicationId", element: <CMApplicationData /> },
-{ path: "/credit-maker", element: <CreditMakerProposal /> },
-{ path: "/credit-maker/:applicationId", element: <CreditMakerProposal /> },
-{ path: "/credit-checker", element: <CreditCheckerReview /> },
-{ path: "/credit-checker/:applicationId", element: <CreditCheckerReview /> },
+  { path: '/credit-dashboard', element: <CreditManagerDashboard /> },
+  { path: '/credit/maker', element: <CreditManagerDashboard /> },
+  { path: '/credit/checker', element: <CreditManagerDashboard /> },
+  { path: "/cm-screening", element: <CmPreliminaryCreditScreening /> },
+  { path: "/cm-screening/:applicationId", element: <CmPreliminaryCreditScreening /> },
+  { path: "/cm-application-data", element: <CMApplicationData /> },
+  { path: "/cm-application-data/:applicationId", element: <CMApplicationData /> },
+  { path: "/credit-maker", element: <CreditMakerProposal /> },
+  { path: "/credit-maker/:applicationId", element: <CreditMakerProposal /> },
+  { path: "/credit-checker", element: <CreditCheckerReview /> },
+  { path: "/credit-checker/:applicationId", element: <CreditCheckerReview /> },
 
-// Legal Officer route
+  // Legal Officer route
   { path: "/legal-dashboard", element: <LegalDashboard /> },
-  { path: "/legal-queue",  element: <LegalQueue /> },
+  { path: "/legal-queue", element: <LegalQueue /> },
 
-// valuation 
-{ path: "/valuation-dashboard", element: <ValuationDashboard /> },
-{ path: "/valuation", element: <ValuationPage /> },
-{ path: "/valuation/:applicationId", element: <ValuationPage /> },
+  // valuation 
+  { path: "/valuation-dashboard", element: <ValuationDashboard /> },
+  { path: "/valuation", element: <ValuationPage /> },
+  { path: "/valuation/:applicationId", element: <ValuationPage /> },
 
 
 
@@ -133,11 +123,11 @@ const protectedChildren = [
   { path: '/geo-verification/:applicationId?', element: <GeoVerification /> },
   { path: '/kyc-documents/:applicationId?', element: <KycDocuments /> },
 
-{ path: '/charges-receipts', element: <ChargesReceipts /> },
-{ path: '/charges-receipts/:applicationId', element: <ChargesReceipts /> },
+  { path: '/charges-receipts', element: <ChargesReceipts /> },
+  { path: '/charges-receipts/:applicationId', element: <ChargesReceipts /> },
 
- { path: '/payment-management', element: <PaymentManagement /> },
-{ path: '/payment-management/:applicationId', element: <PaymentManagement /> },
+  { path: '/payment-management', element: <PaymentManagement /> },
+  { path: '/payment-management/:applicationId', element: <PaymentManagement /> },
 
   { path: '/submit-bm/:applicationId?', element: <SubmitToBM /> },
 

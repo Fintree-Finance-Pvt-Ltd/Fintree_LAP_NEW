@@ -38,6 +38,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
 import { CreditModule } from './modules/credit/credit.module';
 import { ValuationModule } from './modules/valuation/valuation.module';
 import { LegalModule } from './modules/legal/legal.module';
+import { OpsModule } from './modules/operation/ops.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { LegalModule } from './modules/legal/legal.module';
     ValuationModule,
     LegalModule,
     
+    OpsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: RateLimitGuard },

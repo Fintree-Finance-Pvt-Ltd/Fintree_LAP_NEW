@@ -339,9 +339,14 @@ OPS_CHECKER: [
     category: "MODULES",
     items: [
       {
-        to: "/operations/checker",
+        to: "/operations/checker/:applicationId",
         label: "Ops Checker",
         Icon: FaShieldAlt,
+      },
+      {
+        to: "/operations-review",
+        label: "review",
+        Icon: FaFolderOpen,
       },
     ],
   },
