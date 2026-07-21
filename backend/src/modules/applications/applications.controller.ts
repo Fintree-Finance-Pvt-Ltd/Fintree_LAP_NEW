@@ -45,6 +45,7 @@ export class ApplicationsController {
   @Get(':applicationId') 
   findOne(@Param('applicationId', ParseIntPipe) id: number) { return this.service.findOne(id); }
 
+
   // 3. ENDPOINT: PATCH /applications/:applicationId
   // FIXED: Changed DTO definition type to accept partial fields from the profile schema layout
   @Patch(':applicationId')

@@ -37,6 +37,7 @@ import { FieldVisitsModule } from './modules/visits/field-visits.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 import { CreditModule } from './modules/credit/credit.module';
 import { ValuationModule } from './modules/valuation/valuation.module';
+import { LegalModule } from './modules/legal/legal.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { ValuationModule } from './modules/valuation/valuation.module';
     VarificationModule,
     ChargesReceiptsModule,
     ValuationModule,
+    LegalModule,
     
   ],
   providers: [
