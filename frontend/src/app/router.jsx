@@ -49,7 +49,7 @@ import LegalQueue from "../features/Legal/pages/LegalQueue.jsx";
 /*Operations pages */
 import OperationsDashboard from '../features/OPERATION/pages/OperationsDashboard.jsx';
 import OpsChecker from "../features/OPERATION/pages/OpsChecker.jsx";
-
+import OpsMaker from "../features/OPERATION/pages/OpsMaker.jsx";
 // MIS Reports
 import MISReports from "../features/applications/pages/MISReports.jsx";
 
@@ -75,6 +75,10 @@ const protectedChildren = [
 {
   path: "/operationsDashboard",
   element: <OperationsDashboard />,
+},
+{
+  path: "/operations/maker",
+  element: <OpsMaker />,
 },
 {
   path: "/operations/checker",
