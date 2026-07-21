@@ -327,7 +327,7 @@ LEGAL: [
     category: "MODULES",
     items: [
       {
-        to: "/operations/checker",
+        to: "/operations/maker",
         label: "Ops Maker",
         Icon: FaShieldAlt,
       },
