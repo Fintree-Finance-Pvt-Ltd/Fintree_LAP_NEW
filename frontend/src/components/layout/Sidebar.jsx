@@ -19,6 +19,12 @@ import {
   FaFolder,
   FaChartBar,
   FaHistory,
+  FaBalanceScale,
+  FaFileContract,
+  FaSearch,
+  FaQuestionCircle,
+  FaClipboardList,
+  FaRupeeSign,
 } from "react-icons/fa";
 import { useAuth } from "../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -107,7 +113,51 @@ const rolesConfig = {
       ],
     },
   ],
-
+// Legal
+LEGAL: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/legal-dashboard",
+        label: "Legal Dashboard",
+        Icon: FaChartBar,
+      },
+    ],
+  },
+  {
+    category: "MODULES",
+    items: [
+      {
+        to: "/legal-queue",
+        label: "Legal Queue",
+        Icon: FaBalanceScale,
+      },
+      
+      {
+        to: "/legal-reports",
+        label: "MIS & Reports",
+        Icon: FaClipboardList,
+      },
+      
+      {
+          to: "/kyc-documents",
+          label: "KYC & Documents",
+          Icon: FaFolderOpen
+        },
+    ],
+  },
+  {
+    category: "REFERENCE",
+    items: [
+      {
+        to: "/legal-journey",
+        label: "Journey",
+        Icon: FaRoute,
+      },
+    ],
+  },
+],
   CM: [
     {
       category: "PRIMARY",
@@ -363,6 +413,7 @@ const groupOrder = [
   "PRIMARY",
   "MODULES",
   "REFERENCE",
+  "LEGAL_PAYMENT_MODULES",
   "ADMINISTRATION",
   "OPERATIONS",
   "FINANCE",
@@ -407,7 +458,11 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
+<<<<<<< Updated upstream
       const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" , "OPS_CHECKER" , "OPS_MAKER" ,"COMMON",];
+=======
+      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION", "LEGAL"];
+>>>>>>> Stashed changes
       for (const roleKey of roleKeysInOrder) {
         if (
   roleKey !== "COMMON" &&
@@ -448,7 +503,7 @@ export default function Sidebar() {
         {allowedGroups.map((group) => (
           <div key={group.category} className="space-y-1">
             <div className="px-3 text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-2">
-              {group.category}
+               {group.displayCategory || group.category}
             </div>
 
             {group.items.map(({ to, label, Icon }) => (

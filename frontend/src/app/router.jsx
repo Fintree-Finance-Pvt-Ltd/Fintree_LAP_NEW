@@ -40,6 +40,10 @@ import CreditCheckerReview from "../features/credit/pages/CreditCheckerReview.js
 import ValuationDashboard from "../features/valuation/pages/ValuationDashboard.jsx";
 import ValuationPage from "../features/valuation/pages/ValuationPage.jsx";
 
+// Legal Dashboard
+import LegalDashboard from "../features/Legal/pages/LegalDashboard.jsx";  
+import LegalQueue from "../features/Legal/pages/LegalQueue.jsx";
+
 // import BMReviewQueue from '../features/BM/pages/ReviewQueue.jsx';
 
 /*Operations pages */
@@ -105,6 +109,9 @@ const protectedChildren = [
 { path: "/credit-checker", element: <CreditCheckerReview /> },
 { path: "/credit-checker/:applicationId", element: <CreditCheckerReview /> },
 
+// Legal Officer route
+  { path: "/legal-dashboard", element: <LegalDashboard /> },
+  { path: "/legal-queue",  element: <LegalQueue /> },
 
 // valuation 
 { path: "/valuation-dashboard", element: <ValuationDashboard /> },
