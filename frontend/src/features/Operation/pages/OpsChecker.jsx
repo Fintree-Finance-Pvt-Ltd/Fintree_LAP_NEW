@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FaArrowLeft,
   FaArrowRight,
@@ -31,62 +31,23 @@ import {
   FaUserTie,
 } from "react-icons/fa";
 
+import {
+  useLocation,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+
+import { operationApi } from "../operationApi.js";
 const workflowSteps = [
-  {
-    id: 1,
-    label: "Lead",
-    status: "Completed",
-    state: "completed",
-  },
-  {
-    id: 2,
-    label: "Field Verification",
-    status: "Completed",
-    state: "completed",
-  },
-  {
-    id: 3,
-    label: "BM Review",
-    status: "Completed",
-    state: "completed",
-  },
-  {
-    id: 4,
-    label: "CM Screening",
-    status: "Completed",
-    state: "completed",
-  },
-  {
-    id: 5,
-    label: "Credit",
-    status: "Completed",
-    state: "completed",
-  },
-  {
-    id: 6,
-    label: "Legal & Valuation",
-    status: "Completed",
-    state: "completed",
-  },
-  {
-    id: 7,
-    label: "Sanction",
-    status: "Completed",
-    state: "completed",
-  },
-  {
-    id: 8,
-    label: "Operations",
-    status: "Checker Review",
-    state: "current",
-  },
-  {
-    id: 9,
-    label: "Disbursement",
-    status: "Pending",
-    state: "pending",
-  },
+  { id: 1, label: "Lead", state: "completed" },
+  { id: 2, label: "Verification", state: "completed" },
+  { id: 3, label: "Credit", state: "completed" },
+  { id: 4, label: "Legal", state: "completed" },
+  { id: 5, label: "Sanction", state: "completed" },
+  { id: 6, label: "Operations", state: "current" },
+  { id: 7, label: "Disbursement", state: "pending" },
 ];
+
 
 const initialVerificationItems = [
   {
@@ -174,6 +135,194 @@ const initialVerificationItems = [
     required: true,
   },
 ];
+
+// const customerLoanDetails = [
+//   {
+//     label: "Customer Name",
+//     value: "Meera Iyer",
+//   },
+//   {
+//     label: "Application No.",
+//     value: "LAP00000234",
+//   },
+//   {
+//     label: "LAN",
+//     value: "Pending booking",
+//   },
+//   {
+//     label: "Product",
+//     value: "Loan Against Property",
+//   },
+//   {
+//     label: "Property Type",
+//     value: "Residential",
+//   },
+//   {
+//     label: "Branch",
+//     value: "Delhi Hub",
+//   },
+//   {
+//     label: "Requested Amount",
+//     value: "₹85,00,000",
+//   },
+//   {
+//     label: "Sanctioned Amount",
+//     value: "₹80,00,000",
+//   },
+//   {
+//     label: "Loan Tenure",
+//     value: "180 Months",
+//   },
+//   {
+//     label: "Interest Rate",
+//     value: "11.25% p.a.",
+//   },
+//   {
+//     label: "ROI / Monthly EMI",
+//     value: "₹99,527",
+//   },
+//   {
+//     label: "Loan Purpose",
+//     value: "Business Expansion",
+//   },
+// ];
+
+// const disbursementDetails = [
+//   {
+//     label: "Beneficiary Name",
+//     value: "Meera Iyer",
+//   },
+//   {
+//     label: "Disbursement Type",
+//     value: "Single Disbursement",
+//   },
+//   {
+//     label: "Bank Name",
+//     value: "HDFC Bank",
+//   },
+//   {
+//     label: "Disbursement Amount",
+//     value: "₹80,00,000",
+//   },
+//   {
+//     label: "Account Number",
+//     value: "XXXXXX2048",
+//   },
+//   {
+//     label: "Disbursement Date",
+//     value: "19-07-2026",
+//   },
+//   {
+//     label: "IFSC Code",
+//     value: "HDFC0000123",
+//   },
+//   {
+//     label: "Payment Status",
+//     value: "Pending Checker Approval",
+//     status: "pending",
+//   },
+//   {
+//     label: "Penny Drop Match",
+//     value: "98%",
+//     status: "success",
+//   },
+//   {
+//     label: "UTR Number",
+//     value: "Generated after bank success",
+//   },
+// ];
+
+const checklistGroups = [
+  {
+    id: "kyc",
+    title: "KYC & Compliance",
+    description: "PAN, Aadhaar, KFS and AML checks",
+    itemIds: [1, 5, 11],
+    icon: FaShieldAlt,
+  },
+  {
+    id: "credit",
+    title: "Credit & Legal",
+    description: "Bureau, legal and valuation controls",
+    itemIds: [2, 3, 4],
+    icon: FaLandmark,
+  },
+  {
+    id: "documents",
+    title: "Documents & Mandate",
+    description: "Agreement, MODT, inventory and mandate",
+    itemIds: [6, 7, 8, 9],
+    icon: FaFileAlt,
+  },
+  {
+    id: "bank",
+    title: "Bank & Maker Instruction",
+    description: "Bank verification and maker instruction",
+    itemIds: [10, 12],
+    icon: FaUniversity,
+  },
+];
+
+const unwrapApiResponse = (response) => {
+  return (
+    response?.data?.data ??
+    response?.data ??
+    response ??
+    null
+  );
+};
+
+const formatCurrency = (value) => {
+  const amount = Number(value ?? 0);
+
+  if (!Number.isFinite(amount)) {
+    return "₹0";
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const formatDate = (value) => {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+const formatDateTime = (value) => {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
 
 const charges = [
   {
@@ -328,8 +477,8 @@ function InfoRow({ label, value, children }) {
 }
 
 export default function OpsChecker() {
-  const workflowRef = useRef(null);
-
+  // const workflowRef = useRef(null);
+  const [expandedChecklistGroups, setExpandedChecklistGroups] = useState([]);
   const [verificationItems, setVerificationItems] = useState(
     initialVerificationItems,
   );
@@ -347,6 +496,18 @@ export default function OpsChecker() {
     [verificationItems],
   );
 
+  const params = useParams();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const applicationId =
+    params.applicationId ||
+    location.state?.applicationId ||
+    searchParams.get("applicationId");
+
+  const [caseData, setCaseData] = useState(null);
+  const [caseLoading, setCaseLoading] = useState(true);
+  const [caseError, setCaseError] = useState("");
   const requiredItemsVerified = useMemo(
     () =>
       verificationItems
@@ -358,25 +519,335 @@ export default function OpsChecker() {
   const approvalReady =
     requiredItemsVerified && declarationAccepted;
 
+    const customerLoanDetails = useMemo(
+  () => [
+    {
+      label: "Customer Name",
+      value:
+        caseData?.customer?.name ||
+        caseData?.customerName ||
+        "-",
+    },
+    {
+      label: "Application No.",
+      value:
+        caseData?.application
+          ?.applicationNumber ||
+        caseData?.applicationNumber ||
+        "-",
+    },
+    {
+      label: "LAN",
+      value:
+        caseData?.disbursement?.lan ||
+        caseData?.lan ||
+        "Pending booking",
+    },
+    {
+      label: "Product",
+      value:
+        caseData?.application?.product ||
+        caseData?.product ||
+        "Loan Against Property",
+    },
+    {
+      label: "Property Type",
+      value:
+        caseData?.application?.propertyType ||
+        caseData?.propertyType ||
+        "-",
+    },
+    {
+      label: "Branch",
+      value:
+        caseData?.application?.branch ||
+        caseData?.branch ||
+        "-",
+    },
+    {
+      label: "Requested Amount",
+      value: formatCurrency(
+        caseData?.application
+          ?.requestedAmount ??
+          caseData?.requestedAmount,
+      ),
+    },
+    {
+      label: "Sanctioned Amount",
+      value: formatCurrency(
+        caseData?.sanction
+          ?.sanctionedAmount ??
+          caseData?.sanctionedAmount,
+      ),
+    },
+    {
+      label: "Loan Tenure",
+      value:
+        caseData?.sanction?.loanTenure ||
+        caseData?.loanTenure
+          ? `${
+              caseData?.sanction?.loanTenure ||
+              caseData?.loanTenure
+            } Months`
+          : "-",
+    },
+    {
+      label: "Interest Rate",
+      value:
+        caseData?.sanction?.interestRate ||
+        caseData?.interestRate
+          ? `${
+              caseData?.sanction?.interestRate ||
+              caseData?.interestRate
+            }% p.a.`
+          : "-",
+    },
+    {
+      label: "ROI / Monthly EMI",
+      value: formatCurrency(
+        caseData?.sanction?.monthlyEmi ??
+          caseData?.monthlyEmi,
+      ),
+    },
+    {
+      label: "Loan Purpose",
+      value:
+        caseData?.application?.loanPurpose ||
+        caseData?.loanPurpose ||
+        "-",
+    },
+  ],
+  [caseData],
+);
+
+
+const disbursementDetails = useMemo(
+  () => [
+    {
+      label: "Beneficiary Name",
+      value:
+        caseData?.disbursement
+          ?.beneficiaryName ||
+        caseData?.customer?.name ||
+        caseData?.customerName ||
+        "-",
+    },
+    {
+      label: "Disbursement Type",
+      value:
+        caseData?.disbursement?.type ||
+        caseData?.disbursementType ||
+        "-",
+    },
+    {
+      label: "Bank Name",
+      value:
+        caseData?.disbursement?.bankName ||
+        caseData?.bankName ||
+        "-",
+    },
+    {
+      label: "Disbursement Amount",
+      value: formatCurrency(
+        caseData?.disbursement?.amount ??
+          caseData?.disbursementAmount,
+      ),
+    },
+    {
+      label: "Account Number",
+      value:
+        caseData?.disbursement
+          ?.accountNumber ||
+        caseData?.accountNumber ||
+        "-",
+    },
+    {
+      label: "Disbursement Date",
+      value: formatDate(
+        caseData?.disbursement
+          ?.disbursementDate ??
+          caseData?.disbursementDate,
+      ),
+    },
+    {
+      label: "IFSC Code",
+      value:
+        caseData?.disbursement?.ifsc ||
+        caseData?.ifsc ||
+        "-",
+    },
+    {
+      label: "Payment Status",
+      value:
+        caseData?.disbursement
+          ?.paymentStatus ||
+        caseData?.paymentStatus ||
+        "Pending Checker Approval",
+      status: "pending",
+    },
+    {
+      label: "Penny Drop Match",
+      value:
+        caseData?.disbursement
+          ?.pennyDropMatch !== null &&
+        caseData?.disbursement
+          ?.pennyDropMatch !== undefined
+          ? `${caseData.disbursement.pennyDropMatch}%`
+          : caseData?.pennyDropMatch !==
+                null &&
+              caseData?.pennyDropMatch !==
+                undefined
+            ? `${caseData.pennyDropMatch}%`
+            : "-",
+      status: "success",
+    },
+    {
+      label: "UTR Number",
+      value:
+        caseData?.disbursement
+          ?.utrNumber ||
+        caseData?.utrNumber ||
+        "Generated after bank success",
+    },
+  ],
+  [caseData],
+);
+
   const toggleVerification = (itemId) => {
     setVerificationItems((currentItems) =>
       currentItems.map((item) =>
         item.id === itemId
           ? {
-              ...item,
-              checked: !item.checked,
-            }
+            ...item,
+            checked: !item.checked,
+          }
           : item,
       ),
     );
   };
 
-  const scrollWorkflow = (direction) => {
-    workflowRef.current?.scrollBy({
-      left: direction === "left" ? -360 : 360,
-      behavior: "smooth",
-    });
+  const toBoolean = (value) => {
+  return (
+    value === true ||
+    value === 1 ||
+    value === "1" ||
+    value === "true"
+  );
+};
+useEffect(() => {
+  let active = true;
+
+  const fetchCheckerCase = async () => {
+    if (!applicationId) {
+      if (active) {
+        setCaseError(
+          "Application ID is missing. Open this page from the Operations Dashboard.",
+        );
+        setCaseLoading(false);
+      }
+
+      return;
+    }
+
+    try {
+      setCaseLoading(true);
+      setCaseError("");
+
+      const response =
+        await operationApi.getCheckerCase(
+          applicationId,
+        );
+
+      const result = unwrapApiResponse(response);
+
+      if (!result) {
+        throw new Error(
+          "Checker case details were not returned.",
+        );
+      }
+
+      if (!active) {
+        return;
+      }
+
+      setCaseData(result);
+
+      setPageStatus(
+        result?.disbursement?.paymentStatus ||
+          result?.pageStatus ||
+          "Awaiting checker",
+      );
+
+      if (
+        Array.isArray(result?.checklist) &&
+        result.checklist.length > 0
+      ) {
+        setVerificationItems((currentItems) =>
+          currentItems.map((item) => {
+            const databaseItem =
+              result.checklist.find(
+                (savedItem) =>
+                  Number(
+                    savedItem.itemId ??
+                      savedItem.item_id,
+                  ) === Number(item.id),
+              );
+
+            if (!databaseItem) {
+              return item;
+            }
+
+            return {
+              ...item,
+              checked: toBoolean(
+                databaseItem.checked ??
+                  databaseItem.isVerified ??
+                  databaseItem.is_verified,
+              ),
+            };
+          }),
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Failed to fetch operations checker case:",
+        error,
+      );
+
+      if (active) {
+        setCaseError(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to load operations checker case.",
+        );
+      }
+    } finally {
+      if (active) {
+        setCaseLoading(false);
+      }
+    }
   };
+
+  fetchCheckerCase();
+
+  return () => {
+    active = false;
+  };
+}, [applicationId]);
+  const toggleChecklistGroup = (groupId) => {
+    setExpandedChecklistGroups((currentGroups) =>
+      currentGroups.includes(groupId)
+        ? currentGroups.filter((id) => id !== groupId)
+        : [...currentGroups, groupId],
+    );
+  };
+
+  // const scrollWorkflow = (direction) => {
+  //   workflowRef.current?.scrollBy({
+  //     left: direction === "left" ? -360 : 360,
+  //     behavior: "smooth",
+  //   });
+  // };
 
   const showToast = (message) => {
     setToastMessage(message);
@@ -397,7 +868,10 @@ export default function OpsChecker() {
     setReturnReason("");
   };
 
-  const confirmDecision = () => {
+ const confirmDecision = async () => {
+  try {
+    setDecisionError("");
+
     if (decisionModal === "approve") {
       if (!approvalReady) {
         setDecisionError(
@@ -406,25 +880,88 @@ export default function OpsChecker() {
         return;
       }
 
+      await operationApi.approveCheckerCase(applicationId, {
+        remarks: checkerRemarks.trim() || null,
+        declarationAccepted,
+        checklist: verificationItems.map((item) => ({
+          itemId: item.id,
+          checked: item.checked,
+        })),
+      });
+
       setPageStatus("Approved");
       closeDecisionModal();
       showToast("Disbursement instruction approved successfully.");
       return;
     }
 
-    if (decisionModal === "return") {
-      if (!returnReason.trim()) {
-        setDecisionError(
-          "Please enter the reason for returning the case to the maker.",
-        );
-        return;
-      }
-
-      setPageStatus("Returned to maker");
-      closeDecisionModal();
-      showToast("Case returned to Operations Maker.");
+    if (!returnReason.trim()) {
+      setDecisionError(
+        "Please enter the reason for returning the case to the maker.",
+      );
+      return;
     }
-  };
+
+    await operationApi.returnCheckerCase(applicationId, {
+      reason: returnReason.trim(),
+      remarks: checkerRemarks.trim() || null,
+    });
+
+    setPageStatus("Returned to maker");
+    closeDecisionModal();
+    showToast("Case returned to Operations Maker.");
+  } catch (error) {
+    setDecisionError(
+      error?.response?.data?.message ||
+        "Unable to complete the checker decision.",
+    );
+  }
+};
+
+if (caseLoading) {
+  return (
+    <div className="grid min-h-[500px] place-items-center bg-[#f3f7fb]">
+      <div className="text-center">
+        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-600" />
+
+        <p className="mt-4 text-sm font-bold text-slate-600">
+          Loading checker case...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+if (caseError) {
+  return (
+    <div className="grid min-h-[500px] place-items-center bg-[#f3f7fb] p-5">
+      <div className="w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm">
+        <FaExclamationTriangle
+          className="mx-auto text-rose-600"
+          size={28}
+        />
+
+        <h2 className="mt-4 text-lg font-black text-slate-800">
+          Unable to load checker case
+        </h2>
+
+        <p className="mt-2 text-sm text-slate-500">
+          {caseError}
+        </p>
+
+        <button
+          type="button"
+          onClick={() =>
+            window.location.reload()
+          }
+          className="mt-5 rounded-xl bg-[#234a82] px-5 py-2.5 text-xs font-black text-white"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-[#f3f7fb] p-4 sm:p-6 lg:p-8">
@@ -474,35 +1011,33 @@ export default function OpsChecker() {
             </h1>
 
             <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-emerald-50/90 sm:text-base">
-              FTLIP-2026-0002 · Independently verify maker instructions,
-              beneficiary details, compliance checks and the final
-              disbursement amount.
-            </p>
+  {caseData?.application?.applicationNumber || "-"} · Independently verify
+  maker instructions, beneficiary details, compliance checks and final
+  disbursement amount.
+</p>
 
             <div className="mt-6 flex flex-wrap gap-2.5">
               <span className="inline-flex items-center gap-2 rounded-xl bg-slate-950/15 px-3 py-2 text-xs font-semibold">
-                <FaBuilding size={13} />
-                Delhi Hub
-              </span>
+  <FaBuilding size={13} />
+  {caseData?.application?.branch || "-"}
+</span>
 
               <span className="inline-flex items-center gap-2 rounded-xl bg-slate-950/15 px-3 py-2 text-xs font-semibold">
-                <FaUserTie size={13} />
-                Checker: Finance Manager
-              </span>
-
+  <FaUserTie size={13} />
+  Maker: {caseData?.maker?.name || "-"}
+</span>
               <span className="inline-flex items-center gap-2 rounded-xl bg-slate-950/15 px-3 py-2 text-xs font-semibold">
-                <FaClock size={13} />
-                Submitted 26 minutes ago
-              </span>
+  <FaClock size={13} />
+  Submitted {formatDateTime(caseData?.maker?.submittedAt)}
+</span>
 
               <span
-                className={`inline-flex items-center rounded-xl px-3 py-2 text-xs font-black ${
-                  pageStatus === "Approved"
-                    ? "bg-white text-emerald-700"
-                    : pageStatus === "Returned to maker"
-                      ? "bg-rose-100 text-rose-700"
-                      : "bg-amber-100 text-amber-700"
-                }`}
+                className={`inline-flex items-center rounded-xl px-3 py-2 text-xs font-black ${pageStatus === "Approved"
+                  ? "bg-white text-emerald-700"
+                  : pageStatus === "Returned to maker"
+                    ? "bg-rose-100 text-rose-700"
+                    : "bg-amber-100 text-amber-700"
+                  }`}
               >
                 {pageStatus}
               </span>
@@ -533,11 +1068,10 @@ export default function OpsChecker() {
             <button
               type="button"
               onClick={() => openDecisionModal("approve")}
-              className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm font-black shadow-lg transition xl:w-auto ${
-                approvalReady
-                  ? "bg-[#173c70] text-white hover:-translate-y-0.5 hover:bg-[#102e58]"
-                  : "cursor-not-allowed bg-slate-200 text-slate-500"
-              }`}
+              className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm font-black shadow-lg transition xl:w-auto ${approvalReady
+                ? "bg-[#173c70] text-white hover:-translate-y-0.5 hover:bg-[#102e58]"
+                : "cursor-not-allowed bg-slate-200 text-slate-500"
+                }`}
             >
               <FaCheckCircle size={15} />
               Approve Disbursement
@@ -546,7 +1080,7 @@ export default function OpsChecker() {
         </section>
 
         {/* Workflow */}
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        {/* <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:items-center sm:px-7">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
@@ -649,13 +1183,68 @@ export default function OpsChecker() {
               <FaChevronRight size={12} />
             </button>
           </div>
-        </section>
+        </section> */}
 
+
+        {/* Compact Workflow */}
+        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm sm:px-6">
+          <div className="overflow-x-auto">
+            <div className="flex min-w-[720px] items-start">
+              {workflowSteps.map((step, index) => {
+                const completed = step.state === "completed";
+                const current = step.state === "current";
+                const lastStep = index === workflowSteps.length - 1;
+
+                return (
+                  <div key={step.id} className="flex flex-1 items-start">
+                    <div className="w-[92px] shrink-0 text-center">
+                      <span
+                        className={`mx-auto grid h-8 w-8 place-items-center rounded-full border text-xs font-black ${completed
+                          ? "border-emerald-500 bg-emerald-500 text-white shadow-[0_0_0_4px_rgba(16,185,129,0.10)]"
+                          : current
+                            ? "border-blue-600 bg-blue-600 text-white shadow-[0_0_0_4px_rgba(37,99,235,0.10)]"
+                            : "border-slate-200 bg-slate-100 text-slate-400"
+                          }`}
+                      >
+                        {completed ? (
+                          <FaCheck size={11} />
+                        ) : current ? (
+                          <FaUserTie size={11} />
+                        ) : (
+                          <FaClock size={10} />
+                        )}
+                      </span>
+
+                      <strong
+                        className={`mt-2 block whitespace-nowrap text-[10px] font-extrabold ${current
+                          ? "text-blue-700"
+                          : completed
+                            ? "text-[#1c365f]"
+                            : "text-slate-500"
+                          }`}
+                      >
+                        {step.label}
+                      </strong>
+                    </div>
+
+                    {!lastStep && (
+                      <span
+                        className={`mt-4 h-px flex-1 ${completed ? "bg-emerald-400" : "bg-slate-200"
+                          }`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(330px,1fr)]">
+
           {/* Main Content */}
           <div className="space-y-6">
             {/* Maker Submission Summary */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            {/* <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <SectionHeading
                 eyebrow="Maker submission"
                 title="Instruction Submitted for Approval"
@@ -723,7 +1312,7 @@ export default function OpsChecker() {
             </section>
 
             {/* Verification Checklist */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            {/* <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <SectionHeading
                 eyebrow="Independent verification"
                 title="Operations Checker Checklist"
@@ -797,10 +1386,10 @@ export default function OpsChecker() {
                   </label>
                 ))}
               </div>
-            </section>
+            </section> */}
 
             {/* Disbursement Instruction */}
-            <section className="rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm sm:p-7">
+            {/* <section className="rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm sm:p-7">
               <SectionHeading
                 eyebrow="Locked maker instruction"
                 title="Disbursement Instruction"
@@ -888,8 +1477,220 @@ export default function OpsChecker() {
                   valueClass="text-amber-700"
                 />
               </div>
-            </section>
+            </section> */}
 
+            {/* Customer and Disbursement Summary */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Customer & Loan Summary */}
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                  <FaFileAlt className="text-[#234a82]" size={14} />
+
+                  <h2 className="text-sm font-black text-[#1c365f]">
+                    Customer & Loan Summary
+                  </h2>
+                </div>
+
+                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                  {customerLoanDetails.map((detail) => (
+                    <div
+                      key={detail.label}
+                      className="border-b border-slate-100 px-2 py-3"
+                    >
+                      <p className="text-[9px] font-semibold text-slate-400">
+                        {detail.label}
+                      </p>
+
+                      <p className="mt-1 break-words text-[11px] font-bold text-[#243f6d]">
+                        {detail.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Disbursement Instruction */}
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FaFileAlt className="text-[#234a82]" size={14} />
+
+                    <h2 className="text-sm font-black text-[#1c365f]">
+                      Disbursement Instruction
+                    </h2>
+                  </div>
+
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[9px] font-black text-blue-700">
+                    <FaLock size={8} />
+                    Maker Instruction · Read Only
+                  </span>
+                </div>
+
+                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2">
+                  {disbursementDetails.map((detail) => (
+                    <div
+                      key={detail.label}
+                      className="grid grid-cols-[minmax(100px,0.85fr)_minmax(0,1fr)] items-center gap-3 border-b border-slate-100 px-2 py-3"
+                    >
+                      <span className="text-[9px] font-semibold text-slate-500">
+                        {detail.label}
+                      </span>
+
+                      {detail.status === "pending" ? (
+                        <span className="w-fit rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-black text-amber-700">
+                          {detail.value}
+                        </span>
+                      ) : (
+                        <strong
+                          className={`break-words text-[10px] font-extrabold ${detail.status === "success"
+                            ? "text-emerald-700"
+                            : "text-[#243f6d]"
+                            }`}
+                        >
+                          {detail.value}
+                        </strong>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            {/* Grouped Verification Checklist */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-black text-[#1c365f]">
+                  Independent Verification Checklist
+                </h2>
+
+                <strong
+                  className={`text-xs font-black ${verifiedCount === verificationItems.length
+                    ? "text-emerald-700"
+                    : "text-amber-700"
+                    }`}
+                >
+                  {verifiedCount} / {verificationItems.length} Completed
+                </strong>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {checklistGroups.map((group) => {
+                  const GroupIcon = group.icon;
+
+                  const groupItems = verificationItems.filter((item) =>
+                    group.itemIds.includes(item.id),
+                  );
+
+                  const completedCount = groupItems.filter(
+                    (item) => item.checked,
+                  ).length;
+
+                  const complete = completedCount === groupItems.length;
+
+                  const expanded = expandedChecklistGroups.includes(group.id);
+
+                  return (
+                    <div
+                      key={group.id}
+                      className={`overflow-hidden rounded-xl border transition ${complete
+                        ? "border-emerald-200 bg-emerald-50/40"
+                        : "border-slate-200 bg-slate-50/60"
+                        }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleChecklistGroup(group.id)}
+                        className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-white/60"
+                      >
+                        <span
+                          className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${complete
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-200 text-slate-600"
+                            }`}
+                        >
+                          <GroupIcon size={15} />
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <strong className="block text-xs font-black text-[#203b68]">
+                            {group.title}
+                          </strong>
+
+                          <span className="mt-1 block truncate text-[9px] text-slate-500">
+                            {group.description}
+                          </span>
+                        </div>
+
+                        <strong
+                          className={`shrink-0 text-xs font-black ${complete ? "text-emerald-700" : "text-slate-500"
+                            }`}
+                        >
+                          {completedCount} / {groupItems.length}
+                        </strong>
+
+                        <span
+                          className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${complete
+                            ? "bg-emerald-500 text-white"
+                            : "bg-amber-100 text-amber-700"
+                            }`}
+                        >
+                          {complete ? (
+                            <FaCheck size={10} />
+                          ) : (
+                            <FaExclamationTriangle size={9} />
+                          )}
+                        </span>
+
+                        <FaChevronDown
+                          size={10}
+                          className={`shrink-0 text-slate-500 transition-transform duration-200 ${expanded ? "rotate-180" : ""
+                            }`}
+                        />
+                      </button>
+
+                      {expanded && (
+                        <div className="space-y-2 border-t border-slate-200 bg-white p-3">
+                          {groupItems.map((item) => (
+                            <label
+                              key={item.id}
+                              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${item.checked
+                                ? "border-emerald-100 bg-emerald-50/40"
+                                : "border-amber-100 bg-amber-50/40"
+                                }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={item.checked}
+                                onChange={() => toggleVerification(item.id)}
+                                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-emerald-600"
+                              />
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <strong className="block text-[11px] font-extrabold text-slate-700">
+                                    {item.title}
+                                  </strong>
+
+                                  {item.required && (
+                                    <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[7px] font-black uppercase tracking-wide text-rose-600">
+                                      Required
+                                    </span>
+                                  )}
+                                </div>
+
+                                <span className="mt-1 block text-[9px] leading-4 text-slate-500">
+                                  {item.description}
+                                </span>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
             {/* Charges */}
             <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <SectionHeading
@@ -922,26 +1723,23 @@ export default function OpsChecker() {
                   </thead>
 
                   <tbody>
-                    {charges.map((charge) => (
-                      <tr
-                        key={charge.label}
-                        className="border-t border-slate-100"
-                      >
-                        <td className="px-5 py-4 text-xs font-bold text-slate-700">
-                          {charge.label}
-                        </td>
+                {(caseData?.charges ?? []).map((charge) => (
+  <tr key={charge.id ?? charge.label}>
+    <td className="px-5 py-4 text-xs font-bold text-slate-700">
+      {charge.label}
+    </td>
 
-                        <td className="px-5 py-4 text-xs font-extrabold text-[#263f68]">
-                          {charge.amount}
-                        </td>
+    <td className="px-5 py-4 text-xs font-extrabold text-[#263f68]">
+      {formatCurrency(charge.amount)}
+    </td>
 
-                        <td className="px-5 py-4">
-                          <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700">
-                            {charge.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+    <td className="px-5 py-4">
+      <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700">
+        {charge.status}
+      </span>
+    </td>
+  </tr>
+))}
                   </tbody>
 
                   <tfoot>
@@ -969,7 +1767,12 @@ export default function OpsChecker() {
               />
 
               <div className="mt-6 grid gap-3 md:grid-cols-2">
-                {documents.map((document) => (
+                {/* {documents.map((document) => ( */}
+                {(
+  caseData?.documents?.length
+    ? caseData.documents
+    : documents
+).map((document) => (
                   <div
                     key={document.id}
                     className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
@@ -1078,211 +1881,7 @@ export default function OpsChecker() {
             </section>
           </div>
 
-          {/* Right Side */}
-          <aside className="space-y-6">
-            {/* Maker Checker */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-              <SectionHeading
-                eyebrow="Control ownership"
-                title="Maker-Checker"
-              />
 
-              <div className="mt-5">
-                <InfoRow label="Maker" value="Operations User" />
-                <InfoRow label="Maker Name" value="Neha Sharma" />
-                <InfoRow label="Checker" value="Finance Manager" />
-
-                <InfoRow label="Bank Instruction">
-                  <span
-                    className={`justify-self-end rounded-full px-3 py-1.5 text-[10px] font-black ${
-                      pageStatus === "Approved"
-                        ? "bg-emerald-50 text-emerald-700"
-                        : pageStatus === "Returned to maker"
-                          ? "bg-rose-50 text-rose-700"
-                          : "bg-amber-50 text-amber-700"
-                    }`}
-                  >
-                    {pageStatus}
-                  </span>
-                </InfoRow>
-
-                <InfoRow
-                  label="Idempotency Key"
-                  value="DISB-FTLIP-2026-0002-01"
-                />
-              </div>
-
-              <button
-                type="button"
-                disabled={!approvalReady}
-                onClick={() => openDecisionModal("approve")}
-                className={`mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black transition ${
-                  approvalReady
-                    ? "bg-[#234a82] text-white hover:bg-[#193b6d]"
-                    : "cursor-not-allowed bg-slate-200 text-slate-500"
-                }`}
-              >
-                <FaShieldAlt size={14} />
-                Approve as Checker
-              </button>
-            </section>
-
-            {/* System Sequence */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-              <SectionHeading
-                eyebrow="Post approval flow"
-                title="System Sequence"
-              />
-
-              <div className="relative mt-6 space-y-0 pl-2">
-                <div className="absolute bottom-4 left-[17px] top-4 w-[3px] bg-emerald-200" />
-
-                {[
-                  {
-                    title: "Checklist validated",
-                    description: "All blocking conditions checked",
-                  },
-                  {
-                    title: "Maker instruction",
-                    description: "Beneficiary locked after verification",
-                  },
-                  {
-                    title: "Checker approval",
-                    description: "Independent finance approval",
-                  },
-                  {
-                    title: "Bank response",
-                    description: "UTR and settlement confirmation",
-                  },
-                  {
-                    title: "LMS booking",
-                    description: "LAN, schedule and accounting events",
-                  },
-                ].map((item, index) => (
-                  <div
-                    key={item.title}
-                    className="relative flex gap-4 pb-6 last:pb-0"
-                  >
-                    <span
-                      className={`relative z-10 mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border-[7px] ${
-                        index < 2
-                          ? "border-emerald-100 bg-emerald-500"
-                          : "border-slate-100 bg-slate-300"
-                      }`}
-                    />
-
-                    <div>
-                      <strong className="text-xs font-extrabold text-slate-800">
-                        {item.title}
-                      </strong>
-
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* Compliance Warning */}
-            <section className="relative overflow-hidden rounded-3xl border border-amber-200 bg-[#fffaf0] p-5 shadow-sm">
-              <div className="absolute right-0 top-0 h-20 w-24 rounded-bl-full bg-emerald-400/15" />
-
-              <div className="relative flex items-start gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
-                  <FaBan size={16} />
-                </span>
-
-                <div>
-                  <strong className="text-sm font-extrabold text-[#805b20]">
-                    Regulatory Fund Flow Control
-                  </strong>
-
-                  <p className="mt-2 text-xs leading-6 text-[#8b6425]">
-                    Fund flow must be directly from the NBFC to the borrower or
-                    permitted end beneficiary. LSP pool and pass-through
-                    accounts are prohibited.
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* Decision Summary */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-              <SectionHeading
-                eyebrow="Approval readiness"
-                title="Decision Summary"
-              />
-
-              <div className="mt-5 space-y-3">
-                <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3">
-                  <span className="text-xs font-semibold text-slate-500">
-                    Checklist
-                  </span>
-
-                  <strong
-                    className={`text-xs font-black ${
-                      requiredItemsVerified
-                        ? "text-emerald-700"
-                        : "text-amber-700"
-                    }`}
-                  >
-                    {requiredItemsVerified ? "Complete" : "Pending"}
-                  </strong>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3">
-                  <span className="text-xs font-semibold text-slate-500">
-                    Declaration
-                  </span>
-
-                  <strong
-                    className={`text-xs font-black ${
-                      declarationAccepted
-                        ? "text-emerald-700"
-                        : "text-amber-700"
-                    }`}
-                  >
-                    {declarationAccepted ? "Accepted" : "Pending"}
-                  </strong>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3">
-                  <span className="text-xs font-semibold text-slate-500">
-                    Decision
-                  </span>
-
-                  <strong className="text-xs font-black text-[#234a82]">
-                    {pageStatus}
-                  </strong>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => openDecisionModal("return")}
-                className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 text-xs font-black text-rose-700 transition hover:bg-rose-100"
-              >
-                <FaArrowLeft size={11} />
-                Return to Maker
-              </button>
-
-              <button
-                type="button"
-                disabled={!approvalReady}
-                onClick={() => openDecisionModal("approve")}
-                className={`mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black transition ${
-                  approvalReady
-                    ? "bg-emerald-700 text-white hover:bg-emerald-800"
-                    : "cursor-not-allowed bg-slate-200 text-slate-500"
-                }`}
-              >
-                Approve Disbursement
-                <FaArrowRight size={12} />
-              </button>
-            </section>
-          </aside>
         </div>
       </div>
 
@@ -1291,11 +1890,10 @@ export default function OpsChecker() {
         <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div
-              className={`px-6 py-6 text-white ${
-                decisionModal === "approve"
-                  ? "bg-gradient-to-r from-emerald-700 to-emerald-500"
-                  : "bg-gradient-to-r from-rose-700 to-rose-500"
-              }`}
+              className={`px-6 py-6 text-white ${decisionModal === "approve"
+                ? "bg-gradient-to-r from-emerald-700 to-emerald-500"
+                : "bg-gradient-to-r from-rose-700 to-rose-500"
+                }`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -1392,11 +1990,10 @@ export default function OpsChecker() {
                 <button
                   type="button"
                   onClick={confirmDecision}
-                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-xs font-black text-white transition ${
-                    decisionModal === "approve"
-                      ? "bg-emerald-700 hover:bg-emerald-800"
-                      : "bg-rose-700 hover:bg-rose-800"
-                  }`}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-xs font-black text-white transition ${decisionModal === "approve"
+                    ? "bg-emerald-700 hover:bg-emerald-800"
+                    : "bg-rose-700 hover:bg-rose-800"
+                    }`}
                 >
                   {decisionModal === "approve" ? (
                     <>
