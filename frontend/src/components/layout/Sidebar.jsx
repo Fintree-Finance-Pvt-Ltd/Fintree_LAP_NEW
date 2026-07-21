@@ -458,11 +458,7 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
-<<<<<<< Updated upstream
-      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" , "OPS_CHECKER" , "OPS_MAKER" ,"COMMON",];
-=======
-      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION", "LEGAL"];
->>>>>>> Stashed changes
+      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" ,"LEGAL", "OPS_CHECKER" , "OPS_MAKER" ,"COMMON",];
       for (const roleKey of roleKeysInOrder) {
         if (
   roleKey !== "COMMON" &&
