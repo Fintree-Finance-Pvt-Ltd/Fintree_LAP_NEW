@@ -262,7 +262,102 @@ const rolesConfig = {
   ],
 
 
-};
+ OPS_MAKER: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/operationsDashboard",
+        label: "Operations Dashboard",
+        Icon: FaBriefcase,
+      },
+    ],
+  },
+{
+    category: "MODULES",
+    items: [
+      {
+        to: "/operations/checker",
+        label: "Ops Maker",
+        Icon: FaShieldAlt,
+      },
+    ],
+  },],
+
+OPS_CHECKER: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/operationsDashboard",
+        label: "Operations Dashboard",
+        Icon: FaBriefcase,
+      },
+    ],
+  },
+  {
+    category: "MODULES",
+    items: [
+      {
+        to: "/operations/checker",
+        label: "Ops Checker",
+        Icon: FaShieldAlt,
+      },
+    ],
+  },
+],
+COMMON: [
+  {
+    category: "REFERENCE",
+    items: [
+      {
+        to: "/reports",
+        label: "MIS & Reports",
+        Icon: FaChartBar,
+      },
+    ],
+  },
+],
+
+}
+
+
+//   {
+//     category: "MODULES",
+//     items: [
+//       {
+//         to: "/ops-maker",
+//         label: "Ops Maker",
+//         Icon: FaPlayCircle,
+//       },
+//       {
+//         to: "/ops-checker",
+//         label: "Ops Checker",
+//         Icon: FaShieldAlt,
+//       },
+//       {
+//         to: "/pdd-checklist",
+//         label: "PDD Checklist",
+//         Icon: FaFileAlt,
+//       },
+//       {
+//         to: "/disbursement",
+//         label: "Disbursement",
+//         Icon: FaCreditCard,
+//       },
+//       {
+//         to: "/bank-utr",
+//         label: "Bank & UTR",
+//         Icon: FaLink,
+//       },
+//       {
+//         to: "/operations-documents",
+//         label: "Documents",
+//         Icon: FaFolderOpen,
+//       },
+//     ],
+//   },
+// ]
 
 const groupOrder = [
   "PRIMARY",
@@ -312,9 +407,14 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
-      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION"];
+      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" , "OPS_CHECKER" , "OPS_MAKER" ,"COMMON",];
       for (const roleKey of roleKeysInOrder) {
-        if (!roles.includes(roleKey)) continue;
+        if (
+  roleKey !== "COMMON" &&
+  !roles.includes(roleKey)
+) {
+  continue;
+}
         const roleGroups = rolesConfig[roleKey] || [];
         const group = roleGroups.find((g) => g.category === category);
         if (!group) continue;

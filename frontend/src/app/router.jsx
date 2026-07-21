@@ -42,6 +42,13 @@ import ValuationPage from "../features/valuation/pages/ValuationPage.jsx";
 
 // import BMReviewQueue from '../features/BM/pages/ReviewQueue.jsx';
 
+/*Operations pages */
+import OperationsDashboard from '../features/OPERATION/pages/OperationsDashboard.jsx';
+import OpsChecker from "../features/OPERATION/pages/OpsChecker.jsx";
+
+// MIS Reports
+import MISReports from "../features/applications/pages/MISReports.jsx";
+
 const protectedChildren = [
 { path: '/dashboard', element: <RoleDashboardRedirect /> },
   { path: '/applications', element: <ApplicationsPage /> },
@@ -60,6 +67,21 @@ const protectedChildren = [
   {path: "/bmApproved", element: <BMApproved />,},
   {path: "/chargesApproved", element: <ChargesApproved />,},
 
+// Operations routes
+{
+  path: "/operationsDashboard",
+  element: <OperationsDashboard />,
+},
+{
+  path: "/operations/checker",
+  element: <OpsChecker />,
+},
+
+// Common MIS and reports route
+{
+  path: "/reports",
+  element: <MISReports />,
+},
 
 { path: "/field-visits", element: <FieldVisits /> },
 { path: "/field-visits/:applicationId", element: <FieldVisits /> },
