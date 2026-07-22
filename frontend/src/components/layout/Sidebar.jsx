@@ -330,6 +330,34 @@ OPS_MAKER: [
   },
 ],
 
+
+  OPS_HEAD: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/operationsDashboard",
+        label: "Operations Dashboard",
+        Icon: FaBriefcase,
+      },
+    ],
+  },
+  {
+    category: "MODULES",
+    items: [
+      {
+        to: "/operations/head",
+        label: "Ops Head",
+        Icon: FaShieldAlt,
+      },
+      {
+        to: "/operations-review",
+        label: "review",
+        Icon: FaFolderOpen,
+      },
+    ],
+  },
+],
 OPS_CHECKER: [
   {
     category: "PRIMARY",
@@ -423,7 +451,7 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
-      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" ,"LEGAL", "OPS_CHECKER" , "OPS_MAKER" ,"COMMON","LEGALCLEARED"];
+      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" ,"LEGAL", "OPS_CHECKER" ,"OPS_HEAD", "OPS_MAKER" ,"COMMON","LEGALCLEARED"];
       for (const roleKey of roleKeysInOrder) {
         if (
   roleKey !== "COMMON" &&

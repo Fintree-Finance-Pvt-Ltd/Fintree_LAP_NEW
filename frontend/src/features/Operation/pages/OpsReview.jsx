@@ -17,7 +17,7 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-
+import { useSelector } from "react-redux";
 
 import { operationApi } from "../operationApi.js";
 
@@ -173,6 +173,57 @@ export default function OpsReview() {
       type: "",
       message: "",
     });
+
+  //   const roleCode =
+  // String(
+  //   user?.role?.code ??
+  //     user?.roleCode ??
+  //     user?.role ??
+  //     "",
+  // ).toUpperCase();
+
+    const user = useSelector(
+    (state) =>
+      state.auth?.user ??
+      state.auth?.currentUser ??
+      null,
+  );
+  const normalizeRole = (value) =>
+  String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replaceAll(" ", "_")
+    .replaceAll("-", "_");
+
+const roleCode = normalizeRole(
+  user?.role?.code ??
+    user?.role?.name ??
+    user?.roleCode ??
+    user?.roleName ??
+    user?.role ??
+    user?.roles?.[0]?.code ??
+    user?.roles?.[0]?.name ??
+    user?.roles?.[0],
+);
+
+
+
+
+const queueDescription =
+  roleCode === "OPS_HEAD"
+    ? "Cases approved by Operations Maker"
+    : roleCode === "OPS_CHECKER"
+      ? "Cases approved by Operations Head"
+      : "Operations cases pending review";
+
+
+      
+  const queueTitle =
+  roleCode === "OPS_HEAD"
+    ? "Operations Head Review Queue"
+    : roleCode === "OPS_CHECKER"
+      ? "Operations Checker Review Queue"
+      : "Operations Review Queue";
 
   const loadQueue = useCallback(
     async (signal) => {
@@ -537,9 +588,26 @@ const applicationData =
       return;
     }
 
-   navigate(
-  `/operations/checker/${selectedApplicationId}`,
-);
+     if (roleCode === "OPS_HEAD") {
+    navigate(
+      `/operations/head/${selectedApplicationId}`,
+    );
+    return;
+  }
+
+  if (roleCode === "OPS_CHECKER") {
+    navigate(
+      `/operations/checker/${selectedApplicationId}`,
+    );
+    return;
+  }
+
+  setQueueError(
+    "Your role is not authorized to review this Operations case.",
+  );
+//    navigate(
+//   `/operations/checker/${selectedApplicationId}`,
+// );
   };
 
   const toggleChecklist = (id) => {
@@ -755,7 +823,8 @@ const applicationData =
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-lg font-bold text-[#102552]">
-                  Operations Review Queue
+                  {/* Operations Review Queue */}   {queueTitle}
+
                 </h1>
 
                 <span className="rounded-full bg-[#102552]/10 px-2.5 py-1 text-[10px] font-bold text-[#102552]">
@@ -764,8 +833,11 @@ const applicationData =
               </div>
 
               <p className="mt-1 text-xs text-slate-500">
-                Cases whose status is
-                ops_maker_approved
+                {/* Cases whose status is
+                ops_maker_approved */}  
+                  {roleCode === "OPS_HEAD"
+    ? "Cases approved by Operations Maker"
+    : "Cases approved by Operations Head"}
               </p>
             </div>
 

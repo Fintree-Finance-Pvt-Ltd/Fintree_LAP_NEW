@@ -54,6 +54,7 @@ import OpsMaker from "../features/OPERATION/pages/OpsMaker.jsx";
 import MISReports from "../features/applications/pages/MISReports.jsx";
 import OPSReview from '../features/Operation/pages/OpsReview.jsx';
 import LegalCleared from '../features/Operation/pages/LegalCleared.jsx';
+import OpsHead from '../features/Operation/pages/OpsHead.jsx';
 
 const protectedChildren = [
   { path: '/dashboard', element: <RoleDashboardRedirect /> },
@@ -82,6 +83,7 @@ const protectedChildren = [
   element: <LegalCleared/>,
 },
 
+  {path: "/operations/head/:applicationId", element: <OpsHead />,},
   // Common MIS and reports route
   { path: "/reports",element: <MISReports />, },
 
@@ -152,6 +154,7 @@ const protectedChildren = [
     '/credit/maker',
     '/credit/checker',
     '/operations/maker',
+    '/operations/head',
     '/operations/checker',
     '/payments/reconciliation',
     '/loan-accounts',

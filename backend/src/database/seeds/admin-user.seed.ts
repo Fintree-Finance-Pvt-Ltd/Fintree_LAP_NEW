@@ -16,6 +16,7 @@ const users: Array<[string, string, RoleCode]> = [
   ['Valuation', 'valuation@fintree.in', RoleCode.VALUATION],
   ['Sanction', 'sanction@fintree.in', RoleCode.SANCTION],
   ['Ops Maker', 'ops.maker@fintree.in', RoleCode.OPS_MAKER],
+  ['Ops Head', 'ops.head@fintree.in', RoleCode.OPS_HEAD],
   ['Ops Checker', 'ops.checker@fintree.in', RoleCode.OPS_CHECKER],
   ['LMS', 'lms@fintree.in', RoleCode.LMS],
   ['Collection', 'collection@fintree.in', RoleCode.COLLECTION]
