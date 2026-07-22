@@ -214,7 +214,9 @@ const queueDescription =
     ? "Cases approved by Operations Maker"
     : roleCode === "OPS_CHECKER"
       ? "Cases approved by Operations Head"
-      : "Operations cases pending review";
+      : roleCode === "OPS_MAKER"
+        ? "Cases submitted by Operations Maker"
+        : "Operations cases pending review";
 
 
       
@@ -587,7 +589,12 @@ const applicationData =
       );
       return;
     }
-
+ if (roleCode === "OPS_MAKER") {
+    navigate(
+      `/operations/maker/${selectedApplicationId}`,
+    );
+    return;
+  }
      if (roleCode === "OPS_HEAD") {
     navigate(
       `/operations/head/${selectedApplicationId}`,

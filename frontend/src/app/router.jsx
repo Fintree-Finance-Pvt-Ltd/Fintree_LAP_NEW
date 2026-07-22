@@ -76,7 +76,7 @@ const protectedChildren = [
 
   // Operations routes
   {path: "/operationsDashboard", element: <OperationsDashboard />,},
-  {path: "/operations/maker", element: <OpsMaker />,},
+  {path: "/operations/maker/:applicationId", element: <OpsMaker />,},
   {path: "/operations/checker/:applicationId", element: <OpsChecker />,},
   {
   path : "/operations/legal-cleared",

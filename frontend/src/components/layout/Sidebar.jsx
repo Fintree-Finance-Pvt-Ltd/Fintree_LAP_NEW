@@ -317,7 +317,7 @@ OPS_MAKER: [
     category: "MODULES",
     items: [
       {
-        to: "/operations/maker",
+        to: "/operations/maker/:applicationId",
         label: "Ops Maker",
         Icon: FaShieldAlt,
       },
@@ -325,6 +325,11 @@ OPS_MAKER: [
         to: "/operations/legal-cleared",
         label: "Legal Cleared",
         Icon: FaFileAlt,
+      },
+      {
+        to: "/operations-review",
+        label: "review",
+        Icon: FaFolderOpen,
       },
     ],
   },

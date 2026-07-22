@@ -8,6 +8,9 @@ export const operationApi = {
       config,
     ),
 
+     getOpsMakerCase: (applicationId) =>
+    apiClient.get(`/operations/maker/${applicationId}`),
+
 
       getOpsheadCase: (applicationId) =>
     apiClient.get(`/operations/head/${applicationId}`),

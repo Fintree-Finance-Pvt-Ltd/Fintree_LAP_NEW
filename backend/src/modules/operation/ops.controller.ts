@@ -15,6 +15,21 @@ export class OpsController {
     private readonly operationsService: OpsService,
   ) {}
 
+   @Get('maker/:applicationId')
+  async getOpsMakerCase(
+    @Param('applicationId', ParseIntPipe)
+    applicationId: number,
+  ) {
+    const data =
+      await this.operationsService.getOpsMakerCase(applicationId);
+
+    return {
+      success: true,
+      message: 'Operations maker case fetched successfully',
+      data,
+    };
+  }
+
    @Get('head/:applicationId')
   async getOpsHeadCase(
     @Param('applicationId', ParseIntPipe)
