@@ -10,5 +10,10 @@ export const applicationsApi = {
   uploadDocument: (id, formData) => apiClient.post(`/applications/${id}/documents`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   documents: (id) => apiClient.get(`/applications/${id}/documents`),
   transition: (id, payload) => apiClient.post(`/applications/${id}/transitions`, payload),
-  workflowHistory: (id) => apiClient.get(`/applications/${id}/workflow-history`)
+  workflowHistory: (id) => apiClient.get(`/applications/${id}/workflow-history`),
+    // Fetch only applications approved by Legal
+ legalApproved: (params = {}) =>
+  apiClient.get('/applications/legal-approved', {
+    params,
+  }),
 };

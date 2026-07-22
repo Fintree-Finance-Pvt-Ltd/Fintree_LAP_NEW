@@ -53,6 +53,7 @@ import OpsMaker from "../features/OPERATION/pages/OpsMaker.jsx";
 // MIS Reports
 import MISReports from "../features/applications/pages/MISReports.jsx";
 import OPSReview from '../features/Operation/pages/OpsReview.jsx';
+import LegalCleared from '../features/Operation/pages/LegalCleared.jsx';
 
 const protectedChildren = [
   { path: '/dashboard', element: <RoleDashboardRedirect /> },
@@ -76,6 +77,11 @@ const protectedChildren = [
   {path: "/operationsDashboard", element: <OperationsDashboard />,},
   {path: "/operations/maker", element: <OpsMaker />,},
   {path: "/operations/checker/:applicationId", element: <OpsChecker />,},
+  {
+  path : "/operations/legal-cleared",
+  element: <LegalCleared/>,
+},
+
   // Common MIS and reports route
   { path: "/reports",element: <MISReports />, },
 
@@ -106,6 +112,7 @@ const protectedChildren = [
   // Legal Officer route
   { path: "/legal-dashboard", element: <LegalDashboard /> },
   { path: "/legal-queue", element: <LegalQueue /> },
+
 
   // valuation 
   { path: "/valuation-dashboard", element: <ValuationDashboard /> },

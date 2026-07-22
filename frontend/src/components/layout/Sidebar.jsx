@@ -302,7 +302,7 @@ LEGAL: [
   ],
 
 
- OPS_MAKER: [
+OPS_MAKER: [
   {
     category: "PRIMARY",
     items: [
@@ -313,7 +313,7 @@ LEGAL: [
       },
     ],
   },
-{
+  {
     category: "MODULES",
     items: [
       {
@@ -321,8 +321,14 @@ LEGAL: [
         label: "Ops Maker",
         Icon: FaShieldAlt,
       },
+      {
+        to: "/operations/legal-cleared",
+        label: "Legal Cleared",
+        Icon: FaFileAlt,
+      },
     ],
-  },],
+  },
+],
 
 OPS_CHECKER: [
   {
@@ -350,6 +356,7 @@ OPS_CHECKER: [
       },
     ],
   },
+   
 ],
 COMMON: [
   {
@@ -416,7 +423,7 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
-      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" ,"LEGAL", "OPS_CHECKER" , "OPS_MAKER" ,"COMMON",];
+      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" ,"LEGAL", "OPS_CHECKER" , "OPS_MAKER" ,"COMMON","LEGALCLEARED"];
       for (const roleKey of roleKeysInOrder) {
         if (
   roleKey !== "COMMON" &&
