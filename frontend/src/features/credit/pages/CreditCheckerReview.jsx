@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FaArrowLeft,
   FaBalanceScale,
-  FaBuilding,
+  FaCheck,
   FaCheckCircle,
   FaChevronDown,
   FaClipboardCheck,
@@ -21,6 +21,29 @@ import { useParams } from "react-router-dom";
 
 import { creditApi } from "../creditApi.js";
 
+const BASE_WORKFLOW_STEPS = [
+  { id: 1, key: "LEAD", label: "Lead" },
+  { id: 2, key: "FIELD", label: "Field Verification" },
+  { id: 3, key: "BM", label: "BM Review" },
+  { id: 4, key: "CM", label: "CM Screening" },
+  { id: 5, key: "CREDIT_MAKER", label: "Credit Maker" },
+  { id: 6, key: "CREDIT_CHECKER", label: "Credit Checker" },
+  { id: 7, key: "VALUATION", label: "Valuation" },
+  { id: 8, key: "LEGAL", label: "Legal" },
+  { id: 9, key: "SANCTION", label: "Sanction" },
+  { id: 10, key: "AGREEMENT", label: "Agreement" },
+  { id: 11, key: "DISBURSEMENT", label: "Disbursement" },
+];
+
+const CHECKER_VISIBLE_STATUSES = [
+  "CREDIT_MAKER_RECOMMENDED",
+  "SUBMITTED_TO_CREDIT_CHECKER",
+  "CREDIT_CHECKER_PENDING",
+  "CREDIT_CHECKER_QUERY",
+  "CREDIT_CHECKER_APPROVED",
+  "CREDIT_CHECKER_REJECTED",
+];
+
 const unwrapPayload = (response) => {
   if (response?.data?.data !== undefined) return response.data.data;
   if (response?.data !== undefined) return response.data;
@@ -29,8 +52,13 @@ const unwrapPayload = (response) => {
 
 const normalizeRows = (payload) => {
   if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.applications)) return payload.applications;
   if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.applications)) return payload.data.applications;
   if (Array.isArray(payload?.data?.data)) return payload.data.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.result)) return payload.result;
   return [];
 };
 
@@ -40,6 +68,39 @@ const valueOrEmpty = (value) =>
 const numberValue = (value) => {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
+};
+
+const firstValue = (...values) => {
+  for (const value of values) {
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      return value;
+    }
+  }
+
+  return "";
+};
+
+const joinAddress = (...parts) => {
+  return parts
+    .filter(
+      (part) =>
+        part !== null &&
+        part !== undefined &&
+        String(part).trim() !== "",
+    )
+    .map((part) => String(part).trim())
+    .join(", ");
+};
+
+const parseJson = (value, fallback = {}) => {
+  if (!value) return fallback;
+  if (typeof value === "object") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
 };
 
 const formatCurrency = (value) => {
@@ -59,32 +120,542 @@ const formatPercent = (value) => {
   return `${number.toFixed(2)}%`;
 };
 
-const parseJson = (value) => {
-  if (!value) return {};
+const formatStatus = (value) => {
+  if (!value) return "—";
 
-  if (typeof value === "object") {
-    return value;
-  }
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return {};
-  }
+  return String(value)
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const getNestedValue = (object, paths, fallback = "") => {
-  for (const path of paths) {
-    const value = path
-      .split(".")
-      .reduce((current, key) => current?.[key], object);
+const getCurrentWorkflowIndex = (application) => {
+  const stage = String(application?.stage || "").toUpperCase();
+  const status = String(application?.status || "").toUpperCase();
 
-    if (value !== undefined && value !== null && String(value).trim() !== "") {
-      return value;
+  if (!application) return -1;
+
+  if (stage === "DISBURSEMENT" || status.includes("DISBURSEMENT")) return 10;
+  if (stage === "AGREEMENT" || status.includes("AGREEMENT")) return 9;
+  if (stage === "SANCTION" || status.includes("SANCTION")) return 8;
+  if (stage === "LEGAL" || status.includes("LEGAL")) return 7;
+  if (stage === "VALUATION" || status.includes("VALUATION")) return 6;
+  if (status.includes("CREDIT_CHECKER")) return 5;
+  if (status.includes("CREDIT_MAKER")) return 4;
+  if (stage === "CREDIT") return 4;
+  if (stage === "CM" || status.includes("CM")) return 3;
+  if (stage === "BM" || status.includes("BM")) return 2;
+  if (stage === "RM") return 1;
+
+  return 0;
+};
+
+const buildWorkflowSteps = (application) => {
+  const currentIndex = getCurrentWorkflowIndex(application);
+
+  return BASE_WORKFLOW_STEPS.map((step, index) => {
+    if (currentIndex === -1) {
+      return { ...step, status: "pending" };
     }
-  }
 
-  return fallback;
+    if (index < currentIndex) {
+      return { ...step, status: "completed" };
+    }
+
+    if (index === currentIndex) {
+      return { ...step, status: "current" };
+    }
+
+    return { ...step, status: "pending" };
+  });
+};
+
+const getApplicationObject = (payload) => {
+  return (
+    payload?.application ||
+    payload?.data?.application ||
+    payload?.data ||
+    payload ||
+    {}
+  );
+};
+
+const getCreditAssessmentObject = (applicationPayload, assessmentPayload) => {
+  return (
+    applicationPayload?.creditAssessment ||
+    applicationPayload?.data?.creditAssessment ||
+    assessmentPayload?.creditAssessment ||
+    assessmentPayload?.data?.creditAssessment ||
+    assessmentPayload ||
+    null
+  );
+};
+
+const mergeApplication = (primary, fallback) => {
+  return {
+    ...fallback,
+    ...primary,
+    customerProfile: {
+      ...(fallback?.customerProfile || {}),
+      ...(primary?.customerProfile || {}),
+    },
+    borrower: {
+      ...(fallback?.borrower || {}),
+      ...(primary?.borrower || {}),
+    },
+    applicant: {
+      ...(fallback?.applicant || {}),
+      ...(primary?.applicant || {}),
+    },
+    primaryApplicant: {
+      ...(fallback?.primaryApplicant || {}),
+      ...(primary?.primaryApplicant || {}),
+    },
+    property: {
+      ...(fallback?.property || {}),
+      ...(primary?.property || {}),
+    },
+    collateral: {
+      ...(fallback?.collateral || {}),
+      ...(primary?.collateral || {}),
+    },
+  };
+};
+
+const getSourceObject = (application) => {
+  return {
+    profile: application?.customerProfile || {},
+    borrower: application?.borrower || {},
+    applicant: application?.applicant || {},
+    primaryApplicant: application?.primaryApplicant || {},
+    property: application?.property || {},
+    collateral: application?.collateral || {},
+  };
+};
+
+const getCustomerName = (application, customerSnapshot = {}) => {
+  const { profile, borrower, applicant, primaryApplicant } =
+    getSourceObject(application);
+
+  const joinedProfileName = `${profile?.firstName || ""} ${
+    profile?.middleName || ""
+  } ${profile?.lastName || ""}`
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return firstValue(
+    customerSnapshot?.customerName,
+    application?.customerName,
+    application?.name,
+    application?.applicantName,
+    application?.borrowerName,
+    profile?.customerName,
+    profile?.name,
+    joinedProfileName,
+    borrower?.customerName,
+    borrower?.name,
+    applicant?.customerName,
+    applicant?.name,
+    primaryApplicant?.customerName,
+    primaryApplicant?.name,
+  );
+};
+
+const getAddressDetails = (application, propertySnapshot = {}) => {
+  const { profile, borrower, applicant, primaryApplicant, property, collateral } =
+    getSourceObject(application);
+
+  const propertyAddress = firstValue(
+    propertySnapshot?.propertyAddress,
+    propertySnapshot?.address,
+    application?.propertyAddress,
+    application?.address,
+    application?.collateralAddress,
+    application?.property_address,
+    property?.propertyAddress,
+    property?.address,
+    collateral?.propertyAddress,
+    collateral?.address,
+    profile?.propertyAddress,
+    profile?.address,
+    profile?.property_address,
+    borrower?.propertyAddress,
+    borrower?.address,
+    applicant?.propertyAddress,
+    applicant?.address,
+    primaryApplicant?.propertyAddress,
+    primaryApplicant?.address,
+  );
+
+  const propertyCity = firstValue(
+    propertySnapshot?.propertyCity,
+    propertySnapshot?.city,
+    application?.propertyCity,
+    application?.city,
+    property?.propertyCity,
+    property?.city,
+    collateral?.propertyCity,
+    collateral?.city,
+    profile?.propertyCity,
+    profile?.city,
+    borrower?.propertyCity,
+    borrower?.city,
+    applicant?.propertyCity,
+    applicant?.city,
+    primaryApplicant?.propertyCity,
+    primaryApplicant?.city,
+  );
+
+  const propertyState = firstValue(
+    propertySnapshot?.propertyState,
+    propertySnapshot?.state,
+    application?.propertyState,
+    application?.state,
+    property?.propertyState,
+    property?.state,
+    collateral?.propertyState,
+    collateral?.state,
+    profile?.propertyState,
+    profile?.state,
+    borrower?.propertyState,
+    borrower?.state,
+    applicant?.propertyState,
+    applicant?.state,
+    primaryApplicant?.propertyState,
+    primaryApplicant?.state,
+  );
+
+  const propertyPincode = firstValue(
+    propertySnapshot?.propertyPincode,
+    propertySnapshot?.pincode,
+    propertySnapshot?.pinCode,
+    application?.propertyPincode,
+    application?.pinCode,
+    application?.pincode,
+    application?.pin_code,
+    property?.propertyPincode,
+    property?.pincode,
+    property?.pinCode,
+    collateral?.propertyPincode,
+    collateral?.pincode,
+    collateral?.pinCode,
+    profile?.propertyPincode,
+    profile?.pincode,
+    profile?.pinCode,
+    borrower?.propertyPincode,
+    borrower?.pincode,
+    borrower?.pinCode,
+    applicant?.propertyPincode,
+    applicant?.pincode,
+    applicant?.pinCode,
+    primaryApplicant?.propertyPincode,
+    primaryApplicant?.pincode,
+    primaryApplicant?.pinCode,
+  );
+
+  const currentAddress = firstValue(
+    application?.currentAddress,
+    application?.current_address,
+    application?.residenceAddress,
+    application?.residentialAddress,
+    application?.communicationAddress,
+    profile?.currentAddress,
+    profile?.current_address,
+    profile?.residenceAddress,
+    profile?.residentialAddress,
+    profile?.communicationAddress,
+    borrower?.currentAddress,
+    borrower?.residenceAddress,
+    applicant?.currentAddress,
+    applicant?.residenceAddress,
+    primaryApplicant?.currentAddress,
+    primaryApplicant?.residenceAddress,
+  );
+
+  const permanentAddress = firstValue(
+    application?.permanentAddress,
+    application?.permanent_address,
+    profile?.permanentAddress,
+    profile?.permanent_address,
+    borrower?.permanentAddress,
+    applicant?.permanentAddress,
+    primaryApplicant?.permanentAddress,
+  );
+
+  const fullPropertyAddress = firstValue(
+    propertySnapshot?.fullPropertyAddress,
+    joinAddress(propertyAddress, propertyCity, propertyState, propertyPincode),
+  );
+
+  return {
+    propertyAddress,
+    propertyCity,
+    propertyState,
+    propertyPincode,
+    fullPropertyAddress,
+    currentAddress,
+    permanentAddress,
+  };
+};
+
+const buildCaseDetails = (application, creditAssessment) => {
+  const { profile } = getSourceObject(application);
+
+  const cmPayload = parseJson(creditAssessment?.cmPayload, {});
+  const makerPayload = parseJson(creditAssessment?.makerPayload, {});
+  const checkerPayload = parseJson(creditAssessment?.checkerPayload, {});
+
+  const customerSnapshot = firstValue(
+    makerPayload?.customerEditableSnapshot,
+    checkerPayload?.checkerSnapshot?.customer,
+    {},
+  );
+
+  const propertySnapshot = firstValue(
+    makerPayload?.propertyEditableSnapshot,
+    checkerPayload?.checkerSnapshot?.property,
+    {},
+  );
+
+  const eligibilitySnapshot = makerPayload?.eligibilitySnapshot || {};
+  const bureauSnapshot = makerPayload?.bureauSnapshot || {};
+
+  const address = getAddressDetails(application, propertySnapshot);
+
+  const requestedAmount = firstValue(
+    eligibilitySnapshot?.requestedAmount,
+    application?.requestedAmount,
+    application?.loanAmount,
+    application?.loan_amount,
+    creditAssessment?.requestedLoan,
+  );
+
+  const propertyValue = firstValue(
+    propertySnapshot?.assessedPropertyValue,
+    application?.marketValue,
+    application?.propertyValue,
+    application?.property_value,
+    profile?.marketValue,
+    profile?.propertyValue,
+    creditAssessment?.propertyValue,
+  );
+
+  const verifiedIncome = firstValue(
+    eligibilitySnapshot?.verifiedIncome,
+    creditAssessment?.verifiedIncome,
+    application?.verifiedIncome,
+    application?.monthlyIncome,
+    application?.verifiedMonthlyIncome,
+    profile?.monthlyIncome,
+  );
+
+  const existingObligations = firstValue(
+    eligibilitySnapshot?.existingObligations,
+    creditAssessment?.existingObligations,
+    application?.existingMonthlyObligations,
+    application?.monthlyObligations,
+    profile?.monthlyObligations,
+  );
+
+  const makerRecommendedAmount = firstValue(
+    creditAssessment?.makerRecommendedAmount,
+    makerPayload?.makerRecommendedAmount,
+    makerPayload?.recommendedAmount,
+  );
+
+  const makerRecommendedRoi = firstValue(
+    creditAssessment?.makerRecommendedRoi,
+    makerPayload?.makerRecommendedRoi,
+    makerPayload?.recommendedRoi,
+    makerPayload?.roi,
+  );
+
+  const makerRecommendedTenure = firstValue(
+    creditAssessment?.makerRecommendedTenure,
+    makerPayload?.makerRecommendedTenure,
+    makerPayload?.recommendedTenure,
+    makerPayload?.tenure,
+  );
+
+  const foir = firstValue(
+    eligibilitySnapshot?.foir,
+    creditAssessment?.foir,
+    application?.foir,
+  );
+
+  const indicativeLtv = firstValue(
+    eligibilitySnapshot?.indicativeLtv,
+    creditAssessment?.indicativeLtv,
+    application?.ltv,
+    application?.indicativeLtv,
+  );
+
+  return {
+    cmPayload,
+    makerPayload,
+    checkerPayload,
+
+    sourceType: firstValue(application?.sourceType, application?.source, "Direct"),
+    hub: firstValue(application?.hub, application?.branch),
+    spoke: firstValue(application?.spoke),
+
+    customerName: getCustomerName(application, customerSnapshot),
+    mobile: firstValue(
+      customerSnapshot?.mobile,
+      application?.mobile,
+      application?.mobileNumber,
+      profile?.mobile,
+    ),
+    email: firstValue(
+      customerSnapshot?.email,
+      application?.email,
+      application?.emailId,
+      profile?.email,
+    ),
+    pan: firstValue(
+      customerSnapshot?.pan,
+      application?.pan,
+      application?.panNumber,
+      profile?.panNumber,
+    ),
+    aadhaar: firstValue(
+      application?.aadhaarNumber,
+      application?.aadharNumber,
+      application?.ovdNumber,
+      profile?.aadhaarNumber,
+      profile?.aadharNumber,
+      profile?.ovdNumber,
+    ),
+    occupation: firstValue(
+      customerSnapshot?.occupationType,
+      application?.occupationType,
+      application?.occupation,
+      application?.constitution,
+      profile?.occupationType,
+    ),
+    businessName: firstValue(
+      customerSnapshot?.businessName,
+      application?.businessName,
+      profile?.businessName,
+    ),
+    businessVintage: firstValue(
+      makerPayload?.businessVintage,
+      application?.businessVintage,
+      application?.employmentVintage,
+      application?.vintage,
+      profile?.businessVintage,
+    ),
+
+    currentAddress: firstValue(
+      customerSnapshot?.currentAddress,
+      address.currentAddress,
+    ),
+    permanentAddress: firstValue(
+      customerSnapshot?.permanentAddress,
+      address.permanentAddress,
+    ),
+    fullPropertyAddress: firstValue(
+      propertySnapshot?.fullPropertyAddress,
+      address.fullPropertyAddress,
+    ),
+
+    applicationNumber: application?.applicationNumber,
+    requestedAmount,
+    loanPurpose: firstValue(application?.loanPurpose, application?.purpose),
+    requestedTenure: firstValue(application?.tenure, application?.requestedTenure),
+    stage: application?.stage,
+    status: application?.status,
+
+    propertyCategory: firstValue(
+      propertySnapshot?.propertyCategory,
+      application?.propertyCategory,
+      profile?.propertyCategory,
+    ),
+    propertyType: firstValue(
+      propertySnapshot?.propertyType,
+      application?.propertyType,
+      application?.propertyCategory,
+      profile?.propertyType,
+      profile?.propertyCategory,
+    ),
+    propertyAddress: firstValue(propertySnapshot?.propertyAddress, address.propertyAddress),
+    propertyCity: firstValue(propertySnapshot?.propertyCity, address.propertyCity),
+    propertyState: firstValue(propertySnapshot?.propertyState, address.propertyState),
+    propertyPincode: firstValue(propertySnapshot?.propertyPincode, address.propertyPincode),
+    propertyValue,
+
+    verifiedIncome,
+    existingObligations,
+    foir,
+    indicativeLtv,
+    ruleVersion: firstValue(application?.ruleVersion, "LIP-POLICY-2026.06-v1"),
+
+    bureauScore: firstValue(
+      bureauSnapshot?.bureauScore,
+      creditAssessment?.bureauScore,
+      application?.bureauScore,
+      application?.cibilScore,
+    ),
+    currentDpd: firstValue(
+      bureauSnapshot?.currentDpd,
+      creditAssessment?.currentDpd,
+      application?.currentDpd,
+      0,
+    ),
+    dpd30In12m: firstValue(
+      bureauSnapshot?.dpd30In12m,
+      creditAssessment?.dpd30In12m,
+      application?.dpd30In12m,
+      0,
+    ),
+    writtenOffSettled: firstValue(
+      bureauSnapshot?.writtenOffSettled,
+      creditAssessment?.writtenOffSettled,
+      application?.writtenOffSettled,
+    ),
+    recentEnquiries: firstValue(
+      bureauSnapshot?.recentEnquiries,
+      creditAssessment?.recentEnquiries,
+      application?.recentEnquiries,
+      0,
+    ),
+    commercialBureau: firstValue(
+      bureauSnapshot?.commercialBureau,
+      creditAssessment?.commercialBureau,
+      application?.commercialBureau,
+    ),
+
+    cmDecision: firstValue(creditAssessment?.cmDecision, cmPayload?.cmDecision),
+    cmRecommendedAmount: firstValue(
+      creditAssessment?.cmRecommendedAmount,
+      cmPayload?.cmRecommendedAmount,
+    ),
+    cmRiskScore: firstValue(creditAssessment?.cmRiskScore, cmPayload?.cmRiskScore),
+    cmRemarks: firstValue(
+      creditAssessment?.cmRemarks,
+      cmPayload?.cmRemarks,
+      cmPayload?.remarks,
+    ),
+
+    makerDecision: firstValue(
+      creditAssessment?.makerDecision,
+      makerPayload?.makerDecision,
+      makerPayload?.decision,
+    ),
+    makerRecommendedAmount,
+    makerRecommendedRoi,
+    makerRecommendedTenure,
+    makerRiskGrade: firstValue(
+      creditAssessment?.makerRiskGrade,
+      makerPayload?.makerRiskGrade,
+      makerPayload?.riskGrade,
+    ),
+    makerRemarks: firstValue(
+      creditAssessment?.makerRemarks,
+      makerPayload?.makerRemarks,
+      makerPayload?.remarks,
+    ),
+  };
 };
 
 const defaultReview = {
@@ -93,122 +664,163 @@ const defaultReview = {
   checkerApprovedTenure: "",
   checkerApprovedRoi: "",
 
-  checkerRiskGrade: "A3",
-  checkerPolicyDecision: "Acceptable",
-  checkerCollateralView: "Proceed for technical valuation",
-  checkerIncomeView: "Income assessment acceptable",
-  checkerBureauView: "Bureau profile acceptable",
-  checkerDeviationView: "Deviation acceptable within policy authority",
+  checkerRiskGrade: "",
+  checkerPolicyDecision: "",
+  checkerCollateralView: "",
+  checkerIncomeView: "",
+  checkerBureauView: "",
+  checkerDeviationView: "",
 
-  checkerRemarks:
-    "Credit Maker assessment reviewed. Case is acceptable for valuation initiation subject to policy, legal and collateral conditions.",
-  checkerConditions:
-    "Subject to satisfactory valuation, legal clearance, updated KYC, repayment track validation and final sanction terms.",
+  checkerRemarks: "",
+  checkerConditions: "",
 };
 
-const buildReviewFromAssessment = (application, assessment) => {
-  const makerPayload = parseJson(assessment?.makerPayload);
-  const checkerPayload = parseJson(assessment?.checkerPayload);
+const buildReviewFromAssessment = (application, assessment, caseDetails) => {
+  const makerPayload = parseJson(assessment?.makerPayload, {});
+  const checkerPayload = parseJson(assessment?.checkerPayload, {});
 
-  const makerAmount =
-    assessment?.makerRecommendedAmount ||
-    makerPayload?.makerRecommendedAmount ||
-    makerPayload?.recommendedAmount ||
-    "";
+  const makerAmount = firstValue(
+    assessment?.makerRecommendedAmount,
+    makerPayload?.makerRecommendedAmount,
+    makerPayload?.recommendedAmount,
+    caseDetails?.makerRecommendedAmount,
+  );
 
-  const makerRoi =
-    assessment?.makerRecommendedRoi ||
-    makerPayload?.makerRecommendedRoi ||
-    makerPayload?.recommendedRoi ||
-    makerPayload?.roi ||
-    "";
+  const makerRoi = firstValue(
+    assessment?.makerRecommendedRoi,
+    makerPayload?.makerRecommendedRoi,
+    makerPayload?.recommendedRoi,
+    makerPayload?.roi,
+    caseDetails?.makerRecommendedRoi,
+  );
 
-  const makerTenure =
-    assessment?.makerRecommendedTenure ||
-    makerPayload?.makerRecommendedTenure ||
-    makerPayload?.recommendedTenure ||
-    makerPayload?.tenure ||
-    "";
+  const makerTenure = firstValue(
+    assessment?.makerRecommendedTenure,
+    makerPayload?.makerRecommendedTenure,
+    makerPayload?.recommendedTenure,
+    makerPayload?.tenure,
+    caseDetails?.makerRecommendedTenure,
+  );
 
   return {
     ...defaultReview,
 
-    checkerDecision:
-      assessment?.checkerDecision ||
-      checkerPayload?.checkerDecision ||
+    checkerDecision: firstValue(
+      assessment?.checkerDecision,
+      checkerPayload?.checkerDecision,
       "APPROVE",
+    ),
 
     checkerApprovedAmount: valueOrEmpty(
-      assessment?.checkerApprovedAmount ||
-        checkerPayload?.checkerApprovedAmount ||
-        checkerPayload?.approvedAmount ||
-        makerAmount ||
-        application?.requestedAmount ||
+      firstValue(
+        assessment?.checkerApprovedAmount,
+        checkerPayload?.checkerApprovedAmount,
+        checkerPayload?.approvedAmount,
+        makerAmount,
+        application?.requestedAmount,
         application?.loanAmount,
+      ),
     ),
 
     checkerApprovedTenure: valueOrEmpty(
-      assessment?.checkerApprovedTenure ||
-        checkerPayload?.checkerApprovedTenure ||
-        checkerPayload?.approvedTenure ||
-        makerTenure ||
-        application?.tenure ||
+      firstValue(
+        assessment?.checkerApprovedTenure,
+        checkerPayload?.checkerApprovedTenure,
+        checkerPayload?.approvedTenure,
+        makerTenure,
+        application?.tenure,
         application?.requestedTenure,
+      ),
     ),
 
     checkerApprovedRoi: valueOrEmpty(
-      assessment?.checkerApprovedRoi ||
-        checkerPayload?.checkerApprovedRoi ||
-        checkerPayload?.approvedRoi ||
-        makerRoi ||
-        application?.roi ||
+      firstValue(
+        assessment?.checkerApprovedRoi,
+        checkerPayload?.checkerApprovedRoi,
+        checkerPayload?.approvedRoi,
+        makerRoi,
+        application?.roi,
         application?.interestRate,
+      ),
     ),
 
-    checkerRiskGrade:
-      checkerPayload?.checkerRiskGrade ||
-      assessment?.makerRiskGrade ||
-      makerPayload?.makerRiskGrade ||
-      defaultReview.checkerRiskGrade,
+    checkerRiskGrade: valueOrEmpty(
+      firstValue(
+        checkerPayload?.checkerRiskGrade,
+        assessment?.checkerRiskGrade,
+        assessment?.makerRiskGrade,
+        makerPayload?.makerRiskGrade,
+      ),
+    ),
 
-    checkerPolicyDecision:
-      checkerPayload?.checkerPolicyDecision ||
-      defaultReview.checkerPolicyDecision,
+    checkerPolicyDecision: valueOrEmpty(
+      firstValue(checkerPayload?.checkerPolicyDecision, ""),
+    ),
 
-    checkerCollateralView:
-      checkerPayload?.checkerCollateralView ||
-      defaultReview.checkerCollateralView,
+    checkerCollateralView: valueOrEmpty(
+      firstValue(checkerPayload?.checkerCollateralView, ""),
+    ),
 
-    checkerIncomeView:
-      checkerPayload?.checkerIncomeView ||
-      defaultReview.checkerIncomeView,
+    checkerIncomeView: valueOrEmpty(
+      firstValue(checkerPayload?.checkerIncomeView, ""),
+    ),
 
-    checkerBureauView:
-      checkerPayload?.checkerBureauView ||
-      defaultReview.checkerBureauView,
+    checkerBureauView: valueOrEmpty(
+      firstValue(checkerPayload?.checkerBureauView, ""),
+    ),
 
-    checkerDeviationView:
-      checkerPayload?.checkerDeviationView ||
-      defaultReview.checkerDeviationView,
+    checkerDeviationView: valueOrEmpty(
+      firstValue(checkerPayload?.checkerDeviationView, ""),
+    ),
 
-    checkerRemarks:
-      assessment?.checkerRemarks ||
-      checkerPayload?.checkerRemarks ||
-      checkerPayload?.remarks ||
-      defaultReview.checkerRemarks,
+    checkerRemarks: valueOrEmpty(
+      firstValue(
+        assessment?.checkerRemarks,
+        checkerPayload?.checkerRemarks,
+        checkerPayload?.remarks,
+      ),
+    ),
 
-    checkerConditions:
-      checkerPayload?.checkerConditions ||
-      checkerPayload?.conditions ||
-      defaultReview.checkerConditions,
+    checkerConditions: valueOrEmpty(
+      firstValue(checkerPayload?.checkerConditions, checkerPayload?.conditions),
+    ),
   };
+};
+
+const fetchCheckerCaseList = () => {
+  if (typeof creditApi.checkerCases === "function") {
+    return creditApi.checkerCases();
+  }
+
+  return creditApi.applications({
+    page: 1,
+    limit: 500,
+  });
+};
+
+const fetchFullApplication = (applicationId) => {
+  if (typeof creditApi.getApplication === "function") {
+    return creditApi.getApplication(applicationId);
+  }
+
+  return creditApi.getCreditApplication(applicationId);
+};
+
+const isCheckerVisibleCase = (application) => {
+  const stage = String(application?.stage || "").toUpperCase();
+  const status = String(application?.status || "").toUpperCase();
+
+  return (
+    stage === "CREDIT" ||
+    CHECKER_VISIBLE_STATUSES.includes(status)
+  );
 };
 
 export default function CreditCheckerReview() {
   const { applicationId: routeApplicationId } = useParams();
 
   const [selectedId, setSelectedId] = useState(routeApplicationId || "");
-  const [hydratedApplicationId, setHydratedApplicationId] = useState("");
+  const [hydratedKey, setHydratedKey] = useState("");
   const [message, setMessage] = useState("");
   const [review, setReview] = useState(defaultReview);
 
@@ -216,64 +828,85 @@ export default function CreditCheckerReview() {
 
   const checkerCasesQuery = useQuery({
     queryKey: ["credit-checker-cases"],
-    queryFn: () => creditApi.checkerCases(),
+    queryFn: fetchCheckerCaseList,
     retry: false,
   });
 
   const checkerCases = useMemo(() => {
     const payload = unwrapPayload(checkerCasesQuery.data);
-    return normalizeRows(payload);
+    return normalizeRows(payload).filter(isCheckerVisibleCase);
   }, [checkerCasesQuery.data]);
 
   const finalSelectedId =
     selectedId || routeApplicationId || checkerCases?.[0]?.id || "";
 
-  const creditApplicationQuery = useQuery({
-    queryKey: ["credit-checker-application", finalSelectedId],
-    queryFn: () => creditApi.getCreditApplication(finalSelectedId),
+  const applicationQuery = useQuery({
+    queryKey: ["credit-checker-full-application", finalSelectedId],
+    queryFn: () => fetchFullApplication(finalSelectedId),
     enabled: Boolean(finalSelectedId),
+    retry: false,
+  });
+
+  const creditApplicationQuery = useQuery({
+    queryKey: ["credit-checker-application-extra", finalSelectedId],
+    queryFn: () => creditApi.getCreditApplication(finalSelectedId),
+    enabled:
+      Boolean(finalSelectedId) &&
+      typeof creditApi.getCreditApplication === "function",
     retry: false,
   });
 
   const assessmentQuery = useQuery({
     queryKey: ["credit-assessment", finalSelectedId],
     queryFn: () => creditApi.getCreditAssessment(finalSelectedId),
-    enabled: Boolean(finalSelectedId),
+    enabled:
+      Boolean(finalSelectedId) &&
+      typeof creditApi.getCreditAssessment === "function",
     retry: false,
   });
 
+  const applicationPayload = unwrapPayload(applicationQuery.data);
   const creditApplicationPayload = unwrapPayload(creditApplicationQuery.data);
   const assessmentPayload = unwrapPayload(assessmentQuery.data);
 
-  const application =
-    creditApplicationPayload?.application ||
-    creditApplicationPayload ||
-    {};
+  const applicationFromCommonApi = getApplicationObject(applicationPayload);
+  const applicationFromCreditApi = getApplicationObject(creditApplicationPayload);
 
-  const creditAssessment =
-    creditApplicationPayload?.creditAssessment ||
-    assessmentPayload?.creditAssessment ||
-    assessmentPayload ||
-    null;
+  const application = mergeApplication(
+    applicationFromCommonApi,
+    applicationFromCreditApi,
+  );
 
-  const cmPayload = parseJson(creditAssessment?.cmPayload);
-  const makerPayload = parseJson(creditAssessment?.makerPayload);
+  const creditAssessment = getCreditAssessmentObject(
+    creditApplicationPayload,
+    assessmentPayload,
+  );
+
+  const caseDetails = useMemo(() => {
+    return buildCaseDetails(application, creditAssessment);
+  }, [application, creditAssessment]);
+
+  const hydrationKey = [
+    finalSelectedId,
+    applicationQuery.dataUpdatedAt,
+    creditApplicationQuery.dataUpdatedAt,
+    assessmentQuery.dataUpdatedAt,
+  ].join("|");
 
   useEffect(() => {
     if (!finalSelectedId || !application?.id) return;
+    if (hydratedKey === hydrationKey) return;
 
-    if (String(hydratedApplicationId) === String(finalSelectedId)) {
-      return;
-    }
-
-    setReview(buildReviewFromAssessment(application, creditAssessment));
-    setHydratedApplicationId(String(finalSelectedId));
+    setReview(buildReviewFromAssessment(application, creditAssessment, caseDetails));
+    setHydratedKey(hydrationKey);
     setMessage("");
   }, [
     finalSelectedId,
-    hydratedApplicationId,
     application?.id,
     creditAssessment?.id,
+    caseDetails,
+    hydratedKey,
+    hydrationKey,
   ]);
 
   const updateReview = (field, value) => {
@@ -285,10 +918,14 @@ export default function CreditCheckerReview() {
   };
 
   const selectedCaseText = application?.id
-    ? `${application?.customerName || ""} | ${application?.mobile || ""} | ${
-        application?.pan || ""
+    ? `${caseDetails.customerName || ""} | ${caseDetails.mobile || ""} | ${
+        caseDetails.pan || ""
       }`
     : "";
+
+  const workflowSteps = useMemo(() => {
+    return buildWorkflowSteps(application);
+  }, [application]);
 
   const buildPayload = (actionType) => {
     const decision =
@@ -329,41 +966,47 @@ export default function CreditCheckerReview() {
 
       checkerSnapshot: {
         customer: {
-          customerName: application?.customerName,
-          mobile: application?.mobile,
-          email: application?.email,
-          pan: application?.pan,
-          occupationType: application?.occupationType,
-          businessName: application?.businessName,
+          customerName: caseDetails.customerName,
+          mobile: caseDetails.mobile,
+          email: caseDetails.email,
+          pan: caseDetails.pan,
+          aadhaar: caseDetails.aadhaar,
+          occupationType: caseDetails.occupation,
+          businessName: caseDetails.businessName,
+          currentAddress: caseDetails.currentAddress,
+          permanentAddress: caseDetails.permanentAddress,
         },
         application: {
-          applicationNumber: application?.applicationNumber,
-          requestedAmount: application?.requestedAmount,
-          stage: application?.stage,
-          status: application?.status,
+          applicationNumber: caseDetails.applicationNumber,
+          requestedAmount: caseDetails.requestedAmount,
+          loanPurpose: caseDetails.loanPurpose,
+          requestedTenure: caseDetails.requestedTenure,
+          stage: caseDetails.stage,
+          status: caseDetails.status,
         },
         property: {
-          propertyCategory: application?.propertyCategory,
-          propertyType: application?.propertyType,
-          marketValue: application?.marketValue || application?.propertyValue,
-          propertyAddress: application?.propertyAddress,
-          propertyCity: application?.propertyCity,
-          propertyState: application?.propertyState,
-          propertyPincode: application?.propertyPincode,
+          propertyCategory: caseDetails.propertyCategory,
+          propertyType: caseDetails.propertyType,
+          propertyValue: caseDetails.propertyValue,
+          propertyAddress: caseDetails.propertyAddress,
+          propertyCity: caseDetails.propertyCity,
+          propertyState: caseDetails.propertyState,
+          propertyPincode: caseDetails.propertyPincode,
+          fullPropertyAddress: caseDetails.fullPropertyAddress,
         },
         cmAssessment: {
-          cmDecision: creditAssessment?.cmDecision,
-          cmRecommendedAmount: creditAssessment?.cmRecommendedAmount,
-          cmRiskScore: creditAssessment?.cmRiskScore,
-          cmRemarks: creditAssessment?.cmRemarks,
+          cmDecision: caseDetails.cmDecision,
+          cmRecommendedAmount: caseDetails.cmRecommendedAmount,
+          cmRiskScore: caseDetails.cmRiskScore,
+          cmRemarks: caseDetails.cmRemarks,
         },
         makerAssessment: {
-          makerDecision: creditAssessment?.makerDecision,
-          makerRecommendedAmount: creditAssessment?.makerRecommendedAmount,
-          makerRecommendedRoi: creditAssessment?.makerRecommendedRoi,
-          makerRecommendedTenure: creditAssessment?.makerRecommendedTenure,
-          makerRiskGrade: creditAssessment?.makerRiskGrade,
-          makerRemarks: creditAssessment?.makerRemarks,
+          makerDecision: caseDetails.makerDecision,
+          makerRecommendedAmount: caseDetails.makerRecommendedAmount,
+          makerRecommendedRoi: caseDetails.makerRecommendedRoi,
+          makerRecommendedTenure: caseDetails.makerRecommendedTenure,
+          makerRiskGrade: caseDetails.makerRiskGrade,
+          makerRemarks: caseDetails.makerRemarks,
         },
       },
     };
@@ -416,7 +1059,10 @@ export default function CreditCheckerReview() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["credit-checker-cases"] }),
         queryClient.invalidateQueries({
-          queryKey: ["credit-checker-application", finalSelectedId],
+          queryKey: ["credit-checker-full-application", finalSelectedId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["credit-checker-application-extra", finalSelectedId],
         }),
         queryClient.invalidateQueries({
           queryKey: ["credit-assessment", finalSelectedId],
@@ -455,7 +1101,10 @@ export default function CreditCheckerReview() {
           queryKey: ["credit-maker-cases"],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["credit-checker-application", finalSelectedId],
+          queryKey: ["credit-checker-full-application", finalSelectedId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["credit-checker-application-extra", finalSelectedId],
         }),
         queryClient.invalidateQueries({
           queryKey: ["credit-assessment", finalSelectedId],
@@ -488,7 +1137,10 @@ export default function CreditCheckerReview() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["credit-checker-cases"] }),
         queryClient.invalidateQueries({
-          queryKey: ["credit-checker-application", finalSelectedId],
+          queryKey: ["credit-checker-full-application", finalSelectedId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["credit-checker-application-extra", finalSelectedId],
         }),
         queryClient.invalidateQueries({
           queryKey: ["credit-assessment", finalSelectedId],
@@ -525,40 +1177,19 @@ export default function CreditCheckerReview() {
     returnMutation.isPending ||
     rejectMutation.isPending;
 
-  const requestedAmount =
-    application?.requestedAmount ||
-    application?.loanAmount ||
-    creditAssessment?.requestedLoan;
-
-  const propertyValue =
-    application?.marketValue ||
-    application?.propertyValue ||
-    creditAssessment?.propertyValue;
-
-  const makerRecommendedAmount =
-    creditAssessment?.makerRecommendedAmount ||
-    makerPayload?.makerRecommendedAmount ||
-    makerPayload?.recommendedAmount;
-
-  const makerRecommendedRoi =
-    creditAssessment?.makerRecommendedRoi ||
-    makerPayload?.makerRecommendedRoi ||
-    makerPayload?.recommendedRoi;
-
-  const makerRecommendedTenure =
-    creditAssessment?.makerRecommendedTenure ||
-    makerPayload?.makerRecommendedTenure ||
-    makerPayload?.recommendedTenure;
+  const isLoadingSelected =
+    Boolean(finalSelectedId) &&
+    (applicationQuery.isLoading || creditApplicationQuery.isLoading);
 
   const scoreCards = [
     {
       label: "Requested Loan",
-      value: formatCurrency(requestedAmount),
+      value: formatCurrency(caseDetails.requestedAmount),
       icon: FaClipboardCheck,
     },
     {
       label: "Maker Amount",
-      value: formatCurrency(makerRecommendedAmount),
+      value: formatCurrency(caseDetails.makerRecommendedAmount),
       icon: FaUserTie,
     },
     {
@@ -593,13 +1224,13 @@ export default function CreditCheckerReview() {
                   </h1>
 
                   <p className="mt-2 text-sm font-semibold text-white/90">
-                    {application?.applicationNumber || "Select Credit Case"} ·
-                    Review complete maker proposal and approve case for Valuation.
+                    {caseDetails.applicationNumber || "Select Credit Case"} ·
+                    Review full customer, loan, property and maker proposal.
                   </p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Badge value={`Stage: ${application?.stage || "—"}`} />
-                    <Badge value={`Status: ${application?.status || "—"}`} />
+                    <Badge value={`Stage: ${formatStatus(caseDetails.stage)}`} />
+                    <Badge value={`Status: ${formatStatus(caseDetails.status)}`} />
                     <Badge
                       value={`Assessment: ${
                         creditAssessment?.assessmentStatus || "Pending"
@@ -642,14 +1273,14 @@ export default function CreditCheckerReview() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-[420px_1fr]">
+          <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-[520px_1fr]">
             <div className="relative">
               <select
                 value={finalSelectedId}
                 disabled={checkerCasesQuery.isLoading || checkerCases.length === 0}
                 onChange={(event) => {
                   setSelectedId(event.target.value);
-                  setHydratedApplicationId("");
+                  setHydratedKey("");
                   setMessage("");
                 }}
                 className="h-12 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-sm font-extrabold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
@@ -663,7 +1294,10 @@ export default function CreditCheckerReview() {
                     <option value="">Select Credit Checker Case</option>
                     {checkerCases.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.applicationNumber} - {item.customerName}
+                        ID: {item.id} |{" "}
+                        {item.applicationNumber || `APP-${item.id}`} -{" "}
+                        {item.customerName || "No Name"} -{" "}
+                        {formatStatus(item.status)}
                       </option>
                     ))}
                   </>
@@ -696,282 +1330,421 @@ export default function CreditCheckerReview() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {scoreCards.map((card) => (
-            <MetricCard key={card.label} {...card} />
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_430px]">
-          <div className="space-y-6">
-            <Panel
-              title="Customer & Application Details"
-              subtitle="Complete customer information for checker review."
-              icon={FaUserTie}
-            >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <DisplayBox label="Customer Name" value={application?.customerName} />
-                <DisplayBox label="Mobile" value={application?.mobile} />
-                <DisplayBox label="Email" value={application?.email} />
-                <DisplayBox label="PAN" value={application?.pan} />
-                <DisplayBox label="Occupation" value={application?.occupationType} />
-                <DisplayBox label="Business Name" value={application?.businessName} />
-                <DisplayBox label="Application Number" value={application?.applicationNumber} />
-                <DisplayBox label="Requested Amount" value={formatCurrency(requestedAmount)} />
-                <DisplayBox label="Current Status" value={application?.status} />
-              </div>
-            </Panel>
-
-            <Panel
-              title="Property & Collateral"
-              subtitle="Collateral details and valuation dependency."
-              icon={FaHome}
-            >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <DisplayBox label="Property Category" value={application?.propertyCategory} />
-                <DisplayBox label="Property Type" value={application?.propertyType} />
-                <DisplayBox label="Property Value" value={formatCurrency(propertyValue)} />
-                <DisplayBox label="City" value={application?.propertyCity || application?.city} />
-                <DisplayBox label="State" value={application?.propertyState || application?.state} />
-                <DisplayBox label="Pincode" value={application?.propertyPincode || application?.pinCode} />
-              </div>
-
-              <ReadOnlyText
-                label="Property Address"
-                value={application?.propertyAddress}
-              />
-            </Panel>
-
-            <Panel
-              title="CM Screening Summary"
-              subtitle="Preliminary credit screening details saved by CM."
-              icon={FaBalanceScale}
-            >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                <DisplayBox label="CM Decision" value={creditAssessment?.cmDecision} />
-                <DisplayBox label="CM Risk Score" value={creditAssessment?.cmRiskScore} />
-                <DisplayBox label="CM Recommended Amount" value={formatCurrency(creditAssessment?.cmRecommendedAmount)} />
-                <DisplayBox label="Bureau Score" value={creditAssessment?.bureauScore} />
-
-                <DisplayBox label="Verified Income" value={formatCurrency(creditAssessment?.verifiedIncome)} />
-                <DisplayBox label="Existing Obligations" value={formatCurrency(creditAssessment?.existingObligations)} />
-                <DisplayBox label="FOIR" value={formatPercent(creditAssessment?.foir)} />
-                <DisplayBox label="Indicative LTV" value={formatPercent(creditAssessment?.indicativeLtv)} />
-
-                <DisplayBox label="Current DPD" value={creditAssessment?.currentDpd} />
-                <DisplayBox label="30+ DPD in 12M" value={creditAssessment?.dpd30In12m} />
-                <DisplayBox label="Written-off / Settled" value={creditAssessment?.writtenOffSettled} />
-                <DisplayBox label="Commercial Bureau" value={creditAssessment?.commercialBureau} />
-              </div>
-
-              <ReadOnlyText
-                label="CM Remarks"
-                value={creditAssessment?.cmRemarks || cmPayload?.cmRemarks || cmPayload?.remarks}
-              />
-            </Panel>
-
-            <Panel
-              title="Credit Maker Proposal"
-              subtitle="Maker recommendation to be checked before approval."
-              icon={FaFileSignature}
-            >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                <DisplayBox label="Maker Decision" value={creditAssessment?.makerDecision || makerPayload?.makerDecision} />
-                <DisplayBox label="Maker Amount" value={formatCurrency(makerRecommendedAmount)} />
-                <DisplayBox label="Maker ROI" value={formatPercent(makerRecommendedRoi)} />
-                <DisplayBox label="Maker Tenure" value={makerRecommendedTenure ? `${makerRecommendedTenure} months` : "—"} />
-
-                <DisplayBox label="Maker Risk Grade" value={creditAssessment?.makerRiskGrade || makerPayload?.makerRiskGrade} />
-                <DisplayBox label="Income Method" value={makerPayload?.incomeMethod} />
-                <DisplayBox label="Policy Result" value={makerPayload?.policyResult} />
-                <DisplayBox label="Fraud Risk" value={makerPayload?.fraudRisk} />
-              </div>
-
-              <ReadOnlyText
-                label="Borrower Assessment"
-                value={makerPayload?.borrowerAssessment}
-              />
-
-              <ReadOnlyText
-                label="Banking Assessment"
-                value={makerPayload?.bankingAssessment}
-              />
-
-              <ReadOnlyText
-                label="Property Assessment"
-                value={makerPayload?.propertyAssessment}
-              />
-
-              <ReadOnlyText
-                label="Risk / Mitigants"
-                value={makerPayload?.riskMitigants}
-              />
-
-              <ReadOnlyText
-                label="Maker Remarks"
-                value={creditAssessment?.makerRemarks || makerPayload?.makerRemarks || makerPayload?.remarks}
-              />
-            </Panel>
+        {isLoadingSelected && (
+          <div className="rounded-2xl border border-blue-100 bg-white p-8 text-center text-sm font-black text-slate-500 shadow-sm">
+            Loading full application details...
           </div>
+        )}
 
-          <div className="space-y-6">
-            <div className="sticky top-6 space-y-6">
-              <Panel
-                title="Checker Decision"
-                subtitle="Final independent credit review before valuation."
-                icon={FaClipboardCheck}
-              >
-                <div className="space-y-4">
-                  <SelectField
-                    label="Checker Decision"
-                    value={review.checkerDecision}
-                    options={[
-                      { label: "Approve and Send to Valuation", value: "APPROVE" },
-                      { label: "Return to Credit Maker", value: "RETURN_TO_MAKER" },
-                      { label: "Reject", value: "REJECT" },
-                    ]}
-                    onChange={(value) => updateReview("checkerDecision", value)}
+        {!finalSelectedId && (
+          <div className="rounded-2xl border border-blue-100 bg-white p-10 text-center shadow-sm">
+            <h3 className="text-lg font-black text-slate-800">
+              Select Credit Checker case
+            </h3>
+            <p className="mt-2 text-sm font-medium text-slate-500">
+              Customer, address, loan, property and maker proposal details will load here.
+            </p>
+          </div>
+        )}
+
+        {finalSelectedId && !isLoadingSelected && (
+          <>
+            <WorkflowCard workflowSteps={workflowSteps} />
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {scoreCards.map((card) => (
+                <MetricCard key={card.label} {...card} />
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_430px]">
+              <div className="space-y-6">
+                <Panel
+                  title="Lead Sourcing"
+                  subtitle="Loaded from application data."
+                  icon={FaClipboardCheck}
+                >
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <DisplayBox label="Source Type" value={caseDetails.sourceType} />
+                    <DisplayBox label="Hub" value={caseDetails.hub} />
+                    <DisplayBox label="Spoke" value={caseDetails.spoke} />
+                  </div>
+                </Panel>
+
+                <Panel
+                  title="Primary Applicant"
+                  subtitle="Customer details loaded like Application Data page."
+                  icon={FaUserTie}
+                >
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <DisplayBox label="Customer / Entity Name" value={caseDetails.customerName} />
+                    <DisplayBox label="Mobile Number" value={caseDetails.mobile} />
+                    <DisplayBox label="Email ID" value={caseDetails.email} />
+                    <DisplayBox label="PAN Number" value={caseDetails.pan} />
+                    <DisplayBox label="Aadhaar / OVD Masked" value={caseDetails.aadhaar} />
+                    <DisplayBox label="Occupation / Constitution" value={caseDetails.occupation} />
+                    <DisplayBox label="Employer / Business Name" value={caseDetails.businessName} />
+                    <DisplayBox label="Employment / Business Vintage Years" value={caseDetails.businessVintage} />
+                    <DisplayBox label="Verified Monthly Income" value={formatCurrency(caseDetails.verifiedIncome)} />
+                    <DisplayBox label="Existing Monthly Obligations" value={formatCurrency(caseDetails.existingObligations)} />
+                  </div>
+                </Panel>
+
+                <Panel
+                  title="Address Details"
+                  subtitle="Current, permanent and collateral address."
+                  icon={FaHome}
+                >
+                  <ReadOnlyText
+                    label="Current / Residence Address"
+                    value={caseDetails.currentAddress}
                   />
 
-                  <Field
-                    label="Approved Amount *"
-                    type="number"
-                    value={review.checkerApprovedAmount}
-                    onChange={(value) => updateReview("checkerApprovedAmount", value)}
+                  <ReadOnlyText
+                    label="Permanent Address"
+                    value={caseDetails.permanentAddress}
                   />
 
-                  <Field
-                    label="Approved Tenure Months *"
-                    type="number"
-                    value={review.checkerApprovedTenure}
-                    onChange={(value) => updateReview("checkerApprovedTenure", value)}
+                  <ReadOnlyText
+                    label="Full Property Address"
+                    value={caseDetails.fullPropertyAddress}
+                  />
+                </Panel>
+
+                <Panel
+                  title="Loan Requirement"
+                  subtitle="Requested loan data from application."
+                  icon={FaClipboardCheck}
+                >
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <DisplayBox label="Application Number" value={caseDetails.applicationNumber} />
+                    <DisplayBox label="Requested Loan Amount" value={formatCurrency(caseDetails.requestedAmount)} />
+                    <DisplayBox label="Loan Purpose" value={caseDetails.loanPurpose} />
+                    <DisplayBox label="Requested Tenure Months" value={caseDetails.requestedTenure} />
+                    <DisplayBox label="Current Stage" value={formatStatus(caseDetails.stage)} />
+                    <DisplayBox label="Current Status" value={formatStatus(caseDetails.status)} />
+                  </div>
+                </Panel>
+
+                <Panel
+                  title="Collateral Property"
+                  subtitle="Property details used for credit and valuation."
+                  icon={FaHome}
+                >
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <DisplayBox label="Property Category" value={caseDetails.propertyCategory} />
+                    <DisplayBox label="Property Type" value={caseDetails.propertyType} />
+                    <DisplayBox label="Approximate Property Value" value={formatCurrency(caseDetails.propertyValue)} />
+                    <DisplayBox label="City" value={caseDetails.propertyCity} />
+                    <DisplayBox label="State" value={caseDetails.propertyState} />
+                    <DisplayBox label="PIN Code" value={caseDetails.propertyPincode} />
+                  </div>
+
+                  <ReadOnlyText
+                    label="Property Address"
+                    value={caseDetails.propertyAddress}
+                  />
+                </Panel>
+
+                <Panel
+                  title="Indicative Eligibility & Bureau"
+                  subtitle="Credit eligibility and bureau indicators."
+                  icon={FaBalanceScale}
+                >
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <DisplayBox label="FOIR" value={formatPercent(caseDetails.foir)} />
+                    <DisplayBox label="Indicative LTV" value={formatPercent(caseDetails.indicativeLtv)} />
+                    <DisplayBox label="Rule Version" value={caseDetails.ruleVersion} />
+                    <DisplayBox label="Bureau Score" value={caseDetails.bureauScore} />
+                    <DisplayBox label="Current DPD" value={caseDetails.currentDpd} />
+                    <DisplayBox label="30+ DPD in 12M" value={caseDetails.dpd30In12m} />
+                    <DisplayBox label="Recent Enquiries" value={caseDetails.recentEnquiries} />
+                    <DisplayBox label="Written-off / Settled" value={caseDetails.writtenOffSettled} />
+                    <DisplayBox label="Commercial Bureau" value={caseDetails.commercialBureau} />
+                  </div>
+                </Panel>
+
+                <Panel
+                  title="CM Screening Summary"
+                  subtitle="Preliminary credit screening details saved by CM."
+                  icon={FaBalanceScale}
+                >
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <DisplayBox label="CM Decision" value={caseDetails.cmDecision} />
+                    <DisplayBox label="CM Risk Score" value={caseDetails.cmRiskScore} />
+                    <DisplayBox
+                      label="CM Recommended Amount"
+                      value={formatCurrency(caseDetails.cmRecommendedAmount)}
+                    />
+                    <DisplayBox label="CM Remarks Available" value={caseDetails.cmRemarks ? "Yes" : "No"} />
+                  </div>
+
+                  <ReadOnlyText label="CM Remarks" value={caseDetails.cmRemarks} />
+                </Panel>
+
+                <Panel
+                  title="Credit Maker Proposal"
+                  subtitle="Maker recommendation to be checked before approval."
+                  icon={FaFileSignature}
+                >
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <DisplayBox label="Maker Decision" value={caseDetails.makerDecision} />
+                    <DisplayBox label="Maker Amount" value={formatCurrency(caseDetails.makerRecommendedAmount)} />
+                    <DisplayBox label="Maker ROI" value={formatPercent(caseDetails.makerRecommendedRoi)} />
+                    <DisplayBox
+                      label="Maker Tenure"
+                      value={
+                        caseDetails.makerRecommendedTenure
+                          ? `${caseDetails.makerRecommendedTenure} months`
+                          : "—"
+                      }
+                    />
+                    <DisplayBox label="Maker Risk Grade" value={caseDetails.makerRiskGrade} />
+                    <DisplayBox label="Income Method" value={caseDetails.makerPayload?.incomeMethod} />
+                    <DisplayBox label="Policy Result" value={caseDetails.makerPayload?.policyResult} />
+                    <DisplayBox label="Fraud Risk" value={caseDetails.makerPayload?.fraudRisk} />
+                  </div>
+
+                  <ReadOnlyText
+                    label="Borrower Assessment"
+                    value={caseDetails.makerPayload?.borrowerAssessment}
                   />
 
-                  <Field
-                    label="Approved ROI % *"
-                    type="number"
-                    value={review.checkerApprovedRoi}
-                    onChange={(value) => updateReview("checkerApprovedRoi", value)}
+                  <ReadOnlyText
+                    label="Banking Assessment"
+                    value={caseDetails.makerPayload?.bankingAssessment}
                   />
 
-                  <SelectField
-                    label="Checker Risk Grade"
-                    value={review.checkerRiskGrade}
-                    options={[
-                      { label: "A1", value: "A1" },
-                      { label: "A2", value: "A2" },
-                      { label: "A3", value: "A3" },
-                      { label: "B1", value: "B1" },
-                      { label: "B2", value: "B2" },
-                      { label: "C1", value: "C1" },
-                      { label: "High Risk", value: "High Risk" },
-                    ]}
-                    onChange={(value) => updateReview("checkerRiskGrade", value)}
+                  <ReadOnlyText
+                    label="Property Assessment"
+                    value={caseDetails.makerPayload?.propertyAssessment}
                   />
 
-                  <SelectField
-                    label="Policy Decision"
-                    value={review.checkerPolicyDecision}
-                    options={[
-                      { label: "Acceptable", value: "Acceptable" },
-                      { label: "Acceptable with Conditions", value: "Acceptable with Conditions" },
-                      { label: "Return for Clarification", value: "Return for Clarification" },
-                      { label: "Not Acceptable", value: "Not Acceptable" },
-                    ]}
-                    onChange={(value) => updateReview("checkerPolicyDecision", value)}
+                  <ReadOnlyText
+                    label="Risk / Mitigants"
+                    value={caseDetails.makerPayload?.riskMitigants}
                   />
-                </div>
-              </Panel>
 
-              <Panel
-                title="Checker Review Notes"
-                subtitle="Record independent checker observations."
-                icon={FaShieldAlt}
-              >
-                <TextArea
-                  label="Income View"
-                  rows={3}
-                  value={review.checkerIncomeView}
-                  onChange={(value) => updateReview("checkerIncomeView", value)}
-                />
-
-                <TextArea
-                  label="Bureau View"
-                  rows={3}
-                  value={review.checkerBureauView}
-                  onChange={(value) => updateReview("checkerBureauView", value)}
-                />
-
-                <TextArea
-                  label="Collateral View"
-                  rows={3}
-                  value={review.checkerCollateralView}
-                  onChange={(value) => updateReview("checkerCollateralView", value)}
-                />
-
-                <TextArea
-                  label="Deviation View"
-                  rows={3}
-                  value={review.checkerDeviationView}
-                  onChange={(value) => updateReview("checkerDeviationView", value)}
-                />
-
-                <TextArea
-                  label="Final Checker Remarks *"
-                  rows={5}
-                  value={review.checkerRemarks}
-                  onChange={(value) => updateReview("checkerRemarks", value)}
-                />
-
-                <TextArea
-                  label="Conditions"
-                  rows={4}
-                  value={review.checkerConditions}
-                  onChange={(value) => updateReview("checkerConditions", value)}
-                />
-              </Panel>
-
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-relaxed text-amber-800">
-                <div className="mb-2 flex items-center gap-2 text-sm font-black">
-                  <FaExclamationTriangle />
-                  Checker Control
-                </div>
-                Credit Checker can approve and send case to Valuation, return case to Credit Maker, or reject the application.
+                  <ReadOnlyText
+                    label="Maker Remarks"
+                    value={caseDetails.makerRemarks}
+                  />
+                </Panel>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={handleReturn}
-                  className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:opacity-50"
-                >
-                  Return to Credit Maker
-                </button>
+              <div className="space-y-6">
+                <div className="sticky top-6 space-y-6">
+                  <Panel
+                    title="Checker Decision"
+                    subtitle="Final independent credit review before valuation."
+                    icon={FaClipboardCheck}
+                  >
+                    <div className="space-y-4">
+                      <SelectField
+                        label="Checker Decision"
+                        value={review.checkerDecision}
+                        options={[
+                          { label: "Approve and Send to Valuation", value: "APPROVE" },
+                          { label: "Return to Credit Maker", value: "RETURN_TO_MAKER" },
+                          { label: "Reject", value: "REJECT" },
+                        ]}
+                        onChange={(value) => updateReview("checkerDecision", value)}
+                      />
 
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={handleReject}
-                  className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-rose-700 shadow-sm transition-all hover:bg-rose-100 disabled:opacity-50"
-                >
-                  Reject Application
-                </button>
+                      <Field
+                        label="Approved Amount *"
+                        type="number"
+                        value={review.checkerApprovedAmount}
+                        onChange={(value) => updateReview("checkerApprovedAmount", value)}
+                      />
 
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={handleApprove}
-                  className="rounded-xl bg-[#0f2942] px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-[#183d62] disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  {approveMutation.isPending
-                    ? "Approving..."
-                    : "Approve & Send to Valuation"}
-                </button>
+                      <Field
+                        label="Approved Tenure Months *"
+                        type="number"
+                        value={review.checkerApprovedTenure}
+                        onChange={(value) => updateReview("checkerApprovedTenure", value)}
+                      />
+
+                      <Field
+                        label="Approved ROI % *"
+                        type="number"
+                        value={review.checkerApprovedRoi}
+                        onChange={(value) => updateReview("checkerApprovedRoi", value)}
+                      />
+
+                      <SelectField
+                        label="Checker Risk Grade"
+                        value={review.checkerRiskGrade}
+                        options={[
+                          { label: "Select", value: "" },
+                          { label: "A1", value: "A1" },
+                          { label: "A2", value: "A2" },
+                          { label: "A3", value: "A3" },
+                          { label: "B1", value: "B1" },
+                          { label: "B2", value: "B2" },
+                          { label: "C1", value: "C1" },
+                          { label: "High Risk", value: "High Risk" },
+                        ]}
+                        onChange={(value) => updateReview("checkerRiskGrade", value)}
+                      />
+
+                      <SelectField
+                        label="Policy Decision"
+                        value={review.checkerPolicyDecision}
+                        options={[
+                          { label: "Select", value: "" },
+                          { label: "Acceptable", value: "Acceptable" },
+                          { label: "Acceptable with Conditions", value: "Acceptable with Conditions" },
+                          { label: "Return for Clarification", value: "Return for Clarification" },
+                          { label: "Not Acceptable", value: "Not Acceptable" },
+                        ]}
+                        onChange={(value) => updateReview("checkerPolicyDecision", value)}
+                      />
+                    </div>
+                  </Panel>
+
+                  <Panel
+                    title="Checker Review Notes"
+                    subtitle="Record independent checker observations."
+                    icon={FaShieldAlt}
+                  >
+                    <TextArea
+                      label="Income View"
+                      rows={3}
+                      value={review.checkerIncomeView}
+                      onChange={(value) => updateReview("checkerIncomeView", value)}
+                    />
+
+                    <TextArea
+                      label="Bureau View"
+                      rows={3}
+                      value={review.checkerBureauView}
+                      onChange={(value) => updateReview("checkerBureauView", value)}
+                    />
+
+                    <TextArea
+                      label="Collateral View"
+                      rows={3}
+                      value={review.checkerCollateralView}
+                      onChange={(value) => updateReview("checkerCollateralView", value)}
+                    />
+
+                    <TextArea
+                      label="Deviation View"
+                      rows={3}
+                      value={review.checkerDeviationView}
+                      onChange={(value) => updateReview("checkerDeviationView", value)}
+                    />
+
+                    <TextArea
+                      label="Final Checker Remarks *"
+                      rows={5}
+                      value={review.checkerRemarks}
+                      onChange={(value) => updateReview("checkerRemarks", value)}
+                    />
+
+                    <TextArea
+                      label="Conditions"
+                      rows={4}
+                      value={review.checkerConditions}
+                      onChange={(value) => updateReview("checkerConditions", value)}
+                    />
+                  </Panel>
+
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-relaxed text-amber-800">
+                    <div className="mb-2 flex items-center gap-2 text-sm font-black">
+                      <FaExclamationTriangle />
+                      Checker Control
+                    </div>
+                    Credit Checker can approve and send case to Valuation,
+                    return case to Credit Maker, or reject the application.
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleReturn}
+                      className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:opacity-50"
+                    >
+                      Return to Credit Maker
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleReject}
+                      className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-rose-700 shadow-sm transition-all hover:bg-rose-100 disabled:opacity-50"
+                    >
+                      Reject Application
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleApprove}
+                      className="rounded-xl bg-[#0f2942] px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-[#183d62] disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      {approveMutation.isPending
+                        ? "Approving..."
+                        : "Approve & Send to Valuation"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WorkflowCard({ workflowSteps }) {
+  return (
+    <div className="rounded-[26px] border border-blue-100 bg-white p-8 shadow-sm">
+      <div className="flex items-center justify-between gap-6 overflow-x-auto">
+        {workflowSteps.map((step, index) => {
+          const completed = step.status === "completed";
+          const current = step.status === "current";
+
+          return (
+            <div
+              key={step.id}
+              className="flex min-w-[135px] flex-1 flex-col items-center text-center"
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-black ${
+                    completed
+                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                      : current
+                        ? "bg-blue-600 text-white ring-8 ring-blue-100"
+                        : "bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  {completed ? <FaCheck /> : step.id}
+                </div>
+
+                {index < workflowSteps.length - 1 && (
+                  <div className="hidden h-0.5 w-20 bg-blue-200 xl:block" />
+                )}
+              </div>
+
+              <p
+                className={`mt-3 text-xs font-black ${
+                  current ? "text-blue-700" : "text-slate-700"
+                }`}
+              >
+                {step.label}
+              </p>
+
+              <p className="mt-1 text-[11px] font-medium capitalize text-slate-500">
+                {step.status}
+              </p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1107,14 +1880,14 @@ function SelectField({ label, value, options, onChange }) {
           {options.map((option) => {
             if (typeof option === "string") {
               return (
-                <option key={option} value={option}>
-                  {option}
+                <option key={option || "blank"} value={option}>
+                  {option || "Select"}
                 </option>
               );
             }
 
             return (
-              <option key={option.value} value={option.value}>
+              <option key={option.value || "blank"} value={option.value}>
                 {option.label}
               </option>
             );

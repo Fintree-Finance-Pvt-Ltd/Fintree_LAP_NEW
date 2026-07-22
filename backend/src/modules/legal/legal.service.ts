@@ -23,6 +23,8 @@ import {
   LegalAssessment,
   LegalAssessmentStatus,
 } from './entities/legal-assessment.entity';
+import { ApplicationStage } from 'src/common/enums/application-stage.enum';
+import { ApplicationStatus } from 'src/common/enums/application-status.enum';
 
 type ActorLike = {
   id?: number | string;
@@ -263,52 +265,52 @@ async getStatus(id: number) {
     });
   }
 
-  async approveToOpsMaker(applicationId: number, body: any, actor: ActorLike) {
-    return this.dataSource.transaction(async (manager) => {
-      const application = await this.getApplicationOrFail(
-        applicationId,
-        manager,
-        true,
-      );
+async approveToOpsMaker(applicationId: number, body: any, actor: ActorLike) {
+  return this.dataSource.transaction(async (manager) => {
+    const application = await this.getApplicationOrFail(
+      applicationId,
+      manager,
+      true,
+    );
 
-      application.stage = 'OPS_MAKER' as any;
-      application.status = 'OPS_MAKER_PENDING' as any;
-      application.assignedTo = 'OPS_MAKER' as any;
-      application.updatedBy = this.toInteger(actor?.id) as any;
+    application.stage = ApplicationStage.OPS_MAKER as any;
+    application.status = ApplicationStatus.LEGAL_APPROVED as any;
+    application.assignedTo = 'OPS_MAKER' as any;
+    application.updatedBy = this.toInteger(actor?.id) as any;
 
-      const savedApplication = await manager.save(application);
+    const savedApplication = await manager.save(application);
 
-      const legalAssessment = await this.saveAssessment(
-        savedApplication,
-        {
-          ...body,
-          finalLegalStatus: body?.finalLegalStatus || 'Positive',
-        },
-        actor,
-        LegalAssessmentStatus.APPROVED_TO_OPS_MAKER,
-        manager,
-      );
+    const legalAssessment = await this.saveAssessment(
+      savedApplication,
+      {
+        ...body,
+        finalLegalStatus: body?.finalLegalStatus || 'Positive',
+      },
+      actor,
+      LegalAssessmentStatus.APPROVED_TO_OPS_MAKER,
+      manager,
+    );
 
-      const loanAccount = await this.createLoanAccountAfterLegalApproval(
-        savedApplication,
+    const loanAccount = await this.createLoanAccountAfterLegalApproval(
+      savedApplication,
+      legalAssessment,
+      actor,
+      manager,
+      body?.partnerCode || DEFAULT_PARTNER_CODE,
+    );
+
+    return {
+      success: true,
+      message:
+        'Legal approved, LAN generated and case moved to Ops Maker successfully.',
+      data: {
+        application: savedApplication,
         legalAssessment,
-        actor,
-        manager,
-        body?.partnerCode || DEFAULT_PARTNER_CODE,
-      );
-
-      return {
-        success: true,
-        message:
-          'Legal approved, LAN generated and case moved to Ops Maker successfully.',
-        data: {
-          application: savedApplication,
-          legalAssessment,
-          loanAccount,
-        },
-      };
-    });
-  }
+        loanAccount,
+      },
+    };
+  });
+}
 
   private async getApplicationOrFail(
     applicationId: number,

@@ -1,5 +1,3 @@
-// src/features/legal/pages/LegalQueue.jsx
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -17,7 +15,7 @@ import {
   FaTimesCircle,
   FaUserTie,
 } from "react-icons/fa";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { legalApi } from "../legalApi.js";
 
@@ -32,12 +30,48 @@ const unwrapList = (response) => {
 
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.applications)) return payload.applications;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.items)) return payload.items;
 
   return [];
 };
 
 const valueOrEmpty = (value) =>
   value === null || value === undefined ? "" : String(value);
+
+const firstValue = (...values) => {
+  for (const value of values) {
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      return value;
+    }
+  }
+
+  return "";
+};
+
+const parseJson = (value, fallback = {}) => {
+  if (!value) return fallback;
+  if (typeof value === "object") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const joinAddress = (...parts) => {
+  return parts
+    .filter(
+      (part) =>
+        part !== null &&
+        part !== undefined &&
+        String(part).trim() !== "",
+    )
+    .map((part) => String(part).trim())
+    .join(", ");
+};
 
 const formatCurrency = (value) => {
   const number = Number(value);
@@ -51,16 +85,13 @@ const formatCurrency = (value) => {
   }).format(number);
 };
 
-const parseJson = (value, fallback) => {
-  if (!value) return fallback;
+const formatStatus = (value) => {
+  if (!value) return "—";
 
-  if (typeof value === "object") return value;
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
+  return String(value)
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 const todayDate = () => {
@@ -72,7 +103,7 @@ const todayDate = () => {
 
 const workflowSteps = [
   { id: 1, label: "Lead", status: "completed" },
-  { id: 2, label: "BM Review", status: "completed" },
+  { id: 2, label: "BM", status: "completed" },
   { id: 3, label: "CM", status: "completed" },
   { id: 4, label: "Credit", status: "completed" },
   { id: 5, label: "Valuation", status: "completed" },
@@ -87,13 +118,13 @@ const defaultChecklist = [
   {
     id: "documentInventory",
     title: "Document inventory complete",
-    subtitle: "All legal documents are available for review",
+    subtitle: "All required legal documents are available",
     checked: false,
   },
   {
     id: "ownershipMatched",
-    title: "Ownership matches applicant / co-owner",
-    subtitle: "Owner name verified with title documents",
+    title: "Ownership verified",
+    subtitle: "Owner name matches title documents",
     checked: false,
   },
   {
@@ -104,44 +135,20 @@ const defaultChecklist = [
   },
   {
     id: "encumbranceChecked",
-    title: "Encumbrance certificate checked",
-    subtitle: "EC / search report verified",
+    title: "Encumbrance checked",
+    subtitle: "EC / search report reviewed",
     checked: false,
   },
   {
     id: "cersaiChecked",
-    title: "CERSAI search completed",
-    subtitle: "Existing charge checked",
-    checked: false,
-  },
-  {
-    id: "litigationChecked",
-    title: "Litigation search completed",
-    subtitle: "Court / public search reviewed",
-    checked: false,
-  },
-  {
-    id: "taxDuesChecked",
-    title: "Property tax / dues reviewed",
-    subtitle: "Municipal / society dues checked",
+    title: "CERSAI checked",
+    subtitle: "Existing charge verified",
     checked: false,
   },
   {
     id: "mortgageFeasible",
-    title: "Mortgage creation feasible",
-    subtitle: "Mortgage can be created in favour of lender",
-    checked: false,
-  },
-  {
-    id: "originalsConfirmed",
-    title: "Original documents confirmed",
-    subtitle: "Originals availability verified",
-    checked: false,
-  },
-  {
-    id: "legalReportReady",
-    title: "Legal report ready",
-    subtitle: "Legal opinion is complete",
+    title: "Mortgage feasible",
+    subtitle: "Mortgage can be created in lender favour",
     checked: false,
   },
 ];
@@ -149,50 +156,437 @@ const defaultChecklist = [
 const defaultTitleChain = [
   {
     year: "",
-    title: "Previous title document",
+    title: "",
     subtitle: "",
-  },
-  {
-    year: "",
-    title: "Current owner acquisition",
-    subtitle: "",
-  },
-  {
-    year: "",
-    title: "Proposed mortgage",
-    subtitle: "Current owner → Fintree Finance",
   },
 ];
 
 const defaultForm = {
-  propertyAddress: "",
+  propertyCategory: "",
   propertyType: "",
+  propertyAddress: "",
+  propertyCity: "",
+  propertyState: "",
+  propertyPincode: "",
+  fullPropertyAddress: "",
+  currentAddress: "",
+  permanentAddress: "",
+
   currentOwner: "",
   lawFirmAdvocate: "",
   assignmentDate: todayDate(),
-  mortgageMethod: "Equitable Mortgage / MODT",
+  mortgageMethod: "",
 
-  titleStatus: "Pending",
-  encumbranceStatus: "Pending verification",
-  cersaiResult: "Search pending",
-  finalLegalStatus: "Pending",
+  titleStatus: "",
+  encumbranceStatus: "",
+  cersaiResult: "",
+  finalLegalStatus: "",
 
   conditions: "",
   opinionSummary: "",
   legalRemarks: "",
   queryRemarks: "",
   negativeRemarks: "",
-  opsInstructions:
-    "Ops Maker to verify original document collection, payment gate completion and mortgage documentation before agreement/disbursement.",
+  opsInstructions: "",
   legalReportReference: "",
 
   titleChain: defaultTitleChain,
   checklist: defaultChecklist,
 };
 
+const getApplicationObject = (payload) => {
+  return (
+    payload?.application ||
+    payload?.data?.application ||
+    payload?.data ||
+    payload ||
+    {}
+  );
+};
+
+const isBlankValue = (value) =>
+  value === null || value === undefined || String(value).trim() === "";
+
+const mergeNonBlank = (primary = {}, fallback = {}) => {
+  const output = {
+    ...(primary || {}),
+  };
+
+  Object.entries(fallback || {}).forEach(([key, value]) => {
+    if (isBlankValue(output[key]) && !isBlankValue(value)) {
+      output[key] = value;
+    }
+  });
+
+  return output;
+};
+
+const mergeApplicationData = (legalApplication = {}, fullApplication = {}) => {
+  const merged = mergeNonBlank(legalApplication, fullApplication);
+
+  merged.customerProfile = mergeNonBlank(
+    legalApplication?.customerProfile,
+    fullApplication?.customerProfile,
+  );
+
+  merged.borrower = mergeNonBlank(
+    legalApplication?.borrower,
+    fullApplication?.borrower,
+  );
+
+  merged.applicant = mergeNonBlank(
+    legalApplication?.applicant,
+    fullApplication?.applicant,
+  );
+
+  merged.primaryApplicant = mergeNonBlank(
+    legalApplication?.primaryApplicant,
+    fullApplication?.primaryApplicant,
+  );
+
+  merged.property = mergeNonBlank(
+    legalApplication?.property,
+    fullApplication?.property,
+  );
+
+  merged.collateral = mergeNonBlank(
+    legalApplication?.collateral,
+    fullApplication?.collateral,
+  );
+
+  merged.propertyDetails = mergeNonBlank(
+    legalApplication?.propertyDetails,
+    fullApplication?.propertyDetails,
+  );
+
+  merged.collateralDetails = mergeNonBlank(
+    legalApplication?.collateralDetails,
+    fullApplication?.collateralDetails,
+  );
+
+  return merged;
+};
+
+const getSourceObject = (application) => ({
+  profile: application?.customerProfile || {},
+  borrower: application?.borrower || {},
+  applicant: application?.applicant || {},
+  primaryApplicant: application?.primaryApplicant || {},
+  property: application?.property || {},
+  collateral: application?.collateral || {},
+  propertyDetails: application?.propertyDetails || {},
+  collateralDetails: application?.collateralDetails || {},
+});
+
+const getCustomerName = (application, customerSnapshot = {}) => {
+  const { profile, borrower, applicant, primaryApplicant } =
+    getSourceObject(application);
+
+  const joinedProfileName = `${profile?.firstName || ""} ${
+    profile?.middleName || ""
+  } ${profile?.lastName || ""}`
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return firstValue(
+    customerSnapshot?.customerName,
+    application?.customerName,
+    application?.name,
+    application?.applicantName,
+    application?.borrowerName,
+    profile?.customerName,
+    profile?.name,
+    joinedProfileName,
+    borrower?.customerName,
+    borrower?.name,
+    applicant?.customerName,
+    applicant?.name,
+    primaryApplicant?.customerName,
+    primaryApplicant?.name,
+  );
+};
+
+const getAddressDetails = (
+  application,
+  legalPropertySnapshot = {},
+  valuationPropertySnapshot = {},
+) => {
+  const {
+    profile,
+    borrower,
+    applicant,
+    primaryApplicant,
+    property,
+    collateral,
+    propertyDetails,
+    collateralDetails,
+  } = getSourceObject(application);
+
+  const propertyAddress = firstValue(
+    legalPropertySnapshot?.propertyAddress,
+    legalPropertySnapshot?.address,
+    legalPropertySnapshot?.fullAddress,
+
+    valuationPropertySnapshot?.propertyAddress,
+    valuationPropertySnapshot?.address,
+    valuationPropertySnapshot?.fullAddress,
+
+    application?.propertyAddress,
+    application?.address,
+    application?.collateralAddress,
+    application?.property_address,
+    application?.propertyFullAddress,
+
+    property?.propertyAddress,
+    property?.address,
+    property?.fullAddress,
+
+    propertyDetails?.propertyAddress,
+    propertyDetails?.address,
+    propertyDetails?.fullAddress,
+
+    collateral?.propertyAddress,
+    collateral?.address,
+    collateral?.fullAddress,
+
+    collateralDetails?.propertyAddress,
+    collateralDetails?.address,
+    collateralDetails?.fullAddress,
+
+    profile?.propertyAddress,
+    profile?.address,
+    profile?.property_address,
+
+    borrower?.propertyAddress,
+    borrower?.address,
+
+    applicant?.propertyAddress,
+    applicant?.address,
+
+    primaryApplicant?.propertyAddress,
+    primaryApplicant?.address,
+
+
+    application?.propertyFullAddress,
+application?.fullPropertyAddress,
+application?.fullAddress,
+application?.propertyLocation,
+application?.collateralLocation,
+
+profile?.fullPropertyAddress,
+profile?.fullAddress,
+profile?.propertyLocation,
+
+borrower?.fullPropertyAddress,
+borrower?.fullAddress,
+borrower?.propertyLocation,
+
+applicant?.fullPropertyAddress,
+applicant?.fullAddress,
+applicant?.propertyLocation,
+
+primaryApplicant?.fullPropertyAddress,
+primaryApplicant?.fullAddress,
+primaryApplicant?.propertyLocation,
+  );
+
+  const propertyCity = firstValue(
+    legalPropertySnapshot?.propertyCity,
+    legalPropertySnapshot?.city,
+
+    valuationPropertySnapshot?.propertyCity,
+    valuationPropertySnapshot?.city,
+
+    application?.propertyCity,
+    application?.city,
+
+    property?.propertyCity,
+    property?.city,
+
+    propertyDetails?.propertyCity,
+    propertyDetails?.city,
+
+    collateral?.propertyCity,
+    collateral?.city,
+
+    collateralDetails?.propertyCity,
+    collateralDetails?.city,
+
+    profile?.propertyCity,
+    profile?.city,
+
+    borrower?.propertyCity,
+    borrower?.city,
+
+    applicant?.propertyCity,
+    applicant?.city,
+
+    primaryApplicant?.propertyCity,
+    primaryApplicant?.city,
+  );
+
+  const propertyState = firstValue(
+    legalPropertySnapshot?.propertyState,
+    legalPropertySnapshot?.state,
+
+    valuationPropertySnapshot?.propertyState,
+    valuationPropertySnapshot?.state,
+
+    application?.propertyState,
+    application?.state,
+
+    property?.propertyState,
+    property?.state,
+
+    propertyDetails?.propertyState,
+    propertyDetails?.state,
+
+    collateral?.propertyState,
+    collateral?.state,
+
+    collateralDetails?.propertyState,
+    collateralDetails?.state,
+
+    profile?.propertyState,
+    profile?.state,
+
+    borrower?.propertyState,
+    borrower?.state,
+
+    applicant?.propertyState,
+    applicant?.state,
+
+    primaryApplicant?.propertyState,
+    primaryApplicant?.state,
+  );
+
+  const propertyPincode = firstValue(
+    legalPropertySnapshot?.propertyPincode,
+    legalPropertySnapshot?.pincode,
+    legalPropertySnapshot?.pinCode,
+
+    valuationPropertySnapshot?.propertyPincode,
+    valuationPropertySnapshot?.pincode,
+    valuationPropertySnapshot?.pinCode,
+
+    application?.propertyPincode,
+    application?.pinCode,
+    application?.pincode,
+    application?.pin_code,
+
+    property?.propertyPincode,
+    property?.pincode,
+    property?.pinCode,
+
+    propertyDetails?.propertyPincode,
+    propertyDetails?.pincode,
+    propertyDetails?.pinCode,
+
+    collateral?.propertyPincode,
+    collateral?.pincode,
+    collateral?.pinCode,
+
+    collateralDetails?.propertyPincode,
+    collateralDetails?.pincode,
+    collateralDetails?.pinCode,
+
+    profile?.propertyPincode,
+    profile?.pincode,
+    profile?.pinCode,
+
+    borrower?.propertyPincode,
+    borrower?.pincode,
+    borrower?.pinCode,
+
+    applicant?.propertyPincode,
+    applicant?.pincode,
+    applicant?.pinCode,
+
+    primaryApplicant?.propertyPincode,
+    primaryApplicant?.pincode,
+    primaryApplicant?.pinCode,
+  );
+
+  const currentAddress = firstValue(
+    legalPropertySnapshot?.currentAddress,
+
+    application?.currentAddress,
+    application?.current_address,
+    application?.residenceAddress,
+    application?.residentialAddress,
+    application?.communicationAddress,
+    application?.presentAddress,
+
+    profile?.currentAddress,
+    profile?.current_address,
+    profile?.residenceAddress,
+    profile?.residentialAddress,
+    profile?.communicationAddress,
+    profile?.presentAddress,
+
+    borrower?.currentAddress,
+    borrower?.residenceAddress,
+    borrower?.presentAddress,
+
+    applicant?.currentAddress,
+    applicant?.residenceAddress,
+    applicant?.presentAddress,
+
+    primaryApplicant?.currentAddress,
+    primaryApplicant?.residenceAddress,
+    primaryApplicant?.presentAddress,
+application?.address,
+application?.fullAddress,
+profile?.address,
+profile?.fullAddress,
+borrower?.address,
+borrower?.fullAddress,
+applicant?.address,
+applicant?.fullAddress,
+primaryApplicant?.address,
+primaryApplicant?.fullAddress,
+
+  );
+
+  const permanentAddress = firstValue(
+    legalPropertySnapshot?.permanentAddress,
+
+    application?.permanentAddress,
+    application?.permanent_address,
+
+    profile?.permanentAddress,
+    profile?.permanent_address,
+
+    borrower?.permanentAddress,
+    applicant?.permanentAddress,
+    primaryApplicant?.permanentAddress,
+  );
+
+  const fullPropertyAddress = firstValue(
+    legalPropertySnapshot?.fullPropertyAddress,
+    valuationPropertySnapshot?.fullPropertyAddress,
+    joinAddress(propertyAddress, propertyCity, propertyState, propertyPincode),
+  );
+
+  return {
+    propertyAddress,
+    propertyCity,
+    propertyState,
+    propertyPincode,
+    currentAddress,
+    permanentAddress,
+    fullPropertyAddress,
+  };
+};
+
 const buildInitialForm = (application, legalAssessment, valuationAssessment) => {
-  const propertySnapshot = parseJson(
+  const legalPropertySnapshot = parseJson(
     legalAssessment?.propertySnapshot,
+    {},
+  );
+
+  const valuationPropertySnapshot = parseJson(
+    valuationAssessment?.propertySnapshot,
     {},
   );
 
@@ -206,94 +600,97 @@ const buildInitialForm = (application, legalAssessment, valuationAssessment) => 
     defaultChecklist,
   );
 
-  const valuationPropertySnapshot = parseJson(
-    valuationAssessment?.propertySnapshot,
-    {},
+  const address = getAddressDetails(
+    application,
+    legalPropertySnapshot,
+    valuationPropertySnapshot,
   );
+
+  const customerName = getCustomerName(application);
 
   return {
     ...defaultForm,
 
-    propertyAddress:
-      legalAssessment?.propertyAddress ||
-      propertySnapshot?.propertyAddress ||
-      valuationPropertySnapshot?.propertyAddress ||
-      application?.propertyAddress ||
-      application?.customerProfile?.propertyAddress ||
-      "",
+    propertyCategory: valueOrEmpty(
+      firstValue(
+        legalPropertySnapshot?.propertyCategory,
+        valuationPropertySnapshot?.propertyCategory,
+        application?.propertyCategory,
+        application?.customerProfile?.propertyCategory,
+      ),
+    ),
 
-    propertyType:
-      legalAssessment?.propertyType ||
-      propertySnapshot?.propertyType ||
-      valuationPropertySnapshot?.propertyType ||
-      application?.propertyType ||
-      application?.customerProfile?.propertyType ||
-      "",
+    propertyType: valueOrEmpty(
+      firstValue(
+        legalAssessment?.propertyType,
+        legalPropertySnapshot?.propertyType,
+        valuationPropertySnapshot?.propertyType,
+        application?.propertyType,
+        application?.propertyCategory,
+        application?.customerProfile?.propertyType,
+        application?.customerProfile?.propertyCategory,
+      ),
+    ),
 
-    currentOwner:
-      legalAssessment?.currentOwner ||
-      propertySnapshot?.currentOwner ||
-      application?.customerName ||
-      "",
+    propertyAddress: valueOrEmpty(
+      firstValue(legalAssessment?.propertyAddress, address.propertyAddress),
+    ),
 
-    lawFirmAdvocate:
-      legalAssessment?.lawFirmAdvocate || "",
+    propertyCity: valueOrEmpty(address.propertyCity),
+    propertyState: valueOrEmpty(address.propertyState),
+    propertyPincode: valueOrEmpty(address.propertyPincode),
+    fullPropertyAddress: valueOrEmpty(address.fullPropertyAddress),
+    currentAddress: valueOrEmpty(address.currentAddress),
+    permanentAddress: valueOrEmpty(address.permanentAddress),
+
+    currentOwner: valueOrEmpty(
+      firstValue(
+        legalAssessment?.currentOwner,
+        legalPropertySnapshot?.currentOwner,
+        legalPropertySnapshot?.ownerName,
+        valuationPropertySnapshot?.currentOwner,
+        valuationPropertySnapshot?.ownerName,
+        application?.propertyOwner,
+        application?.ownerName,
+        customerName,
+      ),
+    ),
+
+    lawFirmAdvocate: valueOrEmpty(legalAssessment?.lawFirmAdvocate),
 
     assignmentDate: legalAssessment?.assignmentDate
       ? String(legalAssessment.assignmentDate).slice(0, 10)
       : todayDate(),
 
-    mortgageMethod:
-      legalAssessment?.mortgageMethod ||
-      defaultForm.mortgageMethod,
+    mortgageMethod: valueOrEmpty(
+      firstValue(
+        legalAssessment?.mortgageMethod,
+        legalPropertySnapshot?.mortgageMethod,
+      ),
+    ),
 
-    titleStatus:
-      legalAssessment?.titleStatus ||
-      defaultForm.titleStatus,
+    titleStatus: valueOrEmpty(legalAssessment?.titleStatus),
+    encumbranceStatus: valueOrEmpty(legalAssessment?.encumbranceStatus),
+    cersaiResult: valueOrEmpty(legalAssessment?.cersaiResult),
+    finalLegalStatus: valueOrEmpty(legalAssessment?.finalLegalStatus),
 
-    encumbranceStatus:
-      legalAssessment?.encumbranceStatus ||
-      defaultForm.encumbranceStatus,
+    conditions: valueOrEmpty(legalAssessment?.conditions),
+    opinionSummary: valueOrEmpty(legalAssessment?.opinionSummary),
+    legalRemarks: valueOrEmpty(legalAssessment?.legalRemarks),
+    queryRemarks: valueOrEmpty(legalAssessment?.queryRemarks),
+    negativeRemarks: valueOrEmpty(legalAssessment?.negativeRemarks),
+    opsInstructions: valueOrEmpty(legalAssessment?.opsInstructions),
+    legalReportReference: valueOrEmpty(legalAssessment?.legalReportReference),
 
-    cersaiResult:
-      legalAssessment?.cersaiResult ||
-      defaultForm.cersaiResult,
+    titleChain:
+      Array.isArray(titleChain) && titleChain.length
+        ? titleChain
+        : defaultTitleChain,
 
-    finalLegalStatus:
-      legalAssessment?.finalLegalStatus ||
-      defaultForm.finalLegalStatus,
-
-    conditions:
-      legalAssessment?.conditions ||
-      "Original title documents to be deposited before disbursement. Updated property tax receipt and latest search report required.",
-
-    opinionSummary:
-      legalAssessment?.opinionSummary ||
-      "Legal title review is pending. Final opinion to be recorded after title chain, encumbrance and CERSAI verification.",
-
-    legalRemarks:
-      legalAssessment?.legalRemarks || "",
-
-    queryRemarks:
-      legalAssessment?.queryRemarks || "",
-
-    negativeRemarks:
-      legalAssessment?.negativeRemarks || "",
-
-    opsInstructions:
-      legalAssessment?.opsInstructions ||
-      defaultForm.opsInstructions,
-
-    legalReportReference:
-      legalAssessment?.legalReportReference || "",
-
-    titleChain: Array.isArray(titleChain) && titleChain.length
-      ? titleChain
-      : defaultTitleChain,
-
-    checklist: Array.isArray(checklist) && checklist.length
-      ? checklist
-      : defaultChecklist,
+    checklist:
+      Array.isArray(checklist) && checklist.length
+        ? checklist
+        : defaultChecklist,
   };
 };
 
@@ -301,7 +698,7 @@ export default function LegalQueue() {
   const { applicationId: routeApplicationId } = useParams();
 
   const [selectedId, setSelectedId] = useState(routeApplicationId || "");
-  const [hydratedApplicationId, setHydratedApplicationId] = useState("");
+  const [hydrationKey, setHydrationKey] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
   const [form, setForm] = useState(defaultForm);
@@ -314,56 +711,70 @@ export default function LegalQueue() {
     retry: false,
   });
 
-  const legalCases = useMemo(() => {
-    return unwrapList(casesQuery.data);
-  }, [casesQuery.data]);
+  const legalCases = useMemo(() => unwrapList(casesQuery.data), [casesQuery.data]);
 
   const finalSelectedId =
     selectedId || routeApplicationId || legalCases?.[0]?.id || "";
 
-  const applicationQuery = useQuery({
-    queryKey: ["legal-application", finalSelectedId],
-    queryFn: () => legalApi.getApplication(finalSelectedId),
-    enabled: Boolean(finalSelectedId),
-    retry: false,
-  });
+const applicationQuery = useQuery({
+  queryKey: ["legal-application", finalSelectedId],
+  queryFn: () => legalApi.getApplication(finalSelectedId),
+  enabled: Boolean(finalSelectedId),
+  retry: false,
+});
 
-  const applicationPayload = unwrapPayload(applicationQuery.data);
+const fullApplicationQuery = useQuery({
+  queryKey: ["legal-full-application", finalSelectedId],
+  queryFn: () => legalApi.getFullApplication(finalSelectedId),
+  enabled:
+    Boolean(finalSelectedId) &&
+    typeof legalApi.getFullApplication === "function",
+  retry: false,
+});
 
-  const application =
-    applicationPayload?.application ||
-    applicationPayload ||
-    {};
+const applicationPayload = unwrapPayload(applicationQuery.data);
+const fullApplicationPayload = unwrapPayload(fullApplicationQuery.data);
 
-  const legalAssessment =
-    applicationPayload?.legalAssessment || null;
+const legalApplication = getApplicationObject(applicationPayload);
+const fullApplication = getApplicationObject(fullApplicationPayload);
 
-  const valuationAssessment =
-    applicationPayload?.valuationAssessment || null;
+const application = mergeApplicationData(
+  legalApplication,
+  fullApplication,
+);
+
+const legalAssessment =
+  applicationPayload?.legalAssessment ||
+  applicationPayload?.data?.legalAssessment ||
+  null;
+
+const valuationAssessment =
+  applicationPayload?.valuationAssessment ||
+  applicationPayload?.data?.valuationAssessment ||
+  null;
+
+const currentHydrationKey = [
+  finalSelectedId,
+  applicationQuery.dataUpdatedAt,
+  fullApplicationQuery.dataUpdatedAt,
+  legalAssessment?.id,
+  valuationAssessment?.id,
+].join("|");
 
   useEffect(() => {
     if (!finalSelectedId || !application?.id) return;
+    if (hydrationKey === currentHydrationKey) return;
 
-    if (String(hydratedApplicationId) === String(finalSelectedId)) {
-      return;
-    }
-
-    setForm(
-      buildInitialForm(
-        application,
-        legalAssessment,
-        valuationAssessment,
-      ),
-    );
-
-    setHydratedApplicationId(String(finalSelectedId));
+    setForm(buildInitialForm(application, legalAssessment, valuationAssessment));
+    setHydrationKey(currentHydrationKey);
     setMessage("");
   }, [
     finalSelectedId,
-    hydratedApplicationId,
     application?.id,
     legalAssessment?.id,
     valuationAssessment?.id,
+    currentHydrationKey,
+    hydrationKey,
   ]);
 
   const updateForm = (field, value) => {
@@ -372,6 +783,33 @@ export default function LegalQueue() {
       ...previous,
       [field]: value,
     }));
+  };
+
+  const updateAddressField = (field, value) => {
+    setMessage("");
+
+    setForm((previous) => {
+      const updated = {
+        ...previous,
+        [field]: value,
+      };
+
+      if (
+        field === "propertyAddress" ||
+        field === "propertyCity" ||
+        field === "propertyState" ||
+        field === "propertyPincode"
+      ) {
+        updated.fullPropertyAddress = joinAddress(
+          field === "propertyAddress" ? value : updated.propertyAddress,
+          field === "propertyCity" ? value : updated.propertyCity,
+          field === "propertyState" ? value : updated.propertyState,
+          field === "propertyPincode" ? value : updated.propertyPincode,
+        );
+      }
+
+      return updated;
+    });
   };
 
   const updateChecklist = (id) => {
@@ -421,18 +859,17 @@ export default function LegalQueue() {
   const removeTitleChainRow = (index) => {
     setForm((previous) => ({
       ...previous,
-      titleChain: previous.titleChain.filter(
-        (_item, itemIndex) => itemIndex !== index,
-      ),
+      titleChain:
+        previous.titleChain.length <= 1
+          ? previous.titleChain
+          : previous.titleChain.filter((_item, itemIndex) => itemIndex !== index),
     }));
   };
 
-  const completedChecks = form.checklist.filter(
-    (item) => item.checked,
-  ).length;
+  const completedChecks = form.checklist.filter((item) => item.checked).length;
 
   const selectedCaseText = application?.id
-    ? `${application?.customerName || ""} | ${application?.mobile || ""} | ${
+    ? `${getCustomerName(application) || ""} | ${application?.mobile || ""} | ${
         application?.pan || ""
       }`
     : "";
@@ -446,10 +883,26 @@ export default function LegalQueue() {
 
     customerSnapshot: {
       applicationNumber: application?.applicationNumber,
-      customerName: application?.customerName,
+      customerName: getCustomerName(application),
       mobile: application?.mobile,
       pan: application?.pan,
       requestedAmount: application?.requestedAmount,
+      currentAddress: form.currentAddress,
+      permanentAddress: form.permanentAddress,
+    },
+
+    propertySnapshot: {
+      propertyCategory: form.propertyCategory,
+      propertyType: form.propertyType,
+      propertyAddress: form.propertyAddress,
+      propertyCity: form.propertyCity,
+      propertyState: form.propertyState,
+      propertyPincode: form.propertyPincode,
+      fullPropertyAddress: form.fullPropertyAddress,
+      currentOwner: form.currentOwner,
+      mortgageMethod: form.mortgageMethod,
+      currentAddress: form.currentAddress,
+      permanentAddress: form.permanentAddress,
     },
 
     valuationSnapshot: valuationAssessment,
@@ -468,7 +921,10 @@ export default function LegalQueue() {
   const validateBeforeOps = () => {
     const errors = [];
 
-    if (!form.propertyAddress) errors.push("Property Address");
+    if (!form.propertyAddress && !form.fullPropertyAddress) {
+      errors.push("Property Address");
+    }
+
     if (!form.propertyType) errors.push("Property Type");
     if (!form.currentOwner) errors.push("Current Owner");
     if (!form.lawFirmAdvocate) errors.push("Law Firm / Advocate");
@@ -492,15 +948,11 @@ export default function LegalQueue() {
   };
 
   const saveDraftMutation = useMutation({
-    mutationFn: () =>
-      legalApi.saveDraft(finalSelectedId, buildPayload()),
+    mutationFn: () => legalApi.saveDraft(finalSelectedId, buildPayload()),
 
     onSuccess: async (response) => {
       setMessageType("success");
-      setMessage(
-        response?.data?.message ||
-          "Legal draft saved successfully.",
-      );
+      setMessage(response?.data?.message || "Legal draft saved successfully.");
 
       await Promise.all([
         queryClient.invalidateQueries({
@@ -527,17 +979,12 @@ export default function LegalQueue() {
       legalApi.raiseQuery(finalSelectedId, {
         ...buildPayload(),
         remarks:
-          form.queryRemarks ||
-          form.legalRemarks ||
-          "Legal query raised.",
+          form.queryRemarks || form.legalRemarks || "Legal query raised.",
       }),
 
     onSuccess: async (response) => {
       setMessageType("success");
-      setMessage(
-        response?.data?.message ||
-          "Legal query raised successfully.",
-      );
+      setMessage(response?.data?.message || "Legal query raised successfully.");
 
       await Promise.all([
         queryClient.invalidateQueries({
@@ -565,16 +1012,13 @@ export default function LegalQueue() {
         ...buildPayload(),
         finalLegalStatus: "Negative",
         remarks:
-          form.negativeRemarks ||
-          form.legalRemarks ||
-          "Legal marked negative.",
+          form.negativeRemarks || form.legalRemarks || "Legal marked negative.",
       }),
 
     onSuccess: async (response) => {
       setMessageType("success");
       setMessage(
-        response?.data?.message ||
-          "Application marked negative by Legal.",
+        response?.data?.message || "Application marked negative by Legal.",
       );
 
       await queryClient.invalidateQueries({
@@ -609,8 +1053,7 @@ export default function LegalQueue() {
     onSuccess: async (response) => {
       setMessageType("success");
       setMessage(
-        response?.data?.message ||
-          "Legal approved and moved to Ops Maker.",
+        response?.data?.message || "Legal approved and moved to Ops Maker.",
       );
 
       await Promise.all([
@@ -663,6 +1106,10 @@ export default function LegalQueue() {
     markNegativeMutation.isPending ||
     approveToOpsMakerMutation.isPending;
 
+const isLoadingSelected =
+  Boolean(finalSelectedId) &&
+  (applicationQuery.isLoading || fullApplicationQuery.isLoading);
+
   const scoreCards = [
     {
       label: "Requested Amount",
@@ -672,8 +1119,7 @@ export default function LegalQueue() {
     {
       label: "Valuation Value",
       value: formatCurrency(
-        valuationAssessment?.recommendedValue ||
-          valuationAssessment?.marketValue,
+        valuationAssessment?.recommendedValue || valuationAssessment?.marketValue,
       ),
       icon: FaHome,
     },
@@ -683,7 +1129,7 @@ export default function LegalQueue() {
       icon: FaCheck,
     },
     {
-      label: "Final Status",
+      label: "Legal Status",
       value: form.finalLegalStatus || "Pending",
       icon: FaBalanceScale,
     },
@@ -692,28 +1138,6 @@ export default function LegalQueue() {
   return (
     <div className="min-h-screen bg-[#f4f7fb] p-5 text-slate-900 md:p-8">
       <div className="mx-auto max-w-[1800px] space-y-6">
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <b>Legal initiation payment gate:</b> Legal Verification Fee ₹8,850
-              <p className="mt-1 text-xs">
-                Create and send approved payment link before completing Legal stage.
-              </p>
-            </div>
-
-            <Link
-              to={
-                finalSelectedId
-                  ? `/payment-management/${finalSelectedId}`
-                  : "/payment-management"
-              }
-              className="w-fit rounded-xl border border-purple-200 bg-purple-50 px-5 py-2.5 text-xs font-black text-purple-700 shadow-sm transition-all hover:bg-purple-100"
-            >
-              Create payment link
-            </Link>
-          </div>
-        </div>
-
         <div className="overflow-hidden rounded-[28px] border border-purple-100 bg-white shadow-sm">
           <div className="relative bg-gradient-to-r from-[#312e81] via-[#6d28d9] to-[#9333ea] p-7 text-white">
             <div className="absolute -left-16 -top-20 h-56 w-56 rounded-full bg-white/10" />
@@ -732,12 +1156,13 @@ export default function LegalQueue() {
 
                   <p className="mt-2 text-sm font-semibold text-white/90">
                     {application?.applicationNumber || "Select Application"} ·
-                    Review title, ownership, encumbrance, CERSAI and mortgage feasibility.
+                    Review title, ownership, encumbrance, CERSAI and mortgage
+                    feasibility.
                   </p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Badge>{`Stage: ${application?.stage || "—"}`}</Badge>
-                    <Badge>{`Status: ${application?.status || "—"}`}</Badge>
+                    <Badge>{`Stage: ${formatStatus(application?.stage)}`}</Badge>
+                    <Badge>{`Status: ${formatStatus(application?.status)}`}</Badge>
                     <Badge>{`Assessment: ${
                       legalAssessment?.assessmentStatus || "New Draft"
                     }`}</Badge>
@@ -783,14 +1208,14 @@ export default function LegalQueue() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 p-5 xl:grid-cols-[420px_1fr]">
+          <div className="grid grid-cols-1 gap-4 p-5 xl:grid-cols-[460px_1fr]">
             <div className="relative">
               <select
                 value={finalSelectedId}
                 disabled={casesQuery.isLoading || legalCases.length === 0}
                 onChange={(event) => {
                   setSelectedId(event.target.value);
-                  setHydratedApplicationId("");
+                  setHydrationKey("");
                   setMessage("");
                 }}
                 className="h-12 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-sm font-extrabold text-slate-700 outline-none transition-all focus:border-purple-500 focus:ring-4 focus:ring-purple-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
@@ -804,7 +1229,10 @@ export default function LegalQueue() {
                     <option value="">Select Legal Case</option>
                     {legalCases.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.applicationNumber} - {item.customerName}
+                        ID: {item.id} |{" "}
+                        {item.applicationNumber || `APP-${item.id}`} -{" "}
+                        {item.customerName || "No Name"} -{" "}
+                        {formatStatus(item.status)}
                       </option>
                     ))}
                   </>
@@ -843,325 +1271,427 @@ export default function LegalQueue() {
           </div>
         )}
 
-        <WorkflowCard />
+        {isLoadingSelected && (
+          <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center text-sm font-black text-slate-500 shadow-sm">
+            Loading Legal case details...
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {scoreCards.map((card) => (
-            <MetricCard key={card.label} {...card} />
-          ))}
-        </div>
+        {!finalSelectedId && (
+          <div className="rounded-2xl border border-purple-100 bg-white p-10 text-center shadow-sm">
+            <h3 className="text-lg font-black text-slate-800">
+              Select Legal case
+            </h3>
+            <p className="mt-2 text-sm font-medium text-slate-500">
+              Customer, valuation and property address details will load here.
+            </p>
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_430px]">
-          <div className="space-y-6">
-            <Panel
-              title="Customer & Valuation Summary"
-              subtitle="Loaded from application and valuation assessment."
-              icon={FaUserTie}
-            >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <DisplayBox label="Customer Name" value={application?.customerName} />
-                <DisplayBox label="Mobile" value={application?.mobile} />
-                <DisplayBox label="PAN" value={application?.pan} />
-                <DisplayBox label="Application Number" value={application?.applicationNumber} />
-                <DisplayBox label="Requested Amount" value={formatCurrency(application?.requestedAmount)} />
-                <DisplayBox label="Valuation Status" value={valuationAssessment?.valuationStatus} />
-                <DisplayBox label="Market Value" value={formatCurrency(valuationAssessment?.marketValue)} />
-                <DisplayBox label="Recommended Value" value={formatCurrency(valuationAssessment?.recommendedValue)} />
-                <DisplayBox label="Property Risk Grade" value={valuationAssessment?.propertyRiskGrade} />
-              </div>
+        {finalSelectedId && !isLoadingSelected && (
+          <>
+            <WorkflowCard />
 
-              <ReadOnlyText
-                label="Valuation Technical Remarks"
-                value={valuationAssessment?.technicalRemarks}
-              />
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {scoreCards.map((card) => (
+                <MetricCard key={card.label} {...card} />
+              ))}
+            </div>
 
-              <ReadOnlyText
-                label="Valuation Legal Instructions"
-                value={valuationAssessment?.legalInstructions}
-              />
-            </Panel>
-
-            <Panel
-              title="Property & Assignment"
-              subtitle="Legal can edit property and assignment details."
-              icon={FaHome}
-            >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Field
-                  label="Property Type *"
-                  value={form.propertyType}
-                  onChange={(value) => updateForm("propertyType", value)}
-                />
-
-                <Field
-                  label="Current Owner *"
-                  value={form.currentOwner}
-                  onChange={(value) => updateForm("currentOwner", value)}
-                />
-
-                <Field
-                  label="Law Firm / Advocate *"
-                  value={form.lawFirmAdvocate}
-                  onChange={(value) => updateForm("lawFirmAdvocate", value)}
-                />
-
-                <Field
-                  label="Assignment Date *"
-                  type="date"
-                  value={form.assignmentDate}
-                  onChange={(value) => updateForm("assignmentDate", value)}
-                />
-
-                <SelectField
-                  label="Mortgage Method"
-                  value={form.mortgageMethod}
-                  options={[
-                    "Equitable Mortgage / MODT",
-                    "Registered Mortgage",
-                    "Simple Mortgage",
-                  ]}
-                  onChange={(value) => updateForm("mortgageMethod", value)}
-                />
-
-                <Field
-                  label="Legal Report Reference"
-                  value={form.legalReportReference}
-                  onChange={(value) => updateForm("legalReportReference", value)}
-                />
-              </div>
-
-              <TextArea
-                label="Property Address *"
-                rows={3}
-                value={form.propertyAddress}
-                onChange={(value) => updateForm("propertyAddress", value)}
-              />
-            </Panel>
-
-            <Panel
-              title="Title Chain"
-              subtitle="Add title transfer history and proposed mortgage details."
-              icon={FaFileSignature}
-            >
-              <div className="space-y-3">
-                {form.titleChain.map((item, index) => (
-                  <div
-                    key={index}
-                    className="grid grid-cols-1 gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 md:grid-cols-[100px_1fr_1fr_80px]"
-                  >
-                    <Field
-                      label="Year"
-                      value={item.year}
-                      onChange={(value) => updateTitleChain(index, "year", value)}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_430px]">
+              <div className="space-y-6">
+                <Panel
+                  title="Customer & Valuation Summary"
+                  subtitle="Application and valuation details for Legal review."
+                  icon={FaUserTie}
+                >
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <DisplayBox
+                      label="Customer Name"
+                      value={getCustomerName(application)}
                     />
-
-                    <Field
-                      label="Title"
-                      value={item.title}
-                      onChange={(value) => updateTitleChain(index, "title", value)}
+                    <DisplayBox label="Mobile" value={application?.mobile} />
+                    <DisplayBox label="PAN" value={application?.pan} />
+                    <DisplayBox
+                      label="Application Number"
+                      value={application?.applicationNumber}
                     />
-
-                    <Field
-                      label="Details"
-                      value={item.subtitle}
-                      onChange={(value) => updateTitleChain(index, "subtitle", value)}
+                    <DisplayBox
+                      label="Requested Amount"
+                      value={formatCurrency(application?.requestedAmount)}
                     />
+                    <DisplayBox
+                      label="Valuation Status"
+                      value={valuationAssessment?.valuationStatus}
+                    />
+                    <DisplayBox
+                      label="Market Value"
+                      value={formatCurrency(valuationAssessment?.marketValue)}
+                    />
+                    <DisplayBox
+                      label="Recommended Value"
+                      value={formatCurrency(
+                        valuationAssessment?.recommendedValue,
+                      )}
+                    />
+                    <DisplayBox
+                      label="Property Risk Grade"
+                      value={valuationAssessment?.propertyRiskGrade}
+                    />
+                  </div>
+
+                  <ReadOnlyText
+                    label="Valuation Technical Remarks"
+                    value={valuationAssessment?.technicalRemarks}
+                  />
+
+                  <ReadOnlyText
+                    label="Valuation Legal Instructions"
+                    value={valuationAssessment?.legalInstructions}
+                  />
+                </Panel>
+
+               <Panel
+  title="Property & Assignment"
+  subtitle="Address loaded from Application Data, customer profile, applicant, borrower, valuation and saved legal data."
+  icon={FaHome}
+>
+  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <Field
+      label="Property Category"
+      value={form.propertyCategory}
+      onChange={(value) => updateForm("propertyCategory", value)}
+    />
+
+    <Field
+      label="Property Type *"
+      value={form.propertyType}
+      onChange={(value) => updateForm("propertyType", value)}
+    />
+
+    <Field
+      label="Current Owner *"
+      value={form.currentOwner}
+      onChange={(value) => updateForm("currentOwner", value)}
+    />
+
+    <Field
+      label="City"
+      value={form.propertyCity}
+      onChange={(value) => updateAddressField("propertyCity", value)}
+    />
+
+    <Field
+      label="State"
+      value={form.propertyState}
+      onChange={(value) => updateAddressField("propertyState", value)}
+    />
+
+    <Field
+      label="Pincode"
+      value={form.propertyPincode}
+      onChange={(value) => updateAddressField("propertyPincode", value)}
+    />
+
+    <Field
+      label="Law Firm / Advocate *"
+      value={form.lawFirmAdvocate}
+      onChange={(value) => updateForm("lawFirmAdvocate", value)}
+    />
+
+    <Field
+      label="Assignment Date *"
+      type="date"
+      value={form.assignmentDate}
+      onChange={(value) => updateForm("assignmentDate", value)}
+    />
+
+    <SelectField
+      label="Mortgage Method"
+      value={form.mortgageMethod}
+      options={[
+        "",
+        "Equitable Mortgage / MODT",
+        "Registered Mortgage",
+        "Simple Mortgage",
+      ]}
+      onChange={(value) => updateForm("mortgageMethod", value)}
+    />
+
+    <Field
+      label="Legal Report Reference"
+      value={form.legalReportReference}
+      onChange={(value) => updateForm("legalReportReference", value)}
+    />
+  </div>
+
+  <TextArea
+    label="Property Address *"
+    rows={3}
+    value={form.propertyAddress}
+    onChange={(value) => updateAddressField("propertyAddress", value)}
+  />
+
+  <TextArea
+    label="Full Property Address"
+    rows={3}
+    value={form.fullPropertyAddress}
+    onChange={(value) => updateForm("fullPropertyAddress", value)}
+  />
+
+  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <TextArea
+      label="Current / Residence Address"
+      rows={3}
+      value={form.currentAddress}
+      onChange={(value) => updateForm("currentAddress", value)}
+    />
+
+    <TextArea
+      label="Permanent Address"
+      rows={3}
+      value={form.permanentAddress}
+      onChange={(value) => updateForm("permanentAddress", value)}
+    />
+  </div>
+</Panel>
+
+                <Panel
+                  title="Title Chain"
+                  subtitle="Add title transfer history and proposed mortgage details."
+                  icon={FaFileSignature}
+                >
+                  <div className="space-y-3">
+                    {form.titleChain.map((item, index) => (
+                      <div
+                        key={index}
+                        className="grid grid-cols-1 gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 md:grid-cols-[100px_1fr_1fr_80px]"
+                      >
+                        <Field
+                          label="Year"
+                          value={item.year}
+                          onChange={(value) =>
+                            updateTitleChain(index, "year", value)
+                          }
+                        />
+
+                        <Field
+                          label="Title"
+                          value={item.title}
+                          onChange={(value) =>
+                            updateTitleChain(index, "title", value)
+                          }
+                        />
+
+                        <Field
+                          label="Details"
+                          value={item.subtitle}
+                          onChange={(value) =>
+                            updateTitleChain(index, "subtitle", value)
+                          }
+                        />
+
+                        <button
+                          type="button"
+                          disabled={form.titleChain.length <= 1}
+                          onClick={() => removeTitleChainRow(index)}
+                          className="self-end rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
 
                     <button
                       type="button"
-                      disabled={form.titleChain.length <= 1}
-                      onClick={() => removeTitleChainRow(index)}
-                      className="self-end rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={addTitleChainRow}
+                      className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-2 text-xs font-black text-purple-700"
                     >
-                      Remove
+                      + Add Title Chain Row
                     </button>
                   </div>
-                ))}
+                </Panel>
 
-                <button
-                  type="button"
-                  onClick={addTitleChainRow}
-                  className="rounded-xl border border-purple-200 bg-purple-50 px-4 py-2 text-xs font-black text-purple-700"
+                <Panel
+                  title="Legal Checklist"
+                  subtitle="Mandatory legal checks before Ops Maker movement."
+                  icon={FaShieldAlt}
                 >
-                  + Add Title Chain Row
-                </button>
-              </div>
-            </Panel>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {form.checklist.map((item) => (
+                      <label
+                        key={item.id}
+                        className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={item.checked}
+                          onChange={() => updateChecklist(item.id)}
+                          className="mt-1 h-4 w-4 accent-purple-600"
+                        />
 
-            <Panel
-              title="Title & Legal Checklist"
-              subtitle="Mandatory legal checks before Ops Maker movement."
-              icon={FaShieldAlt}
-            >
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {form.checklist.map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4"
+                        <span>
+                          <span className="block text-xs font-black text-slate-800">
+                            {item.title}
+                          </span>
+                          <span className="mt-1 block text-[11px] font-semibold text-slate-400">
+                            {item.subtitle}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </Panel>
+              </div>
+
+              <div className="space-y-6">
+                <div className="sticky top-6 space-y-6">
+                  <Panel
+                    title="Legal Opinion"
+                    subtitle="Final Legal decision and remarks."
+                    icon={FaBalanceScale}
                   >
-                    <input
-                      type="checkbox"
-                      checked={item.checked}
-                      onChange={() => updateChecklist(item.id)}
-                      className="mt-1 h-4 w-4 accent-purple-600"
-                    />
+                    <div className="space-y-4">
+                      <SelectField
+                        label="Title Status *"
+                        value={form.titleStatus}
+                        options={["", "Clear", "Conditional", "Adverse", "Pending"]}
+                        onChange={(value) => updateForm("titleStatus", value)}
+                      />
 
-                    <span>
-                      <span className="block text-xs font-black text-slate-800">
-                        {item.title}
-                      </span>
-                      <span className="mt-1 block text-[11px] font-semibold text-slate-400">
-                        {item.subtitle}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </Panel>
-          </div>
+                      <SelectField
+                        label="Encumbrance Status"
+                        value={form.encumbranceStatus}
+                        options={[
+                          "",
+                          "No adverse encumbrance",
+                          "Existing charge found",
+                          "Pending verification",
+                        ]}
+                        onChange={(value) =>
+                          updateForm("encumbranceStatus", value)
+                        }
+                      />
 
-          <div className="space-y-6">
-            <div className="sticky top-6 space-y-6">
-              <Panel
-                title="Legal Opinion"
-                subtitle="Final Legal decision and remarks."
-                icon={FaBalanceScale}
-              >
-                <div className="space-y-4">
-                  <SelectField
-                    label="Title Status *"
-                    value={form.titleStatus}
-                    options={[
-                      "Clear",
-                      "Conditional",
-                      "Adverse",
-                      "Pending",
-                    ]}
-                    onChange={(value) => updateForm("titleStatus", value)}
-                  />
+                      <SelectField
+                        label="CERSAI Result"
+                        value={form.cersaiResult}
+                        options={[
+                          "",
+                          "No active charge",
+                          "Active charge found",
+                          "Search pending",
+                        ]}
+                        onChange={(value) => updateForm("cersaiResult", value)}
+                      />
 
-                  <SelectField
-                    label="Encumbrance Status"
-                    value={form.encumbranceStatus}
-                    options={[
-                      "No adverse encumbrance",
-                      "Existing charge found",
-                      "Pending verification",
-                    ]}
-                    onChange={(value) => updateForm("encumbranceStatus", value)}
-                  />
+                      <SelectField
+                        label="Final Legal Status *"
+                        value={form.finalLegalStatus}
+                        options={["", "Positive", "Conditional", "Negative", "Pending"]}
+                        onChange={(value) =>
+                          updateForm("finalLegalStatus", value)
+                        }
+                      />
 
-                  <SelectField
-                    label="CERSAI Result"
-                    value={form.cersaiResult}
-                    options={[
-                      "No active charge",
-                      "Active charge found",
-                      "Search pending",
-                    ]}
-                    onChange={(value) => updateForm("cersaiResult", value)}
-                  />
+                      <TextArea
+                        label="Conditions / Deficiencies"
+                        value={form.conditions}
+                        onChange={(value) => updateForm("conditions", value)}
+                      />
 
-                  <SelectField
-                    label="Final Legal Status *"
-                    value={form.finalLegalStatus}
-                    options={[
-                      "Positive",
-                      "Conditional",
-                      "Negative",
-                      "Pending",
-                    ]}
-                    onChange={(value) => updateForm("finalLegalStatus", value)}
-                  />
+                      <TextArea
+                        label="Legal Opinion Summary *"
+                        value={form.opinionSummary}
+                        onChange={(value) =>
+                          updateForm("opinionSummary", value)
+                        }
+                      />
 
-                  <TextArea
-                    label="Conditions / Deficiencies"
-                    value={form.conditions}
-                    onChange={(value) => updateForm("conditions", value)}
-                  />
+                      <TextArea
+                        label="Legal Remarks"
+                        value={form.legalRemarks}
+                        onChange={(value) => updateForm("legalRemarks", value)}
+                      />
 
-                  <TextArea
-                    label="Legal Opinion Summary *"
-                    value={form.opinionSummary}
-                    onChange={(value) => updateForm("opinionSummary", value)}
-                  />
+                      <TextArea
+                        label="Query Remarks"
+                        value={form.queryRemarks}
+                        onChange={(value) => updateForm("queryRemarks", value)}
+                      />
 
-                  <TextArea
-                    label="Legal Remarks"
-                    value={form.legalRemarks}
-                    onChange={(value) => updateForm("legalRemarks", value)}
-                  />
+                      <TextArea
+                        label="Negative Remarks"
+                        value={form.negativeRemarks}
+                        onChange={(value) =>
+                          updateForm("negativeRemarks", value)
+                        }
+                      />
 
-                  <TextArea
-                    label="Query Remarks"
-                    value={form.queryRemarks}
-                    onChange={(value) => updateForm("queryRemarks", value)}
-                  />
+                      <TextArea
+                        label="Ops Maker Instructions *"
+                        value={form.opsInstructions}
+                        onChange={(value) =>
+                          updateForm("opsInstructions", value)
+                        }
+                      />
+                    </div>
+                  </Panel>
 
-                  <TextArea
-                    label="Negative Remarks"
-                    value={form.negativeRemarks}
-                    onChange={(value) => updateForm("negativeRemarks", value)}
-                  />
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-relaxed text-amber-800">
+                    Legal can save draft, raise query, mark negative, or approve
+                    and move the case to Ops Maker.
+                  </div>
 
-                  <TextArea
-                    label="Ops Maker Instructions *"
-                    value={form.opsInstructions}
-                    onChange={(value) => updateForm("opsInstructions", value)}
-                  />
+                  <div className="grid grid-cols-1 gap-3">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={handleSaveDraft}
+                      className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Save Draft
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={handleRaiseQuery}
+                      className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:opacity-50"
+                    >
+                      Raise Legal Query
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={handleMarkNegative}
+                      className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-rose-700 shadow-sm transition-all hover:bg-rose-100 disabled:opacity-50"
+                    >
+                      Mark Negative
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={handleApproveToOpsMaker}
+                      className="rounded-xl bg-[#0f2942] px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-[#183d62] disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      {approveToOpsMakerMutation.isPending
+                        ? "Moving..."
+                        : "Approve & Send to Ops Maker"}
+                    </button>
+                  </div>
                 </div>
-              </Panel>
-
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-relaxed text-amber-800">
-                Legal and valuation may run in parallel, but Ops Maker should receive the case only after accepted legal outcome and required conditions are recorded.
-              </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleSaveDraft}
-                  className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Save Draft
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleRaiseQuery}
-                  className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:opacity-50"
-                >
-                  Raise Legal Query
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleMarkNegative}
-                  className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-rose-700 shadow-sm transition-all hover:bg-rose-100 disabled:opacity-50"
-                >
-                  Mark Negative
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={handleApproveToOpsMaker}
-                  className="rounded-xl bg-[#0f2942] px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-[#183d62] disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  {approveToOpsMakerMutation.isPending
-                    ? "Moving..."
-                    : "Approve & Send to Ops Maker"}
-                </button>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs font-medium text-slate-500">
-          Final submit saves Legal data in <b>legal_assessments</b> and moves the application to <b>OPS_MAKER_PENDING</b>.
-        </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs font-medium text-slate-500">
+              Final submit saves Legal data in <b>legal_assessments</b> and
+              moves the application to <b>OPS_MAKER_PENDING</b>.
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1169,7 +1699,7 @@ export default function LegalQueue() {
 
 function WorkflowCard() {
   return (
-    <div className="rounded-[26px] border border-blue-100 bg-white p-6 shadow-sm">
+    <div className="rounded-[26px] border border-purple-100 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between gap-6 overflow-x-auto">
         {workflowSteps.map((step, index) => {
           const completed = step.status === "completed";
@@ -1243,9 +1773,7 @@ function MetricCard({ label, value, icon: Icon }) {
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
             {label}
           </p>
-          <p className="mt-2 text-2xl font-black text-slate-900">
-            {value}
-          </p>
+          <p className="mt-2 text-2xl font-black text-slate-900">{value}</p>
         </div>
 
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
@@ -1310,8 +1838,8 @@ function SelectField({ label, value, options, onChange }) {
           className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-3.5 pr-10 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
         >
           {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
+            <option key={option || "blank"} value={option}>
+              {option || "Select"}
             </option>
           ))}
         </select>

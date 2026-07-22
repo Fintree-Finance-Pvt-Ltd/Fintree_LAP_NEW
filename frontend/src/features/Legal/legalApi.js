@@ -3,11 +3,13 @@
 import { apiClient } from "../../services/apiClient.js";
 
 export const legalApi = {
-  cases: () =>
-    apiClient.get("/legal/cases"),
+  cases: () => apiClient.get("/legal/cases"),
 
   getApplication: (applicationId) =>
     apiClient.get(`/legal/${applicationId}`),
+
+  getFullApplication: (applicationId) =>
+    apiClient.get(`/applications/${applicationId}`),
 
   getAssessment: (applicationId) =>
     apiClient.get(`/legal/${applicationId}/assessment`),
