@@ -1,7 +1,7 @@
 // src/co-applicants/co-applicants.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { Application } from '../applications/entities/application.entity';
 import { SaveCoApplicantsBulkDto } from './dto/save-co-applicants-bulk.dto';
 import { CoApplicant } from './entities/co-applicant.entity';
@@ -37,19 +37,33 @@ export class CoApplicantsService {
     await queryRunner.startTransaction();
 
     try {
-      // 1. Wipe previous entries under this specific application
-      await queryRunner.manager.delete(CoApplicant, { applicationId });
+      // Preserve row IDs so verification records remain attached to the correct person.
+      const existing = await queryRunner.manager.find(CoApplicant, { where: { applicationId } });
+      const existingById = new Map(existing.map((item) => [Number(item.id), item]));
+      const retainedIds = coApplicants
+        .map((item) => Number(item.id))
+        .filter((id) => Number.isInteger(id) && existingById.has(id));
+      const removedIds = existing.map((item) => Number(item.id)).filter((id) => !retainedIds.includes(id));
 
-      // 2. Map and structurally persist dynamic entries
-      console.log('[CoApplicantsService.saveBulk] normalizing coApplicants...');
+      if (removedIds.length) {
+        await queryRunner.manager.delete('kyc_verification_status', { coApplicantId: In(removedIds) });
+        await queryRunner.manager.delete(CoApplicant, { id: In(removedIds), applicationId });
+      }
+
       const entities = coApplicants.map((item) => {
-        return queryRunner.manager.create(CoApplicant, {
-          ...item,
-          applicationId,
-          monthlyIncome: item.monthlyIncome !== undefined && item.monthlyIncome !== null 
-            ? String(item.monthlyIncome) 
-            : undefined,
-        });
+        const id = Number(item.id);
+        const entity = Number.isInteger(id) && existingById.has(id)
+          ? existingById.get(id)!
+          : queryRunner.manager.create(CoApplicant, { applicationId });
+        entity.name = String(item.name || '').trim();
+        entity.mobile = String(item.mobile || '').trim();
+        entity.email = item.email ? String(item.email).trim().toLowerCase() : undefined;
+        entity.panNumber = item.panNumber ? String(item.panNumber).trim().toUpperCase() : undefined;
+        entity.relationship = item.relationship;
+        entity.occupation = item.occupation;
+        entity.monthlyIncome = item.monthlyIncome !== undefined && item.monthlyIncome !== null
+          ? String(item.monthlyIncome) : undefined;
+        return entity;
       });
 
       console.log('[CoApplicantsService.saveBulk] deleting done. Saving entities... count=', entities.length);

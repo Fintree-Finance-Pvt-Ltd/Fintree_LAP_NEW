@@ -44,6 +44,15 @@ import ValuationPage from "../features/valuation/pages/ValuationPage.jsx";
 import LegalDashboard from "../features/Legal/pages/LegalDashboard.jsx";
 import LegalQueue from "../features/Legal/pages/LegalQueue.jsx";
 
+import LmsLoanAccounts from "../features/lms/pages/LmsLoanAccounts.jsx";
+import LmsDisbursements from "../features/lms/pages/LmsDisbursements.jsx";
+import LmsRepayments from "../features/lms/pages/LmsRepayments.jsx";
+import LmsUtrUpload from "../features/lms/pages/LmsUtrUpload.jsx";
+import LmsNach from "../features/lms/pages/LmsNach.jsx";
+
+import LmsCollections from "../features/lms/pages/LmsCollections.jsx";
+
+
 // import BMReviewQueue from '../features/BM/pages/ReviewQueue.jsx';
 
 /*Operations pages */
@@ -55,6 +64,9 @@ import MISReports from "../features/applications/pages/MISReports.jsx";
 import OPSReview from '../features/Operation/pages/OpsReview.jsx';
 import LegalCleared from '../features/Operation/pages/LegalCleared.jsx';
 import OpsHead from '../features/Operation/pages/OpsHead.jsx';
+
+
+import LmsDashboard from "../features/lms/pages/LmsDashboard.jsx";
 
 const protectedChildren = [
   { path: '/dashboard', element: <RoleDashboardRedirect /> },
@@ -120,6 +132,17 @@ const protectedChildren = [
   { path: "/valuation-dashboard", element: <ValuationDashboard /> },
   { path: "/valuation", element: <ValuationPage /> },
   { path: "/valuation/:applicationId", element: <ValuationPage /> },
+
+  // LMS routes
+  { path: "/lms-dashboard", element: <LmsDashboard /> },
+{ path: "/lms/loan-accounts", element: <LmsLoanAccounts /> },
+{ path: "/lms/disbursements", element: <LmsDisbursements /> },
+{ path: "/lms/repayments", element: <LmsRepayments /> },
+{ path: "/lms/utr-upload", element: <LmsUtrUpload /> },
+{ path: "/lms/nach", element: <LmsNach /> },
+// { path: "/lms/soa", element: <LmsSoa /> },
+{ path: "/lms/collections", element: <LmsCollections /> },
+// { path: "/lms/reports", element: <LmsReports /> },
 
 
 

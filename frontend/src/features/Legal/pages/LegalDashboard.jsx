@@ -1,68 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-
-/* =========================================================
-   JOURNEY STEPS
-   Field Verification removed.
-   Remaining stages renumbered from 1 to 10.
-========================================================= */
-
-const journeySteps = [
-  {
-    number: 1,
-    name: "Lead",
-    status: "Current",
-  },
-  {
-    number: 2,
-    name: "BM Review",
-    status: "Pending",
-  },
-  {
-    number: 3,
-    name: "CM Screening",
-    status: "Pending",
-  },
-  {
-    number: 4,
-    name: "Credit",
-    status: "Pending",
-  },
-  {
-    number: 5,
-    name: "Legal & Valuation",
-    status: "Pending",
-  },
-  {
-    number: 6,
-    name: "Sanction",
-    status: "Pending",
-  },
-  {
-    number: 7,
-    name: "Documentation",
-    status: "Pending",
-  },
-  {
-    number: 8,
-    name: "Disbursement",
-    status: "Pending",
-  },
-  {
-    number: 9,
-    name: "Active Loan",
-    status: "Pending",
-  },
-  {
-    number: 10,
-    name: "Collections",
-    status: "Pending",
-  },
-];
-
-
-
 /* =========================================================
    RESPONSIVE VIEWPORT HOOK
 ========================================================= */

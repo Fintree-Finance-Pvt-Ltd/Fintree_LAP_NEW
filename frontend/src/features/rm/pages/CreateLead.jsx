@@ -146,6 +146,7 @@ const emptyForm = {
 };
 
 const emptyCoApplicantForm = {
+  id: null,
   name: "",
   mobile: "",
   email: "",
@@ -154,6 +155,16 @@ const emptyCoApplicantForm = {
   relationship: "",
   occupation: "",
   monthlyIncome: "",
+  mobileOtp: "",
+  mobileOtpSent: false,
+  mobileVerified: false,
+  emailOtp: "",
+  emailOtpSent: false,
+  emailVerified: false,
+  panFile: null,
+  panOcrLoading: false,
+  panOcrError: "",
+  identityStatus: "NOT_INITIATED",
 };
 
 
@@ -442,6 +453,16 @@ const startAadhaarCooldown = () => {
     body: "",
     severity: "info",
   });
+  const [coApplicantOtpModal, setCoApplicantOtpModal] = useState({
+    open: false,
+    index: null,
+    channel: "mobile",
+    destination: "",
+    otp: "",
+    consentAccepted: false,
+    error: "",
+    verifying: false,
+  });
 
   const [otpModal, setOtpModal] = useState({
     open: false,
@@ -598,29 +619,271 @@ useEffect(() => {
     ? value.toUpperCase()
     : value;
 
-if (name === "gstNumber") {
-  setGstVerified(false);
-}
+    const resetVerification =
+      name === "mobile"
+        ? { mobileVerified: false, mobileOtpSent: false, mobileOtp: "" }
+        : name === "email"
+          ? { emailVerified: false, emailOtpSent: false, emailOtp: "" }
+          : name === "panNumber"
+            ? { panVerified: false }
+            : {};
     setCoApplicants((prev) =>
       prev.map((coApp, idx) =>
-        idx === index ? { ...coApp, [name]: nextValue } : coApp
+        idx === index ? { ...coApp, [name]: nextValue, ...resetVerification } : coApp
       )
     );
+  };
+
+  const updateCoApplicant = (index, patch) => {
+    setCoApplicants((previous) => previous.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...patch } : item));
+  };
+
+  const ensureCoApplicantIsSaved = async (index) => {
+    const current = coApplicants[index];
+    if (current?.id) return Number(current.id);
+
+    let targetApplicationId = createdApplicationId ?? applicationId;
+    if (!targetApplicationId) {
+      const draftResponse = unwrapResponse(await rmApi.saveDraft(buildPayload(false)));
+      const draft = draftResponse?.data ?? draftResponse;
+      targetApplicationId = draft?.id || draft?.applicationId || draft?.application?.id;
+      if (!targetApplicationId) {
+        throw new Error("The draft was saved but no application ID was returned.");
+      }
+      setCreatedApplicationId(Number(targetApplicationId));
+      navigate(`/create-lead/${targetApplicationId}`, { replace: true });
+    }
+
+    const payload = buildCoApplicantsPayload().map((item, itemIndex) => ({
+      ...item,
+      // The legal name is replaced immediately after PAN OCR. The database row
+      // must exist first so phone/email verification can be linked to it.
+      name: item.name || `Co-applicant ${itemIndex + 1} - PAN pending`,
+    }));
+    const saveResponse = unwrapResponse(
+      await rmApi.saveCoApplicantsBulk(targetApplicationId, payload),
+    );
+    const savedRows = saveResponse?.data ?? saveResponse ?? [];
+    const saved = Array.isArray(savedRows) ? savedRows[index] : null;
+    const savedId = Number(saved?.id);
+    if (!Number.isInteger(savedId) || savedId <= 0) {
+      throw new Error("Co-applicant was saved but no co-applicant ID was returned.");
+    }
+    setCoApplicants((previous) => previous.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, id: savedId } : {
+        ...item,
+        id: savedRows[itemIndex]?.id || item.id,
+      }));
+    return savedId;
+  };
+
+  const handleCoApplicantMobileOtp = async (index, verify = false, otpOverride = "", consentAccepted = false) => {
+    const coApp = coApplicants[index];
+    if (!/^[6-9]\d{9}$/.test(String(coApp.mobile || "").trim())) {
+      setMessageType("error");
+      setMessage("Enter a valid 10-digit co-applicant mobile number.");
+      return;
+    }
+    const enteredOtp = otpOverride || coApp.mobileOtp;
+    if (verify && !consentAccepted) {
+      throw new Error("Please accept the consent before verifying the OTP.");
+    }
+    if (verify && !/^\d{6}$/.test(String(enteredOtp || ""))) {
+      setMessageType("error");
+      setMessage("Enter the 6-digit mobile OTP.");
+      return;
+    }
+    try {
+      const coApplicantId = await ensureCoApplicantIsSaved(index);
+      if (verify) {
+        await rmApi.verifyCoApplicantMobileOtp(coApplicantId, {
+          mobile: coApp.mobile.trim(), otp: enteredOtp, consentGiven: true, consentText: CONSENT_TEXT,
+        });
+        updateCoApplicant(index, { mobileVerified: true });
+        setMessage("Co-applicant mobile number verified successfully.");
+      } else {
+        await rmApi.sendCoApplicantMobileOtp(coApplicantId, { mobile: coApp.mobile.trim() });
+        updateCoApplicant(index, { mobileOtpSent: true, mobileOtp: "" });
+        setCoApplicantOtpModal({
+          open: true, index, channel: "mobile",
+          destination: `mobile ending ${coApp.mobile.slice(-4)}`,
+          otp: "", consentAccepted: false, error: "", verifying: false,
+        });
+        setMessage("OTP sent to the co-applicant's mobile number.");
+      }
+      setMessageType("success");
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error?.response?.data?.message || error?.message || "Mobile verification failed.");
+      if (verify) throw error;
+    }
+  };
+
+  const handleCoApplicantEmailOtp = async (index, verify = false, otpOverride = "", consentAccepted = false) => {
+    const coApp = coApplicants[index];
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(coApp.email || "").trim())) {
+      setMessageType("error");
+      setMessage("Enter a valid co-applicant email address.");
+      return;
+    }
+    const enteredOtp = otpOverride || coApp.emailOtp;
+    if (verify && !consentAccepted) {
+      throw new Error("Please accept the consent before verifying the OTP.");
+    }
+    if (verify && !/^\d{6}$/.test(String(enteredOtp || ""))) {
+      setMessageType("error");
+      setMessage("Enter the 6-digit email OTP.");
+      return;
+    }
+    try {
+      const coApplicantId = await ensureCoApplicantIsSaved(index);
+      if (verify) {
+        await rmApi.verifyCoApplicantEmailOtp(coApplicantId, {
+          email: coApp.email.trim(),
+          otp: enteredOtp,
+          sessionId: coApp.emailOtpSessionId,
+          consentGiven: true,
+          consentText: CONSENT_TEXT,
+        });
+        updateCoApplicant(index, { emailVerified: true });
+        setMessage("Co-applicant email address verified successfully.");
+      } else {
+        const response = unwrapResponse(await rmApi.sendCoApplicantEmailOtp(coApplicantId, { email: coApp.email.trim() }));
+        updateCoApplicant(index, {
+          emailOtpSent: true,
+          emailOtp: "",
+          emailOtpSessionId: response?.data?.sessionId || response?.sessionId || null,
+        });
+        setCoApplicantOtpModal({
+          open: true, index, channel: "email",
+          destination: coApp.email,
+          otp: "", consentAccepted: false, error: "", verifying: false,
+        });
+        setMessage("OTP sent to the co-applicant's email address.");
+      }
+      setMessageType("success");
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error?.response?.data?.message || error?.message || "Email verification failed.");
+      if (verify) throw error;
+    }
+  };
+
+  const handleVerifyCoApplicantOtpModal = async () => {
+    const modal = coApplicantOtpModal;
+    if (!modal.consentAccepted) {
+      setCoApplicantOtpModal((previous) => ({ ...previous, error: "Please accept the consent to continue." }));
+      return;
+    }
+    if (!/^\d{6}$/.test(modal.otp)) {
+      setCoApplicantOtpModal((previous) => ({ ...previous, error: "Enter the valid 6-digit OTP you received." }));
+      return;
+    }
+    setCoApplicantOtpModal((previous) => ({ ...previous, verifying: true, error: "" }));
+    try {
+      if (modal.channel === "mobile") {
+        await handleCoApplicantMobileOtp(modal.index, true, modal.otp, true);
+      } else {
+        await handleCoApplicantEmailOtp(modal.index, true, modal.otp, true);
+      }
+      setCoApplicantOtpModal((previous) => ({ ...previous, open: false, verifying: false }));
+    } catch (error) {
+      setCoApplicantOtpModal((previous) => ({
+        ...previous, verifying: false,
+        error: error?.response?.data?.message || error?.message || "OTP verification failed.",
+      }));
+    }
+  };
+
+  const handleCoApplicantPanOcr = async (index) => {
+    const coApp = coApplicants[index];
+    if (!coApp.panFile) {
+      setMessageType("error");
+      setMessage("Upload a clear image or PDF of the co-applicant's PAN card.");
+      return;
+    }
+    updateCoApplicant(index, { panOcrLoading: true, panOcrError: "" });
+    try {
+      const payload = new FormData();
+      payload.append("imageUrl", coApp.panFile);
+      payload.append("clientRefId", String(coApp.id || `CO-PAN-${Date.now()}`));
+      const response = unwrapResponse(await rmApi.panOcr(payload));
+      const extracted = response?.data ?? response;
+      const panNumber = readPanOcrValue(extracted, ["panNumber", "pan", "pan_number", "idNumber", "documentNumber"]);
+      const name = readPanOcrValue(extracted, ["name", "fullName", "customerName", "applicantName", "nameOnPan"]);
+      if (!name || !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(String(panNumber).toUpperCase())) {
+        throw new Error("We could not clearly read the PAN card. Please re-upload a clearer, glare-free image with all four corners visible.");
+      }
+      updateCoApplicant(index, {
+        name: String(name).trim(),
+        panNumber: String(panNumber).trim().toUpperCase(),
+        panOcrLoading: false,
+        panOcrError: "",
+      });
+      setMessageType("success");
+      setMessage("PAN read successfully. Co-Applicant Name has been auto-filled.");
+    } catch (error) {
+      const errorMessage = error?.message || "We could not clearly read the PAN card. Please re-upload a clearer image.";
+      updateCoApplicant(index, { panOcrLoading: false, panOcrError: errorMessage });
+      setMessageType("error");
+      setMessage(errorMessage);
+    }
+  };
+
+  const handleCoApplicantIdentityLink = async (index) => {
+    const coApp = coApplicants[index];
+    if (!coApp.mobileVerified || (coApp.email && !coApp.emailVerified)) {
+      setMessageType("error");
+      setMessage("Verify the co-applicant's mobile number and email before sending the identity link.");
+      return;
+    }
+    try {
+      const coApplicantId = await ensureCoApplicantIsSaved(index);
+      await rmApi.initCoApplicantAadhaar(coApplicantId, { channel: "DIGILOCKER" });
+      updateCoApplicant(index, { identityStatus: "INITIATED" });
+      setMessageType("success");
+      setMessage("Secure DigiLocker identity link sent directly to the co-applicant.");
+    } catch (error) {
+      setMessageType("error");
+      setMessage(error?.response?.data?.message || error?.message || "Unable to send the identity verification link.");
+    }
+  };
+
+  const handleCoApplicantPanVerify = async (index) => {
+    const coApp = coApplicants[index];
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(String(coApp.panNumber || '').trim().toUpperCase())) {
+      setMessageType("error");
+      setMessage("Enter or extract a valid 10-character PAN number.");
+      return;
+    }
+    if (!String(coApp.name || '').trim()) {
+      setMessageType("error");
+      setMessage("Upload a clear PAN card so the legal name can be extracted before verification.");
+      return;
+    }
+    try {
+      const coApplicantId = await ensureCoApplicantIsSaved(index);
+      await rmApi.verifyCoApplicantPan(coApplicantId, {
+        panNumber: coApp.panNumber.trim().toUpperCase(), name: coApp.name.trim(),
+      });
+      updateCoApplicant(index, { panVerified: true });
+      setMessageType("success");
+      setMessage("Co-applicant PAN verified successfully.");
+    } catch (error) {
+      updateCoApplicant(index, { panVerified: false });
+      setMessageType("error");
+      setMessage(error?.response?.data?.message || error?.message || "PAN verification failed.");
+    }
   };
 
   // Append a new empty co-applicant structure to the array
   const handleAddCoApplicant = () => {
     setCoApplicants((prev) => [
       ...prev,
-      {
-        name: "",
-        mobile: "",
-        email: "",
-        panNumber: "",
-        aadhaarNumber: "",
+      { ...emptyCoApplicantForm,
         relationship: "SPOUSE",
         occupation: "SELF_EMPLOYED",
-        monthlyIncome: "",
       },
     ]);
   };
@@ -636,11 +899,11 @@ if (name === "gstNumber") {
 
   const buildCoApplicantsPayload = () => {
     return coApplicants.map((coApp) => ({
+      id: coApp.id || undefined,
       name: coApp.name.trim(),
       mobile: coApp.mobile.trim(),
       email: coApp.email?.trim() || undefined,
       panNumber: coApp.panNumber?.trim().toUpperCase() || undefined,
-      aadhaarNumber: coApp.aadhaarNumber?.trim() || undefined,
       relationship: coApp.relationship,
       occupation: coApp.occupation || undefined,
       monthlyIncome: coApp.monthlyIncome ? Number(coApp.monthlyIncome) : undefined,
@@ -994,16 +1257,29 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
         const rows = result?.data ?? result ?? [];
 
         if (Array.isArray(rows) && rows.length > 0) {
+          const statusRows = await Promise.all(rows.map(async (row) => {
+            try {
+              const statusResponse = unwrapResponse(await rmApi.getCoApplicantAadhaarStatus(row.id));
+              return statusResponse?.data ?? statusResponse ?? {};
+            } catch {
+              return {};
+            }
+          }));
           setCoApplicants(
-            rows.map((row) => ({
+            rows.map((row, rowIndex) => ({
+              ...emptyCoApplicantForm,
+              id: row.id,
               name: row.name || "",
               mobile: row.mobile || "",
               email: row.email || "",
               panNumber: row.panNumber || row.pan_number || "",
-              aadhaarNumber: row.aadhaarNumber || row.aadhaar_number || "",
               relationship: row.relationship || "SPOUSE",
               occupation: row.occupation || "SELF_EMPLOYED",
               monthlyIncome: row.monthlyIncome ? String(row.monthlyIncome) : "",
+              mobileVerified: statusRows[rowIndex]?.mobileStatus === "VERIFIED",
+              emailVerified: statusRows[rowIndex]?.emailStatus === "VERIFIED",
+              panVerified: statusRows[rowIndex]?.panStatus === "VERIFIED",
+              identityStatus: statusRows[rowIndex]?.aadhaarStatus || "NOT_INITIATED",
             }))
           );
         }
@@ -2244,6 +2520,58 @@ setLocalAadhaarStatus("INITIATED");
         </div>
       )}
 
+      {coApplicantOtpModal.open && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+            onClick={() => !coApplicantOtpModal.verifying && setCoApplicantOtpModal((previous) => ({ ...previous, open: false }))}
+            aria-hidden="true" />
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-100 px-6 py-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Verify Co-Applicant {coApplicantOtpModal.channel === "mobile" ? "Mobile" : "Email"}</h3>
+                  <p className="mt-1 text-xs text-slate-500">Enter the OTP sent to {coApplicantOtpModal.destination}.</p>
+                </div>
+                <button type="button" disabled={coApplicantOtpModal.verifying}
+                  onClick={() => setCoApplicantOtpModal((previous) => ({ ...previous, open: false }))}
+                  className="text-xl text-slate-400 hover:text-slate-700 disabled:opacity-40">×</button>
+              </div>
+            </div>
+            <div className="space-y-5 p-6">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-slate-700">6-digit OTP</label>
+                <input autoFocus value={coApplicantOtpModal.otp} inputMode="numeric" maxLength={6}
+                  onChange={(event) => setCoApplicantOtpModal((previous) => ({
+                    ...previous, otp: event.target.value.replace(/\D/g, "").slice(0, 6), error: "",
+                  }))}
+                  placeholder="Enter OTP"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-center text-xl font-bold tracking-[0.35em] outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" />
+              </div>
+              <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-800">Co-Applicant Consent</p>
+                <p className="mt-2 text-xs leading-relaxed text-slate-600">{CONSENT_TEXT}</p>
+                <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-xs font-semibold text-slate-700">
+                  <input type="checkbox" checked={coApplicantOtpModal.consentAccepted}
+                    onChange={(event) => setCoApplicantOtpModal((previous) => ({
+                      ...previous, consentAccepted: event.target.checked, error: "",
+                    }))}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600" />
+                  I have read and accept this consent for verification.
+                </label>
+              </div>
+              {coApplicantOtpModal.error && (
+                <div className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs font-semibold text-rose-700">{coApplicantOtpModal.error}</div>
+              )}
+              <button type="button" onClick={handleVerifyCoApplicantOtpModal}
+                disabled={coApplicantOtpModal.verifying || !coApplicantOtpModal.consentAccepted || coApplicantOtpModal.otp.length !== 6}
+                className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+                {coApplicantOtpModal.verifying ? "Verifying OTP..." : "Verify OTP & Save Consent"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Secondary Server Errors Alert Popup Container */}
       {otpPopup.open && !otpModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -2920,11 +3248,11 @@ setLocalAadhaarStatus("INITIATED");
               <div key={index} className="relative group">
                 <Section title={`Co-Applicant Details ${index + 1}`}>
                   <Field
-                    label="Co-Applicant Name *"
+                    label="Co-Applicant Name (from PAN) *"
                     name="name"
                     value={coApp.name}
-                    onChange={(e) => handleCoApplicantChange(index, e)}
-                    placeholder="Enter full legal name"
+                    readOnly
+                    placeholder="Auto-filled after PAN scan"
                     required
                   />
 
@@ -2932,26 +3260,33 @@ setLocalAadhaarStatus("INITIATED");
                     <label className="text-xs font-semibold text-slate-700">
                       Mobile Number *
                     </label>
-                    <input
-                      name="mobile"
-                      value={coApp.mobile}
-                      onChange={(e) => handleCoApplicantChange(index, e)}
-                      maxLength={10}
-                      inputMode="numeric"
-                      placeholder="Enter 10-digit mobile"
-                      required
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                    />
+                    <div className="flex gap-2">
+                      <input name="mobile" value={coApp.mobile}
+                        onChange={(e) => handleCoApplicantChange(index, e)} maxLength={10}
+                        inputMode="numeric" placeholder="10-digit mobile" required
+                        disabled={coApp.mobileVerified}
+                        className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50" />
+                      <button type="button" onClick={() => handleCoApplicantMobileOtp(index)}
+                        disabled={coApp.mobileVerified}
+                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600">
+                        {coApp.mobileVerified ? "Verified" : coApp.mobileOtpSent ? "Resend" : "Send OTP"}
+                      </button>
+                    </div>
                   </div>
 
-                  <Field
-                    label="Email Id"
-                    type="email"
-                    name="email"
-                    value={coApp.email}
-                    onChange={(e) => handleCoApplicantChange(index, e)}
-                    placeholder="name@domain.com"
-                  />
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-slate-700">Email Address *</label>
+                    <div className="flex gap-2">
+                      <input type="email" name="email" value={coApp.email}
+                        onChange={(e) => handleCoApplicantChange(index, e)} placeholder="name@domain.com"
+                        disabled={coApp.emailVerified}
+                        className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3.5 py-2 text-sm disabled:bg-slate-50" />
+                      <button type="button" onClick={() => handleCoApplicantEmailOtp(index)} disabled={coApp.emailVerified}
+                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600">
+                        {coApp.emailVerified ? "Verified" : coApp.emailOtpSent ? "Resend" : "Send OTP"}
+                      </button>
+                    </div>
+                  </div>
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-slate-700">
@@ -2965,21 +3300,33 @@ setLocalAadhaarStatus("INITIATED");
                       placeholder="ABCDE1234F"
                       className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm uppercase text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     />
+                    <span className="text-[11px] text-slate-500">Enter PAN manually or upload the card below. Format: ABCDE1234F.</span>
+                    <button type="button" onClick={() => handleCoApplicantPanVerify(index)} disabled={coApp.panVerified}
+                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600">
+                      {coApp.panVerified ? "PAN Verified" : "Verify PAN"}
+                    </button>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Aadhaar / OVD Number
-                    </label>
-                    <input
-                      name="aadhaarNumber"
-                      value={coApp.aadhaarNumber}
-                      onChange={(e) => handleCoApplicantChange(index, e)}
-                      maxLength={12}
-                      inputMode="numeric"
-                      placeholder="0000 0000 0000"
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                    />
+                    <label className="text-xs font-semibold text-slate-700">PAN Card OCR *</label>
+                    <input type="file" accept="image/jpeg,image/png,application/pdf"
+                      onChange={(e) => updateCoApplicant(index, { panFile: e.target.files?.[0] || null, panOcrError: "" })}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs" />
+                    <button type="button" onClick={() => handleCoApplicantPanOcr(index)} disabled={coApp.panOcrLoading}
+                      className="rounded-lg border border-blue-600 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50">
+                      {coApp.panOcrLoading ? "Reading PAN..." : "Extract PAN & Name"}
+                    </button>
+                    {coApp.panOcrError && <span className="text-[11px] text-rose-600">{coApp.panOcrError}</span>}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
+                    <label className="text-xs font-semibold text-slate-700">Identity Verification</label>
+                    <p className="text-[11px] leading-relaxed text-slate-600">No Aadhaar number entry is required. A secure DigiLocker / offline XML verification link will be sent directly to the co-applicant.</p>
+                    <button type="button" onClick={() => handleCoApplicantIdentityLink(index)}
+                      disabled={coApp.identityStatus === "INITIATED" || coApp.identityStatus === "VERIFIED"}
+                      className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600">
+                      {coApp.identityStatus === "VERIFIED" ? "Identity Verified" : coApp.identityStatus === "INITIATED" ? "Link Sent" : "Send Identity Link"}
+                    </button>
                   </div>
 
                   <Field label="Relationship Matrix *">

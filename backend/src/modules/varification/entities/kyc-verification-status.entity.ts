@@ -89,6 +89,18 @@ export class KycVerificationStatus {
   })
   emailStatus: KycVerificationStatusValue;
 
+  @Column({ type: 'longtext', nullable: true })
+  mobileApiRequest?: string;
+
+  @Column({ type: 'longtext', nullable: true })
+  mobileApiResponse?: string;
+
+  @Column({ type: 'longtext', nullable: true })
+  emailApiRequest?: string;
+
+  @Column({ type: 'longtext', nullable: true })
+  emailApiResponse?: string;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   aadhaarTransactionId?: string;
 

@@ -25,6 +25,7 @@ import {
   FaQuestionCircle,
   FaClipboardList,
   FaRupeeSign,
+  FaUniversity,
 } from "react-icons/fa";
 import { useAuth } from "../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -391,6 +392,33 @@ OPS_CHECKER: [
   },
    
 ],
+
+LMS: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/lms-dashboard",
+        label: "LMS Dashboard",
+        Icon: FaChartBar,
+      },
+    ],
+  },
+  {
+    category: "MODULES",
+    items: [
+      { to: "/lms/loan-accounts", label: "Loan Accounts", Icon: FaUniversity },
+      { to: "/lms/disbursements", label: "Disbursements", Icon: FaRupeeSign },
+      { to: "/lms/repayments", label: "Repayments", Icon: FaReceipt },
+      { to: "/lms/utr-upload", label: "UTR Upload", Icon: FaClipboardList },
+      { to: "/lms/nach", label: "NACH / eNACH", Icon: FaFileContract },
+      { to: "/lms/soa", label: "Statement of Account", Icon: FaFileAlt },
+      { to: "/lms/collections", label: "Collections", Icon: FaUsers },
+      
+    ],
+  },
+],
+
 COMMON: [
   {
     category: "REFERENCE",
@@ -418,9 +446,11 @@ const groupOrder = [
 ];
 
 function normalizeRoles(user) {
-  const roles = user?.roles;
+  const roles = user?.roles ?? user?.role;
   if (!roles) return [];
-  return Array.isArray(roles) ? roles : [roles];
+  return (Array.isArray(roles) ? roles : [roles])
+    .map((role) => String(role?.code || role?.name || role?.role || role).toUpperCase())
+    .filter(Boolean);
 }
 
 export default function Sidebar() {
