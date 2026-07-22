@@ -10,78 +10,119 @@ import {
 } from '@nestjs/common';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
+
 import type { Actor } from '../applications/applications.service';
 import { LegalService } from './legal.service';
 
 @Controller('legal')
 export class LegalController {
-  constructor(private readonly service: LegalService) {}
+  constructor(
+    private readonly service: LegalService,
+  ) {}
 
+  /*
+   * Public dashboard API.
+   * Keep this static route before :applicationId.
+   */
+  @Public()
+@Get('cases-requiring-attention')
+getCasesRequiringAttention() {
+  return this.service.getCasesRequiringAttention();
+}
 
-  //   @Get('cases-requiring-attention')
-  // getCasesRequiringAttention() {
-  //   return this.service.getCasesRequiringAttention();
-  // }
-
-  // @Get(':applicationId/status')
-  // getStatus(
-  //   @Param('applicationId', ParseIntPipe) id: number,
-  // ) {
-  //   return this.service.getStatus(id);
-  // }
-  
+  /*
+   * Existing Legal cases API.
+   */
   @Get('cases')
   getCases() {
     return this.service.getCases();
   }
 
-  @Get(':applicationId')
-  getApplication(
-    @Param('applicationId', ParseIntPipe) applicationId: number,
+  /*
+   * Application status API.
+   * Keep before the generic :applicationId route.
+   */
+  @Get(':applicationId/status')
+  getStatus(
+    @Param('applicationId', ParseIntPipe)
+    applicationId: number,
   ) {
-    return this.service.getApplication(applicationId);
+    return this.service.getStatus(applicationId);
   }
 
   @Get(':applicationId/assessment')
   getAssessment(
-    @Param('applicationId', ParseIntPipe) applicationId: number,
+    @Param('applicationId', ParseIntPipe)
+    applicationId: number,
   ) {
     return this.service.getAssessment(applicationId);
   }
 
+  /*
+   * Generic dynamic route should remain after static routes.
+   */
+  @Get(':applicationId')
+  getApplication(
+    @Param('applicationId', ParseIntPipe)
+    applicationId: number,
+  ) {
+    return this.service.getApplication(applicationId);
+  }
+
   @Post(':applicationId/save-draft')
   saveDraft(
-    @Param('applicationId', ParseIntPipe) applicationId: number,
+    @Param('applicationId', ParseIntPipe)
+    applicationId: number,
     @Body() body: any,
     @CurrentUser() user: Actor,
   ) {
-    return this.service.saveDraft(applicationId, body, user);
+    return this.service.saveDraft(
+      applicationId,
+      body,
+      user,
+    );
   }
 
   @Post(':applicationId/raise-query')
   raiseQuery(
-    @Param('applicationId', ParseIntPipe) applicationId: number,
+    @Param('applicationId', ParseIntPipe)
+    applicationId: number,
     @Body() body: any,
     @CurrentUser() user: Actor,
   ) {
-    return this.service.raiseQuery(applicationId, body, user);
+    return this.service.raiseQuery(
+      applicationId,
+      body,
+      user,
+    );
   }
 
   @Post(':applicationId/mark-negative')
   markNegative(
-    @Param('applicationId', ParseIntPipe) applicationId: number,
+    @Param('applicationId', ParseIntPipe)
+    applicationId: number,
     @Body() body: any,
     @CurrentUser() user: Actor,
   ) {
-    return this.service.markNegative(applicationId, body, user);
+    return this.service.markNegative(
+      applicationId,
+      body,
+      user,
+    );
   }
 
   @Post(':applicationId/approve-to-ops-maker')
   approveToOpsMaker(
-    @Param('applicationId', ParseIntPipe) applicationId: number,
+    @Param('applicationId', ParseIntPipe)
+    applicationId: number,
     @Body() body: any,
     @CurrentUser() user: Actor,
   ) {
-    return this.service.approveToOpsMaker(applicationId, body, user);
+    return this.service.approveToOpsMaker(
+      applicationId,
+      body,
+      user,
+    );
   }
 }

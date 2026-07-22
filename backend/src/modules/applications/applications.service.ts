@@ -43,10 +43,56 @@ export class ApplicationsService {
     value as WorkflowLogAction,
   );
 }
-  async findAll(query: any) {
-    const [data, total] = await this.applications.findAndCount({ order: { id: 'DESC' }, skip: (query.page - 1) * query.limit, take: query.limit });
-    return { data, meta: { total, page: query.page, limit: query.limit } };
-  }
+  // async findAll(query: any) {
+  //   const [data, total] = await this.applications.findAndCount({ order: { id: 'DESC' }, skip: (query.page - 1) * query.limit, take: query.limit });
+  //   return { data, meta: { total, page: query.page, limit: query.limit } };
+  // }
+
+  async findAll(query: any = {}) {
+  const pageValue = Number.parseInt(
+    String(query?.page ?? '1'),
+    10,
+  );
+
+  const limitValue = Number.parseInt(
+    String(query?.limit ?? '50'),
+    10,
+  );
+
+  const page =
+    Number.isFinite(pageValue) &&
+    pageValue > 0
+      ? pageValue
+      : 1;
+
+  const limit =
+    Number.isFinite(limitValue) &&
+    limitValue > 0
+      ? Math.min(limitValue, 100)
+      : 50;
+
+  const [data, total] =
+    await this.applications.findAndCount({
+      order: {
+        id: 'DESC',
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+  return {
+    data,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages:
+        total === 0
+          ? 0
+          : Math.ceil(total / limit),
+    },
+  };
+}
 
   async search(term: string) {
     const where = term

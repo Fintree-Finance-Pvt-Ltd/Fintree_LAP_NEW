@@ -1,197 +1,102 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+
 
 /* =========================================================
-   STATIC DATA
-   Replace these arrays with API responses later.
+   JOURNEY STEPS
+   Field Verification removed.
+   Remaining stages renumbered from 1 to 10.
 ========================================================= */
 
-const statistics = [
-  {
-    title: "LEGAL QUEUE",
-    value: "8",
-    accent: "#4f67e8",
-    border: "#b9c8ff",
-    background: "#f7f8ff",
-    circle: "rgba(93, 112, 235, 0.09)",
-  },
-  {
-    title: "POSITIVE",
-    value: "4",
-    accent: "#109f8e",
-    border: "#a8ded6",
-    background: "#f5fcfb",
-    circle: "rgba(16, 159, 142, 0.09)",
-  },
-  {
-    title: "QUERIES",
-    value: "3",
-    accent: "#d24978",
-    border: "#e9bfd0",
-    background: "#fff8fb",
-    circle: "rgba(210, 73, 120, 0.09)",
-  },
-  {
-    title: "AVG TAT",
-    value: "2.1 days",
-    accent: "#df7d0a",
-    border: "#f1cfaa",
-    background: "#fffaf4",
-    circle: "rgba(223, 125, 10, 0.08)",
-  },
-];
-
 const journeySteps = [
-  { number: 1, name: "Lead", status: "Current" },
-  { number: 2, name: "Field Verification", status: "Pending" },
-  { number: 3, name: "BM Review", status: "Pending" },
-  { number: 4, name: "CM Screening", status: "Pending" },
-  { number: 5, name: "Credit", status: "Pending" },
-  { number: 6, name: "Legal & Valuation", status: "Pending" },
-  { number: 7, name: "Sanction", status: "Pending" },
-  { number: 8, name: "Documentation", status: "Pending" },
-  { number: 9, name: "Disbursement", status: "Pending" },
-  { number: 10, name: "Active Loan", status: "Pending" },
-];
-
-const caseRows = [
   {
-    caseId: "FTLIP-2026-0001",
-    applicant: "Aarav Sharma",
-    amount: "₹65,00,000",
-    stage: "Lead",
-    status: "New",
-    owner: "Rohit Mehta",
-    statusType: "blue",
+    number: 1,
+    name: "Lead",
+    status: "Current",
   },
   {
-    caseId: "FTLIP-2026-0002",
-    applicant: "Meera Iyer",
-    amount: "₹80,00,000",
-    stage: "BM Review",
-    status: "Submitted to BM",
-    owner: "Rohit Mehta",
-    statusType: "blue",
+    number: 2,
+    name: "BM Review",
+    status: "Pending",
   },
   {
-    caseId: "FTLIP-2026-0003",
-    applicant: "Rajesh Traders",
-    amount: "₹1,20,00,000",
-    stage: "Credit",
-    status: "Credit Underwriting",
-    owner: "Chirag Mishra",
-    statusType: "orange",
+    number: 3,
+    name: "CM Screening",
+    status: "Pending",
   },
   {
-    caseId: "FTLIP-2026-0004",
-    applicant: "Neha Kapoor",
-    amount: "₹90,00,000",
-    stage: "Legal & Valuation",
-    status: "Legal & Valuation",
-    owner: "Kavita Rao",
-    statusType: "orange",
+    number: 4,
+    name: "Credit",
+    status: "Pending",
   },
   {
-    caseId: "FTLIP-2026-0005",
-    applicant: "Siddharth Jain",
-    amount: "₹1,50,00,000",
-    stage: "Documentation",
-    status: "Documentation Pending",
-    owner: "Sameer Khanna",
-    statusType: "orange",
+    number: 5,
+    name: "Legal & Valuation",
+    status: "Pending",
   },
   {
-    caseId: "FTLIP-2026-0006",
-    applicant: "Prakash Verma",
-    amount: "₹72,00,000",
-    stage: "Active Loan",
-    status: "Active",
-    owner: "Ojas Batra",
-    statusType: "green",
+    number: 6,
+    name: "Sanction",
+    status: "Pending",
   },
   {
-    caseId: "FTLIP-2026-0007",
-    applicant: "Sunita Enterprises",
-    amount: "₹60,00,000",
-    stage: "Collections",
-    status: "37 DPD",
-    owner: "Chetan Yadav",
-    statusType: "green",
+    number: 7,
+    name: "Documentation",
+    status: "Pending",
+  },
+  {
+    number: 8,
+    name: "Disbursement",
+    status: "Pending",
+  },
+  {
+    number: 9,
+    name: "Active Loan",
+    status: "Pending",
+  },
+  {
+    number: 10,
+    name: "Collections",
+    status: "Pending",
   },
 ];
 
-const selectedCaseDetails = [
-  { label: "Applicant", value: "Aarav Sharma" },
-  { label: "Requested", value: "₹65,00,000" },
-  { label: "FOIR", value: "22.70%" },
-  { label: "Indicative LTV", value: "61.90%" },
-  { label: "Bureau", value: "742" },
-  { label: "Last Action", value: "Lead created" },
-];
 
-const alerts = [
-  {
-    type: "success",
-    text: (
-      <>
-        Geo distance: <strong>18 KM.</strong> Within approved{" "}
-        <strong>50 KM</strong> sourcing radius.
-      </>
-    ),
-  },
-  {
-    type: "warning",
-    text: (
-      <>
-        Documents: <strong>5/16</strong> verified.
-      </>
-    ),
-  },
-];
+
+/* =========================================================
+   RESPONSIVE VIEWPORT HOOK
+========================================================= */
 
 function useViewportWidth() {
   const [width, setWidth] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth : 1440
+    typeof window !== "undefined" ? window.innerWidth : 1440,
   );
 
   useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
+    const handleResize = () => {
+      setWidth(window.innerWidth);
+    };
+
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   return width;
 }
 
-function SectionTitle({ children }) {
-  return (
-    <div>
-      <h2
-        style={{
-          margin: 0,
-          color: "#142e59",
-          fontSize: "18px",
-          lineHeight: 1.3,
-          fontWeight: 800,
-          letterSpacing: "-0.3px",
-        }}
-      >
-        {children}
-      </h2>
+/* =========================================================
+   COMMON ACTION BUTTON
+========================================================= */
 
-      <div
-        style={{
-          width: "38px",
-          height: "3px",
-          marginTop: "9px",
-          borderRadius: "999px",
-          background: "linear-gradient(90deg, #4166e6 0%, #12a6d4 100%)",
-        }}
-      />
-    </div>
-  );
-}
-
-function ActionButton({ children, onClick, transparent = false, compact = false }) {
+function ActionButton({
+  children,
+  onClick,
+  transparent = false,
+  compact = false,
+}) {
   return (
     <button
       type="button"
@@ -202,6 +107,7 @@ function ActionButton({ children, onClick, transparent = false, compact = false 
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
+        flexShrink: 0,
         color: transparent ? "#ffffff" : "#1b3359",
         fontFamily: "inherit",
         fontSize: compact ? "12px" : "13px",
@@ -221,13 +127,26 @@ function ActionButton({ children, onClick, transparent = false, compact = false 
           : "0 4px 12px rgba(30,55,95,0.05)",
         backdropFilter: transparent ? "blur(8px)" : "none",
         WebkitBackdropFilter: transparent ? "blur(8px)" : "none",
-        transition: "transform 180ms ease, box-shadow 180ms ease",
+        transition:
+          "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
       }}
       onMouseEnter={(event) => {
         event.currentTarget.style.transform = "translateY(-1px)";
+
+        if (!transparent) {
+          event.currentTarget.style.borderColor = "#bdcce3";
+          event.currentTarget.style.boxShadow =
+            "0 7px 17px rgba(30,55,95,0.09)";
+        }
       }}
       onMouseLeave={(event) => {
         event.currentTarget.style.transform = "translateY(0)";
+
+        if (!transparent) {
+          event.currentTarget.style.borderColor = "#d7e0ef";
+          event.currentTarget.style.boxShadow =
+            "0 4px 12px rgba(30,55,95,0.05)";
+        }
       }}
     >
       {children}
@@ -235,167 +154,31 @@ function ActionButton({ children, onClick, transparent = false, compact = false 
   );
 }
 
-function LegalToolbar({ compact }) {
-  return (
-    <section
-      style={{
-        width: "100%",
-        minHeight: compact ? "68px" : "72px",
-        padding: compact ? "10px 14px" : "11px 18px",
-        boxSizing: "border-box",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "16px",
-        border: "1px solid #dce4ef",
-        borderRadius: "16px",
-        background: "rgba(255,255,255,0.97)",
-        boxShadow: "0 8px 20px rgba(24,46,79,0.05)",
-      }}
-    >
-      <div
-        style={{
-          minWidth: 0,
-          display: "flex",
-          alignItems: "center",
-          gap: "13px",
-        }}
-      >
-        <div
-          style={{
-            width: "4px",
-            height: "36px",
-            flexShrink: 0,
-            borderRadius: "999px",
-            background: "linear-gradient(180deg, #4969ed 0%, #21a7d4 100%)",
-          }}
-        />
 
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              color: "#17335d",
-              fontSize: compact ? "13px" : "15px",
-              fontWeight: 900,
-              whiteSpace: "nowrap",
-            }}
-          >
-            LAP Operations Workspace
-          </div>
+/* =========================================================
+   EXISTING BANNER
+========================================================= */
 
-          {!compact && (
-            <div
-              style={{
-                marginTop: "3px",
-                color: "#7c8aa2",
-                fontSize: "10px",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Legal Officer · Delhi Hub · Dashboard
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div
-        style={{
-          minWidth: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          gap: "10px",
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            width: compact ? "290px" : "370px",
-            minWidth: compact ? "250px" : "320px",
-          }}
-        >
-          <select
-            defaultValue="FTLIP-2026-0001"
-            style={{
-              width: "100%",
-              height: "46px",
-              padding: "0 42px 0 16px",
-              color: "#17335d",
-              fontFamily: "inherit",
-              fontSize: "13px",
-              fontWeight: 800,
-              cursor: "pointer",
-              appearance: "none",
-              WebkitAppearance: "none",
-              outline: "none",
-              border: "1px solid #d4deed",
-              borderRadius: "12px",
-              background: "#ffffff",
-            }}
-          >
-            <option value="FTLIP-2026-0001">
-              FTLIP-2026-0001 · Aarav Sharma
-            </option>
-            <option value="FTLIP-2026-0002">
-              FTLIP-2026-0002 · Meera Iyer
-            </option>
-          </select>
-
-          <span
-            style={{
-              position: "absolute",
-              top: "50%",
-              right: "16px",
-              width: "8px",
-              height: "8px",
-              pointerEvents: "none",
-              borderRight: "2px solid #17335d",
-              borderBottom: "2px solid #17335d",
-              transform: "translateY(-70%) rotate(45deg)",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            height: "31px",
-            padding: "0 13px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#385ad3",
-            fontSize: "11px",
-            fontWeight: 900,
-            border: "1px solid #dce5ff",
-            borderRadius: "20px",
-            background: "#edf3ff",
-          }}
-        >
-          New
-        </div>
-
-        {!compact && <ActionButton compact>Journey map</ActionButton>}
-      </div>
-    </section>
-  );
-}
-
-function HeroBanner({ compact }) {
+function HeroBanner({ compact, mobile }) {
   return (
     <section
       style={{
         position: "relative",
-        minHeight: compact ? "130px" : "150px",
-        padding: compact ? "25px 26px" : "31px 32px",
+        minHeight: mobile ? "190px" : compact ? "130px" : "150px",
+        padding: mobile
+          ? "24px 20px"
+          : compact
+            ? "25px 26px"
+            : "31px 32px",
         boxSizing: "border-box",
         overflow: "hidden",
         display: "flex",
-        alignItems: "center",
+        alignItems: mobile ? "flex-start" : "center",
         justifyContent: "space-between",
-        gap: "24px",
+        flexDirection: mobile ? "column" : "row",
+        gap: mobile ? "22px" : "24px",
         color: "#ffffff",
-        borderRadius: "24px",
+        borderRadius: mobile ? "19px" : "24px",
         background:
           "linear-gradient(105deg, #4e50da 0%, #4360d3 42%, #3378cc 69%, #35aed1 100%)",
         boxShadow: "0 17px 34px rgba(48,88,190,0.17)",
@@ -441,21 +224,22 @@ function HeroBanner({ compact }) {
         style={{
           position: "relative",
           zIndex: 2,
+          minWidth: 0,
           display: "flex",
           alignItems: "center",
-          gap: "17px",
+          gap: mobile ? "13px" : "17px",
         }}
       >
         <div
           style={{
-            width: "52px",
-            height: "52px",
+            width: mobile ? "46px" : "52px",
+            height: mobile ? "46px" : "52px",
             flexShrink: 0,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             color: "#ffffff",
-            fontSize: "25px",
+            fontSize: mobile ? "21px" : "25px",
             border: "1px solid rgba(255,255,255,0.36)",
             borderRadius: "14px",
             background: "rgba(255,255,255,0.13)",
@@ -465,15 +249,15 @@ function HeroBanner({ compact }) {
           ✦
         </div>
 
-        <div>
+        <div style={{ minWidth: 0 }}>
           <h1
             style={{
               margin: 0,
               color: "#ffffff",
-              fontSize: compact ? "28px" : "34px",
+              fontSize: mobile ? "24px" : compact ? "28px" : "34px",
               lineHeight: 1.12,
               fontWeight: 900,
-              letterSpacing: "-1.2px",
+              letterSpacing: mobile ? "-0.7px" : "-1.2px",
             }}
           >
             Legal Officer Dashboard
@@ -497,258 +281,61 @@ function HeroBanner({ compact }) {
         style={{
           position: "relative",
           zIndex: 2,
+          width: mobile ? "100%" : "auto",
           display: "flex",
           alignItems: "center",
+          justifyContent: mobile ? "flex-start" : "flex-end",
+          flexWrap: "wrap",
           gap: "9px",
         }}
       >
         <ActionButton transparent onClick={() => window.print()}>
           Print
         </ActionButton>
+
         <ActionButton transparent>View Journey</ActionButton>
       </div>
     </section>
   );
 }
 
-function StatsCards({ columns }) {
+/* =========================================================
+   SECTION TITLE
+========================================================= */
+
+function SectionTitle({ children }) {
   return (
-    <section
-      style={{
-        width: "100%",
-        display: "grid",
-        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-        gap: "17px",
-      }}
-    >
-      {statistics.map((stat) => (
-        <article
-          key={stat.title}
-          style={{
-            position: "relative",
-            minHeight: "150px",
-            padding: "27px 21px 20px",
-            boxSizing: "border-box",
-            overflow: "hidden",
-            border: `1px solid ${stat.border}`,
-            borderTop: `4px solid ${stat.accent}`,
-            borderRadius: "19px",
-            background: stat.background,
-            boxShadow: "0 11px 23px rgba(37,58,92,0.045)",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: "-50px",
-              right: "-39px",
-              width: "137px",
-              height: "137px",
-              borderRadius: "50%",
-              background: stat.circle,
-            }}
-          />
-
-          <div
-            style={{
-              position: "absolute",
-              top: "-31px",
-              right: "-19px",
-              width: "93px",
-              height: "93px",
-              borderRadius: "50%",
-              background: stat.circle,
-            }}
-          />
-
-          <div style={{ position: "relative", zIndex: 2 }}>
-            <div
-              style={{
-                color: "#74849e",
-                fontSize: "11px",
-                fontWeight: 900,
-                letterSpacing: "0.75px",
-              }}
-            >
-              {stat.title}
-            </div>
-
-            <div
-              style={{
-                marginTop: "17px",
-                color: stat.accent,
-                fontSize: stat.value.includes("days") ? "29px" : "31px",
-                lineHeight: 1,
-                fontWeight: 900,
-                letterSpacing: "-0.7px",
-              }}
-            >
-              {stat.value}
-            </div>
-
-            <div
-              style={{
-                width: "fit-content",
-                marginTop: "14px",
-                padding: "5px 8px",
-                color: "#118159",
-                fontSize: "10px",
-                fontWeight: 500,
-                borderRadius: "20px",
-                background: "#e5f7ee",
-              }}
-            >
-              Live prototype indicator
-            </div>
-          </div>
-        </article>
-      ))}
-    </section>
-  );
-}
-
-function JourneyProgress() {
-  return (
-    <section
-      style={{
-        width: "100%",
-        padding: "30px 27px 24px",
-        boxSizing: "border-box",
-        overflow: "hidden",
-        border: "1px solid #d6e0ee",
-        borderRadius: "21px",
-        background: "rgba(255,255,255,0.9)",
-        boxShadow: "0 13px 27px rgba(34,55,87,0.045)",
-      }}
-    >
-      <div
+    <div>
+      <h2
         style={{
-          width: "100%",
-          overflowX: "auto",
-          overflowY: "hidden",
-          paddingBottom: "5px",
+          margin: 0,
+          color: "#142e59",
+          fontSize: "18px",
+          lineHeight: 1.3,
+          fontWeight: 800,
+          letterSpacing: "-0.3px",
         }}
       >
-        <div
-          style={{
-            position: "relative",
-            minWidth: "1180px",
-            padding: "0 4px",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: "20px",
-              left: "42px",
-              right: "42px",
-              height: "2px",
-              background:
-                "linear-gradient(90deg, #9db6ff 0%, #cad6f7 100%)",
-            }}
-          />
+        {children}
+      </h2>
 
-          <div
-            style={{
-              position: "relative",
-              zIndex: 2,
-              display: "grid",
-              gridTemplateColumns: `repeat(${journeySteps.length}, minmax(105px, 1fr))`,
-              columnGap: "10px",
-            }}
-          >
-            {journeySteps.map((step, index) => {
-              const active = index === 0;
-
-              return (
-                <div
-                  key={step.number}
-                  style={{
-                    minWidth: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: active ? "47px" : "42px",
-                      height: active ? "47px" : "42px",
-                      boxSizing: "border-box",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: active ? "#ffffff" : "#7c899f",
-                      fontSize: active ? "14px" : "13px",
-                      fontWeight: 900,
-                      border: active
-                        ? "7px solid #e7edff"
-                        : "6px solid #f0f3f8",
-                      borderRadius: "50%",
-                      background: active
-                        ? "linear-gradient(145deg, #4774eb, #1ea5d4)"
-                        : "#e2e8f0",
-                      boxShadow: active
-                        ? "0 0 0 3px #cbd8ff, 0 10px 23px rgba(59,98,220,0.22)"
-                        : "0 2px 7px rgba(38,58,89,0.05)",
-                    }}
-                  >
-                    {step.number}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: "12px",
-                      color: active ? "#3f5fe0" : "#263b5e",
-                      fontSize: "12px",
-                      fontWeight: active ? 900 : 800,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {step.name}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: "6px",
-                      color: "#7e8ba2",
-                      fontSize: "10px",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {step.status}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div
-            style={{
-              position: "relative",
-              height: "8px",
-              margin: "24px 9px 0",
-              borderRadius: "999px",
-              background: "#eef2f7",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: "5px",
-                right: "245px",
-                borderRadius: "999px",
-                background: "#acbdd6",
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    </section>
+      <div
+        style={{
+          width: "38px",
+          height: "3px",
+          marginTop: "9px",
+          borderRadius: "999px",
+          background:
+            "linear-gradient(90deg, #4166e6 0%, #12a6d4 100%)",
+        }}
+      />
+    </div>
   );
 }
+
+/* =========================================================
+   STATUS PILL
+========================================================= */
 
 function StatusPill({ type, children }) {
   const palettes = {
@@ -776,6 +363,7 @@ function StatusPill({ type, children }) {
       style={{
         maxWidth: "100%",
         padding: "6px 11px",
+        boxSizing: "border-box",
         display: "inline-flex",
         alignItems: "center",
         color: palette.color,
@@ -794,226 +382,203 @@ function StatusPill({ type, children }) {
   );
 }
 
-function CasesTable() {
+function formatAmount(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "—";
+  }
+
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return String(value);
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatText(value) {
+  if (!value) {
+    return "—";
+  }
+
+  return String(value)
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (character) =>
+      character.toUpperCase(),
+    );
+}
+
+function getStatusType(status) {
+  const normalized = String(
+    status || "",
+  ).toUpperCase();
+
+  if (
+    normalized.includes("APPROVED") ||
+    normalized.includes("POSITIVE") ||
+    normalized.includes("COMPLETED")
+  ) {
+    return "green";
+  }
+
+  if (
+    normalized.includes("PENDING") ||
+    normalized.includes("QUERY") ||
+    normalized.includes("LEGAL") ||
+    normalized.includes("VALUATION")
+  ) {
+    return "orange";
+  }
+
+  return "blue";
+}
+
+function extractLegalCases(responseData) {
+  if (Array.isArray(responseData)) {
+    return responseData;
+  }
+
+  if (Array.isArray(responseData?.data)) {
+    return responseData.data;
+  }
+
+  if (
+    Array.isArray(
+      responseData?.data?.data,
+    )
+  ) {
+    return responseData.data.data;
+  }
+
+  return [];
+}
+
+function mapLegalCase(application) {
+  const status = application.status || "";
+
+  return {
+    id:
+      application.id ??
+      application.application_id,
+
+    caseId:
+      application.application_number ??
+      application.applicationNumber ??
+      "—",
+
+    applicant:
+      application.customer_name ??
+      application.customerName ??
+      "—",
+
+    amount: formatAmount(
+      application.requested_amount ??
+      application.requestedAmount,
+    ),
+
+    stage: formatText(application.stage),
+
+    status: formatText(status),
+
+    owner:
+      application.owner ??
+      application.assigned_to ??
+      application.assignedTo ??
+      "—",
+
+    statusType: getStatusType(status),
+  };
+}
+
+/* =========================================================
+   MOBILE CASE CARD
+========================================================= */
+
+function MobileCaseCard({ row }) {
+  const detailRows = [
+    {
+      label: "Applicant",
+      value: row.applicant,
+    },
+    {
+      label: "Amount",
+      value: row.amount,
+    },
+    {
+      label: "Stage",
+      value: row.stage,
+    },
+    {
+      label: "Owner",
+      value: row.owner,
+    },
+  ];
+
   return (
-    <section
+    <article
       style={{
-        minWidth: 0,
-        minHeight: "485px",
-        padding: "28px 22px 30px",
-        boxSizing: "border-box",
-        border: "1px solid #bdd0f5",
-        borderRadius: "21px",
-        background: "rgba(255,255,255,0.94)",
-        boxShadow: "0 14px 31px rgba(35,56,88,0.05)",
+        padding: "17px",
+        border: "1px solid #dbe4f0",
+        borderRadius: "15px",
+        background: "#ffffff",
+        boxShadow: "0 6px 16px rgba(34,55,87,0.04)",
       }}
     >
       <div
         style={{
-          marginBottom: "25px",
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          gap: "20px",
+          gap: "12px",
         }}
       >
-        <SectionTitle>Cases requiring attention</SectionTitle>
-        <ActionButton compact>View all</ActionButton>
+        <div
+          style={{
+            minWidth: 0,
+            color: "#253a5d",
+            fontSize: "12px",
+            lineHeight: 1.45,
+            fontWeight: 900,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {row.caseId}
+        </div>
+
+        <StatusPill type={row.statusType}>{row.status}</StatusPill>
       </div>
 
       <div
         style={{
-          width: "100%",
-          overflowX: "auto",
-          border: "1px solid #d4dfee",
-          borderRadius: "16px",
-          background: "#ffffff",
+          marginTop: "15px",
+          display: "grid",
+          gap: "10px",
         }}
       >
-        <table
-          style={{
-            width: "100%",
-            minWidth: "900px",
-            borderCollapse: "separate",
-            borderSpacing: 0,
-            tableLayout: "fixed",
-            color: "#304566",
-            fontSize: "12px",
-          }}
-        >
-          <colgroup>
-            <col style={{ width: "17%" }} />
-            <col style={{ width: "17%" }} />
-            <col style={{ width: "13%" }} />
-            <col style={{ width: "17%" }} />
-            <col style={{ width: "24%" }} />
-            <col style={{ width: "15%" }} />
-          </colgroup>
-
-          <thead>
-            <tr>
-              {["CASE", "APPLICANT", "AMOUNT", "STAGE", "STATUS", "OWNER"].map(
-                (column) => (
-                  <th
-                    key={column}
-                    style={{
-                      height: "41px",
-                      padding: "0 14px",
-                      color: "#3c56ad",
-                      fontSize: "10px",
-                      fontWeight: 900,
-                      letterSpacing: "0.65px",
-                      textAlign: "left",
-                      borderBottom: "2px solid #bacaf5",
-                      background: "#eef3ff",
-                    }}
-                  >
-                    {column}
-                  </th>
-                )
-              )}
-            </tr>
-          </thead>
-
-          <tbody>
-            {caseRows.map((row, rowIndex) => {
-              const borderBottom =
-                rowIndex === caseRows.length - 1
-                  ? "none"
-                  : "1px solid #dce4ee";
-
-              const background =
-                rowIndex % 2 === 0 ? "#ffffff" : "#f9fbfd";
-
-              return (
-                <tr key={row.caseId}>
-                  <td
-                    style={{
-                      height: "54px",
-                      padding: "0 14px",
-                      color: "#253a5d",
-                      fontWeight: 900,
-                      whiteSpace: "nowrap",
-                      borderBottom,
-                      background,
-                    }}
-                  >
-                    {row.caseId}
-                  </td>
-
-                  <td
-                    style={{
-                      height: "54px",
-                      padding: "0 14px",
-                      color: "#455978",
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                      borderBottom,
-                      background,
-                    }}
-                  >
-                    {row.applicant}
-                  </td>
-
-                  <td
-                    style={{
-                      height: "54px",
-                      padding: "0 14px",
-                      color: "#455978",
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                      borderBottom,
-                      background,
-                    }}
-                  >
-                    {row.amount}
-                  </td>
-
-                  <td
-                    style={{
-                      height: "54px",
-                      padding: "0 14px",
-                      color: "#455978",
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                      borderBottom,
-                      background,
-                    }}
-                  >
-                    {row.stage}
-                  </td>
-
-                  <td
-                    style={{
-                      height: "54px",
-                      padding: "0 14px",
-                      whiteSpace: "nowrap",
-                      borderBottom,
-                      background,
-                    }}
-                  >
-                    <StatusPill type={row.statusType}>
-                      {row.status}
-                    </StatusPill>
-                  </td>
-
-                  <td
-                    style={{
-                      height: "54px",
-                      padding: "0 14px",
-                      color: "#455978",
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                      borderBottom,
-                      background,
-                    }}
-                  >
-                    {row.owner}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function SelectedCaseCard() {
-  return (
-    <section
-      style={{
-        padding: "27px 22px 22px",
-        border: "1px solid #d3deec",
-        borderRadius: "21px",
-        background: "rgba(255,255,255,0.95)",
-        boxShadow: "0 14px 28px rgba(35,57,89,0.055)",
-      }}
-    >
-      <SectionTitle>Selected case</SectionTitle>
-
-      <div style={{ marginTop: "18px" }}>
-        {selectedCaseDetails.map((detail, index) => (
+        {detailRows.map((detail) => (
           <div
             key={detail.label}
             style={{
-              minHeight: "42px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "18px",
-              borderBottom:
-                index === selectedCaseDetails.length - 1
-                  ? "none"
-                  : "1px solid #e1e7ef",
+              display: "grid",
+              gridTemplateColumns: "88px minmax(0, 1fr)",
+              alignItems: "start",
+              gap: "10px",
             }}
           >
             <span
               style={{
-                color: "#7888a2",
-                fontSize: "12px",
-                fontWeight: 500,
+                color: "#7b899f",
+                fontSize: "11px",
+                lineHeight: 1.45,
+                fontWeight: 600,
               }}
             >
               {detail.label}
@@ -1021,11 +586,13 @@ function SelectedCaseCard() {
 
             <strong
               style={{
-                color: "#173464",
-                fontSize: "12px",
-                fontWeight: 900,
+                minWidth: 0,
+                color: "#405575",
+                fontSize: "11px",
+                lineHeight: 1.45,
+                fontWeight: 800,
                 textAlign: "right",
-                whiteSpace: "nowrap",
+                overflowWrap: "anywhere",
               }}
             >
               {detail.value}
@@ -1033,100 +600,430 @@ function SelectedCaseCard() {
           </div>
         ))}
       </div>
-    </section>
+    </article>
   );
 }
 
-function ControlAlertsCard() {
+/* =========================================================
+   FULL-WIDTH CASES TABLE
+========================================================= */
+
+function CasesTable({
+  compact,
+  mobile,
+  cases,
+  loading,
+  error,
+}) {
+  const columns = [
+    "CASE",
+    "APPLICANT",
+    "AMOUNT",
+    "STAGE",
+    "STATUS",
+    "OWNER",
+  ];
+  const renderMessage = (message) => (
+    <div
+      style={{
+        minHeight: "90px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+        color: error
+          ? "#b42318"
+          : "#66758d",
+        fontSize: "12px",
+        fontWeight: 700,
+        textAlign: "center",
+        border: "1px solid #d4dfee",
+        borderRadius: "14px",
+        background: "#ffffff",
+      }}
+    >
+      {message}
+    </div>
+  );
+
   return (
     <section
       style={{
-        padding: "27px 22px 28px",
-        border: "1px solid #d3deec",
-        borderRadius: "21px",
-        background: "rgba(255,255,255,0.95)",
-        boxShadow: "0 14px 28px rgba(35,57,89,0.055)",
+        width: "100%",
+        minWidth: 0,
+        padding: mobile
+          ? "20px 15px"
+          : compact
+            ? "24px 18px"
+            : "28px 22px 30px",
+        boxSizing: "border-box",
+        border: "1px solid #bdd0f5",
+        borderRadius: mobile ? "17px" : "21px",
+        background: "rgba(255,255,255,0.94)",
+        boxShadow: "0 14px 31px rgba(35,56,88,0.05)",
       }}
     >
-      <SectionTitle>Control alerts</SectionTitle>
-
       <div
         style={{
-          marginTop: "16px",
+          marginBottom: mobile ? "19px" : "25px",
           display: "flex",
-          flexDirection: "column",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
           gap: "15px",
         }}
       >
-        {alerts.map((alert, index) => {
-          const success = alert.type === "success";
+        <SectionTitle>Cases requiring attention</SectionTitle>
 
-          return (
-            <div
-              key={`${alert.type}-${index}`}
-              style={{
-                position: "relative",
-                minHeight: success ? "76px" : "54px",
-                padding: success
-                  ? "15px 21px 14px 18px"
-                  : "13px 21px 13px 18px",
-                boxSizing: "border-box",
-                overflow: "hidden",
-                display: "flex",
-                alignItems: "center",
-                color: success ? "#34735f" : "#8b6728",
-                fontSize: "13px",
-                lineHeight: 1.65,
-                fontWeight: 500,
-                border: `1px solid ${
-                  success ? "#b7e0ce" : "#f0d29c"
-                }`,
-                borderLeft: `4px solid ${
-                  success ? "#18a574" : "#e69313"
-                }`,
-                borderRadius: "14px",
-                background: success ? "#f4fbf8" : "#fff8eb",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: "-35px",
-                  right: "-25px",
-                  width: "93px",
-                  height: "93px",
-                  borderRadius: "50%",
-                  background: "rgba(83,101,220,0.17)",
-                }}
-              />
-
-              <div style={{ position: "relative", zIndex: 2 }}>
-                {alert.text}
-              </div>
-            </div>
-          );
-        })}
+        <ActionButton compact>View all</ActionButton>
       </div>
+
+      {mobile ? (
+        <div
+          style={{
+            width: "100%",
+            display: "grid",
+            gap: "12px",
+          }}
+        >
+          {loading
+            ? renderMessage("Loading legal cases...")
+            : error
+              ? renderMessage(error)
+              : cases.length === 0
+                ? renderMessage(
+                  "No Legal cases requiring attention found.",
+                )
+                : cases.map((row) => (
+                  <MobileCaseCard
+                    key={row.id ?? row.caseId}
+                    row={row}
+                  />
+                ))}
+        </div>
+      ) : (
+        <div
+          style={{
+            width: "100%",
+            minWidth: 0,
+            overflow: "hidden",
+            border: "1px solid #d4dfee",
+            borderRadius: "16px",
+            background: "#ffffff",
+          }}
+        >
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "separate",
+              borderSpacing: 0,
+              tableLayout: "fixed",
+              color: "#304566",
+              fontSize: compact ? "11px" : "12px",
+            }}
+          >
+            <colgroup>
+              <col style={{ width: compact ? "18%" : "17%" }} />
+              <col style={{ width: compact ? "17%" : "18%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "17%" }} />
+              <col style={{ width: "22%" }} />
+              <col style={{ width: "13%" }} />
+            </colgroup>
+
+            <thead>
+              <tr>
+                {columns.map((column) => (
+                  <th
+                    key={column}
+                    style={{
+                      height: compact ? "39px" : "41px",
+                      padding: compact ? "0 9px" : "0 14px",
+                      color: "#3c56ad",
+                      fontSize: compact ? "9px" : "10px",
+                      lineHeight: 1.25,
+                      fontWeight: 900,
+                      letterSpacing: "0.65px",
+                      textAlign: "left",
+                      overflow: "hidden",
+                      whiteSpace: "nowrap",
+                      textOverflow: "ellipsis",
+                      borderBottom: "2px solid #bacaf5",
+                      background: "#eef3ff",
+                    }}
+                  >
+                    {column}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{
+                      height: "90px",
+                      textAlign: "center",
+                      color: "#66758d",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Loading legal cases...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{
+                      height: "90px",
+                      textAlign: "center",
+                      color: "#b42318",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {error}
+                  </td>
+                </tr>
+              ) : cases.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{
+                      height: "90px",
+                      textAlign: "center",
+                      color: "#66758d",
+                      fontWeight: 700,
+                    }}
+                  >
+                    No Legal cases requiring attention found.
+                  </td>
+                </tr>
+              ) : (
+                cases.map((row, rowIndex) => {
+                  const borderBottom =
+                    rowIndex === cases.length - 1
+                      ? "none"
+                      : "1px solid #dce4ee";
+
+                  const background =
+                    rowIndex % 2 === 0
+                      ? "#ffffff"
+                      : "#f9fbfd";
+
+                  const baseCellStyle = {
+                    height: compact ? "57px" : "54px",
+                    padding: compact
+                      ? "7px 9px"
+                      : "0 14px",
+                    boxSizing: "border-box",
+                    overflow: "hidden",
+                    lineHeight: 1.4,
+                    borderBottom,
+                    background,
+                  };
+
+                  return (
+                    <tr key={row.id ?? row.caseId}>
+                      <td
+                        title={row.caseId}
+                        style={{
+                          ...baseCellStyle,
+                          color: "#253a5d",
+                          fontWeight: 900,
+                          whiteSpace: compact
+                            ? "normal"
+                            : "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {row.caseId}
+                      </td>
+
+                      <td
+                        title={row.applicant}
+                        style={{
+                          ...baseCellStyle,
+                          color: "#455978",
+                          fontWeight: 500,
+                          whiteSpace: compact
+                            ? "normal"
+                            : "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {row.applicant}
+                      </td>
+
+                      <td
+                        title={row.amount}
+                        style={{
+                          ...baseCellStyle,
+                          color: "#455978",
+                          fontWeight: 500,
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {row.amount}
+                      </td>
+
+                      <td
+                        title={row.stage}
+                        style={{
+                          ...baseCellStyle,
+                          color: "#455978",
+                          fontWeight: 500,
+                          whiteSpace: compact
+                            ? "normal"
+                            : "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {row.stage}
+                      </td>
+
+                      <td
+                        style={{
+                          ...baseCellStyle,
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        <StatusPill
+                          type={row.statusType}
+                        >
+                          {row.status}
+                        </StatusPill>
+                      </td>
+
+                      <td
+                        title={row.owner}
+                        style={{
+                          ...baseCellStyle,
+                          color: "#455978",
+                          fontWeight: 500,
+                          whiteSpace: compact
+                            ? "normal"
+                            : "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {row.owner}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
+
+/* =========================================================
+   LEGAL DASHBOARD
+========================================================= */
 
 export default function LegalDashboard() {
   const viewportWidth = useViewportWidth();
 
-  const compactToolbar = viewportWidth < 1250;
-  const compactHero = viewportWidth < 1050;
-  const stackBottom = viewportWidth < 1180;
+  const [legalCases, setLegalCases] = useState([]);
+  const [legalCasesLoading, setLegalCasesLoading] =
+    useState(true);
+  const [legalCasesError, setLegalCasesError] =
+    useState("");
 
-  const statsColumns =
-    viewportWidth < 900 ? 1 : viewportWidth < 1200 ? 2 : 4;
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadLegalCases = async () => {
+      try {
+        setLegalCasesLoading(true);
+        setLegalCasesError("");
+
+        const response = await axios.get(
+          "/api/legal/cases-requiring-attention",
+          {
+            signal: controller.signal,
+          },
+        );
+
+        const applications = extractLegalCases(
+          response.data,
+        );
+
+        const mappedCases = applications
+          .filter((application) => {
+            const stage = String(
+              application?.stage || "",
+            ).toUpperCase();
+
+            return (
+              stage === "LEGAL" ||
+              stage === "LEGAL_VALUATION"
+            );
+          })
+          .map(mapLegalCase);
+
+        setLegalCases(mappedCases);
+      } catch (error) {
+        if (
+          error?.code === "ERR_CANCELED" ||
+          axios.isCancel(error)
+        ) {
+          return;
+        }
+
+        console.error(
+          "Unable to load Legal cases:",
+          error?.response?.data ||
+            error?.message ||
+            error,
+        );
+
+        const apiMessage =
+          error?.response?.data?.message ||
+          error?.message ||
+          "Unable to load Legal cases.";
+
+        setLegalCasesError(
+          Array.isArray(apiMessage)
+            ? apiMessage.join(", ")
+            : String(apiMessage),
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setLegalCasesLoading(false);
+        }
+      }
+    };
+
+    loadLegalCases();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  const mobileHeader = viewportWidth < 700;
+  const compactHero = viewportWidth < 1050;
+  const mobileLayout = viewportWidth < 700;
+  const compactTable = viewportWidth < 1100;
+  const mobileTable = viewportWidth < 760;
 
   return (
     <div
       style={{
         width: "100%",
+        minWidth: 0,
         minHeight: "100%",
         boxSizing: "border-box",
+        overflowX: "hidden",
         color: "#23395e",
         fontFamily:
           'Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
@@ -1134,11 +1031,15 @@ export default function LegalDashboard() {
           "radial-gradient(circle at 42% 4%, rgba(90,113,227,0.08), transparent 27%), linear-gradient(180deg, #f3f7fc 0%, #f7f9fc 100%)",
       }}
     >
-      <div
+
+
+      <main
         style={{
           width: "100%",
-          padding:
-            viewportWidth < 1200
+          minWidth: 0,
+          padding: mobileLayout
+            ? "17px 13px 34px"
+            : viewportWidth < 1200
               ? "22px 20px 44px"
               : "26px 28px 48px",
           boxSizing: "border-box",
@@ -1147,64 +1048,27 @@ export default function LegalDashboard() {
         <div
           style={{
             width: "100%",
-            maxWidth: "none",
+            minWidth: 0,
             margin: 0,
             display: "flex",
             flexDirection: "column",
-            gap: "20px",
+            gap: mobileLayout ? "16px" : "20px",
           }}
         >
-          <LegalToolbar compact={compactToolbar} />
-
-          <HeroBanner compact={compactHero} />
-
-          <StatsCards columns={statsColumns} />
-
-          <JourneyProgress />
-
-          <div
-            style={{
-              width: "100%",
-              display: "grid",
-              gridTemplateColumns: stackBottom
-                ? "minmax(0, 1fr)"
-                : "minmax(0, 1fr) 340px",
-              alignItems: "start",
-              gap: "18px",
-            }}
-          >
-            <CasesTable />
-
-            <div
-              style={{
-                minWidth: 0,
-                display: "flex",
-                flexDirection: stackBottom ? "row" : "column",
-                alignItems: "stretch",
-                gap: "18px",
-              }}
-            >
-              <div
-                style={{
-                  minWidth: 0,
-                  flex: stackBottom ? 1 : "initial",
-                }}
-              >
-                <SelectedCaseCard />
-              </div>
-
-              <div
-                style={{
-                  minWidth: 0,
-                  flex: stackBottom ? 1 : "initial",
-                }}
-              >
-                <ControlAlertsCard />
-              </div>
-            </div>
-          </div>
+          <HeroBanner
+            compact={compactHero}
+            mobile={mobileLayout}
+          />
+          
+          <CasesTable
+            compact={compactTable}
+            mobile={mobileTable}
+            cases={legalCases}
+            loading={legalCasesLoading}
+            error={legalCasesError}
+          />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -47,31 +47,86 @@ export class LegalService {
   ) {}
 
   async getCases() {
-    const data = await this.applicationsRepo.find({
-      where: [
-        {
-          stage: 'LEGAL' as any,
-        },
-        {
-          status: In([
-            'LEGAL_PENDING',
-            'LEGAL_QUERY',
-            'LEGAL_REJECTED',
-            'VALUATION_APPROVED',
-            'VALUATION_PENDING',
-          ] as any),
-        },
-      ],
+  const data = await this.applicationsRepo.find({
+    where: {
+      stage: 'LEGAL' as any,
+      status: In([
+        'LEGAL_PENDING',
+        'LEGAL_QUERY',
+        'LEGAL_REJECTED',
+        'VALUATION_APPROVED',
+        'VALUATION_PENDING',
+      ] as any),
+    },
+    order: {
+      updatedAt: 'DESC',
+    },
+  });
+
+  return data;
+}
+
+async getCasesRequiringAttention() {
+  const applications =
+    await this.applicationsRepo.find({
+      where: {
+        stage: In([
+          'LEGAL',
+          'LEGAL_VALUATION',
+        ] as Application['stage'][]),
+      },
+      select: {
+        id: true,
+        applicationNumber: true,
+        customerName: true,
+        requestedAmount: true,
+        stage: true,
+        status: true,
+      },
       order: {
-        updatedAt: 'DESC' as any,
+        updatedAt: 'DESC',
       },
     });
 
-    return {
-      success: true,
-      data,
-    };
+  return applications.map((application) => ({
+    id: Number(application.id),
+    application_number:
+      application.applicationNumber,
+    customer_name:
+      application.customerName,
+    requested_amount:
+      application.requestedAmount,
+    stage: application.stage,
+    status: application.status,
+  }));
+}
+
+async getStatus(id: number) {
+  const application = await this.applicationsRepo.findOne({
+    where: {
+      id,
+    },
+    select: {
+      id: true,
+      applicationNumber: true,
+      stage: true,
+      status: true,
+    },
+  });
+
+  if (!application) {
+    throw new NotFoundException(
+      `Application ${id} was not found.`,
+    );
   }
+
+  return {
+    applicationId: Number(application.id),
+    applicationNumber: application.applicationNumber,
+    stage: application.stage,
+    status: application.status,
+  };
+}
 
   async getApplication(applicationId: number) {
     const application = await this.getApplicationOrFail(applicationId);
