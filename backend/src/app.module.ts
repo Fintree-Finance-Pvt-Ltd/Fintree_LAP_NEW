@@ -41,6 +41,10 @@ import { ValuationModule } from './modules/valuation/valuation.module';
 import { LegalModule } from './modules/legal/legal.module';
 import { OpsModule } from './modules/operation/ops.module';
 import { LmsModule } from './modules/lms/lms.module';
+
+import { PartnerModule } from './modules/partners/partner.module';
+
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -83,6 +87,7 @@ import { LmsModule } from './modules/lms/lms.module';
     ValuationModule,
     LegalModule,
     LmsModule,
+    PartnerModule,
     
     OpsModule,
   ],

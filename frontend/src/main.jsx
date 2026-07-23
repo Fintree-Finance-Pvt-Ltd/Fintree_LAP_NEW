@@ -11,16 +11,17 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AppProviders>
       <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+      position="top-right"
+      autoClose={3000}
+      hideProgressBar={false}
+      newestOnTop
+      closeOnClick
+      pauseOnFocusLoss={false}
+      pauseOnHover
+      draggable
+      theme="light"
+      limit={3}
+    />{" "}
       <RouterProvider router={router} />
     </AppProviders>
   </React.StrictMode>,

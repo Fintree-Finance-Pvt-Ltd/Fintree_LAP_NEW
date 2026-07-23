@@ -1,12 +1,18 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import * as bcrypt from "bcrypt";
 
 import { User } from "./entities/user.entity";
-import * as bcrypt from "bcrypt";
 import { Role } from "../roles/entities/role.entity";
 
-interface createUserPayload {
+interface CreateUserPayload {
   name: string;
   email: string;
   password: string;
@@ -14,55 +20,92 @@ interface createUserPayload {
   location: string;
 }
 
-
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository:
       Repository<User>,
-      
+
     @InjectRepository(Role)
     private readonly roleRepository:
       Repository<Role>,
-  ) { }
+  ) {}
 
+  /*
+   * Fetch all users with their assigned roles.
+   *
+   * Only the required user and role fields are selected.
+   * Password hash is not selected or returned.
+   */
+  async findAll() {
+    const users =
+      await this.userRepository
+        .createQueryBuilder("user")
+        .leftJoinAndSelect(
+          "user.roles",
+          "role",
+        )
+        .select([
+          "user.id",
+          "user.name",
+          "user.email",
+          "user.location",
+          "user.isActive",
+          "role.id",
+          "role.name",
+        ])
+        .orderBy("user.id", "DESC")
+        .getMany();
+
+    return users.map((user) =>
+      this.formatUser(user),
+    );
+  }
+
+  /*
+   * Existing access-list method.
+   */
   async getAccessList() {
-    const users = await this.userRepository.find({
-      select: {
-        id: true,
-        name: true,
-        email: true,
+    const users =
+      await this.userRepository.find({
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
 
-      },
-
-      order: {
-        name: "ASC",
-      },
-    });
+        order: {
+          name: "ASC",
+        },
+      });
 
     return users.map((user) => ({
       id: user.id,
       name: user.name,
       email: user.email,
-
-
     }));
   }
-  
 
-   async createUser(
-    payload: createUserPayload,
+  /*
+   * Existing create-user method.
+   */
+  async createUser(
+    payload: CreateUserPayload,
   ) {
-    const name = payload.name?.trim();
+    const name =
+      payload.name?.trim();
 
-    const email = payload.email
-      ?.trim()
-      .toLowerCase();
+    const email =
+      payload.email
+        ?.trim()
+        .toLowerCase();
 
-    const password = payload.password;
+    const password =
+      payload.password;
 
-    const roleName = payload.role?.trim();
+    const roleName =
+      payload.role?.trim();
 
     const location =
       payload.location?.trim();
@@ -92,10 +135,6 @@ export class UsersService {
       );
     }
 
-    /*
-     * This assumes your Role entity has a property
-     * named "name".
-     */
     const selectedRole =
       await this.roleRepository.findOne({
         where: {
@@ -110,7 +149,10 @@ export class UsersService {
     }
 
     const passwordHash =
-      await bcrypt.hash(password, 12);
+      await bcrypt.hash(
+        password,
+        12,
+      );
 
     const newUser =
       this.userRepository.create({
@@ -128,7 +170,7 @@ export class UsersService {
       );
 
     /*
-     * Reload the user with role relation.
+     * Reload the created user with its role relation.
      */
     const createdUser =
       await this.userRepository.findOne({
@@ -147,26 +189,42 @@ export class UsersService {
       );
     }
 
-    return this.formatUser(createdUser);
+    return this.formatUser(
+      createdUser,
+    );
   }
 
-   private formatUser(user: User) {
+  /*
+   * Common response formatter.
+   *
+   * This prevents passwordHash and other internal
+   * fields from being returned by the APIs.
+   */
+  private formatUser(
+    user: User,
+  ) {
     return {
-      id: user.id,
+      id: Number(user.id),
+
       name: user.name,
+
       email: user.email,
 
       role:
         user.roles
-          ?.map((role) => role.name)
+          ?.map(
+            (role) => role.name,
+          )
           .join(", ") ||
         "Not Assigned",
 
       roles:
-        user.roles?.map((role) => ({
-          id: role.id,
-          name: role.name,
-        })) ?? [],
+        user.roles?.map(
+          (role) => ({
+            id: Number(role.id),
+            name: role.name,
+          }),
+        ) ?? [],
 
       location:
         user.location ||
@@ -178,6 +236,4 @@ export class UsersService {
           : "Inactive",
     };
   }
-
-
 }

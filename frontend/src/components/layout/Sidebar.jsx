@@ -26,6 +26,7 @@ import {
   FaClipboardList,
   FaRupeeSign,
   FaUniversity,
+  FaHandshake
 } from "react-icons/fa";
 import { useAuth } from "../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -74,6 +75,11 @@ const rolesConfig = {
           Icon: FaUsers,
         },
 
+        {
+        to: "/admin/partners",
+        label: "Partners",
+        Icon: FaHandshake,
+        },
         
         {
           to: "/payment-management",

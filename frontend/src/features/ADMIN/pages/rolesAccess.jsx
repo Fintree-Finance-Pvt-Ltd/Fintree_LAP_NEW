@@ -42,7 +42,7 @@ const informationCards = [
 const emptyForm = {
   name: "",
   email: "",
-  role: "",
+  roleId: "",
   location: "",
   password: "",
 };
@@ -55,7 +55,17 @@ function StatusBadge({ children }) {
   );
 }
 
-function AddUserModal({ open, onClose, onSubmit ,   submitting = false, submitError = "" }) {
+function AddUserModal({
+  open,
+  onClose,
+  onSubmit,
+  submitting = false,
+  submitError = "",
+  roles = [],
+  rolesLoading = false,
+  rolesError = "",
+  onRetryRoles,
+}) {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
 
@@ -76,14 +86,15 @@ function AddUserModal({ open, onClose, onSubmit ,   submitting = false, submitEr
     event.preventDefault();
 
     const hasEmptyField = Object.values(form).some(
-      (value) => !value.trim(),
+      (value) => !String(value ?? "").trim(),
     );
 
     if (hasEmptyField) {
       setError("Please complete all fields.");
       return;
     }
-  try {
+
+    try {
       await onSubmit(form);
 
       setForm(emptyForm);
@@ -103,7 +114,7 @@ function AddUserModal({ open, onClose, onSubmit ,   submitting = false, submitEr
   };
 
   const inputClasses =
-    "h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100";
+    "h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm">
@@ -132,6 +143,7 @@ function AddUserModal({ open, onClose, onSubmit ,   submitting = false, submitEr
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-semibold text-slate-700">
               Full name
+
               <input
                 name="name"
                 value={form.name}
@@ -143,6 +155,7 @@ function AddUserModal({ open, onClose, onSubmit ,   submitting = false, submitEr
 
             <label className="grid gap-2 text-sm font-semibold text-slate-700">
               Email address
+
               <input
                 name="email"
                 type="email"
@@ -155,36 +168,52 @@ function AddUserModal({ open, onClose, onSubmit ,   submitting = false, submitEr
 
             <label className="grid gap-2 text-sm font-semibold text-slate-700">
               Role
+
               <select
-                name="role"
-                value={form.role}
+                name="roleId"
+                value={form.roleId}
                 onChange={handleChange}
+                disabled={rolesLoading || submitting}
                 className={inputClasses}
               >
-                <option value="">Select role</option>
-                <option value="System Administrator">
-                  System Administrator
+                <option value="">
+                  {rolesLoading
+                    ? "Loading roles..."
+                    : roles.length === 0
+                      ? "No roles available"
+                      : "Select role"}
                 </option>
-                <option value="Relationship Manager">
-                  Relationship Manager
-                </option>
-                <option value="Branch Manager">
-                  Branch Manager
-                </option>
-                <option value="Credit Manager">
-                  Credit Manager
-                </option>
-                <option value="Legal Officer">
-                  Legal Officer
-                </option>
-                <option value="Operations Officer">
-                  Operations Officer
-                </option>
+
+                {roles.map((role) => (
+                  <option
+                    key={role.id}
+                    value={String(role.id)}
+                  >
+                    {role.name}
+                  </option>
+                ))}
               </select>
+
+              {rolesError && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium text-red-600">
+                    {rolesError}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={onRetryRoles}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-500"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-slate-700">
               Location
+
               <select
                 name="location"
                 value={form.location}
@@ -200,40 +229,23 @@ function AddUserModal({ open, onClose, onSubmit ,   submitting = false, submitEr
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-slate-700">
-  Password
+              Password
 
-  <input
-    name="password"
-    type="password"
-    value={form.password}
-    onChange={handleChange}
-    placeholder="Enter password"
-    autoComplete="new-password"
-    className={inputClasses}
-  />
-</label>
-            {/* <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:col-span-2">
-              Data scope
-              <select
-                name="dataScope"
-                value={form.dataScope}
+              <input
+                name="password"
+                type="password"
+                value={form.password}
                 onChange={handleChange}
+                placeholder="Enter password"
+                autoComplete="new-password"
                 className={inputClasses}
-              >
-                <option value="">Select data scope</option>
-                <option value="Hub / Authorised Portfolio">
-                  Hub / Authorised Portfolio
-                </option>
-                <option value="Assigned Spoke / Cases">
-                  Assigned Spoke / Cases
-                </option>
-              </select>
-            </label> */}
+              />
+            </label>
           </div>
 
-          {error && (
+          {(error || submitError) && (
             <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-              {error}
+              {error || submitError}
             </p>
           )}
 
@@ -248,7 +260,11 @@ function AddUserModal({ open, onClose, onSubmit ,   submitting = false, submitEr
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={
+                submitting ||
+                rolesLoading ||
+                roles.length === 0
+              }
               className="flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? (
@@ -349,58 +365,194 @@ export default function RolesAccess() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState("");
 
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [rolesError, setRolesError] = useState("");
 
-  const loadUsers = useCallback(async (signal) => {
+
+  // const loadUsers = useCallback(async (signal) => {
+  //   try {
+  //     setLoading(true);
+  //     setApiError("");
+
+  //     const response =
+  //       await usersApi.getAccessList({
+  //         signal,
+  //       });
+
+  //     const responseData =
+  //       response?.data?.data?.users ??
+  //       response?.data?.users ??
+  //       response?.data?.data ??
+  //       response?.data ??
+  //       [];
+
+  //     if (!Array.isArray(responseData)) {
+  //       throw new Error(
+  //         "Invalid users response received from server.",
+  //       );
+  //     }
+
+  //     setUsers(
+  //       responseData.map(normalizeUser),
+  //     );
+  //   } catch (error) {
+  //     if (
+  //       error?.name === "CanceledError" ||
+  //       error?.code === "ERR_CANCELED"
+  //     ) {
+  //       return;
+  //     }
+
+  //     console.error(
+  //       "Unable to load users:",
+  //       error,
+  //     );
+
+  //     setUsers([]);
+
+  //     setApiError(
+  //       error?.response?.data?.message ||
+  //       error?.message ||
+  //       "Unable to load users.",
+  //     );
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, []);
+
+    const loadUsers = useCallback(async (signal) => {
+  try {
+    setLoading(true);
+    setApiError("");
+
+    const response =
+      await usersApi.getAllUsers({
+        signal,
+      });
+
+    const responseData =
+      response?.data?.data?.users ??
+      response?.data?.users ??
+      response?.data?.data ??
+      response?.data ??
+      [];
+
+    if (!Array.isArray(responseData)) {
+      throw new Error(
+        "Invalid users response received from server.",
+      );
+    }
+
+    setUsers(
+      responseData.map(normalizeUser),
+    );
+  } catch (error) {
+    const isCanceled =
+      error?.name === "CanceledError" ||
+      error?.code === "ERR_CANCELED" ||
+      error?.message === "canceled" ||
+      error?.message === "Canceled";
+
+    if (isCanceled) {
+      return;
+    }
+
+    console.error(
+      "Unable to load users:",
+      error,
+    );
+
+    setUsers([]);
+
+    setApiError(
+      error?.response?.data?.message ||
+        error?.message ||
+        "Unable to load users.",
+    );
+  } finally {
+    if (!signal?.aborted) {
+      setLoading(false);
+    }
+  }
+}, []);
+
+  const loadRoles = useCallback(async (signal) => {
     try {
-      setLoading(true);
-      setApiError("");
+      setRolesLoading(true);
+      setRolesError("");
 
-      const response =
-        await usersApi.getAccessList({
-          signal,
-        });
+      const response = await usersApi.getRoles({
+        signal,
+      });
 
       const responseData =
-        response?.data?.data?.users ??
-        response?.data?.users ??
+        response?.data?.data?.roles ??
+        response?.data?.roles ??
         response?.data?.data ??
         response?.data ??
         [];
 
       if (!Array.isArray(responseData)) {
         throw new Error(
-          "Invalid users response received from server.",
+          "Invalid roles response received from server.",
         );
       }
 
-      setUsers(
-        responseData.map(normalizeUser),
-      );
+      const normalizedRoles = responseData
+        .map((role) => ({
+          id: Number(role?.id),
+          name: String(
+            role?.name ||
+            role?.roleName ||
+            role?.code ||
+            "",
+          ).trim(),
+        }))
+        .filter(
+          (role) =>
+            Number.isInteger(role.id) &&
+            role.id > 0 &&
+            role.name,
+        );
+
+      setRoles(normalizedRoles);
     } catch (error) {
-      if (
+      const isCanceled =
         error?.name === "CanceledError" ||
-        error?.code === "ERR_CANCELED"
-      ) {
+        error?.code === "ERR_CANCELED" ||
+        error?.message === "canceled" ||
+        error?.message === "Canceled";
+
+      if (isCanceled) {
         return;
       }
 
       console.error(
-        "Unable to load users:",
+        "Unable to load roles:",
         error,
       );
 
-      setUsers([]);
+      setRoles([]);
 
-      setApiError(
+      const message =
         error?.response?.data?.message ||
         error?.message ||
-        "Unable to load users.",
+        "Unable to load roles.";
+
+      setRolesError(
+        Array.isArray(message)
+          ? message.join(", ")
+          : String(message),
       );
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setRolesLoading(false);
+      }
     }
   }, []);
 
+  // Existing user-fetching effect remains unchanged.
   useEffect(() => {
     const controller = new AbortController();
 
@@ -410,6 +562,17 @@ export default function RolesAccess() {
       controller.abort();
     };
   }, [loadUsers]);
+
+  // Roles are fetched independently from the existing Roles API.
+  useEffect(() => {
+    const controller = new AbortController();
+
+    loadRoles(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadRoles]);
 
 
   const filteredUsers = useMemo(() => {
@@ -436,6 +599,24 @@ export default function RolesAccess() {
       setSubmitting(true);
       setSubmitError("");
 
+      const roleId = Number(formData.roleId);
+
+      if (!Number.isInteger(roleId) || roleId <= 0) {
+        throw new Error(
+          "Please select a valid role.",
+        );
+      }
+
+      const selectedRole = roles.find(
+        (role) => Number(role.id) === roleId,
+      );
+
+      if (!selectedRole) {
+        throw new Error(
+          "Selected role was not found. Please reload the roles.",
+        );
+      }
+
       await usersApi.createUser({
         name: formData.name.trim(),
 
@@ -445,27 +626,37 @@ export default function RolesAccess() {
 
         password: formData.password,
 
-        role: formData.role,
-        location: formData.location,
-        dataScope: formData.dataScope,
+        // Keep existing backend logic:
+        // send the selected role name to POST /users.
+        role: selectedRole.name,
+
+        location: formData.location.trim(),
       });
 
       setShowAddUser(false);
 
-      // Fetch again from DB so the table
-      // always shows actual saved records.
+      // Existing user-fetching logic remains unchanged.
+      // Reload users from the database after creation.
       await loadUsers();
     } catch (error) {
       console.error(
         "Unable to create user:",
-        error,
+        error?.response?.data || error,
       );
 
-      setSubmitError(
+      const message =
         error?.response?.data?.message ||
+        error?.response?.data?.error ||
         error?.message ||
-        "Unable to create user.",
+        "Unable to create user.";
+
+      setSubmitError(
+        Array.isArray(message)
+          ? message.join(", ")
+          : String(message),
       );
+
+      throw error;
     } finally {
       setSubmitting(false);
     }
@@ -794,6 +985,10 @@ export default function RolesAccess() {
         onSubmit={handleAddUser}
         submitting={submitting}
         submitError={submitError}
+        roles={roles}
+        rolesLoading={rolesLoading}
+        rolesError={rolesError}
+        onRetryRoles={() => loadRoles()}
       />
     </>
   );

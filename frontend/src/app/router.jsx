@@ -26,6 +26,8 @@ import RoleDashboardRedirect from '../components/layout/RoleDashboardRedirect.js
 import AdminDashboard from '../features/ADMIN/pages/AdminDashboard.jsx';
 import RolesAccess from '../features/ADMIN/pages/rolesAccess.jsx';
 
+import PartnersManagement from "../features/Partners/pages/PartnersManagement.jsx"; //Partners
+
 import BmDashboard from '../features/BM/pages/BmDashboard.jsx'
 import BMReview from '../features/BM/pages/BMReview.jsx';
 import BMApproved from '../features/BM/pages/BmApproved.jsx';
@@ -77,6 +79,7 @@ const protectedChildren = [
   // RM routes (wired to Sidebar.jsx)
   { path: '/rmDashboard', element: <RMDashboard /> },
   { path: '/adminDashboard', element: <AdminDashboard /> },
+  { path: "/admin/partners", element: <PartnersManagement /> },
 
   // BM routes (wired to Sidebar.jsx)
   { path: '/bmDashboard', element: <BmDashboard /> },
