@@ -25,6 +25,8 @@ import RoleDashboardRedirect from '../components/layout/RoleDashboardRedirect.js
 
 import AdminDashboard from '../features/ADMIN/pages/AdminDashboard.jsx';
 import RolesAccess from '../features/ADMIN/pages/rolesAccess.jsx';
+import Hub from "../features/Hub/pages/Hub.jsx"; //Hub
+import Spokes from "../features/Spokes/pages/Spokes.jsx"; //Spokes
 
 import PartnersManagement from "../features/Partners/pages/PartnersManagement.jsx"; //Partners
 
@@ -68,6 +70,7 @@ import LegalCleared from '../features/Operation/pages/LegalCleared.jsx';
 import OpsHead from '../features/Operation/pages/OpsHead.jsx';
 
 
+
 import LmsDashboard from "../features/lms/pages/LmsDashboard.jsx";
 
 const protectedChildren = [
@@ -80,6 +83,8 @@ const protectedChildren = [
   { path: '/rmDashboard', element: <RMDashboard /> },
   { path: '/adminDashboard', element: <AdminDashboard /> },
   { path: "/admin/partners", element: <PartnersManagement /> },
+  { path: "/admin/hub", element: <Hub /> },
+  { path: "/admin/spokes", element: <Spokes /> },
 
   // BM routes (wired to Sidebar.jsx)
   { path: '/bmDashboard', element: <BmDashboard /> },

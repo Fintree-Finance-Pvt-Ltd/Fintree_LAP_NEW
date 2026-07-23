@@ -26,7 +26,10 @@ import {
   FaClipboardList,
   FaRupeeSign,
   FaUniversity,
-  FaHandshake
+  FaHandshake,
+  FaBuilding,
+  FaSitemap,
+  FaTachometerAlt
 } from "react-icons/fa";
 import { useAuth } from "../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -43,7 +46,7 @@ const rolesConfig = {
       items: [
         { to: "/my-leads", label: "My Leads", Icon: FaFileAlt },
         { to: "/create-lead", label: "Create Lead", Icon: FaUserPlus },
-{
+        {
           to: "/customer-visit",
           label: "Customer / Business Visit",
           Icon: FaBriefcase,
@@ -61,36 +64,90 @@ const rolesConfig = {
   ],
 
 
-  ADMIN: [
-    {
-      category: "PRIMARY",
-      items: [{ to: "/adminDashboard", label: "My Work", Icon: FaBriefcase }],
-    },
-    {
-      category: "MODULES",
-      items: [
-        {
-          to: "/roles-access",
-          label: "Users & Roles",
-          Icon: FaUsers,
-        },
+  // ADMIN: [
+  //   {
+  //     category: "PRIMARY",
+  //     items: [{ to: "/adminDashboard", label: "My Work", Icon: FaBriefcase }],
+  //   },
+  //   {
+  //     category: "MODULES",
+  //     items: [
+  //       {
+  //         to: "/roles-access",
+  //         label: "Users & Roles",
+  //         Icon: FaUsers,
+  //       },
 
-        {
+  //       {
+  //         to: "/admin/partners",
+  //         label: "Partners",
+  //         Icon: FaHandshake,
+  //       },
+
+  //       {
+  //         to: "/admin/hub",
+  //         label: "Hub",
+  //         Icon: FaBuilding,
+  //       },
+
+  //       {
+  //         label: "Spokes",
+  //         path: "/admin/spokes",
+  //         icon: FaRoute,
+  //       },
+
+  //       {
+  //         to: "/payment-management",
+  //         label: "Payment Management",
+  //         Icon: FaCreditCard,
+  //       },
+  //       // { to: "/submit-bm", label: "Submit to BM", Icon: FaPaperPlane },
+  //     ],
+  //   },
+  // ],
+
+  ADMIN: [
+  {
+    category: "PRIMARY",
+    items: [
+      {
+        to: "/adminDashboard",
+        label: "My Work",
+        Icon: FaBriefcase,
+      },
+    ],
+  },
+  {
+    category: "MODULES",
+    items: [
+      {
+        to: "/roles-access",
+        label: "Users & Roles",
+        Icon: FaUsers,
+      },
+      {
         to: "/admin/partners",
         label: "Partners",
         Icon: FaHandshake,
-        },
-        
-        {
-          to: "/payment-management",
-          label: "Payment Management",
-          Icon: FaCreditCard,
-        },
-        // { to: "/submit-bm", label: "Submit to BM", Icon: FaPaperPlane },
-      ],
-    },
-  ],
-
+      },
+      {
+        to: "/admin/hub",
+        label: "Hub",
+        Icon: FaBuilding,
+      },
+      {
+        to: "/admin/spokes",
+        label: "Spokes",
+        Icon: FaSitemap,
+      },
+      {
+        to: "/payment-management",
+        label: "Payment Management",
+        Icon: FaCreditCard,
+      },
+    ],
+  },
+],
 
   BM: [
     {
@@ -103,7 +160,7 @@ const rolesConfig = {
       items: [
         { to: "/my-leads", label: "My Leads", Icon: FaFileAlt },
         { to: "/create-lead", label: "Create Lead", Icon: FaUserPlus },
-        
+
         { to: "/kyc-documents", label: "KYC & Documents", Icon: FaFolderOpen },
         {
           to: "/charges-receipts",
@@ -122,46 +179,46 @@ const rolesConfig = {
   ],
 
 
-// Legal
-LEGAL: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/legal-dashboard",
-        label: "Legal Dashboard",
-        Icon: FaChartBar,
-      },
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
-      {
-        to: "/legal-queue",
-        label: "Legal Queue",
-        Icon: FaBalanceScale,
-      },
-      {
+  // Legal
+  LEGAL: [
+    {
+      category: "PRIMARY",
+      items: [
+        {
+          to: "/legal-dashboard",
+          label: "Legal Dashboard",
+          Icon: FaChartBar,
+        },
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
+        {
+          to: "/legal-queue",
+          label: "Legal Queue",
+          Icon: FaBalanceScale,
+        },
+        {
           to: "/kyc-documents",
           label: "KYC & Documents",
           Icon: FaFolderOpen
         },
-    ],
-  },
- 
-],
+      ],
+    },
+
+  ],
   CM: [
     {
       category: "PRIMARY",
       items: [
 
-         {
+        {
           to: "/credit-dashboard",
           label: "Credit Dashboard",
           Icon: FaChartBar,
         },
-        
+
 
       ],
     },
@@ -184,7 +241,7 @@ LEGAL: [
           label: "Credit Screening",
           Icon: FaShieldAlt,
         },
-       
+
         {
           to: "/kyc-documents",
           label: "KYC & Documents",
@@ -213,13 +270,13 @@ LEGAL: [
           label: "Application Data",
           Icon: FaFolderOpen,
         },
-       
+
         {
           to: "/credit-maker",
           label: "Underwriting Proposal",
           Icon: FaFileAlt,
         },
-        
+
         {
           to: "/kyc-documents",
           label: "KYC & Documents",
@@ -233,7 +290,7 @@ LEGAL: [
     {
       category: "PRIMARY",
       items: [
-       {
+        {
           to: "/credit-dashboard",
           label: "Credit Dashboard",
           Icon: FaChartBar,
@@ -272,23 +329,23 @@ LEGAL: [
       category: "MODULES",
       items: [
 
-         {
+        {
           to: "/valuation",
           label: "Comparable Analysis",
           Icon: FaRoute,
         },
-        
+
         {
           to: "/field-visits",
           label: "Visit Photo Upload",
           Icon: FaFolderOpen,
         },
-         {
-        to: "/geo-verification",
-        label: "Geo Verification",
-        Icon: FaMapMarkerAlt,
-      },
-       
+        {
+          to: "/geo-verification",
+          label: "Geo Verification",
+          Icon: FaMapMarkerAlt,
+        },
+
 
         {
           to: "/kyc-documents",
@@ -309,134 +366,134 @@ LEGAL: [
   ],
 
 
-OPS_MAKER: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/operationsDashboard",
-        label: "Operations Dashboard",
-        Icon: FaBriefcase,
-      },
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
-      {
-        to: "/operations/maker/:applicationId",
-        label: "Ops Maker",
-        Icon: FaShieldAlt,
-      },
-      {
-        to: "/operations/legal-cleared",
-        label: "Legal Cleared",
-        Icon: FaFileAlt,
-      },
-      {
-        to: "/operations-review",
-        label: "review",
-        Icon: FaFolderOpen,
-      },
-    ],
-  },
-],
+  OPS_MAKER: [
+    {
+      category: "PRIMARY",
+      items: [
+        {
+          to: "/operationsDashboard",
+          label: "Operations Dashboard",
+          Icon: FaBriefcase,
+        },
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
+        {
+          to: "/operations/maker/:applicationId",
+          label: "Ops Maker",
+          Icon: FaShieldAlt,
+        },
+        {
+          to: "/operations/legal-cleared",
+          label: "Legal Cleared",
+          Icon: FaFileAlt,
+        },
+        {
+          to: "/operations-review",
+          label: "review",
+          Icon: FaFolderOpen,
+        },
+      ],
+    },
+  ],
 
 
   OPS_HEAD: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/operationsDashboard",
-        label: "Operations Dashboard",
-        Icon: FaBriefcase,
-      },
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
-      {
-        to: "/operations/head",
-        label: "Ops Head",
-        Icon: FaShieldAlt,
-      },
-      {
-        to: "/operations-review",
-        label: "review",
-        Icon: FaFolderOpen,
-      },
-    ],
-  },
-],
-OPS_CHECKER: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/operationsDashboard",
-        label: "Operations Dashboard",
-        Icon: FaBriefcase,
-      },
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
-      {
-        to: "/operations/checker/:applicationId",
-        label: "Ops Checker",
-        Icon: FaShieldAlt,
-      },
-      {
-        to: "/operations-review",
-        label: "review",
-        Icon: FaFolderOpen,
-      },
-    ],
-  },
-   
-],
+    {
+      category: "PRIMARY",
+      items: [
+        {
+          to: "/operationsDashboard",
+          label: "Operations Dashboard",
+          Icon: FaBriefcase,
+        },
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
+        {
+          to: "/operations/head",
+          label: "Ops Head",
+          Icon: FaShieldAlt,
+        },
+        {
+          to: "/operations-review",
+          label: "review",
+          Icon: FaFolderOpen,
+        },
+      ],
+    },
+  ],
+  OPS_CHECKER: [
+    {
+      category: "PRIMARY",
+      items: [
+        {
+          to: "/operationsDashboard",
+          label: "Operations Dashboard",
+          Icon: FaBriefcase,
+        },
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
+        {
+          to: "/operations/checker/:applicationId",
+          label: "Ops Checker",
+          Icon: FaShieldAlt,
+        },
+        {
+          to: "/operations-review",
+          label: "review",
+          Icon: FaFolderOpen,
+        },
+      ],
+    },
 
-LMS: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/lms-dashboard",
-        label: "LMS Dashboard",
-        Icon: FaChartBar,
-      },
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
-      { to: "/lms/loan-accounts", label: "Loan Accounts", Icon: FaUniversity },
-      { to: "/lms/disbursements", label: "Disbursements", Icon: FaRupeeSign },
-      { to: "/lms/repayments", label: "Repayments", Icon: FaReceipt },
-      { to: "/lms/utr-upload", label: "UTR Upload", Icon: FaClipboardList },
-      { to: "/lms/nach", label: "NACH / eNACH", Icon: FaFileContract },
-      { to: "/lms/soa", label: "Statement of Account", Icon: FaFileAlt },
-      { to: "/lms/collections", label: "Collections", Icon: FaUsers },
-      
-    ],
-  },
-],
+  ],
 
-COMMON: [
-  {
-    category: "REFERENCE",
-    items: [
-      {
-        to: "/reports",
-        label: "MIS & Reports",
-        Icon: FaChartBar,
-      },
-    ],
-  },
-],
+  LMS: [
+    {
+      category: "PRIMARY",
+      items: [
+        {
+          to: "/lms-dashboard",
+          label: "LMS Dashboard",
+          Icon: FaChartBar,
+        },
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
+        { to: "/lms/loan-accounts", label: "Loan Accounts", Icon: FaUniversity },
+        { to: "/lms/disbursements", label: "Disbursements", Icon: FaRupeeSign },
+        { to: "/lms/repayments", label: "Repayments", Icon: FaReceipt },
+        { to: "/lms/utr-upload", label: "UTR Upload", Icon: FaClipboardList },
+        { to: "/lms/nach", label: "NACH / eNACH", Icon: FaFileContract },
+        { to: "/lms/soa", label: "Statement of Account", Icon: FaFileAlt },
+        { to: "/lms/collections", label: "Collections", Icon: FaUsers },
+
+      ],
+    },
+  ],
+
+  COMMON: [
+    {
+      category: "REFERENCE",
+      items: [
+        {
+          to: "/reports",
+          label: "MIS & Reports",
+          Icon: FaChartBar,
+        },
+      ],
+    },
+  ],
 
 }
 
@@ -492,14 +549,14 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
-      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" ,"LEGAL", "OPS_CHECKER" ,"OPS_HEAD", "OPS_MAKER" ,"LMS","COMMON","LEGALCLEARED"];
+      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION", "LEGAL", "OPS_CHECKER", "OPS_HEAD", "OPS_MAKER", "LMS", "COMMON", "LEGALCLEARED"];
       for (const roleKey of roleKeysInOrder) {
         if (
-  roleKey !== "COMMON" &&
-  !roles.includes(roleKey)
-) {
-  continue;
-}
+          roleKey !== "COMMON" &&
+          !roles.includes(roleKey)
+        ) {
+          continue;
+        }
         const roleGroups = rolesConfig[roleKey] || [];
         const group = roleGroups.find((g) => g.category === category);
         if (!group) continue;
@@ -533,7 +590,7 @@ export default function Sidebar() {
         {allowedGroups.map((group) => (
           <div key={group.category} className="space-y-1">
             <div className="px-3 text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-2">
-               {group.displayCategory || group.category}
+              {group.displayCategory || group.category}
             </div>
 
             {group.items.map(({ to, label, Icon }) => (
