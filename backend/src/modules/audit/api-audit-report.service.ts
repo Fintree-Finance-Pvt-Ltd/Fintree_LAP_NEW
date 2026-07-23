@@ -43,15 +43,35 @@ export class ApiAuditReportService {
   ) {}
 
   // Uses the server's local timezone, as requested.
-  @Cron('0 59 23 * * *', { name: 'daily-api-audit-report' })
+  // @Cron('0 0 14 * * *', {
+  //   name: 'daily-api-audit-report',
+  //   timeZone: 'Asia/Kolkata',
+  // })
+
+  @Cron('0 59 23 * * *', {
+  name: 'daily-api-audit-report',
+  timeZone: 'Asia/Kolkata',
+})
+// for every min 
+
+  //   @Cron('0 * * * * *', {
+  //   name: 'daily-api-audit-report-test',
+  //   timeZone: 'Asia/Kolkata',
+  // })
   async runDailyReport() {
     try {
+      this.logger.log('⏰ Daily API audit cron started at 2:00 PM IST.');
+
       const result = await this.generateReport();
+
       this.logger.log(
-        `Daily API audit saved to ${result.filePath}; requests=${result.totalRequests}, success=${result.successRate}%`,
+        `✅ Daily API audit PDF generated successfully: ${result.filePath}; requests=${result.totalRequests}, success=${result.successRate}%`,
       );
     } catch (error: any) {
-      this.logger.error(`Daily API audit generation failed: ${error?.message || error}`, error?.stack);
+      this.logger.error(
+        `❌ Daily API audit generation failed: ${error?.message || error}`,
+        error?.stack,
+      );
     }
   }
 
@@ -146,7 +166,9 @@ LATENCY: ${log.latencyMs} ms</div></div>`).join('');
     const templatePath = this.templatePath();
     let template = await fs.readFile(templatePath, 'utf8');
     const replacements: Record<string, string> = {
-      REPORT_DATE: this.localDate(now), WINDOW_START: since.toISOString(), WINDOW_END: now.toISOString(),
+     REPORT_DATE: this.localDate(now),
+WINDOW_START: this.formatIstDateTime(since),
+WINDOW_END: this.formatIstDateTime(now),
       TOTAL_REQUESTS: metrics.summary.totalRequests.toLocaleString('en-IN'),
       SUCCESS_RATE: String(metrics.summary.successRate), AVERAGE_LATENCY: String(metrics.summary.averageLatencyMs),
       FAILED_4XX: String(metrics.summary.failed4xx), FAILED_5XX: String(metrics.summary.failed5xx),
@@ -274,10 +296,28 @@ LATENCY: ${log.latencyMs} ms</div></div>`).join('');
   }
 
   private localDate(value: Date) {
-    const year = value.getFullYear(); const month = String(value.getMonth() + 1).padStart(2, '0'); const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+
+    return formatter.format(value);
   }
 
+    private formatIstDateTime(value: Date) {
+    return new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    }).format(value);
+  }
   private escape(value: unknown) {
     return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] || character);
   }

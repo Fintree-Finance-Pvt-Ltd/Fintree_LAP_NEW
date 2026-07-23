@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>API Audit 2026-07-23</title>
+<style>
+  @page { size:A4; margin:18mm 15mm; background:#f8fafc; @bottom-right { content:"Page " counter(page) " of " counter(pages); font:8pt Arial; color:#64748b; } @bottom-left { content:"Confidential - Internal API Audit Log"; font:8pt Arial; color:#64748b; } }
+  *,*::before,*::after{box-sizing:border-box} body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1e293b;margin:0;font-size:9.5pt;line-height:1.5}
+  .header-card{background:#0f172a;color:#fff;padding:20px 24px;border-radius:8px;margin-bottom:20px}.header-card h1{margin:0 0 6px;font-size:18pt;color:#f8fafc}.header-card p{margin:0;color:#94a3b8}
+  .meta-grid{width:100%;margin-bottom:20px;border-spacing:0}.meta-card{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px}.meta-label{font-size:7.5pt;text-transform:uppercase;font-weight:700;color:#64748b;letter-spacing:.5px}.meta-value{font-size:11pt;font-weight:600;color:#0f172a}
+  .section-title{font-size:12pt;font-weight:700;color:#0f172a;margin:22px 0 10px;padding-bottom:4px;border-bottom:2px solid #e2e8f0;page-break-after:avoid}.stats-table{width:100%;border-collapse:collapse;margin-bottom:20px;background:#fff;border:1px solid #e2e8f0}.stats-table th{background:#f1f5f9;color:#334155;text-align:left;padding:8px 12px;font-size:8.5pt;text-transform:uppercase}.stats-table td{padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:9pt}
+  .badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:7.5pt;font-weight:700;text-transform:uppercase}.badge-get{background:#e0f2fe;color:#0369a1}.badge-post{background:#dcfce7;color:#15803d}.badge-put,.badge-patch{background:#fef3c7;color:#b45309}.badge-delete{background:#fee2e2;color:#b91c1c}.status-2xx,.status-3xx{color:#16a34a;font-weight:600}.status-4xx{color:#d97706;font-weight:600}.status-5xx{color:#dc2626;font-weight:600}
+  .info-box{background:#eff6ff;border-left:4px solid #2563eb;padding:12px;border-radius:0 6px 6px 0;margin-bottom:20px;color:#1e40af}.log-entry{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;margin-bottom:10px;page-break-inside:avoid}.log-header{margin-bottom:6px}.log-time{color:#64748b;font-size:8pt;font-weight:600}.log-endpoint{font-family:'Courier New',monospace;font-weight:700;color:#0f172a;font-size:8.5pt}.code-block{background:#1e293b;color:#f1f5f9;padding:12px 14px;border-radius:6px;font-family:'Courier New',monospace;font-size:8pt;white-space:pre-wrap;word-break:break-all}.empty{text-align:center;color:#64748b;padding:18px}
+</style>
+</head>
+<body>
+  <div class="header-card"><h1>Daily System API Audit &amp; Execution Report</h1><p>Window: 22/07/2026, 02:14:00 pm - 23/07/2026, 02:14:00 pm</p></div>
+  <table class="meta-grid"><tr>
+    <td width="24%"><div class="meta-card"><div class="meta-label">Total Requests</div><div class="meta-value">753</div></div></td><td width="1%"></td>
+    <td width="24%"><div class="meta-card"><div class="meta-label">Success Rate</div><div class="meta-value" style="color:#16a34a">98.94%</div></div></td><td width="1%"></td>
+    <td width="24%"><div class="meta-card"><div class="meta-label">Average Latency</div><div class="meta-value">71 ms</div></div></td><td width="1%"></td>
+    <td width="24%"><div class="meta-card"><div class="meta-label">4xx / 5xx Errors</div><div class="meta-value" style="color:#d97706">3 / 5</div></div></td>
+  </tr></table>
+  <div class="info-box"><strong>Audit Note:</strong> Authorization, cookies, headers, request bodies, and sensitive query values are not collected. Any displayed authorization example is masked: <code>Authorization: Bearer [REDACTED]</code>.</div>
+  <div class="section-title">1. Daily API Endpoint Execution Summary</div>
+  <p>All API endpoints executed during the 24-hour cycle, including methods, hit counts, average latency, and complete status breakdown.</p>
+  <table class="stats-table"><thead><tr><th width="12%">Method</th><th width="38%">Endpoint URL</th><th width="15%">Total Hits</th><th width="15%">Avg Latency</th><th width="20%">Status Breakdown</th></tr></thead><tbody><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/applications/:applicationId/workflow</code></td><td>223</td>
+      <td>45 ms</td><td><span class="status-2xx">200 OK (223)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/applications</code></td><td>120</td>
+      <td>45 ms</td><td><span class="status-2xx">200 OK (120)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/auth/spokes</code></td><td>51</td>
+      <td>32 ms</td><td><span class="status-2xx">200 OK (51)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/applications/:applicationId</code></td><td>43</td>
+      <td>72 ms</td><td><span class="status-2xx">200 OK (43)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/credit/:applicationId</code></td><td>27</td>
+      <td>59 ms</td><td><span class="status-2xx">200 OK (27)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/credit/:applicationId/assessment</code></td><td>27</td>
+      <td>63 ms</td><td><span class="status-2xx">200 OK (27)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/operations/checker/:applicationId</code></td><td>26</td>
+      <td>39 ms</td><td><span class="status-2xx">200 OK (26)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/auth/login</code></td><td>23</td>
+      <td>364 ms</td><td><span class="status-2xx">201 Created (22)</span><br><span class="status-4xx">401 Unauthorized (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/auth/logout</code></td><td>22</td>
+      <td>1 ms</td><td><span class="status-2xx">201 Created (22)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/documents/application/:applicationId/all</code></td><td>21</td>
+      <td>66 ms</td><td><span class="status-2xx">200 OK (21)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/kyc/status/:applicationId</code></td><td>16</td>
+      <td>24 ms</td><td><span class="status-2xx">200 OK (16)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/operations/head/:applicationId</code></td><td>14</td>
+      <td>84 ms</td><td><span class="status-2xx">200 OK (14)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/operations/queue</code></td><td>14</td>
+      <td>32 ms</td><td><span class="status-2xx">200 OK (14)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/customer-profiles/:applicationId</code></td><td>12</td>
+      <td>70 ms</td><td><span class="status-2xx">200 OK (12)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/applications/:applicationId/field-visits</code></td><td>11</td>
+      <td>235 ms</td><td><span class="status-2xx">200 OK (11)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/co-applicants/application/:applicationId</code></td><td>9</td>
+      <td>59 ms</td><td><span class="status-2xx">200 OK (9)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/contact-persons/:applicationId</code></td><td>9</td>
+      <td>47 ms</td><td><span class="status-2xx">200 OK (9)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/applications/:applicationId/workflow-history</code></td><td>7</td>
+      <td>44 ms</td><td><span class="status-2xx">200 OK (7)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/legal/cases-requiring-attention</code></td><td>7</td>
+      <td>19 ms</td><td><span class="status-2xx">200 OK (7)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/applications/:applicationId/field-visits/documents</code></td><td>6</td>
+      <td>113 ms</td><td><span class="status-2xx">200 OK (6)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/applications/:applicationId/geo-locations</code></td><td>6</td>
+      <td>48 ms</td><td><span class="status-2xx">200 OK (6)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/charges-receipts/application/:applicationId</code></td><td>5</td>
+      <td>53 ms</td><td><span class="status-2xx">200 OK (5)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/credit/checker/cases</code></td><td>5</td>
+      <td>34 ms</td><td><span class="status-2xx">200 OK (5)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/rm/dashboard</code></td><td>5</td>
+      <td>154 ms</td><td><span class="status-2xx">200 OK (5)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/aadhaar/status/:applicationId</code></td><td>4</td>
+      <td>51 ms</td><td><span class="status-5xx">500 Internal Server Error (4)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/co-applicants/:id/aadhaar/status</code></td><td>4</td>
+      <td>46 ms</td><td><span class="status-2xx">200 OK (4)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/legal/:applicationId</code></td><td>4</td>
+      <td>97 ms</td><td><span class="status-2xx">200 OK (4)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/legal/cases</code></td><td>4</td>
+      <td>28 ms</td><td><span class="status-2xx">200 OK (4)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/valuation/cases</code></td><td>4</td>
+      <td>32 ms</td><td><span class="status-2xx">200 OK (4)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/applications/:applicationId/workflow</code></td><td>2</td>
+      <td>18 ms</td><td><span class="status-4xx">400 Bad Request (2)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/applications/:id/submit-to-bm</code></td><td>2</td>
+      <td>79 ms</td><td><span class="status-2xx">201 Created (2)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/applications/:id/submit-to-cm</code></td><td>2</td>
+      <td>86 ms</td><td><span class="status-2xx">201 Created (2)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/credit/maker/cases</code></td><td>2</td>
+      <td>17 ms</td><td><span class="status-2xx">200 OK (2)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/valuation/:applicationId</code></td><td>2</td>
+      <td>53 ms</td><td><span class="status-2xx">200 OK (2)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/applications/submit-draft</code></td><td>1</td>
+      <td>256 ms</td><td><span class="status-2xx">201 Created (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/auth/refresh</code></td><td>1</td>
+      <td>1 ms</td><td><span class="status-5xx">500 Internal Server Error (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/co-applicants/:id/email/send-otp</code></td><td>1</td>
+      <td>1407 ms</td><td><span class="status-2xx">200 OK (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/co-applicants/:id/email/verify-otp</code></td><td>1</td>
+      <td>137 ms</td><td><span class="status-2xx">200 OK (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/co-applicants/:id/mobile/send-otp</code></td><td>1</td>
+      <td>1339 ms</td><td><span class="status-2xx">200 OK (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/co-applicants/:id/mobile/verify-otp</code></td><td>1</td>
+      <td>209 ms</td><td><span class="status-2xx">200 OK (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/co-applicants/:id/pan/verify</code></td><td>1</td>
+      <td>4706 ms</td><td><span class="status-2xx">200 OK (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/co-applicants/save-CoApplicants</code></td><td>1</td>
+      <td>72 ms</td><td><span class="status-2xx">201 Created (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/contact-persons</code></td><td>1</td>
+      <td>40 ms</td><td><span class="status-2xx">201 Created (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/credit/:applicationId/cm/recommend</code></td><td>1</td>
+      <td>483 ms</td><td><span class="status-2xx">201 Created (1)</span></td></tr><tr>
+      <td><span class="badge badge-post">POST</span></td>
+      <td><code>/api/credit/:applicationId/maker/submit-to-checker</code></td><td>1</td>
+      <td>251 ms</td><td><span class="status-2xx">201 Created (1)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/lms/dashboard</code></td><td>1</td>
+      <td>38 ms</td><td><span class="status-2xx">200 OK (1)</span></td></tr><tr>
+      <td><span class="badge badge-get">GET</span></td>
+      <td><code>/api/lms/loan-accounts</code></td><td>1</td>
+      <td>31 ms</td><td><span class="status-2xx">200 OK (1)</span></td></tr><tr>
+      <td><span class="badge badge-patch">PATCH</span></td>
+      <td><code>/api/operations/head/:applicationId/approve</code></td><td>1</td>
+      <td>39 ms</td><td><span class="status-2xx">200 OK (1)</span></td></tr></tbody></table>
+  <div class="section-title">2. User-wise API Hit Summary</div>
+  <p>This section shows which user accessed which API endpoint and how many times during the audit window.</p>
+  <table class="stats-table"><thead><tr><th width="18%">User</th><th width="18%">Email / Role</th><th width="10%">Method</th><th width="28%">Endpoint URL</th><th width="10%">Hits</th><th width="10%">Avg Latency</th><th width="16%">Status Breakdown</th></tr></thead><tbody><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/workflow</code></td>
+        <td>66</td>
+        <td>48 ms</td>
+        <td><span class="status-2xx">2xx (66)</span></td>
+      </tr><tr>
+        <td><strong>Anonymous</strong><br><small>ID: ANONYMOUS</small></td>
+        <td>-<br><small>-</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/auth/spokes</code></td>
+        <td>51</td>
+        <td>32 ms</td>
+        <td><span class="status-2xx">2xx (51)</span></td>
+      </tr><tr>
+        <td><strong>bm@fintree.in</strong><br><small>ID: 3</small></td>
+        <td>bm@fintree.in<br><small>BM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/workflow</code></td>
+        <td>51</td>
+        <td>42 ms</td>
+        <td><span class="status-2xx">2xx (51)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>44</td>
+        <td>37 ms</td>
+        <td><span class="status-2xx">2xx (44)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/workflow</code></td>
+        <td>36</td>
+        <td>53 ms</td>
+        <td><span class="status-2xx">2xx (36)</span></td>
+      </tr><tr>
+        <td><strong>legal@fintree.in</strong><br><small>ID: 7</small></td>
+        <td>legal@fintree.in<br><small>LEGAL</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/workflow</code></td>
+        <td>34</td>
+        <td>31 ms</td>
+        <td><span class="status-2xx">2xx (34)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId</code></td>
+        <td>24</td>
+        <td>75 ms</td>
+        <td><span class="status-2xx">2xx (24)</span></td>
+      </tr><tr>
+        <td><strong>Anonymous</strong><br><small>ID: ANONYMOUS</small></td>
+        <td>-<br><small>-</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/login</code></td>
+        <td>23</td>
+        <td>364 ms</td>
+        <td><span class="status-2xx">2xx (22)</span><br><span class="status-4xx">4xx (1)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/credit/:applicationId/assessment</code></td>
+        <td>20</td>
+        <td>70 ms</td>
+        <td><span class="status-2xx">2xx (20)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/credit/:applicationId</code></td>
+        <td>20</td>
+        <td>65 ms</td>
+        <td><span class="status-2xx">2xx (20)</span></td>
+      </tr><tr>
+        <td><strong>bm@fintree.in</strong><br><small>ID: 3</small></td>
+        <td>bm@fintree.in<br><small>BM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>19</td>
+        <td>18 ms</td>
+        <td><span class="status-2xx">2xx (19)</span></td>
+      </tr><tr>
+        <td><strong>valuation@fintree.in</strong><br><small>ID: 8</small></td>
+        <td>valuation@fintree.in<br><small>VALUATION</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/workflow</code></td>
+        <td>18</td>
+        <td>40 ms</td>
+        <td><span class="status-2xx">2xx (18)</span></td>
+      </tr><tr>
+        <td><strong>credit.checker@fintree.in</strong><br><small>ID: 6</small></td>
+        <td>credit.checker@fintree.in<br><small>CREDIT_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/workflow</code></td>
+        <td>17</td>
+        <td>55 ms</td>
+        <td><span class="status-2xx">2xx (17)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/kyc/status/:applicationId</code></td>
+        <td>16</td>
+        <td>24 ms</td>
+        <td><span class="status-2xx">2xx (16)</span></td>
+      </tr><tr>
+        <td><strong>ops.checker@fintree.in</strong><br><small>ID: 11</small></td>
+        <td>ops.checker@fintree.in<br><small>OPS_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/operations/checker/:applicationId</code></td>
+        <td>16</td>
+        <td>50 ms</td>
+        <td><span class="status-2xx">2xx (16)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>16</td>
+        <td>70 ms</td>
+        <td><span class="status-2xx">2xx (16)</span></td>
+      </tr><tr>
+        <td><strong>credit.checker@fintree.in</strong><br><small>ID: 6</small></td>
+        <td>credit.checker@fintree.in<br><small>CREDIT_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>8</td>
+        <td>37 ms</td>
+        <td><span class="status-2xx">2xx (8)</span></td>
+      </tr><tr>
+        <td><strong>ops.checker@fintree.in</strong><br><small>ID: 11</small></td>
+        <td>ops.checker@fintree.in<br><small>OPS_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>8</td>
+        <td>41 ms</td>
+        <td><span class="status-2xx">2xx (8)</span></td>
+      </tr><tr>
+        <td><strong>ops.head@fintree.in</strong><br><small>ID: 17</small></td>
+        <td>ops.head@fintree.in<br><small>OPS_HEAD</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/operations/checker/:applicationId</code></td>
+        <td>8</td>
+        <td>21 ms</td>
+        <td><span class="status-2xx">2xx (8)</span></td>
+      </tr><tr>
+        <td><strong>ops.head@fintree.in</strong><br><small>ID: 17</small></td>
+        <td>ops.head@fintree.in<br><small>OPS_HEAD</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>8</td>
+        <td>55 ms</td>
+        <td><span class="status-2xx">2xx (8)</span></td>
+      </tr><tr>
+        <td><strong>ops.maker@fintree.in</strong><br><small>ID: 10</small></td>
+        <td>ops.maker@fintree.in<br><small>OPS_MAKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/operations/head/:applicationId</code></td>
+        <td>8</td>
+        <td>110 ms</td>
+        <td><span class="status-2xx">2xx (8)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/documents/application/:applicationId/all</code></td>
+        <td>8</td>
+        <td>97 ms</td>
+        <td><span class="status-2xx">2xx (8)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/field-visits</code></td>
+        <td>8</td>
+        <td>131 ms</td>
+        <td><span class="status-2xx">2xx (8)</span></td>
+      </tr><tr>
+        <td><strong>Anonymous</strong><br><small>ID: ANONYMOUS</small></td>
+        <td>-<br><small>-</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/legal/cases-requiring-attention</code></td>
+        <td>7</td>
+        <td>19 ms</td>
+        <td><span class="status-2xx">2xx (7)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/contact-persons/:applicationId</code></td>
+        <td>7</td>
+        <td>48 ms</td>
+        <td><span class="status-2xx">2xx (7)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/co-applicants/application/:applicationId</code></td>
+        <td>7</td>
+        <td>61 ms</td>
+        <td><span class="status-2xx">2xx (7)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId</code></td>
+        <td>7</td>
+        <td>95 ms</td>
+        <td><span class="status-2xx">2xx (7)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/customer-profiles/:applicationId</code></td>
+        <td>7</td>
+        <td>64 ms</td>
+        <td><span class="status-2xx">2xx (7)</span></td>
+      </tr><tr>
+        <td><strong>ops.head@fintree.in</strong><br><small>ID: 17</small></td>
+        <td>ops.head@fintree.in<br><small>OPS_HEAD</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/operations/head/:applicationId</code></td>
+        <td>6</td>
+        <td>51 ms</td>
+        <td><span class="status-2xx">2xx (6)</span></td>
+      </tr><tr>
+        <td><strong>ops.maker@fintree.in</strong><br><small>ID: 10</small></td>
+        <td>ops.maker@fintree.in<br><small>OPS_MAKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/operations/queue</code></td>
+        <td>6</td>
+        <td>26 ms</td>
+        <td><span class="status-2xx">2xx (6)</span></td>
+      </tr><tr>
+        <td><strong>credit.checker@fintree.in</strong><br><small>ID: 6</small></td>
+        <td>credit.checker@fintree.in<br><small>CREDIT_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/credit/checker/cases</code></td>
+        <td>5</td>
+        <td>34 ms</td>
+        <td><span class="status-2xx">2xx (5)</span></td>
+      </tr><tr>
+        <td><strong>ops.head@fintree.in</strong><br><small>ID: 17</small></td>
+        <td>ops.head@fintree.in<br><small>OPS_HEAD</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/operations/queue</code></td>
+        <td>5</td>
+        <td>43 ms</td>
+        <td><span class="status-2xx">2xx (5)</span></td>
+      </tr><tr>
+        <td><strong>ops.maker@fintree.in</strong><br><small>ID: 10</small></td>
+        <td>ops.maker@fintree.in<br><small>OPS_MAKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>5</td>
+        <td>101 ms</td>
+        <td><span class="status-2xx">2xx (5)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/field-visits/documents</code></td>
+        <td>5</td>
+        <td>88 ms</td>
+        <td><span class="status-2xx">2xx (5)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/workflow-history</code></td>
+        <td>5</td>
+        <td>42 ms</td>
+        <td><span class="status-2xx">2xx (5)</span></td>
+      </tr><tr>
+        <td><strong>bm@fintree.in</strong><br><small>ID: 3</small></td>
+        <td>bm@fintree.in<br><small>BM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>4</td>
+        <td>1 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>bm@fintree.in</strong><br><small>ID: 3</small></td>
+        <td>bm@fintree.in<br><small>BM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/documents/application/:applicationId/all</code></td>
+        <td>4</td>
+        <td>34 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>bm@fintree.in</strong><br><small>ID: 3</small></td>
+        <td>bm@fintree.in<br><small>BM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/customer-profiles/:applicationId</code></td>
+        <td>4</td>
+        <td>21 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/documents/application/:applicationId/all</code></td>
+        <td>4</td>
+        <td>75 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>credit.checker@fintree.in</strong><br><small>ID: 6</small></td>
+        <td>credit.checker@fintree.in<br><small>CREDIT_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId</code></td>
+        <td>4</td>
+        <td>51 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>credit.checker@fintree.in</strong><br><small>ID: 6</small></td>
+        <td>credit.checker@fintree.in<br><small>CREDIT_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/credit/:applicationId/assessment</code></td>
+        <td>4</td>
+        <td>51 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>credit.checker@fintree.in</strong><br><small>ID: 6</small></td>
+        <td>credit.checker@fintree.in<br><small>CREDIT_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/credit/:applicationId</code></td>
+        <td>4</td>
+        <td>49 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>credit.maker@fintree.in</strong><br><small>ID: 5</small></td>
+        <td>credit.maker@fintree.in<br><small>CREDIT_MAKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId</code></td>
+        <td>4</td>
+        <td>38 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>legal@fintree.in</strong><br><small>ID: 7</small></td>
+        <td>legal@fintree.in<br><small>LEGAL</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId</code></td>
+        <td>4</td>
+        <td>64 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>legal@fintree.in</strong><br><small>ID: 7</small></td>
+        <td>legal@fintree.in<br><small>LEGAL</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/legal/cases</code></td>
+        <td>4</td>
+        <td>28 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>legal@fintree.in</strong><br><small>ID: 7</small></td>
+        <td>legal@fintree.in<br><small>LEGAL</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>4</td>
+        <td>36 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>legal@fintree.in</strong><br><small>ID: 7</small></td>
+        <td>legal@fintree.in<br><small>LEGAL</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/legal/:applicationId</code></td>
+        <td>4</td>
+        <td>97 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/co-applicants/:id/aadhaar/status</code></td>
+        <td>4</td>
+        <td>46 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/rm/dashboard</code></td>
+        <td>4</td>
+        <td>150 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/geo-locations</code></td>
+        <td>4</td>
+        <td>41 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/aadhaar/status/:applicationId</code></td>
+        <td>4</td>
+        <td>51 ms</td>
+        <td><span class="status-5xx">5xx (4)</span></td>
+      </tr><tr>
+        <td><strong>valuation@fintree.in</strong><br><small>ID: 8</small></td>
+        <td>valuation@fintree.in<br><small>VALUATION</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/valuation/cases</code></td>
+        <td>4</td>
+        <td>32 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>valuation@fintree.in</strong><br><small>ID: 8</small></td>
+        <td>valuation@fintree.in<br><small>VALUATION</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>4</td>
+        <td>136 ms</td>
+        <td><span class="status-2xx">2xx (4)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>3</td>
+        <td>1 ms</td>
+        <td><span class="status-2xx">2xx (3)</span></td>
+      </tr><tr>
+        <td><strong>credit.maker@fintree.in</strong><br><small>ID: 5</small></td>
+        <td>credit.maker@fintree.in<br><small>CREDIT_MAKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/credit/:applicationId/assessment</code></td>
+        <td>3</td>
+        <td>30 ms</td>
+        <td><span class="status-2xx">2xx (3)</span></td>
+      </tr><tr>
+        <td><strong>credit.maker@fintree.in</strong><br><small>ID: 5</small></td>
+        <td>credit.maker@fintree.in<br><small>CREDIT_MAKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/credit/:applicationId</code></td>
+        <td>3</td>
+        <td>33 ms</td>
+        <td><span class="status-2xx">2xx (3)</span></td>
+      </tr><tr>
+        <td><strong>credit.maker@fintree.in</strong><br><small>ID: 5</small></td>
+        <td>credit.maker@fintree.in<br><small>CREDIT_MAKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>3</td>
+        <td>18 ms</td>
+        <td><span class="status-2xx">2xx (3)</span></td>
+      </tr><tr>
+        <td><strong>legal@fintree.in</strong><br><small>ID: 7</small></td>
+        <td>legal@fintree.in<br><small>LEGAL</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/documents/application/:applicationId/all</code></td>
+        <td>3</td>
+        <td>45 ms</td>
+        <td><span class="status-2xx">2xx (3)</span></td>
+      </tr><tr>
+        <td><strong>ops.checker@fintree.in</strong><br><small>ID: 11</small></td>
+        <td>ops.checker@fintree.in<br><small>OPS_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/operations/queue</code></td>
+        <td>3</td>
+        <td>26 ms</td>
+        <td><span class="status-2xx">2xx (3)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/charges-receipts/application/:applicationId</code></td>
+        <td>3</td>
+        <td>50 ms</td>
+        <td><span class="status-2xx">2xx (3)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>3</td>
+        <td>1 ms</td>
+        <td><span class="status-2xx">2xx (3)</span></td>
+      </tr><tr>
+        <td><strong>bm@fintree.in</strong><br><small>ID: 3</small></td>
+        <td>bm@fintree.in<br><small>BM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/applications/:id/submit-to-cm</code></td>
+        <td>2</td>
+        <td>86 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>bm@fintree.in</strong><br><small>ID: 3</small></td>
+        <td>bm@fintree.in<br><small>BM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/applications/:applicationId/workflow</code></td>
+        <td>2</td>
+        <td>18 ms</td>
+        <td><span class="status-4xx">4xx (2)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/field-visits</code></td>
+        <td>2</td>
+        <td>625 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/contact-persons/:applicationId</code></td>
+        <td>2</td>
+        <td>44 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/workflow-history</code></td>
+        <td>2</td>
+        <td>49 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/charges-receipts/application/:applicationId</code></td>
+        <td>2</td>
+        <td>57 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/geo-locations</code></td>
+        <td>2</td>
+        <td>61 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/co-applicants/application/:applicationId</code></td>
+        <td>2</td>
+        <td>50 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>credit.checker@fintree.in</strong><br><small>ID: 6</small></td>
+        <td>credit.checker@fintree.in<br><small>CREDIT_CHECKER</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>2</td>
+        <td>2 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>credit.maker@fintree.in</strong><br><small>ID: 5</small></td>
+        <td>credit.maker@fintree.in<br><small>CREDIT_MAKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/credit/maker/cases</code></td>
+        <td>2</td>
+        <td>17 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>legal@fintree.in</strong><br><small>ID: 7</small></td>
+        <td>legal@fintree.in<br><small>LEGAL</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>2</td>
+        <td>1 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>ops.checker@fintree.in</strong><br><small>ID: 11</small></td>
+        <td>ops.checker@fintree.in<br><small>OPS_CHECKER</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>2</td>
+        <td>1 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>ops.head@fintree.in</strong><br><small>ID: 17</small></td>
+        <td>ops.head@fintree.in<br><small>OPS_HEAD</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>2</td>
+        <td>3 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>ops.maker@fintree.in</strong><br><small>ID: 10</small></td>
+        <td>ops.maker@fintree.in<br><small>OPS_MAKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/operations/checker/:applicationId</code></td>
+        <td>2</td>
+        <td>24 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/applications/:id/submit-to-bm</code></td>
+        <td>2</td>
+        <td>79 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>valuation@fintree.in</strong><br><small>ID: 8</small></td>
+        <td>valuation@fintree.in<br><small>VALUATION</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/valuation/:applicationId</code></td>
+        <td>2</td>
+        <td>53 ms</td>
+        <td><span class="status-2xx">2xx (2)</span></td>
+      </tr><tr>
+        <td><strong>Anonymous</strong><br><small>ID: ANONYMOUS</small></td>
+        <td>-<br><small>-</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications</code></td>
+        <td>1</td>
+        <td>23 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>Anonymous</strong><br><small>ID: ANONYMOUS</small></td>
+        <td>-<br><small>-</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/lms/loan-accounts</code></td>
+        <td>1</td>
+        <td>31 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>Anonymous</strong><br><small>ID: ANONYMOUS</small></td>
+        <td>-<br><small>-</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/refresh</code></td>
+        <td>1</td>
+        <td>1 ms</td>
+        <td><span class="status-5xx">5xx (1)</span></td>
+      </tr><tr>
+        <td><strong>Anonymous</strong><br><small>ID: ANONYMOUS</small></td>
+        <td>-<br><small>-</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/lms/dashboard</code></td>
+        <td>1</td>
+        <td>38 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>cm@fintree.in</strong><br><small>ID: 4</small></td>
+        <td>cm@fintree.in<br><small>CM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/credit/:applicationId/cm/recommend</code></td>
+        <td>1</td>
+        <td>483 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>credit.checker@fintree.in</strong><br><small>ID: 6</small></td>
+        <td>credit.checker@fintree.in<br><small>CREDIT_CHECKER</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/documents/application/:applicationId/all</code></td>
+        <td>1</td>
+        <td>17 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>credit.maker@fintree.in</strong><br><small>ID: 5</small></td>
+        <td>credit.maker@fintree.in<br><small>CREDIT_MAKER</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/credit/:applicationId/maker/submit-to-checker</code></td>
+        <td>1</td>
+        <td>251 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>credit.maker@fintree.in</strong><br><small>ID: 5</small></td>
+        <td>credit.maker@fintree.in<br><small>CREDIT_MAKER</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>1</td>
+        <td>0 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>lms@fintree.in</strong><br><small>ID: 12</small></td>
+        <td>lms@fintree.in<br><small>LMS</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>1</td>
+        <td>2 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>ops.head@fintree.in</strong><br><small>ID: 17</small></td>
+        <td>ops.head@fintree.in<br><small>OPS_HEAD</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/workflow</code></td>
+        <td>1</td>
+        <td>21 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>ops.head@fintree.in</strong><br><small>ID: 17</small></td>
+        <td>ops.head@fintree.in<br><small>OPS_HEAD</small></td>
+        <td><span class="badge badge-patch">PATCH</span></td>
+        <td><code>/api/operations/head/:applicationId/approve</code></td>
+        <td>1</td>
+        <td>39 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>ops.head@fintree.in</strong><br><small>ID: 17</small></td>
+        <td>ops.head@fintree.in<br><small>OPS_HEAD</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/rm/dashboard</code></td>
+        <td>1</td>
+        <td>169 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>ops.maker@fintree.in</strong><br><small>ID: 10</small></td>
+        <td>ops.maker@fintree.in<br><small>OPS_MAKER</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>1</td>
+        <td>1 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/co-applicants/:id/email/send-otp</code></td>
+        <td>1</td>
+        <td>1407 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/co-applicants/save-CoApplicants</code></td>
+        <td>1</td>
+        <td>72 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/co-applicants/:id/mobile/verify-otp</code></td>
+        <td>1</td>
+        <td>209 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/applications/submit-draft</code></td>
+        <td>1</td>
+        <td>256 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/co-applicants/:id/email/verify-otp</code></td>
+        <td>1</td>
+        <td>137 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/contact-persons</code></td>
+        <td>1</td>
+        <td>40 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/co-applicants/:id/pan/verify</code></td>
+        <td>1</td>
+        <td>4706 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>rm@fintree.in</strong><br><small>ID: 2</small></td>
+        <td>rm@fintree.in<br><small>RM</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/co-applicants/:id/mobile/send-otp</code></td>
+        <td>1</td>
+        <td>1339 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>valuation@fintree.in</strong><br><small>ID: 8</small></td>
+        <td>valuation@fintree.in<br><small>VALUATION</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/customer-profiles/:applicationId</code></td>
+        <td>1</td>
+        <td>306 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>valuation@fintree.in</strong><br><small>ID: 8</small></td>
+        <td>valuation@fintree.in<br><small>VALUATION</small></td>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/api/auth/logout</code></td>
+        <td>1</td>
+        <td>0 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>valuation@fintree.in</strong><br><small>ID: 8</small></td>
+        <td>valuation@fintree.in<br><small>VALUATION</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/field-visits</code></td>
+        <td>1</td>
+        <td>293 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>valuation@fintree.in</strong><br><small>ID: 8</small></td>
+        <td>valuation@fintree.in<br><small>VALUATION</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/documents/application/:applicationId/all</code></td>
+        <td>1</td>
+        <td>19 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr><tr>
+        <td><strong>valuation@fintree.in</strong><br><small>ID: 8</small></td>
+        <td>valuation@fintree.in<br><small>VALUATION</small></td>
+        <td><span class="badge badge-get">GET</span></td>
+        <td><code>/api/applications/:applicationId/field-visits/documents</code></td>
+        <td>1</td>
+        <td>235 ms</td>
+        <td><span class="status-2xx">2xx (1)</span></td>
+      </tr></tbody></table>
+  <div class="section-title">3. Sample API Execution Log Snapshot (Audit Trail)</div>
+  <p>Privacy-safe samples from the reporting window. Request bodies and sensitive headers are deliberately excluded.</p>
+  <div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T01:39:23.483Z]</span>
+      <span class="badge badge-post">POST</span>
+      <span class="log-endpoint">/api/applications/:applicationId/workflow</span></div>
+      <div class="code-block">REQUEST ID: 11b857fd-725b-4bf2-b23e-957b77de22d9
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 400 Bad Request
+LATENCY: 16 ms</div></div><div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T01:10:11.576Z]</span>
+      <span class="badge badge-post">POST</span>
+      <span class="log-endpoint">/api/auth/refresh</span></div>
+      <div class="code-block">REQUEST ID: 72feb63b-23b1-4e28-9200-2e743f0aa41b
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 500 Internal Server Error
+LATENCY: 1 ms</div></div><div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T01:10:11.565Z]</span>
+      <span class="badge badge-post">POST</span>
+      <span class="log-endpoint">/api/auth/login</span></div>
+      <div class="code-block">REQUEST ID: a0bb9279-6532-4fa9-b704-1407601f4d1c
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 401 Unauthorized
+LATENCY: 52 ms</div></div><div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T00:52:16.217Z]</span>
+      <span class="badge badge-post">POST</span>
+      <span class="log-endpoint">/api/applications/:applicationId/workflow</span></div>
+      <div class="code-block">REQUEST ID: 450e8b43-f0d0-4f35-8616-934867a3d2f0
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 400 Bad Request
+LATENCY: 20 ms</div></div><div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T00:40:15.288Z]</span>
+      <span class="badge badge-get">GET</span>
+      <span class="log-endpoint">/api/aadhaar/status/:applicationId</span></div>
+      <div class="code-block">REQUEST ID: 4943463f-592d-409f-b46f-a2ac558bc5d0
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 500 Internal Server Error
+LATENCY: 21 ms</div></div><div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T00:40:15.175Z]</span>
+      <span class="badge badge-get">GET</span>
+      <span class="log-endpoint">/api/aadhaar/status/:applicationId</span></div>
+      <div class="code-block">REQUEST ID: 96218361-cbe9-4160-a388-6871b1b30b27
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 500 Internal Server Error
+LATENCY: 51 ms</div></div><div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T00:37:26.022Z]</span>
+      <span class="badge badge-get">GET</span>
+      <span class="log-endpoint">/api/aadhaar/status/:applicationId</span></div>
+      <div class="code-block">REQUEST ID: 89523e66-fee6-4ccb-8a22-944385ed6786
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 500 Internal Server Error
+LATENCY: 30 ms</div></div><div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T00:37:25.876Z]</span>
+      <span class="badge badge-get">GET</span>
+      <span class="log-endpoint">/api/aadhaar/status/:applicationId</span></div>
+      <div class="code-block">REQUEST ID: 7e3263c2-2233-4e78-9f69-b099b8018b68
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 500 Internal Server Error
+LATENCY: 103 ms</div></div><div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T03:10:24.563Z]</span>
+      <span class="badge badge-get">GET</span>
+      <span class="log-endpoint">/api/operations/head/:applicationId</span></div>
+      <div class="code-block">REQUEST ID: 695abe0d-393b-4820-bdd5-09a97d3e3087
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 200 OK
+LATENCY: 17 ms</div></div><div class="log-entry"><div class="log-header">
+      <span class="log-time">[2026-07-23T03:10:24.536Z]</span>
+      <span class="badge badge-get">GET</span>
+      <span class="log-endpoint">/api/operations/head/:applicationId</span></div>
+      <div class="code-block">REQUEST ID: 913ff74a-1e88-4926-8f6f-b688e146cf6b
+AUTHORIZATION: Bearer [REDACTED]
+REQUEST HEADERS/BODY/QUERY: [NOT COLLECTED]
+
+RESPONSE STATUS: 200 OK
+LATENCY: 23 ms</div></div>
+</body>
+</html>
