@@ -9,6 +9,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { WorkflowTransitionService } from '../workflow/workflow-transition.service';
 
 @Injectable()
 export class OpsService {
@@ -16,6 +17,7 @@ export class OpsService {
 
   constructor(
     private readonly dataSource: DataSource,
+    private readonly workflowTransitions: WorkflowTransitionService,
   ) {}
 
    async getOpsMakerCase(applicationId: number) {
@@ -1100,20 +1102,24 @@ private maskAccountNumber(
         this.getUserRoleCode(user);
 
       let requiredStatus: string;
+      let requiredStage: string;
 
       switch (roleCode) {
         case 'OPS_HEAD':
           requiredStatus =
-            'OPS_MAKER_APPROVED';
+            'OPS_HEAD_PENDING';
+          requiredStage = 'OPS_HEAD';
           break;
 
         case 'OPS_CHECKER':
           requiredStatus =
-            'OPS_HEAD_APPROVED';
+            'OPS_CHECKER_PENDING';
+          requiredStage = 'OPS_CHECKER';
           break;
         case 'OPS_MAKER':
           requiredStatus =
-            'LEGAL_APPROVED';
+            'OPS_MAKER_PENDING';
+          requiredStage = 'OPS_MAKER';
           break;
         default:
           throw new ForbiddenException(
@@ -1143,7 +1149,7 @@ private maskAccountNumber(
           ORDER BY a.updated_at DESC
         `,
          [
-            'OPERATIONS',
+            requiredStage,
             requiredStatus,
           ],
         );
@@ -1231,330 +1237,39 @@ private maskAccountNumber(
 
 async approveByOpsMaker(
   applicationId: number,
-  userId: number,
+  user: Record<string, any>,
 ) {
-  try {
-    return await this.dataSource.transaction(
-      async (manager) => {
-        const rows = await manager.query(
-          `
-            SELECT
-              id,
-              application_number AS applicationNumber,
-              stage,
-              status,
-              version
-            FROM applications
-            WHERE id = ?
-            LIMIT 1
-            FOR UPDATE
-          `,
-          [applicationId],
-        );
-
-        if (!rows.length) {
-          throw new NotFoundException(
-            `Application ${applicationId} was not found`,
-          );
-        }
-
-        const application = rows[0];
-
-        const currentStatus = String(
-          application.status ?? '',
-        )
-          .trim()
-          .toUpperCase();
-
-        if (currentStatus !== 'OPS_MAKER_APPROVED') {
-          throw new BadRequestException(
-            `Application cannot be approved by Operations Maker because its current status is ${currentStatus || 'UNKNOWN'}. Expected status is LEGAL_APPROVED.`,
-          );
-        }
-
-        const updateResult = await manager.query(
-          `
-            UPDATE applications
-            SET
-              stage = 'OPS_HEAD',
-              status = 'OPS_MAKER_APPROVED',
-              version = COALESCE(version, 0) + 1,
-              updated_by = ?,
-              updated_at = NOW()
-            WHERE
-              id = ?
-              AND UPPER(TRIM(status)) = 'OPS_MAKER_APPROVED'
-          `,
-          [
-            userId,
-            applicationId,
-          ],
-        );
-
-        if (
-          !updateResult ||
-          Number(updateResult.affectedRows ?? 0) !== 1
-        ) {
-          throw new ConflictException(
-            'The application was modified by another user. Refresh the case and try again.',
-          );
-        }
-
-        return {
-          applicationId,
-          applicationNumber:
-            application.applicationNumber,
-          previousStage:
-            application.stage,
-          previousStatus:
-            application.status,
-          stage: 'OPERATIONS',
-          status: 'OPS_MAKER_APPROVED',
-          version:
-            Number(application.version ?? 0) + 1,
-          approvedBy: userId,
-        };
-      },
-    );
-  } catch (error) {
-    if (
-      error instanceof NotFoundException ||
-      error instanceof BadRequestException ||
-      error instanceof ConflictException
-    ) {
-      throw error;
-    }
-
-    this.logger.error(
-      `Unable to approve application ${applicationId} by Operations Maker`,
-      error instanceof Error
-        ? error.stack
-        : String(error),
-    );
-
-    throw new InternalServerErrorException(
-      'Unable to approve the application.',
-    );
-  }
+  return this.workflowTransitions.move({
+    applicationId,
+    action: 'OPS_MAKER_APPROVE_TO_OPS_HEAD',
+    remarks: 'Approved by Operations Maker.',
+    actor: user,
+  });
 }
 
 
 async approveByOpsHead(
   applicationId: number,
-  userId: number,
+  user: Record<string, any>,
 ) {
-  try {
-    return await this.dataSource.transaction(
-      async (manager) => {
-        const rows = await manager.query(
-          `
-            SELECT
-              id,
-              application_number AS applicationNumber,
-              stage,
-              status,
-              version
-            FROM applications
-            WHERE id = ?
-            LIMIT 1
-            FOR UPDATE
-          `,
-          [applicationId],
-        );
-
-        if (!rows.length) {
-          throw new NotFoundException(
-            `Application ${applicationId} was not found`,
-          );
-        }
-
-        const application = rows[0];
-
-        const currentStatus = String(
-          application.status ?? '',
-        )
-          .trim()
-          .toUpperCase();
-
-        if (currentStatus !== 'OPS_MAKER_APPROVED') {
-          throw new BadRequestException(
-            `Application cannot be approved by Operations Maker because its current status is ${currentStatus || 'UNKNOWN'}. Expected status is LEGAL_APPROVED.`,
-          );
-        }
-
-        const updateResult = await manager.query(
-          `
-            UPDATE applications
-            SET
-              stage = 'OPERATIONS',
-              status = 'DISBURSED',
-              version = COALESCE(version, 0) + 1,
-              updated_by = ?,
-              updated_at = NOW()
-            WHERE
-              id = ?
-              AND UPPER(TRIM(status)) = 'OPS_MAKER_APPROVED'
-          `,
-          [
-            userId,
-            applicationId,
-          ],
-        );
-
-        if (
-          !updateResult ||
-          Number(updateResult.affectedRows ?? 0) !== 1
-        ) {
-          throw new ConflictException(
-            'The application was modified by another user. Refresh the case and try again.',
-          );
-        }
-
-        return {
-          applicationId,
-          applicationNumber:
-            application.applicationNumber,
-          previousStage:
-            application.stage,
-          previousStatus:
-            application.status,
-          stage: 'OPERATIONS',
-          status: 'OPS_HEAD_APPROVED',
-          version:
-            Number(application.version ?? 0) + 1,
-          approvedBy: userId,
-        };
-      },
-    );
-  } catch (error) {
-    if (
-      error instanceof NotFoundException ||
-      error instanceof BadRequestException ||
-      error instanceof ConflictException
-    ) {
-      throw error;
-    }
-
-    this.logger.error(
-      `Unable to approve application ${applicationId} by Operations Maker`,
-      error instanceof Error
-        ? error.stack
-        : String(error),
-    );
-
-    throw new InternalServerErrorException(
-      'Unable to approve the application.',
-    );
-  }
+  return this.workflowTransitions.move({
+    applicationId,
+    action: 'OPS_HEAD_APPROVE_TO_OPS_CHECKER',
+    remarks: 'Approved by Operations Head.',
+    actor: user,
+  });
 }
 
 
 async approveByOpsChecker(
   applicationId: number,
-  userId: number,
+  user: Record<string, any>,
 ) {
-  try {
-    return await this.dataSource.transaction(
-      async (manager) => {
-        const rows = await manager.query(
-          `
-            SELECT
-              id,
-              application_number AS applicationNumber,
-              stage,
-              status,
-              version
-            FROM applications
-            WHERE id = ?
-            LIMIT 1
-            FOR UPDATE
-          `,
-          [applicationId],
-        );
-
-        if (!rows.length) {
-          throw new NotFoundException(
-            `Application ${applicationId} was not found`,
-          );
-        }
-
-        const application = rows[0];
-
-        const currentStatus = String(
-          application.status ?? '',
-        )
-          .trim()
-          .toUpperCase();
-
-        if (currentStatus !== 'OPS_HEAD_APPROVED') {
-          throw new BadRequestException(
-            `Application cannot be approved by Operations head because its current status is ${currentStatus || 'UNKNOWN'}. Expected status is ops_maker_APPROVED.`,
-          );
-        }
-
-        const updateResult = await manager.query(
-          `
-            UPDATE applications
-            SET
-              stage = 'OPERATIONS',
-              status = 'OPS_CHECKER_APPROVED',
-              version = COALESCE(version, 0) + 1,
-              updated_by = ?,
-              updated_at = NOW()
-            WHERE
-              id = ?
-              AND UPPER(TRIM(status)) = 'OPS_HEAD_APPROVED'
-          `,
-          [
-            userId,
-            applicationId,
-          ],
-        );
-
-        if (
-          !updateResult ||
-          Number(updateResult.affectedRows ?? 0) !== 1
-        ) {
-          throw new ConflictException(
-            'The application was modified by another user. Refresh the case and try again.',
-          );
-        }
-
-        return {
-          applicationId,
-          applicationNumber:
-            application.applicationNumber,
-          previousStage:
-            application.stage,
-          previousStatus:
-            application.status,
-          stage: 'OPERATIONS',
-          status: 'OPS_CHECKER_APPROVED',
-          version:
-            Number(application.version ?? 0) + 1,
-          approvedBy: userId,
-        };
-      },
-    );
-  } catch (error) {
-    if (
-      error instanceof NotFoundException ||
-      error instanceof BadRequestException ||
-      error instanceof ConflictException
-    ) {
-      throw error;
-    }
-
-    this.logger.error(
-      `Unable to approve application ${applicationId} by Operations Checker`,
-      error instanceof Error
-        ? error.stack
-        : String(error),
-    );
-
-    throw new InternalServerErrorException(
-      'Unable to approve the application.',
-    );
-  }
+  return this.workflowTransitions.move({
+    applicationId,
+    action: 'OPS_CHECKER_APPROVE_TO_DISBURSEMENT',
+    remarks: 'Approved by Operations Checker.',
+    actor: user,
+  });
 }
 }

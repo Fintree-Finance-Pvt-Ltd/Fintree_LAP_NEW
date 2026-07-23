@@ -18,6 +18,7 @@ import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
 import { WorkflowLog } from '../workflow/entities/workflow-log.entity';
 import { Workflow } from '../workflow/entities/workflow.entity';
 import { Application } from './entities/application.entity';
+import { WorkflowTransitionService } from '../workflow/workflow-transition.service';
 
 export type Actor = { id: number; roles: string[]; permissions: string[] };
 
@@ -31,7 +32,8 @@ export class ApplicationsService {
     @InjectRepository(Workflow) private readonly workflows: Repository<Workflow>,
     @InjectRepository(WorkflowLog) private readonly workflowLogs: Repository<WorkflowLog>,
     @InjectRepository(CustomerProfile) private readonly profiles: Repository<CustomerProfile>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly workflowTransitions: WorkflowTransitionService,
   ) {}
 
   private isWorkflowLogAction(
@@ -484,39 +486,20 @@ return {
   }
 
 
-  async submitToBm(
+async submitToBm(
   applicationId: number,
   actor: Actor,
 ) {
-  const application =
-    await this.applications.findOne({
-      where: {
-        id: applicationId,
-      },
-    });
-
-  if (!application) {
-    throw new NotFoundException(
-      'Application not found',
-    );
-  }
-
-  application.stage = 'BM' as any;
-  application.status =
-    'BM_PENDING' as any;
-
-  application.updatedBy =
-  actor?.id ?? undefined;
-
-  const saved =
-    await this.applications.save(
-      application,
-    );
-
+  const result = await this.workflowTransitions.move({
+    applicationId,
+    action: 'RM_SUBMIT_TO_BM',
+    remarks: 'Application submitted to BM.',
+    actor,
+  });
   return {
-    data: saved,
-    message:
-      'Application submitted to BM successfully.',
+    success: true,
+    data: result.data.application,
+    message: 'Application submitted to BM successfully.',
   };
 }
 
@@ -559,16 +542,13 @@ async submitToCm(
     );
   }
 
-  application.stage = 'CM' as any;
-  application.status = 'CM_PENDING' as any;
-
-  application.updatedBy =
-    actor?.id ?? undefined;
-
-  const saved =
-    await this.applications.save(
-      application,
-    );
+  const movement = await this.workflowTransitions.move({
+    applicationId,
+    action: 'BM_APPROVE_TO_CM',
+    remarks: 'Application approved by BM and submitted to CM.',
+    actor,
+  });
+  const saved = movement.data.application;
 
   return {
     success: true,
@@ -632,25 +612,16 @@ async submitToCredit(
       dto?.remarks || 'CM screening decision updated.';
 
     if (decision === 'REJECTED') {
-      application.stage = ApplicationStage.CM;
-      application.status = ApplicationStatus.CM_REJECTED;
-
       assignedTo = 'CM';
       lastAction = 'CM_REJECTED';
       lastRemarks =
         dto?.remarks || 'CM rejected application.';
     } else if (decision === 'HOLD_QUERY') {
-      application.stage = ApplicationStage.CM;
-      application.status = ApplicationStatus.CM_QUERY;
-
       assignedTo = 'CM';
       lastAction = 'CM_QUERY_RAISED';
       lastRemarks =
         dto?.remarks || 'CM kept application on hold/query.';
     } else {
-      application.stage = ApplicationStage.CREDIT;
-      application.status = ApplicationStatus.CREDIT_MAKER_PENDING;
-
       assignedTo = 'CREDIT_MAKER';
       lastAction = 'SUBMITTED_TO_CREDIT_MAKER';
       lastRemarks =
@@ -658,9 +629,19 @@ async submitToCredit(
         'CM recommended application and submitted to Credit Maker.';
     }
 
-    application.updatedBy = actor?.id ?? undefined;
-
-    const saved = await manager.save(application);
+    const movement = await this.workflowTransitions.move({
+      applicationId,
+      action: decision === 'REJECTED'
+        ? 'CM_REJECT'
+        : decision === 'HOLD_QUERY'
+          ? 'CM_QUERY'
+          : 'CM_APPROVE_TO_CREDIT_MAKER',
+      remarks: lastRemarks,
+      payload: dto,
+      actor,
+      manager,
+    });
+    const saved = movement.data.application;
 
     let workflow = await manager.findOne(Workflow, {
       where: {
@@ -1066,35 +1047,18 @@ async addVisit(
 
   async transition(applicationId: number, dto: any, actor: Actor) {
     if (!actor.permissions?.includes(PERMISSIONS.APPLICATION_TRANSITION)) throw new ForbiddenException('Missing workflow permission');
-    return this.dataSource.transaction(async (manager) => {
-      const application = await manager.findOne(Application, { where: { id: applicationId }, lock: { mode: 'pessimistic_write' } });
-      if (!application) throw new NotFoundException('Application not found');
-      if (application.version !== dto.expectedVersion) throw new BadRequestException('Application version changed');
-      const fromStage = application.stage;
-      if (dto.action === WorkflowAction.SUBMIT_TO_BM) {
-        if (application.stage !== ApplicationStage.RM) throw new BadRequestException('Invalid stage for BM submission');
-        application.stage = ApplicationStage.BM;
-        application.status = ApplicationStatus.BM_PENDING;
-      } else if (dto.action === 'BM_APPROVE') {
-        if (!actor.permissions.includes(PERMISSIONS.BM_APPROVE)) throw new ForbiddenException('Missing BM approval permission');
-        if (application.stage !== ApplicationStage.BM) throw new BadRequestException('Application is not in BM review');
-        application.stage = ApplicationStage.CM;
-        application.status = ApplicationStatus.CM_PENDING;
-      }
-      application.updatedBy = actor.id;
-      const saved = await manager.save(application);
-      await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId, fromRole: fromStage, toRole: saved.stage, action: dto.action, remarks: dto.remarks, actionBy: actor.id }));
-      await this.workflows.save(manager.create(Workflow, {
-        applicationId,
-        currentStage: saved.stage,
-        currentStatus: saved.status,
-        assignedTo: actor.roles?.[0],
-        currentOwner: actor.id,
-        lastAction: dto.action as WorkflowAction,
-        lastRemarks: dto.remarks,
-      }));
-      await manager.save(AuditLog, manager.create(AuditLog, { action: dto.action, entityName: 'applications', entityId: applicationId, snapshot: { fromStage, toStage: saved.stage }, createdBy: actor.id }));
-      return { data: saved };
+    const actionAliases: Record<string, string> = {
+      SUBMIT_TO_BM: 'RM_SUBMIT_TO_BM',
+      BM_APPROVE: 'BM_APPROVE_TO_CM',
+    };
+    const action = actionAliases[String(dto?.action || '').toUpperCase()] || dto?.action;
+    return this.workflowTransitions.move({
+      applicationId,
+      action,
+      remarks: dto?.remarks,
+      payload: dto?.payload,
+      assignedToUserId: dto?.assignedToUserId,
+      actor,
     });
   }
 

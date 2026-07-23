@@ -259,106 +259,87 @@ await this.markMobileVerifiedInProfile(
     const mobile = this.normalizeMobile(body.mobile);
     const otp = this.normalizeOtp(body.otp);
     const consentText = this.normalizeConsentText(body.consentText);
-
     const customerName = String(body.customerName || '').trim();
-
     if (!customerName) {
       throw new BadRequestException('customerName is required');
     }
 
-    const session = await this.otpSessions.findOne({
-      where: {
-        mobileNumber: mobile,
-      },
-      order: {
-        id: 'DESC',
-      },
+    return this.dataSource.transaction(async (manager) => {
+      const session = await manager.getRepository(OtpSession)
+        .createQueryBuilder('session')
+        .setLock('pessimistic_write')
+        .where('session.mobileNumber = :mobile', { mobile })
+        .orderBy('session.id', 'DESC')
+        .getOne();
+
+      if (!session) throw new BadRequestException('OTP not generated.');
+
+      // A previous non-atomic attempt may have verified the OTP and failed
+      // before linking an application. Allow that exact session to resume.
+      if (session.verified && session.applicationId) {
+        throw new BadRequestException('OTP already verified.');
+      }
+      if (new Date() > session.expiresAt) {
+        throw new BadRequestException('OTP expired.');
+      }
+      if (session.otp !== otp) {
+        session.attempts += 1;
+        await manager.save(session);
+        throw new BadRequestException('Invalid OTP.');
+      }
+
+      const application = manager.create(Application, {
+        applicationNumber: `TMP-${Date.now()}-${randomInt(100000, 999999)}`,
+        customerName,
+        mobile,
+        status: ApplicationStatus.DRAFT,
+        stage: ApplicationStage.RM,
+      });
+      const saved = await manager.save(application);
+      saved.applicationNumber = createReferenceNumber('LAP', saved.id);
+      await manager.save(saved);
+
+      const names = customerName.split(/\s+/);
+      const firstName = names[0] || '';
+      const lastName = names.length > 1 ? names[names.length - 1] : firstName;
+      const middleName = names.length > 2 ? names.slice(1, -1).join(' ') : null;
+
+      // Specify only established lead-profile columns. This keeps OTP lead
+      // creation compatible while workflow schema migrations are pending.
+      await manager.query(
+        `INSERT INTO customer_profiles (
+          application_id, customer_type, first_name, middle_name,
+          last_name, mobile, mobile_verified
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          saved.id,
+          CustomerType.INDIVIDUAL,
+          firstName,
+          middleName,
+          lastName,
+          mobile,
+          1,
+        ],
+      );
+
+      session.verified = true;
+      session.consentGiven = true;
+      session.consentText = consentText;
+      session.consentAt = new Date();
+      session.applicationId = saved.id;
+      await manager.save(session);
+
+      return {
+        success: true,
+        message: 'Lead created successfully.',
+        data: {
+          applicationId: saved.id,
+          applicationNumber: saved.applicationNumber,
+          customerName: saved.customerName,
+          mobile: saved.mobile,
+        },
+      };
     });
-
-    if (!session) {
-      throw new BadRequestException('OTP not generated.');
-    }
-
-    if (session.verified) {
-      throw new BadRequestException('OTP already verified.');
-    }
-
-    if (new Date() > session.expiresAt) {
-      throw new BadRequestException('OTP expired.');
-    }
-
-    if (session.otp !== otp) {
-      session.attempts += 1;
-      await this.otpSessions.save(session);
-
-      throw new BadRequestException('Invalid OTP.');
-    }
-
-    // OTP Verified
-    session.verified = true;
-    session.consentGiven = true;
-    session.consentText = consentText;
-    session.consentAt = new Date();
-
-    await this.otpSessions.save(session);
-
-    // Create Application
-    const application = this.applications.create({
-      applicationNumber: 'TEMP',
-      customerName,
-      mobile,
-      status: ApplicationStatus.DRAFT,
-      stage: ApplicationStage.RM,
-      version: 1,
-    });
-
-    const saved = await this.applications.save(application);
-
-    saved.applicationNumber = createReferenceNumber('LAP', saved.id);
-
-    await this.applications.save(saved);
-
-    // Split Customer Name
-    const names = customerName.split(/\s+/);
-
-    const firstName = names[0] || '';
-    const lastName =
-      names.length > 1 ? names[names.length - 1] : '';
-
-    const middleName =
-      names.length > 2
-        ? names.slice(1, -1).join(' ')
-        : null;
-
-    // Create Customer Profile
-const profile = this.customerProfiles.create({
-  applicationId: saved.id,
-  customerType: CustomerType.INDIVIDUAL,
-  firstName,
-  middleName: middleName || undefined,
-  lastName: lastName || firstName,
-  mobile,
-  mobileVerified: true,
-});
-
-    await this.customerProfiles.save(profile);
-
-
-
-    // Update OTP Session
-    session.applicationId = saved.id;
-    await this.otpSessions.save(session);
-
-    return {
-      success: true,
-      message: 'Lead created successfully.',
-      data: {
-        applicationId: saved.id,
-        applicationNumber: saved.applicationNumber,
-        customerName: saved.customerName,
-        mobile: saved.mobile,
-      },
-    };
   }
 
 

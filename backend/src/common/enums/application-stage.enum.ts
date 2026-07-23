@@ -18,6 +18,7 @@ export enum ApplicationStage {
   AGREEMENT = 'AGREEMENT',
   DISBURSEMENT = 'DISBURSEMENT',
 
+  LMS = 'LMS',
   ACTIVE = 'ACTIVE',
   COLLECTION = 'COLLECTION',
   CLOSED = 'CLOSED',

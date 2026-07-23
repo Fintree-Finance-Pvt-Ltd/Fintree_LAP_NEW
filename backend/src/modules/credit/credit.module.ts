@@ -7,12 +7,14 @@ import { Application } from '../applications/entities/application.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
 import { Workflow } from '../workflow/entities/workflow.entity';
+import { WorkflowModule } from '../workflow/workflow.module';
 import { CreditController } from './credit.controller';
 import { CreditService } from './credit.service';
 import { CreditAssessment } from './entities/credit-assessment.entity';
 
 @Module({
   imports: [
+    WorkflowModule,
     TypeOrmModule.forFeature([
       Application,
       Workflow,

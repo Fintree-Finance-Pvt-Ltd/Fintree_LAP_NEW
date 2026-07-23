@@ -22,10 +22,14 @@ import { AuditLog } from '../audit/entities/audit-log.entity';
 
 import { ApplicationStage } from '../../common/enums/application-stage.enum';
 import { ApplicationStatus } from '../../common/enums/application-status.enum';
+import { WorkflowTransitionService } from '../workflow/workflow-transition.service';
 
 @Injectable()
 export class CreditService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly workflowTransitions: WorkflowTransitionService,
+  ) {}
 
 
 private toDecimalString(value: any): string | undefined {
@@ -459,20 +463,19 @@ async cmRecommendToCreditMaker(
       dto?.decision || dto?.cmDecision,
     );
 
-    if (decision === CreditDecision.REJECT) {
-      application.stage = ApplicationStage.CM;
-      application.status = ApplicationStatus.CM_REJECTED;
-    } else if (decision === CreditDecision.HOLD_QUERY) {
-      application.stage = ApplicationStage.CM;
-      application.status = ApplicationStatus.CM_QUERY;
-    } else {
-      application.stage = ApplicationStage.CREDIT;
-      application.status = ApplicationStatus.CREDIT_MAKER_PENDING;
-    }
-
-    application.updatedBy = actor?.id ?? undefined;
-
-    const saved = await manager.save(application);
+    const movement = await this.workflowTransitions.move({
+      applicationId,
+      action: decision === CreditDecision.REJECT
+        ? 'CM_REJECT'
+        : decision === CreditDecision.HOLD_QUERY
+          ? 'CM_QUERY'
+          : 'CM_APPROVE_TO_CREDIT_MAKER',
+      remarks: dto?.remarks || dto?.cmRemarks,
+      payload: dto,
+      actor,
+      manager,
+    });
+    const saved = movement.data.application;
 
     const assessmentStatus =
       decision === CreditDecision.REJECT
@@ -594,7 +597,7 @@ async cmRecommendToCreditMaker(
     const status = String(application.status || '').toUpperCase();
 
     if (
-      stage !== ApplicationStage.CREDIT ||
+      ![ApplicationStage.CREDIT, ApplicationStage.CREDIT_MAKER].includes(stage as ApplicationStage) ||
       ![
         ApplicationStatus.CREDIT_MAKER_PENDING,
         ApplicationStatus.CREDIT_MAKER_QUERY,
@@ -621,7 +624,7 @@ private ensureCreditCheckerCase(application: Application) {
   const status = String(application.status || '').toUpperCase();
 
   if (
-    stage !== ApplicationStage.CREDIT ||
+    ![ApplicationStage.CREDIT, ApplicationStage.CREDIT_CHECKER].includes(stage as ApplicationStage) ||
     ![
       ApplicationStatus.CREDIT_CHECKER_PENDING,
       ApplicationStatus.CREDIT_CHECKER_QUERY,
@@ -639,8 +642,8 @@ private ensureCreditCheckerCase(application: Application) {
     const rows = await this.dataSource
       .getRepository(Application)
       .createQueryBuilder('a')
-      .where('a.stage = :stage', {
-        stage: ApplicationStage.CREDIT,
+      .where('a.stage IN (:...stages)', {
+        stages: [ApplicationStage.CREDIT, ApplicationStage.CREDIT_MAKER],
       })
       .andWhere('a.status IN (:...statuses)', {
         statuses: [
@@ -661,8 +664,8 @@ private ensureCreditCheckerCase(application: Application) {
     const rows = await this.dataSource
       .getRepository(Application)
       .createQueryBuilder('a')
-      .where('a.stage = :stage', {
-        stage: ApplicationStage.CREDIT,
+      .where('a.stage IN (:...stages)', {
+        stages: [ApplicationStage.CREDIT, ApplicationStage.CREDIT_CHECKER],
       })
       .andWhere('a.status IN (:...statuses)', {
         statuses: [
@@ -830,11 +833,11 @@ private ensureCreditCheckerCase(application: Application) {
 
       this.ensureCreditMakerCase(application);
 
-      application.stage = ApplicationStage.CREDIT;
-      application.status = ApplicationStatus.CREDIT_MAKER_QUERY;
-      application.updatedBy = actor?.id ?? undefined;
-
-      const saved = await manager.save(application);
+      const movement = await this.workflowTransitions.move({
+        applicationId, action: 'CREDIT_MAKER_QUERY',
+        remarks: dto?.remarks || dto?.queryRemarks, payload: dto, actor, manager,
+      });
+      const saved = movement.data.application;
 
       const remarks =
         dto?.remarks ||
@@ -937,11 +940,11 @@ private ensureCreditCheckerCase(application: Application) {
       const fromStage = application.stage;
       const fromStatus = application.status;
 
-      application.stage = ApplicationStage.CREDIT;
-      application.status = ApplicationStatus.CREDIT_CHECKER_PENDING;
-      application.updatedBy = actor?.id ?? undefined;
-
-      const saved = await manager.save(application);
+      const movement = await this.workflowTransitions.move({
+        applicationId, action: 'CREDIT_MAKER_SUBMIT_TO_CHECKER',
+        remarks: dto?.remarks || dto?.makerRecommendation, payload: dto, actor, manager,
+      });
+      const saved = movement.data.application;
 
       const remarks =
         dto?.remarks ||
@@ -1046,11 +1049,11 @@ async creditCheckerApprove(
     const fromStage = application.stage;
     const fromStatus = application.status;
 
-    application.stage = ApplicationStage.VALUATION;
-    application.status = ApplicationStatus.VALUATION_PENDING;
-    application.updatedBy = actor?.id ?? undefined;
-
-    const saved = await manager.save(application);
+    const movement = await this.workflowTransitions.move({
+      applicationId, action: 'CREDIT_CHECKER_APPROVE_TO_VALUATION',
+      remarks: dto?.remarks || dto?.checkerRemarks, payload: dto, actor, manager,
+    });
+    const saved = movement.data.application;
 
     const remarks =
       dto?.remarks ||
@@ -1156,11 +1159,11 @@ async creditCheckerReturnToMaker(
     const fromStage = application.stage;
     const fromStatus = application.status;
 
-    application.stage = ApplicationStage.CREDIT;
-    application.status = ApplicationStatus.CREDIT_MAKER_QUERY;
-    application.updatedBy = actor?.id ?? undefined;
-
-    const saved = await manager.save(application);
+    const movement = await this.workflowTransitions.move({
+      applicationId, action: 'CREDIT_CHECKER_RETURN_TO_MAKER',
+      remarks: dto?.remarks || dto?.checkerRemarks, payload: dto, actor, manager,
+    });
+    const saved = movement.data.application;
 
     const remarks =
       dto?.remarks ||
@@ -1266,11 +1269,11 @@ async creditCheckerReject(
     const fromStage = application.stage;
     const fromStatus = application.status;
 
-    application.stage = ApplicationStage.CREDIT;
-    application.status = ApplicationStatus.CREDIT_CHECKER_REJECTED;
-    application.updatedBy = actor?.id ?? undefined;
-
-    const saved = await manager.save(application);
+    const movement = await this.workflowTransitions.move({
+      applicationId, action: 'CREDIT_CHECKER_REJECT',
+      remarks: dto?.remarks || dto?.checkerRemarks, payload: dto, actor, manager,
+    });
+    const saved = movement.data.application;
 
     const remarks =
       dto?.remarks ||

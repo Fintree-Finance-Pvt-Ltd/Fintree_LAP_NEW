@@ -1544,7 +1544,6 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
     const errors = [];
     if (!formData.customerName.trim()) errors.push("Customer Name is required");
     if (!/^[6-9]\d{9}$/.test(formData.mobileNumber.trim())) errors.push("Valid Mobile number is required");
-    if (!formData.panNumber.trim()) errors.push("PAN Number is required");
     if (!formData.occupation) errors.push("Occupation is required");
     if (!formData.propertyType?.trim()) errors.push("Property Type is required");
     if (!formData.propertyValue) errors.push("Property Value is required");

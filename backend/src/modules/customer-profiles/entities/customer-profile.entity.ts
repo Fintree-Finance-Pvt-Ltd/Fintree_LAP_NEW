@@ -75,6 +75,10 @@ customerType?: CustomerType;
   @Column({ name: 'recommended_tenure', type: 'int', nullable: true }) recommendedTenure?: number;
   @Column({ name: 'rm_recommendation', type: 'text', nullable: true }) rmRecommendation?: string;
   @Column({ type: 'text', nullable: true }) remarks?: string;
+  @Column({ name: 'current_workflow_stage', length: 50, nullable: true }) currentWorkflowStage?: string;
+  @Column({ name: 'current_workflow_status', length: 80, nullable: true }) currentWorkflowStatus?: string;
+  @Column({ name: 'last_workflow_action', length: 100, nullable: true }) lastWorkflowAction?: string;
+  @Column({ name: 'last_workflow_updated_at', type: 'datetime', precision: 6, nullable: true }) lastWorkflowUpdatedAt?: Date;
   @CreateDateColumn({ name: 'created_at', precision: 6 }) createdAt: Date;
   @UpdateDateColumn({ name: 'updated_at', precision: 6 }) updatedAt: Date;
 }

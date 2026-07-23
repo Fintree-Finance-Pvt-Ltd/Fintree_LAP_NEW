@@ -15,8 +15,10 @@ import { Document } from '../documents/entities/document.entity';
 import { Notification } from '../notifications/entities/notification.entity';
 import { WorkflowActionDto } from './dto/workflow-action.dto';
 import { WorkflowHistory } from './entities/workflow-history.entity';
+import { WorkflowApprovalLog } from './entities/workflow-approval-log.entity';
 import { WorkflowLog } from './entities/workflow-log.entity';
 import { Workflow } from './entities/workflow.entity';
+import { WorkflowTransitionService } from './workflow-transition.service';
 
 @Injectable()
 export class WorkflowService {
@@ -25,8 +27,10 @@ export class WorkflowService {
   constructor(
     @InjectRepository(Workflow) private readonly workflows: Repository<Workflow>,
     @InjectRepository(WorkflowHistory) private readonly history: Repository<WorkflowHistory>,
+    @InjectRepository(WorkflowApprovalLog) private readonly approvalLogs: Repository<WorkflowApprovalLog>,
     @InjectRepository(WorkflowLog) private readonly workflowLogs: Repository<WorkflowLog>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly workflowTransitions: WorkflowTransitionService,
   ) {}
 
   async saveDraft(applicationId: number, dto: WorkflowActionDto, actor: Actor) {
@@ -47,11 +51,14 @@ export class WorkflowService {
       const application = await manager.findOne(Application, { where: { id: applicationId }, lock: { mode: 'pessimistic_write' } });
       if (!application) throw new NotFoundException('Application not found');
       await this.validateRmSubmission(manager, applicationId);
-      application.stage = ApplicationStage.BM;
-      application.status = ApplicationStatus.BM_PENDING;
-      application.updatedBy = actor.id;
-      const saved = await manager.save(application);
-      await this.upsertWorkflow(manager, saved, WorkflowAction.SUBMIT_TO_BM, dto.remarks, RoleCode.BM, actor.id);
+      const movement = await this.workflowTransitions.move({
+        applicationId,
+        action: 'RM_SUBMIT_TO_BM',
+        remarks: dto.remarks,
+        actor,
+        manager,
+      });
+      const saved = movement.data.application;
       await manager.save(WorkflowHistory, manager.create(WorkflowHistory, { applicationId, fromRole: RoleCode.RM, toRole: RoleCode.BM, action: WorkflowAction.SUBMIT_TO_BM, remarks: dto.remarks ?? 'Submitted to BM', actionBy: actor.id }));
       await manager.save(WorkflowLog, manager.create(WorkflowLog, { applicationId, action: WorkflowLogAction.SUBMITTED_TO_BM, remarks: dto.remarks ?? 'Submitted to BM', createdBy: actor.id }));
       await manager.save(Notification, manager.create(Notification, { applicationId, title: 'LAP case pending BM review', message: `${application.applicationNumber} is pending BM review.` }));
@@ -79,11 +86,35 @@ export class WorkflowService {
   async find(applicationId: number) {
     const workflow = await this.workflows.findOneBy({ applicationId });
     if (!workflow) throw new NotFoundException('Workflow not found');
-    return { data: workflow };
+    const application = await this.dataSource.manager.findOne(Application, { where: { id: applicationId } });
+    return { success: true, data: { workflow, application } };
   }
 
   async findHistory(applicationId: number) {
-    return { data: await this.history.find({ where: { applicationId }, order: { id: 'DESC' } }) };
+    return {
+      success: true,
+      data: await this.approvalLogs.find({
+        where: { applicationId },
+        order: { createdAt: 'DESC', id: 'DESC' },
+      }),
+    };
+  }
+
+  async findCases(query: any) {
+    const page = Math.max(Number(query?.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(query?.limit) || 20, 1), 100);
+    const builder = this.workflows.createQueryBuilder('workflow')
+      .leftJoinAndSelect('workflow.application', 'application');
+    if (query?.stage) builder.andWhere('workflow.currentStage = :stage', { stage: String(query.stage).toUpperCase() });
+    if (query?.status) builder.andWhere('workflow.currentStatus = :status', { status: String(query.status).toUpperCase() });
+    if (query?.assignedToRole) {
+      builder.andWhere('workflow.currentAssignedRole = :assignedToRole', {
+        assignedToRole: String(query.assignedToRole).toUpperCase(),
+      });
+    }
+    const [data, total] = await builder.orderBy('workflow.updatedAt', 'DESC')
+      .skip((page - 1) * limit).take(limit).getManyAndCount();
+    return { success: true, data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
   }
 
   private async upsertWorkflow(manager: DataSource['manager'], application: Application, action: WorkflowAction, remarks: string | undefined, assignedTo: RoleCode, actorId: number) {

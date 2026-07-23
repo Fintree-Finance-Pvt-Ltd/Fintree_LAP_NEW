@@ -112,7 +112,7 @@ async approveByOpsMaker(
 
   return this.operationsService.approveByOpsMaker(
     applicationId,
-    userId,
+    request.user || { id: userId, roles: ['OPS_MAKER'] },
   );
 }
 
@@ -139,7 +139,7 @@ async approveByOpsHead(
 
   return this.operationsService.approveByOpsHead(
     applicationId,
-    userId,
+    request.user || { id: userId, roles: ['OPS_HEAD'] },
   );
 }
 
@@ -166,7 +166,7 @@ async approveByOpsChecker(
 
   return this.operationsService.approveByOpsChecker(
     applicationId,
-    userId,
+    request.user || { id: userId, roles: ['OPS_CHECKER'] },
   );
 }
 }

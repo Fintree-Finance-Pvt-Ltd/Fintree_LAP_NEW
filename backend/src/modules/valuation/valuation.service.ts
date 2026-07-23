@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
 import { Application } from '../applications/entities/application.entity';
+import { WorkflowTransitionService } from '../workflow/workflow-transition.service';
 import {
   ValuationAssessment,
   ValuationAssessmentStatus,
@@ -26,6 +27,7 @@ export class ValuationService {
 
     @InjectRepository(ValuationAssessment)
     private readonly valuationRepo: Repository<ValuationAssessment>,
+    private readonly workflowTransitions: WorkflowTransitionService,
   ) {}
 
   async getCases() {
@@ -128,13 +130,11 @@ export class ValuationService {
   }
 
   async raiseQuery(applicationId: number, body: any, actor: ActorLike) {
-    const application = await this.getApplicationOrFail(applicationId);
-
-    application.stage = 'VALUATION' as any;
-    application.status = 'VALUATION_QUERY' as any;
-    application.updatedBy = actor?.id ?? undefined;
-
-    const savedApplication = await this.applicationsRepo.save(application);
+    const movement = await this.workflowTransitions.move({
+      applicationId, action: 'VALUATION_QUERY', remarks: body?.remarks,
+      payload: body, actor,
+    });
+    const savedApplication = movement.data.application;
 
     const valuationAssessment = await this.saveAssessment(
       savedApplication,
@@ -157,13 +157,11 @@ export class ValuationService {
   }
 
   async markNegative(applicationId: number, body: any, actor: ActorLike) {
-    const application = await this.getApplicationOrFail(applicationId);
-
-    application.stage = 'VALUATION' as any;
-    application.status = 'VALUATION_REJECTED' as any;
-    application.updatedBy = actor?.id ?? undefined;
-
-    const savedApplication = await this.applicationsRepo.save(application);
+    const movement = await this.workflowTransitions.move({
+      applicationId, action: 'VALUATION_REJECT', remarks: body?.remarks,
+      payload: body, actor,
+    });
+    const savedApplication = movement.data.application;
 
     const valuationAssessment = await this.saveAssessment(
       savedApplication,
@@ -186,13 +184,24 @@ export class ValuationService {
   }
 
   async approveToLegal(applicationId: number, body: any, actor: ActorLike) {
-    const application = await this.getApplicationOrFail(applicationId);
+    await this.workflowTransitions.updateVerification(applicationId, {
+      valuationFieldVisitRequired:
+        process.env.VALUATION_FIELD_VISIT_REQUIRED === 'true',
+      valuationFieldVisitCompleted: Boolean(body?.visitDate),
+      valuationGeoRequired:
+        process.env.VALUATION_GEO_REQUIRED === 'true',
+      valuationGeoCompleted:
+        body?.latitude !== undefined &&
+        body?.longitude !== undefined &&
+        body?.latitude !== '' &&
+        body?.longitude !== '',
+    });
 
-    application.stage = 'LEGAL' as any;
-    application.status = 'LEGAL_PENDING' as any;
-    application.updatedBy = actor?.id ?? undefined;
-
-    const savedApplication = await this.applicationsRepo.save(application);
+    const movement = await this.workflowTransitions.move({
+      applicationId, action: 'VALUATION_APPROVE_TO_LEGAL', remarks: body?.remarks,
+      payload: body, actor,
+    });
+    const savedApplication = movement.data.application;
 
     const valuationAssessment = await this.saveAssessment(
       savedApplication,

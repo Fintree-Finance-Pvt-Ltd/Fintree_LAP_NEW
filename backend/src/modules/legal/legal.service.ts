@@ -25,6 +25,7 @@ import {
 } from './entities/legal-assessment.entity';
 import { ApplicationStage } from 'src/common/enums/application-stage.enum';
 import { ApplicationStatus } from 'src/common/enums/application-status.enum';
+import { WorkflowTransitionService } from '../workflow/workflow-transition.service';
 
 type ActorLike = {
   id?: number | string;
@@ -46,6 +47,7 @@ export class LegalService {
 
     @InjectRepository(ValuationAssessment)
     private readonly valuationRepo: Repository<ValuationAssessment>,
+    private readonly workflowTransitions: WorkflowTransitionService,
   ) {}
 
   async getCases() {
@@ -204,11 +206,11 @@ async getStatus(id: number) {
         true,
       );
 
-      application.stage = 'LEGAL' as any;
-      application.status = 'LEGAL_QUERY' as any;
-      application.updatedBy = this.toInteger(actor?.id) as any;
-
-      const savedApplication = await manager.save(application);
+      const movement = await this.workflowTransitions.move({
+        applicationId, action: 'LEGAL_QUERY', remarks: body?.remarks,
+        payload: body, actor, manager,
+      });
+      const savedApplication = movement.data.application;
 
       const legalAssessment = await this.saveAssessment(
         savedApplication,
@@ -237,11 +239,11 @@ async getStatus(id: number) {
         true,
       );
 
-      application.stage = 'LEGAL' as any;
-      application.status = 'LEGAL_REJECTED' as any;
-      application.updatedBy = this.toInteger(actor?.id) as any;
-
-      const savedApplication = await manager.save(application);
+      const movement = await this.workflowTransitions.move({
+        applicationId, action: 'LEGAL_REJECT', remarks: body?.remarks,
+        payload: body, actor, manager,
+      });
+      const savedApplication = movement.data.application;
 
       const legalAssessment = await this.saveAssessment(
         savedApplication,
@@ -273,12 +275,11 @@ async approveToOpsMaker(applicationId: number, body: any, actor: ActorLike) {
       true,
     );
 
-    application.stage = ApplicationStage.OPS_MAKER as any;
-    application.status = ApplicationStatus.LEGAL_APPROVED as any;
-    application.assignedTo = 'OPS_MAKER' as any;
-    application.updatedBy = this.toInteger(actor?.id) as any;
-
-    const savedApplication = await manager.save(application);
+    const movement = await this.workflowTransitions.move({
+      applicationId, action: 'LEGAL_APPROVE_TO_OPS_MAKER', remarks: body?.remarks,
+      payload: body, actor, manager,
+    });
+    const savedApplication = movement.data.application;
 
     const legalAssessment = await this.saveAssessment(
       savedApplication,

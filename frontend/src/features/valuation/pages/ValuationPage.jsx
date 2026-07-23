@@ -350,6 +350,7 @@ export default function ValuationPage() {
     return true;
   };
 
+
   const validateBeforeApprove = () => {
     const errors = [];
 
