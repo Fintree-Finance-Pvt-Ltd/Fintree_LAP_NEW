@@ -3,12 +3,23 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { OpsService } from './ops.service';
 import { Request } from 'express';
+// import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 
-
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id?: string | number;
+    userId?: string | number;
+    sub?: string | number;
+    roles?: string[];
+    permissions?: string[];
+  };
+}
 @Controller('operations')
 export class OpsController {
   constructor(
@@ -45,7 +56,6 @@ export class OpsController {
     };
   }
 
-
   @Get('checker/:applicationId')
   async getCheckerCase(
     @Param('applicationId', ParseIntPipe)
@@ -60,8 +70,6 @@ export class OpsController {
       data,
     };
   }
-
-
 
 
   // GET /api/bm-reviews/queue
@@ -79,4 +87,86 @@ export class OpsController {
       applications,
     };
   }
+
+
+    @Patch('maker/:applicationId/approve')
+async approveByOpsMaker(
+  @Param('applicationId', ParseIntPipe)
+  applicationId: number,
+
+  @Req()
+  request: AuthenticatedRequest,
+) {
+  const rawUserId =
+    request.user?.id ??
+    request.user?.userId ??
+    request.user?.sub;
+
+  const userId = Number(rawUserId);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new UnauthorizedException(
+      'Authenticated user ID is missing or invalid.',
+    );
+  }
+
+  return this.operationsService.approveByOpsMaker(
+    applicationId,
+    userId,
+  );
+}
+
+ @Patch('head/:applicationId/approve')
+async approveByOpsHead(
+  @Param('applicationId', ParseIntPipe)
+  applicationId: number,
+
+  @Req()
+  request: AuthenticatedRequest,
+) {
+  const rawUserId =
+    request.user?.id ??
+    request.user?.userId ??
+    request.user?.sub;
+
+  const userId = Number(rawUserId);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new UnauthorizedException(
+      'Authenticated user ID is missing or invalid.',
+    );
+  }
+
+  return this.operationsService.approveByOpsHead(
+    applicationId,
+    userId,
+  );
+}
+
+ @Patch('checker/:applicationId/approve')
+async approveByOpsChecker(
+  @Param('applicationId', ParseIntPipe)
+  applicationId: number,
+
+  @Req()
+  request: AuthenticatedRequest,
+) {
+  const rawUserId =
+    request.user?.id ??
+    request.user?.userId ??
+    request.user?.sub;
+
+  const userId = Number(rawUserId);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new UnauthorizedException(
+      'Authenticated user ID is missing or invalid.',
+    );
+  }
+
+  return this.operationsService.approveByOpsChecker(
+    applicationId,
+    userId,
+  );
+}
 }

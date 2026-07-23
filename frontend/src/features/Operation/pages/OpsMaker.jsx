@@ -1929,6 +1929,9 @@ export default function OpsMaker() {
   const [pageStatus, setPageStatus] = useState("Awaiting checker");
   const [toastMessage, setToastMessage] = useState("");
 
+  const [decisionSubmitting, setDecisionSubmitting] =
+  useState(false);
+
   const verifiedCount = useMemo(
     () => verificationItems.filter((item) => item.checked).length,
     [verificationItems],
@@ -2305,54 +2308,75 @@ useEffect(() => {
     setDecisionError("");
     setReturnReason("");
   };
+  // const { applicationId } = useParams();
 
- const confirmDecision = async () => {
-  try {
-    setDecisionError("");
-
-    if (decisionModal === "approve") {
-      if (!approvalReady) {
-        setDecisionError(
-          "Complete all mandatory verification points and accept the checker declaration before approval.",
-        );
-        return;
-      }
-
-      await operationApi.approveCheckerCase(applicationId, {
-        remarks: checkerRemarks.trim() || null,
-        declarationAccepted,
-        checklist: verificationItems.map((item) => ({
-          itemId: item.id,
-          checked: item.checked,
-        })),
-      });
-
-      setPageStatus("Approved");
-      closeDecisionModal();
-      showToast("Disbursement instruction approved successfully.");
-      return;
-    }
-
-    if (!returnReason.trim()) {
+const confirmDecision = async () => {
+  if (decisionModal === "approve") {
+    if (!approvalReady) {
       setDecisionError(
-        "Please enter the reason for returning the case to the maker.",
+        "Complete all mandatory verification points and accept the declaration before approval.",
       );
       return;
     }
 
-    await operationApi.returnCheckerCase(applicationId, {
-      reason: returnReason.trim(),
-      remarks: checkerRemarks.trim() || null,
-    });
+    try {
+      setDecisionSubmitting(true);
+      setDecisionError("");
 
-    setPageStatus("Returned to maker");
+      const response =
+        await operationApi.approveByOpsMaker(
+          applicationId,
+        );
+
+      const result =
+        response?.data?.data ??
+        response?.data ??
+        {};
+
+      setPageStatus(
+        result?.status ||
+          "OPS_MAKER_APPROVED",
+      );
+
+      closeDecisionModal();
+
+      showToast(
+        "Case approved and submitted to Operations Head.",
+      );
+    } catch (error) {
+      console.error(
+        "Unable to approve by Operations Maker:",
+        error,
+      );
+
+      const message =
+        error?.response?.data?.message ??
+        error?.message ??
+        "Unable to approve the application.";
+
+      setDecisionError(
+        Array.isArray(message)
+          ? message.join(", ")
+          : String(message),
+      );
+    } finally {
+      setDecisionSubmitting(false);
+    }
+
+    return;
+  }
+
+  if (decisionModal === "return") {
+    if (!returnReason.trim()) {
+      setDecisionError(
+        "Please enter the reason for returning the case.",
+      );
+      return;
+    }
+
+    setPageStatus("Returned");
     closeDecisionModal();
-    showToast("Case returned to Operations Maker.");
-  } catch (error) {
-    setDecisionError(
-      error?.response?.data?.message ||
-        "Unable to complete the checker decision.",
-    );
+    showToast("Case returned successfully.");
   }
 };
 
@@ -2503,7 +2527,7 @@ if (caseError) {
               Return to Maker
             </button>
 
-            <button
+            {/* <button
               type="button"
               onClick={() => openDecisionModal("approve")}
               className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm font-black shadow-lg transition xl:w-auto ${approvalReady
@@ -2513,7 +2537,23 @@ if (caseError) {
             >
               <FaCheckCircle size={15} />
               Approve Disbursement
-            </button>
+            </button> */}
+            <button
+  type="button"
+  disabled={decisionSubmitting}
+  onClick={() => openDecisionModal("approve")}
+  className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm font-black shadow-lg transition xl:w-auto ${
+    decisionSubmitting
+      ? "cursor-not-allowed bg-slate-200 text-slate-500"
+      : "bg-[#173c70] text-white hover:-translate-y-0.5 hover:bg-[#102e58]"
+  }`}
+>
+  <FaCheckCircle size={15} />
+
+  {decisionSubmitting
+    ? "Approving..."
+    : "Approve & Send to Ops Head"}
+</button>
           </div>
         </section>
 
@@ -3367,9 +3407,10 @@ if (caseError) {
                     />
 
                     <p className="text-xs leading-6 text-emerald-900">
-                      Approval will lock the instruction and initiate the bank
+                      Approval will lock
+                       {/* the instruction and initiate the bank
                       payment process for ₹80,00,000 to Meera Iyer, HDFC Bank,
-                      account ending 2048.
+                      account ending 2048. */}
                     </p>
                   </div>
 
@@ -3424,8 +3465,19 @@ if (caseError) {
                 >
                   Cancel
                 </button>
+              <button
+  type="button"
+  disabled={decisionSubmitting}
+  onClick={confirmDecision}
+  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-xs font-black text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+>
+  <FaCheckCircle size={13} />
 
-                <button
+  {decisionSubmitting
+    ? "Approving..."
+    : "Confirm Approval"}
+</button>
+                {/* <button
                   type="button"
                   onClick={confirmDecision}
                   className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-xs font-black text-white transition ${decisionModal === "approve"
@@ -3444,7 +3496,7 @@ if (caseError) {
                       Return to Maker
                     </>
                   )}
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
