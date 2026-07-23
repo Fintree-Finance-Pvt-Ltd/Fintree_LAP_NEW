@@ -2195,7 +2195,7 @@ useEffect(() => {
       setCaseError("");
 
       const response =
-        await operationApi.getCheckerCase(
+        await operationApi.getMakerCase(
           applicationId,
         );
 

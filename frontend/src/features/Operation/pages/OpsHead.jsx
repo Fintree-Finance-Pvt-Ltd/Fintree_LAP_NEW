@@ -4233,7 +4233,7 @@ useEffect(() => {
       setCaseError("");
 
       const response =
-        await operationApi.getCheckerCase(
+        await operationApi.getHeadCase(
           applicationId,
         );
 

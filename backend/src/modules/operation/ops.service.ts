@@ -38,8 +38,48 @@ export class OpsService {
           a.status AS applicationStatus,
           a.assigned_to AS assignedTo,
           a.created_at AS createdAt,
-          a.updated_at AS updatedAt
+          a.updated_at AS updatedAt,
+
+           cp.id AS customerProfileId,
+          cp.customer_type AS customerType,
+          cp.first_name AS firstName,
+          cp.middle_name AS middleName,
+          cp.last_name AS lastName,
+          cp.mobile AS profileMobile,
+          cp.email AS email,
+          cp.pan_number AS profilePanNumber,
+
+          cp.property_category AS propertyCategory,
+          cp.property_type AS propertyType,
+          cp.property_address AS propertyAddress,
+          cp.property_city AS propertyCity,
+          cp.property_state AS propertyState,
+          cp.property_pincode AS propertyPincode,
+
+          cp.monthly_income AS monthlyIncome,
+          cp.annual_income AS annualIncome,
+          cp.bureau_score AS bureauScore,
+          cp.bureau_status AS bureauStatus,
+
+          cp.bank_name AS bankName,
+          cp.account_number AS accountNumber,
+          cp.ifsc AS ifsc,
+          cp.branch_name AS bankBranchName,
+          cp.average_balance AS averageBalance,
+
+          cp.foir AS foir,
+          cp.eligible_amount AS eligibleAmount,
+          cp.roi AS roi,
+          cp.tenure AS tenure,
+          cp.emi AS emi,
+          cp.recommended_amount AS recommendedAmount,
+          cp.recommended_roi AS recommendedRoi,
+          cp.recommended_tenure AS recommendedTenure
+
+
         FROM applications a
+         LEFT JOIN customer_profiles cp
+          ON cp.application_id = a.id
         WHERE a.id = ?
         LIMIT 1
       `,
@@ -59,66 +99,254 @@ export class OpsService {
 
     const row = rows[0];
 
+       const profileCustomerName = [
+  row.firstName,
+  row.middleName,
+  row.lastName,
+]
+  .map((value) => String(value ?? '').trim())
+  .filter(Boolean)
+  .join(' ');
     return {
       applicationId: Number(row.applicationId),
 
       customer: {
-        name: row.customerName ?? '',
-        mobile: row.mobile ?? '',
-        pan: row.pan ?? '',
+        profileId: row.customerProfileId
+          ? Number(row.customerProfileId)
+          : null,
+
+        name:
+          profileCustomerName ||
+          row.customerName ||
+          '',
+
+        mobile:
+          row.profileMobile ||
+          row.mobile ||
+          '',
+
+        email: row.email ?? '',
+
+        pan:
+          row.profilePanNumber ||
+          row.pan ||
+          '',
+
+        customerType:
+          row.customerType ?? '',
       },
 
       application: {
         applicationNumber:
           row.applicationNumber ?? '',
-        stage: row.stage ?? '',
-        status: row.applicationStatus ?? '',
-        product: 'Loan Against Property',
-        propertyType: '',
-        branch: '',
+
+        stage:
+          row.stage ?? '',
+
+        status:
+          row.applicationStatus ?? '',
+
+        product:
+          'Loan Against Property',
+
+        propertyCategory:
+          row.propertyCategory ?? '',
+
+        propertyType:
+          row.propertyType ?? '',
+
+        propertyAddress:
+          row.propertyAddress ?? '',
+
+        propertyCity:
+          row.propertyCity ?? '',
+
+        propertyState:
+          row.propertyState ?? '',
+
+        propertyPincode:
+          row.propertyPincode ?? '',
+
+        branch:
+          row.propertyCity ?? '',
+
         loanPurpose: '',
-        requestedAmount: this.toNumber(
-          row.requestedAmount,
-        ),
+
+        requestedAmount:
+          this.toNumber(row.requestedAmount),
+      },
+
+      financialProfile: {
+        monthlyIncome:
+          this.toNumber(row.monthlyIncome),
+
+        annualIncome:
+          this.toNumber(row.annualIncome),
+
+        bureauScore:
+          row.bureauScore !== null &&
+          row.bureauScore !== undefined
+            ? Number(row.bureauScore)
+            : null,
+
+        bureauStatus:
+          row.bureauStatus ?? '',
+
+        averageBalance:
+          this.toNumber(row.averageBalance),
+
+        foir:
+          this.toNumber(row.foir),
+
+        eligibleAmount:
+          this.toNumber(row.eligibleAmount),
       },
 
       sanction: {
-        sanctionedAmount: null,
+        sanctionedAmount:
+          this.toNumber(
+            row.recommendedAmount ??
+              row.eligibleAmount,
+          ),
+
         sanctionDate: null,
-        loanTenure: null,
-        interestRate: null,
-        monthlyEmi: null,
+
+        loanTenure:
+          row.recommendedTenure ??
+          row.tenure ??
+          null,
+
+        interestRate:
+          this.toNumber(
+            row.recommendedRoi ??
+              row.roi,
+          ),
+
+        monthlyEmi:
+          this.toNumber(row.emi),
       },
 
       disbursement: {
         instructionId: null,
-        lan: 'Pending booking',
-        amount: null,
-        type: '',
+
+        lan:
+          'Pending booking',
+
+        amount:
+          this.toNumber(
+            row.recommendedAmount ??
+              row.eligibleAmount,
+          ),
+
+        type:
+          'Single Disbursement',
+
         beneficiaryName:
-          row.customerName ?? '',
-        bankName: '',
-        accountNumber: '',
-        ifsc: '',
+          profileCustomerName ||
+          row.customerName ||
+          '',
+
+        bankName:
+          row.bankName ?? '',
+
+        accountNumber:
+          this.maskAccountNumber(
+            row.accountNumber,
+          ),
+
+        ifsc:
+          row.ifsc ?? '',
+
+        bankBranchName:
+          row.bankBranchName ?? '',
+
+        averageBalance:
+          this.toNumber(row.averageBalance),
+
         pennyDropMatch: null,
+
         disbursementDate: null,
+
         paymentStatus:
           'Pending Checker Approval',
+
         utrNumber:
           'Generated after bank success',
+
         idempotencyKey: '',
       },
 
       maker: {
         name: '',
         role: 'Operations Maker',
-        submittedAt: null,
+        submittedAt:
+          row.updatedAt ?? null,
       },
 
       checklist: [],
       documents: [],
       charges: [],
     };
+    // return {
+    //   applicationId: Number(row.applicationId),
+
+    //   customer: {
+    //     name: row.customerName ?? '',
+    //     mobile: row.mobile ?? '',
+    //     pan: row.pan ?? '',
+    //   },
+
+    //   application: {
+    //     applicationNumber:
+    //       row.applicationNumber ?? '',
+    //     stage: row.stage ?? '',
+    //     status: row.applicationStatus ?? '',
+    //     product: 'Loan Against Property',
+    //     propertyType: '',
+    //     branch: '',
+    //     loanPurpose: '',
+    //     requestedAmount: this.toNumber(
+    //       row.requestedAmount,
+    //     ),
+    //   },
+
+    //   sanction: {
+    //     sanctionedAmount: null,
+    //     sanctionDate: null,
+    //     loanTenure: null,
+    //     interestRate: null,
+    //     monthlyEmi: null,
+    //   },
+
+    //   disbursement: {
+    //     instructionId: null,
+    //     lan: 'Pending booking',
+    //     amount: null,
+    //     type: '',
+    //     beneficiaryName:
+    //       row.customerName ?? '',
+    //     bankName: '',
+    //     accountNumber: '',
+    //     ifsc: '',
+    //     pennyDropMatch: null,
+    //     disbursementDate: null,
+    //     paymentStatus:
+    //       'Pending Checker Approval',
+    //     utrNumber:
+    //       'Generated after bank success',
+    //     idempotencyKey: '',
+    //   },
+
+    //   maker: {
+    //     name: '',
+    //     role: 'Operations Maker',
+    //     submittedAt: null,
+    //   },
+
+    //   checklist: [],
+    //   documents: [],
+    //   charges: [],
+    // };
   } catch (error) {
     console.error(
       '[OPS CHECKER] Database/service error:',
@@ -149,8 +377,48 @@ export class OpsService {
           a.status AS applicationStatus,
           a.assigned_to AS assignedTo,
           a.created_at AS createdAt,
-          a.updated_at AS updatedAt
+          a.updated_at AS updatedAt,
+
+           cp.id AS customerProfileId,
+          cp.customer_type AS customerType,
+          cp.first_name AS firstName,
+          cp.middle_name AS middleName,
+          cp.last_name AS lastName,
+          cp.mobile AS profileMobile,
+          cp.email AS email,
+          cp.pan_number AS profilePanNumber,
+
+          cp.property_category AS propertyCategory,
+          cp.property_type AS propertyType,
+          cp.property_address AS propertyAddress,
+          cp.property_city AS propertyCity,
+          cp.property_state AS propertyState,
+          cp.property_pincode AS propertyPincode,
+
+          cp.monthly_income AS monthlyIncome,
+          cp.annual_income AS annualIncome,
+          cp.bureau_score AS bureauScore,
+          cp.bureau_status AS bureauStatus,
+
+          cp.bank_name AS bankName,
+          cp.account_number AS accountNumber,
+          cp.ifsc AS ifsc,
+          cp.branch_name AS bankBranchName,
+          cp.average_balance AS averageBalance,
+
+          cp.foir AS foir,
+          cp.eligible_amount AS eligibleAmount,
+          cp.roi AS roi,
+          cp.tenure AS tenure,
+          cp.emi AS emi,
+          cp.recommended_amount AS recommendedAmount,
+          cp.recommended_roi AS recommendedRoi,
+          cp.recommended_tenure AS recommendedTenure
+
+
         FROM applications a
+         LEFT JOIN customer_profiles cp
+          ON cp.application_id = a.id
         WHERE a.id = ?
         LIMIT 1
       `,
@@ -169,67 +437,254 @@ export class OpsService {
     }
 
     const row = rows[0];
-
+       const profileCustomerName = [
+  row.firstName,
+  row.middleName,
+  row.lastName,
+]
+  .map((value) => String(value ?? '').trim())
+  .filter(Boolean)
+  .join(' ');
     return {
       applicationId: Number(row.applicationId),
 
       customer: {
-        name: row.customerName ?? '',
-        mobile: row.mobile ?? '',
-        pan: row.pan ?? '',
+        profileId: row.customerProfileId
+          ? Number(row.customerProfileId)
+          : null,
+
+        name:
+          profileCustomerName ||
+          row.customerName ||
+          '',
+
+        mobile:
+          row.profileMobile ||
+          row.mobile ||
+          '',
+
+        email: row.email ?? '',
+
+        pan:
+          row.profilePanNumber ||
+          row.pan ||
+          '',
+
+        customerType:
+          row.customerType ?? '',
       },
 
       application: {
         applicationNumber:
           row.applicationNumber ?? '',
-        stage: row.stage ?? '',
-        status: row.applicationStatus ?? '',
-        product: 'Loan Against Property',
-        propertyType: '',
-        branch: '',
+
+        stage:
+          row.stage ?? '',
+
+        status:
+          row.applicationStatus ?? '',
+
+        product:
+          'Loan Against Property',
+
+        propertyCategory:
+          row.propertyCategory ?? '',
+
+        propertyType:
+          row.propertyType ?? '',
+
+        propertyAddress:
+          row.propertyAddress ?? '',
+
+        propertyCity:
+          row.propertyCity ?? '',
+
+        propertyState:
+          row.propertyState ?? '',
+
+        propertyPincode:
+          row.propertyPincode ?? '',
+
+        branch:
+          row.propertyCity ?? '',
+
         loanPurpose: '',
-        requestedAmount: this.toNumber(
-          row.requestedAmount,
-        ),
+
+        requestedAmount:
+          this.toNumber(row.requestedAmount),
+      },
+
+      financialProfile: {
+        monthlyIncome:
+          this.toNumber(row.monthlyIncome),
+
+        annualIncome:
+          this.toNumber(row.annualIncome),
+
+        bureauScore:
+          row.bureauScore !== null &&
+          row.bureauScore !== undefined
+            ? Number(row.bureauScore)
+            : null,
+
+        bureauStatus:
+          row.bureauStatus ?? '',
+
+        averageBalance:
+          this.toNumber(row.averageBalance),
+
+        foir:
+          this.toNumber(row.foir),
+
+        eligibleAmount:
+          this.toNumber(row.eligibleAmount),
       },
 
       sanction: {
-        sanctionedAmount: null,
+        sanctionedAmount:
+          this.toNumber(
+            row.recommendedAmount ??
+              row.eligibleAmount,
+          ),
+
         sanctionDate: null,
-        loanTenure: null,
-        interestRate: null,
-        monthlyEmi: null,
+
+        loanTenure:
+          row.recommendedTenure ??
+          row.tenure ??
+          null,
+
+        interestRate:
+          this.toNumber(
+            row.recommendedRoi ??
+              row.roi,
+          ),
+
+        monthlyEmi:
+          this.toNumber(row.emi),
       },
 
       disbursement: {
         instructionId: null,
-        lan: 'Pending booking',
-        amount: null,
-        type: '',
+
+        lan:
+          'Pending booking',
+
+        amount:
+          this.toNumber(
+            row.recommendedAmount ??
+              row.eligibleAmount,
+          ),
+
+        type:
+          'Single Disbursement',
+
         beneficiaryName:
-          row.customerName ?? '',
-        bankName: '',
-        accountNumber: '',
-        ifsc: '',
+          profileCustomerName ||
+          row.customerName ||
+          '',
+
+        bankName:
+          row.bankName ?? '',
+
+        accountNumber:
+          this.maskAccountNumber(
+            row.accountNumber,
+          ),
+
+        ifsc:
+          row.ifsc ?? '',
+
+        bankBranchName:
+          row.bankBranchName ?? '',
+
+        averageBalance:
+          this.toNumber(row.averageBalance),
+
         pennyDropMatch: null,
+
         disbursementDate: null,
+
         paymentStatus:
           'Pending Checker Approval',
+
         utrNumber:
           'Generated after bank success',
+
         idempotencyKey: '',
       },
 
       maker: {
         name: '',
         role: 'Operations Maker',
-        submittedAt: null,
+        submittedAt:
+          row.updatedAt ?? null,
       },
 
       checklist: [],
       documents: [],
       charges: [],
     };
+    // return {
+    //   applicationId: Number(row.applicationId),
+
+    //   customer: {
+    //     name: row.customerName ?? '',
+    //     mobile: row.mobile ?? '',
+    //     pan: row.pan ?? '',
+    //   },
+
+    //   application: {
+    //     applicationNumber:
+    //       row.applicationNumber ?? '',
+    //     stage: row.stage ?? '',
+    //     status: row.applicationStatus ?? '',
+    //     product: 'Loan Against Property',
+    //     propertyType: '',
+    //     branch: '',
+    //     loanPurpose: '',
+    //     requestedAmount: this.toNumber(
+    //       row.requestedAmount,
+    //     ),
+    //   },
+
+    //   sanction: {
+    //     sanctionedAmount: null,
+    //     sanctionDate: null,
+    //     loanTenure: null,
+    //     interestRate: null,
+    //     monthlyEmi: null,
+    //   },
+
+    //   disbursement: {
+    //     instructionId: null,
+    //     lan: 'Pending booking',
+    //     amount: null,
+    //     type: '',
+    //     beneficiaryName:
+    //       row.customerName ?? '',
+    //     bankName: '',
+    //     accountNumber: '',
+    //     ifsc: '',
+    //     pennyDropMatch: null,
+    //     disbursementDate: null,
+    //     paymentStatus:
+    //       'Pending Checker Approval',
+    //     utrNumber:
+    //       'Generated after bank success',
+    //     idempotencyKey: '',
+    //   },
+
+    //   maker: {
+    //     name: '',
+    //     role: 'Operations Maker',
+    //     submittedAt: null,
+    //   },
+
+    //   checklist: [],
+    //   documents: [],
+    //   charges: [],
+    // };
   } catch (error) {
     console.error(
       '[OPS CHECKER] Database/service error:',
@@ -259,8 +714,48 @@ async getCheckerCase(applicationId: number) {
           a.status AS applicationStatus,
           a.assigned_to AS assignedTo,
           a.created_at AS createdAt,
-          a.updated_at AS updatedAt
+          a.updated_at AS updatedAt,
+
+           cp.id AS customerProfileId,
+          cp.customer_type AS customerType,
+          cp.first_name AS firstName,
+          cp.middle_name AS middleName,
+          cp.last_name AS lastName,
+          cp.mobile AS profileMobile,
+          cp.email AS email,
+          cp.pan_number AS profilePanNumber,
+
+          cp.property_category AS propertyCategory,
+          cp.property_type AS propertyType,
+          cp.property_address AS propertyAddress,
+          cp.property_city AS propertyCity,
+          cp.property_state AS propertyState,
+          cp.property_pincode AS propertyPincode,
+
+          cp.monthly_income AS monthlyIncome,
+          cp.annual_income AS annualIncome,
+          cp.bureau_score AS bureauScore,
+          cp.bureau_status AS bureauStatus,
+
+          cp.bank_name AS bankName,
+          cp.account_number AS accountNumber,
+          cp.ifsc AS ifsc,
+          cp.branch_name AS bankBranchName,
+          cp.average_balance AS averageBalance,
+
+          cp.foir AS foir,
+          cp.eligible_amount AS eligibleAmount,
+          cp.roi AS roi,
+          cp.tenure AS tenure,
+          cp.emi AS emi,
+          cp.recommended_amount AS recommendedAmount,
+          cp.recommended_roi AS recommendedRoi,
+          cp.recommended_tenure AS recommendedTenure
+
+
         FROM applications a
+          LEFT JOIN customer_profiles cp
+          ON cp.application_id = a.id
         WHERE a.id = ?
         LIMIT 1
       `,
@@ -279,67 +774,255 @@ async getCheckerCase(applicationId: number) {
     }
 
     const row = rows[0];
-
+    const profileCustomerName = [
+  row.firstName,
+  row.middleName,
+  row.lastName,
+]
+  .map((value) => String(value ?? '').trim())
+  .filter(Boolean)
+  .join(' ');
     return {
       applicationId: Number(row.applicationId),
 
       customer: {
-        name: row.customerName ?? '',
-        mobile: row.mobile ?? '',
-        pan: row.pan ?? '',
+        profileId: row.customerProfileId
+          ? Number(row.customerProfileId)
+          : null,
+
+        name:
+          profileCustomerName ||
+          row.customerName ||
+          '',
+
+        mobile:
+          row.profileMobile ||
+          row.mobile ||
+          '',
+
+        email: row.email ?? '',
+
+        pan:
+          row.profilePanNumber ||
+          row.pan ||
+          '',
+
+        customerType:
+          row.customerType ?? '',
       },
 
       application: {
         applicationNumber:
           row.applicationNumber ?? '',
-        stage: row.stage ?? '',
-        status: row.applicationStatus ?? '',
-        product: 'Loan Against Property',
-        propertyType: '',
-        branch: '',
+
+        stage:
+          row.stage ?? '',
+
+        status:
+          row.applicationStatus ?? '',
+
+        product:
+          'Loan Against Property',
+
+        propertyCategory:
+          row.propertyCategory ?? '',
+
+        propertyType:
+          row.propertyType ?? '',
+
+        propertyAddress:
+          row.propertyAddress ?? '',
+
+        propertyCity:
+          row.propertyCity ?? '',
+
+        propertyState:
+          row.propertyState ?? '',
+
+        propertyPincode:
+          row.propertyPincode ?? '',
+
+        branch:
+          row.propertyCity ?? '',
+
         loanPurpose: '',
-        requestedAmount: this.toNumber(
-          row.requestedAmount,
-        ),
+
+        requestedAmount:
+          this.toNumber(row.requestedAmount),
+      },
+
+      financialProfile: {
+        monthlyIncome:
+          this.toNumber(row.monthlyIncome),
+
+        annualIncome:
+          this.toNumber(row.annualIncome),
+
+        bureauScore:
+          row.bureauScore !== null &&
+          row.bureauScore !== undefined
+            ? Number(row.bureauScore)
+            : null,
+
+        bureauStatus:
+          row.bureauStatus ?? '',
+
+        averageBalance:
+          this.toNumber(row.averageBalance),
+
+        foir:
+          this.toNumber(row.foir),
+
+        eligibleAmount:
+          this.toNumber(row.eligibleAmount),
       },
 
       sanction: {
-        sanctionedAmount: null,
+        sanctionedAmount:
+          this.toNumber(
+            row.recommendedAmount ??
+              row.eligibleAmount,
+          ),
+
         sanctionDate: null,
-        loanTenure: null,
-        interestRate: null,
-        monthlyEmi: null,
+
+        loanTenure:
+          row.recommendedTenure ??
+          row.tenure ??
+          null,
+
+        interestRate:
+          this.toNumber(
+            row.recommendedRoi ??
+              row.roi,
+          ),
+
+        monthlyEmi:
+          this.toNumber(row.emi),
       },
 
       disbursement: {
         instructionId: null,
-        lan: 'Pending booking',
-        amount: null,
-        type: '',
+
+        lan:
+          'Pending booking',
+
+        amount:
+          this.toNumber(
+            row.recommendedAmount ??
+              row.eligibleAmount,
+          ),
+
+        type:
+          'Single Disbursement',
+
         beneficiaryName:
-          row.customerName ?? '',
-        bankName: '',
-        accountNumber: '',
-        ifsc: '',
+          profileCustomerName ||
+          row.customerName ||
+          '',
+
+        bankName:
+          row.bankName ?? '',
+
+        accountNumber:
+          this.maskAccountNumber(
+            row.accountNumber,
+          ),
+
+        ifsc:
+          row.ifsc ?? '',
+
+        bankBranchName:
+          row.bankBranchName ?? '',
+
+        averageBalance:
+          this.toNumber(row.averageBalance),
+
         pennyDropMatch: null,
+
         disbursementDate: null,
+
         paymentStatus:
           'Pending Checker Approval',
+
         utrNumber:
           'Generated after bank success',
+
         idempotencyKey: '',
       },
 
       maker: {
         name: '',
         role: 'Operations Maker',
-        submittedAt: null,
+        submittedAt:
+          row.updatedAt ?? null,
       },
 
       checklist: [],
       documents: [],
       charges: [],
     };
+
+    // return {
+    //   applicationId: Number(row.applicationId),
+
+    //   customer: {
+    //     name: row.customerName ?? '',
+    //     mobile: row.mobile ?? '',
+    //     pan: row.pan ?? '',
+    //   },
+
+    //   application: {
+    //     applicationNumber:
+    //       row.applicationNumber ?? '',
+    //     stage: row.stage ?? '',
+    //     status: row.applicationStatus ?? '',
+    //     product: 'Loan Against Property',
+    //     propertyType: '',
+    //     branch: '',
+    //     loanPurpose: '',
+    //     requestedAmount: this.toNumber(
+    //       row.requestedAmount,
+    //     ),
+    //   },
+
+    //   sanction: {
+    //     sanctionedAmount: null,
+    //     sanctionDate: null,
+    //     loanTenure: null,
+    //     interestRate: null,
+    //     monthlyEmi: null,
+    //   },
+
+    //   disbursement: {
+    //     instructionId: null,
+    //     lan: 'Pending booking',
+    //     amount: null,
+    //     type: '',
+    //     beneficiaryName:
+    //       row.customerName ?? '',
+    //     bankName: '',
+    //     accountNumber: '',
+    //     ifsc: '',
+    //     pennyDropMatch: null,
+    //     disbursementDate: null,
+    //     paymentStatus:
+    //       'Pending Checker Approval',
+    //     utrNumber:
+    //       'Generated after bank success',
+    //     idempotencyKey: '',
+    //   },
+
+    //   maker: {
+    //     name: '',
+    //     role: 'Operations Maker',
+    //     submittedAt: null,
+    //   },
+
+    //   checklist: [],
+    //   documents: [],
+    //   charges: [],
+    // };
   } catch (error) {
     console.error(
       '[OPS CHECKER] Database/service error:',
@@ -350,7 +1033,25 @@ async getCheckerCase(applicationId: number) {
   }
 }
 
-private toNumber(value: unknown): number | null {
+// private toNumber(value: unknown): number | null {
+//   if (
+//     value === null ||
+//     value === undefined ||
+//     value === ''
+//   ) {
+//     return null;
+//   }
+
+//   const parsed = Number(value);
+
+//   return Number.isFinite(parsed)
+//     ? parsed
+//     : null;
+// }
+
+private toNumber(
+  value: unknown,
+): number | null {
   if (
     value === null ||
     value === undefined ||
@@ -366,6 +1067,31 @@ private toNumber(value: unknown): number | null {
     : null;
 }
 
+private maskAccountNumber(
+  accountNumber: unknown,
+): string {
+  if (
+    accountNumber === null ||
+    accountNumber === undefined
+  ) {
+    return '';
+  }
+
+  const normalized =
+    String(accountNumber).trim();
+
+  if (!normalized) {
+    return '';
+  }
+
+  if (normalized.length <= 4) {
+    return normalized;
+  }
+
+  return `${'X'.repeat(
+    normalized.length - 4,
+  )}${normalized.slice(-4)}`;
+}
  async getSubmittedToOpsCheckerCases(
    user: Record<string, any>,
  ) {
