@@ -45,9 +45,17 @@ export class VarificationController {
 
   @Get("aadhaar/status/:applicationId")
 @HttpCode(HttpStatus.OK)
-async getAadhaarKycStatus(
-  @Param("applicationId", ParseIntPipe) applicationId: number,
-) {
-  return this.service.getAadhaarKycStatus(applicationId);
-}
+  async getAadhaarKycStatus(
+    @Param("applicationId", ParseIntPipe) applicationId: number,
+  ) {
+    return this.service.getAadhaarKycStatus(applicationId);
+  }
+
+  @Get('kyc/status/:applicationId')
+  @HttpCode(HttpStatus.OK)
+  async getKycVerificationStatus(
+    @Param('applicationId', ParseIntPipe) applicationId: number,
+  ) {
+    return this.service.getKycVerificationStatus(applicationId);
+  }
 }

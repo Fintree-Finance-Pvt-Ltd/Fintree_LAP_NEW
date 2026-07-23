@@ -1135,6 +1135,56 @@ async getAadhaarKycStatus(applicationId: number) {
   };
 }
 
+  async getKycVerificationStatus(applicationId: number) {
+    const status = await this.kycVerificationStatusRepository.findOne({
+      where: {
+        applicationId,
+        ownerType: KycOwnerType.APPLICANT,
+      },
+      order: {
+        updatedAt: 'DESC',
+        id: 'DESC',
+      },
+      select: {
+        id: true,
+        applicationId: true,
+        ownerType: true,
+        applicantId: true,
+        panStatus: true,
+        gstStatus: true,
+        aadhaarStatus: true,
+        bureauStatus: true,
+        mobileStatus: true,
+        emailStatus: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!status) {
+      return {
+        success: true,
+        message: 'KYC verification has not been initiated for this application.',
+        data: {
+          applicationId,
+          ownerType: KycOwnerType.APPLICANT,
+          panStatus: KycVerificationStatusValue.PENDING,
+          gstStatus: KycVerificationStatusValue.PENDING,
+          aadhaarStatus: KycVerificationStatusValue.PENDING,
+          bureauStatus: KycVerificationStatusValue.PENDING,
+          mobileStatus: KycVerificationStatusValue.PENDING,
+          emailStatus: KycVerificationStatusValue.PENDING,
+          updatedAt: null,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      message: 'KYC verification status fetched successfully.',
+      data: status,
+    };
+  }
+
   private async findAadhaarKycStatusForWebhook(
     transactionId: string | null,
     uniqueId: string | null,

@@ -5,6 +5,7 @@ import { AppProviders } from "./app/providers.jsx";
 import { router } from "./app/router.jsx";
 import "./styles/index.css";
 import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -19,7 +20,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         draggable
         pauseOnHover
         theme="light"
-      />{" "}
+      />
       <RouterProvider router={router} />
     </AppProviders>
   </React.StrictMode>,

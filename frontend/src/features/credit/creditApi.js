@@ -14,6 +14,9 @@ export const creditApi = {
   getApplication: (applicationId) =>
     apiClient.get(`/applications/${applicationId}`),
 
+  getKycVerificationStatus: (applicationId) =>
+    apiClient.get(`/kyc/status/${applicationId}`),
+
   submitToCredit: (applicationId, payload = {}) =>
     apiClient.post(`/applications/${applicationId}/submit-to-credit`, payload),
 
@@ -23,15 +26,7 @@ export const creditApi = {
   workflowStatus: (applicationId) =>
     apiClient.get(`/applications/${applicationId}/workflow`),
 
-  getApplication: (applicationId) =>
-  apiClient.get(`/applications/${applicationId}`),
-
-applications: (params = {}) =>
-  apiClient.get("/applications", { params }),
-
-
-
-makerCases: () =>
+  makerCases: () =>
     apiClient.get("/credit/maker/cases"),
 
   checkerCases: () =>
@@ -39,6 +34,15 @@ makerCases: () =>
 
   getCreditApplication: (applicationId) =>
     apiClient.get(`/credit/${applicationId}`),
+
+  getCreditAssessment: (applicationId) =>
+    apiClient.get(`/credit/${applicationId}/assessment`),
+
+  cmSaveDraft: (applicationId, payload = {}) =>
+    apiClient.post(`/credit/${applicationId}/cm/save-draft`, payload),
+
+  cmRecommendToCreditMaker: (applicationId, payload = {}) =>
+    apiClient.post(`/credit/${applicationId}/cm/recommend`, payload),
 
   creditMakerSaveDraft: (applicationId, payload = {}) =>
     apiClient.post(`/credit/${applicationId}/maker/save-draft`, payload),
@@ -49,25 +53,12 @@ makerCases: () =>
   creditMakerSubmitToChecker: (applicationId, payload = {}) =>
     apiClient.post(`/credit/${applicationId}/maker/submit-to-checker`, payload),
 
-  checkerCases: () =>
-  apiClient.get("/credit/checker/cases"),
+  creditCheckerApprove: (applicationId, payload = {}) =>
+    apiClient.post(`/credit/${applicationId}/checker/approve`, payload),
 
-creditCheckerApprove: (applicationId, payload = {}) =>
-  apiClient.post(`/credit/${applicationId}/checker/approve`, payload),
+  creditCheckerReturnToMaker: (applicationId, payload = {}) =>
+    apiClient.post(`/credit/${applicationId}/checker/return-to-maker`, payload),
 
-creditCheckerReturnToMaker: (applicationId, payload = {}) =>
-  apiClient.post(`/credit/${applicationId}/checker/return-to-maker`, payload),
-
-creditCheckerReject: (applicationId, payload = {}) =>
-  apiClient.post(`/credit/${applicationId}/checker/reject`, payload),
-
-
-getCreditAssessment: (applicationId) =>
-  apiClient.get(`/credit/${applicationId}/assessment`),
-
-cmSaveDraft: (applicationId, payload = {}) =>
-  apiClient.post(`/credit/${applicationId}/cm/save-draft`, payload),
-
-cmRecommendToCreditMaker: (applicationId, payload = {}) =>
-  apiClient.post(`/credit/${applicationId}/cm/recommend`, payload),
+  creditCheckerReject: (applicationId, payload = {}) =>
+    apiClient.post(`/credit/${applicationId}/checker/reject`, payload),
 };

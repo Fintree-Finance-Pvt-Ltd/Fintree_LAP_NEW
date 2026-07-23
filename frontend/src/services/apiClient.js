@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "react-toastify";
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -74,8 +75,36 @@ apiClient.interceptors.request.use(
 
 let refreshPromise = null;
 
+const getResponseMessage = (payload, fallback) => {
+  const message = payload?.message;
+
+  if (Array.isArray(message)) {
+    return message.filter(Boolean).join(", ") || fallback;
+  }
+
+  if (typeof message === "string" && message.trim()) {
+    return message.trim();
+  }
+
+  return fallback;
+};
+
+const isPostRequest = (config) =>
+  String(config?.method || "").toLowerCase() === "post";
+
 apiClient.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    if (isPostRequest(response.config) && !response.config?.skipToast) {
+      toast.success(
+        getResponseMessage(
+          response.data,
+          "Login successfully.",
+        ),
+      );
+    }
+
+    return response.data;
+  },
 
   async (error) => {
     const originalRequest = error?.config;
@@ -98,6 +127,7 @@ apiClient.interceptors.response.use(
             {},
             {
               skipAuthRefresh: true,
+              skipToast: true,
             },
           )
           .finally(() => {
@@ -158,6 +188,8 @@ apiClient.interceptors.response.use(
           window.location.assign("/login");
         }
 
+        toast.error("Session expired. Please log in again.");
+
         return Promise.reject({
           status: 401,
           message: "Session expired. Please log in again.",
@@ -166,15 +198,20 @@ apiClient.interceptors.response.use(
     }
 
     const responseData = error?.response?.data;
+    const message = getResponseMessage(
+      responseData,
+      error?.message || "Request failed",
+    );
+
+    if (isPostRequest(originalRequest) && !originalRequest?.skipToast) {
+      toast.error(message);
+    }
 
     return Promise.reject({
       success: false,
       status,
       errorCode: responseData?.errorCode,
-      message:
-        responseData?.message ||
-        error?.message ||
-        "Request failed",
+      message,
       errors: responseData?.errors || [],
       requestId:
         responseData?.requestId ||
