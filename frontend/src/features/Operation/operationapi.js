@@ -21,6 +21,12 @@ export const operationApi = {
     apiClient.get(`/operations/checker/${applicationId}`),
 
 
+ getHeadCase: (applicationId) =>
+    apiClient.get(`/operations/head/${applicationId}`),
+
+
+  getMakerCase: (applicationId) =>
+    apiClient.get(`/operations/head/${applicationId}`),
 
 
     approveCheckerCase: (applicationId, payload) =>
