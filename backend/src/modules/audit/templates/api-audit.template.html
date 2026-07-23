@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>API Audit {{REPORT_DATE}}</title>
+<style>
+  @page { size:A4; margin:18mm 15mm; background:#f8fafc; @bottom-right { content:"Page " counter(page) " of " counter(pages); font:8pt Arial; color:#64748b; } @bottom-left { content:"Confidential - Internal API Audit Log"; font:8pt Arial; color:#64748b; } }
+  *,*::before,*::after{box-sizing:border-box} body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1e293b;margin:0;font-size:9.5pt;line-height:1.5}
+  .header-card{background:#0f172a;color:#fff;padding:20px 24px;border-radius:8px;margin-bottom:20px}.header-card h1{margin:0 0 6px;font-size:18pt;color:#f8fafc}.header-card p{margin:0;color:#94a3b8}
+  .meta-grid{width:100%;margin-bottom:20px;border-spacing:0}.meta-card{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px}.meta-label{font-size:7.5pt;text-transform:uppercase;font-weight:700;color:#64748b;letter-spacing:.5px}.meta-value{font-size:11pt;font-weight:600;color:#0f172a}
+  .section-title{font-size:12pt;font-weight:700;color:#0f172a;margin:22px 0 10px;padding-bottom:4px;border-bottom:2px solid #e2e8f0;page-break-after:avoid}.stats-table{width:100%;border-collapse:collapse;margin-bottom:20px;background:#fff;border:1px solid #e2e8f0}.stats-table th{background:#f1f5f9;color:#334155;text-align:left;padding:8px 12px;font-size:8.5pt;text-transform:uppercase}.stats-table td{padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:9pt}
+  .badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:7.5pt;font-weight:700;text-transform:uppercase}.badge-get{background:#e0f2fe;color:#0369a1}.badge-post{background:#dcfce7;color:#15803d}.badge-put,.badge-patch{background:#fef3c7;color:#b45309}.badge-delete{background:#fee2e2;color:#b91c1c}.status-2xx,.status-3xx{color:#16a34a;font-weight:600}.status-4xx{color:#d97706;font-weight:600}.status-5xx{color:#dc2626;font-weight:600}
+  .info-box{background:#eff6ff;border-left:4px solid #2563eb;padding:12px;border-radius:0 6px 6px 0;margin-bottom:20px;color:#1e40af}.log-entry{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;margin-bottom:10px;page-break-inside:avoid}.log-header{margin-bottom:6px}.log-time{color:#64748b;font-size:8pt;font-weight:600}.log-endpoint{font-family:'Courier New',monospace;font-weight:700;color:#0f172a;font-size:8.5pt}.code-block{background:#1e293b;color:#f1f5f9;padding:12px 14px;border-radius:6px;font-family:'Courier New',monospace;font-size:8pt;white-space:pre-wrap;word-break:break-all}.empty{text-align:center;color:#64748b;padding:18px}
+</style>
+</head>
+<body>
+  <div class="header-card"><h1>Daily System API Audit &amp; Execution Report</h1><p>Window: {{WINDOW_START}} - {{WINDOW_END}}</p></div>
+  <table class="meta-grid"><tr>
+    <td width="24%"><div class="meta-card"><div class="meta-label">Total Requests</div><div class="meta-value">{{TOTAL_REQUESTS}}</div></div></td><td width="1%"></td>
+    <td width="24%"><div class="meta-card"><div class="meta-label">Success Rate</div><div class="meta-value" style="color:#16a34a">{{SUCCESS_RATE}}%</div></div></td><td width="1%"></td>
+    <td width="24%"><div class="meta-card"><div class="meta-label">Average Latency</div><div class="meta-value">{{AVERAGE_LATENCY}} ms</div></div></td><td width="1%"></td>
+    <td width="24%"><div class="meta-card"><div class="meta-label">4xx / 5xx Errors</div><div class="meta-value" style="color:#d97706">{{FAILED_4XX}} / {{FAILED_5XX}}</div></div></td>
+  </tr></table>
+  <div class="info-box"><strong>Audit Note:</strong> Authorization, cookies, headers, request bodies, and sensitive query values are not collected. Any displayed authorization example is masked: <code>Authorization: Bearer [REDACTED]</code>.</div>
+  <div class="section-title">1. Daily API Endpoint Execution Summary</div>
+  <p>All API endpoints executed during the 24-hour cycle, including methods, hit counts, average latency, and complete status breakdown.</p>
+  <table class="stats-table"><thead><tr><th width="12%">Method</th><th width="38%">Endpoint URL</th><th width="15%">Total Hits</th><th width="15%">Avg Latency</th><th width="20%">Status Breakdown</th></tr></thead><tbody>{{ENDPOINT_ROWS}}</tbody></table>
+  <div class="section-title">2. User-wise API Hit Summary</div>
+  <p>This section shows which user accessed which API endpoint and how many times during the audit window.</p>
+  <table class="stats-table"><thead><tr><th width="18%">User</th><th width="18%">Email / Role</th><th width="10%">Method</th><th width="28%">Endpoint URL</th><th width="10%">Hits</th><th width="10%">Avg Latency</th><th width="16%">Status Breakdown</th></tr></thead><tbody>{{USER_API_SUMMARY_ROWS}}</tbody></table>
+  <div class="section-title">3. Sample API Execution Log Snapshot (Audit Trail)</div>
+  <p>Privacy-safe samples from the reporting window. Request bodies and sensitive headers are deliberately excluded.</p>
+  {{LOG_ENTRIES}}
+</body>
+</html>

@@ -486,7 +486,7 @@ export default function Sidebar() {
       const collected = [];
       const seenTo = new Set();
 
-      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" ,"LEGAL", "OPS_CHECKER" ,"OPS_HEAD", "OPS_MAKER" ,"COMMON","LEGALCLEARED"];
+      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION" ,"LEGAL", "OPS_CHECKER" ,"OPS_HEAD", "OPS_MAKER" ,"LMS","COMMON","LEGALCLEARED"];
       for (const roleKey of roleKeysInOrder) {
         if (
   roleKey !== "COMMON" &&

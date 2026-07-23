@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -58,6 +59,7 @@ import { LmsModule } from './modules/lms/lms.module';
       },
     }),
     TypeOrmModule.forRootAsync({ useFactory: databaseConfig }),
+    ScheduleModule.forRoot(),
     AuthModule,
     OtpModule,
     UsersModule,
