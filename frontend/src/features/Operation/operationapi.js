@@ -29,6 +29,7 @@ export const operationApi = {
     apiClient.get(`/operations/head/${applicationId}`),
 
 
+
     approveCheckerCase: (applicationId, payload) =>
     apiClient.post(
       `/operations/checker/${applicationId}/approve`,
@@ -58,5 +59,12 @@ export const operationApi = {
     apiClient.patch(
       `/operations/checker/${applicationId}/approve`,
       payload,
+    ),
+
+      getApplicationDocuments: (applicationId) =>
+    apiClient.get(
+      // `/documents/application/${applicationId}`,
+          `/applications/${applicationId}/documents`,
+
     ),
 };

@@ -11,6 +11,7 @@ const roleDefaultRoutes = {
   VALUATION: "/valuation-dashboard",
   LEGAL: "/legal-dashboard",
   OPS_MAKER: "/operationsDashboard",
+  OPS_HEAD: "/operationsDashboard",
   OPS_CHECKER: "/operationsDashboard",
   LMS: "/lms-dashboard",
 };
