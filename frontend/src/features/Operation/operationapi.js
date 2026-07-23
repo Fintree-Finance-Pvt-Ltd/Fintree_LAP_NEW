@@ -7,6 +7,7 @@ export const operationApi = {
       "/operations/queue",
       config,
     ),
+    
 
      getOpsMakerCase: (applicationId) =>
     apiClient.get(`/operations/maker/${applicationId}`),
@@ -31,6 +32,25 @@ export const operationApi = {
   returnCheckerCase: (applicationId, payload) =>
     apiClient.post(
       `/operations/checker/${applicationId}/return`,
+      payload,
+    ),
+
+    approveByOpsMaker: (applicationId, payload = {}) =>
+    apiClient.patch(
+      `/operations/maker/${applicationId}/approve`,
+      payload,
+    ),
+
+    approveByOpsHead: (applicationId, payload = {}) =>
+    apiClient.patch(
+      `/operations/head/${applicationId}/approve`,
+      payload,
+    ),
+
+
+    approveByOpsChecker: (applicationId, payload = {}) =>
+    apiClient.patch(
+      `/operations/checker/${applicationId}/approve`,
       payload,
     ),
 };
