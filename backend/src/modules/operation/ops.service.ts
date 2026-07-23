@@ -661,7 +661,7 @@ async approveByOpsHead(
             UPDATE applications
             SET
               stage = 'OPERATIONS',
-              status = 'OPS_HEAD_APPROVED',
+              status = 'DISBURSED',
               version = COALESCE(version, 0) + 1,
               updated_by = ?,
               updated_at = NOW()
