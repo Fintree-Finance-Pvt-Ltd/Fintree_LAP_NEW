@@ -15,12 +15,23 @@ import { ValuationService } from './valuation.service';
 
 @Controller('valuation')
 export class ValuationController {
-  constructor(private readonly service: ValuationService) {}
+  constructor(private readonly service: ValuationService) { }
 
   @Get('cases')
   getCases() {
     return this.service.getCases();
   }
+
+  @Get('debug/queue')
+  debugQueue() {
+    return this.service.debugQueue();
+  }
+
+  @Get('debug/transitions')
+  debugValuationTransitions() {
+    return this.service.debugValuationTransitions();
+  }
+
 
   @Get(':applicationId')
   getApplication(

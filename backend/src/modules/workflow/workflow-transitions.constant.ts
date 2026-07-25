@@ -104,7 +104,7 @@ CREDIT_CHECKER_APPROVE_TO_CREDIT_MANAGER: {
   VALUATION_APPROVE_TO_LEGAL: { allowedRoles: ['VALUATION', 'ADMIN'], fromStages: ['VALUATION'], toStage: 'LEGAL', toStatus: 'LEGAL_PENDING', assignedToRole: 'LEGAL', decision: 'APPROVED' },
   VALUATION_QUERY: { allowedRoles: ['VALUATION', 'ADMIN'], fromStages: ['VALUATION'], toStage: 'VALUATION', toStatus: 'VALUATION_QUERY', assignedToRole: 'VALUATION', decision: 'QUERY' },
   VALUATION_REJECT: { allowedRoles: ['VALUATION', 'ADMIN'], fromStages: ['VALUATION'], toStage: 'VALUATION', toStatus: 'VALUATION_REJECTED', decision: 'REJECTED', terminal: true },
-  LEGAL_APPROVE_TO_OPS_MAKER: { allowedRoles: ['LEGAL', 'ADMIN'], fromStages: ['LEGAL'], toStage: 'OPS_MAKER', toStatus: 'OPS_MAKER_PENDING', assignedToRole: 'OPS_MAKER', decision: 'APPROVED' },
+  LEGAL_APPROVE_TO_CREDIT_MAKER: { allowedRoles: ['LEGAL', 'ADMIN'], fromStages: ['LEGAL'], toStage: 'CREDIT_MAKER_FINAL', toStatus: 'CREDIT_MAKER_FINAL_PENDING', assignedToRole: 'CREDIT_MAKER', decision: 'APPROVED' },
   LEGAL_QUERY: { allowedRoles: ['LEGAL', 'ADMIN'], fromStages: ['LEGAL'], toStage: 'LEGAL', toStatus: 'LEGAL_QUERY', assignedToRole: 'LEGAL', decision: 'QUERY' },
   LEGAL_REJECT: { allowedRoles: ['LEGAL', 'ADMIN'], fromStages: ['LEGAL'], toStage: 'LEGAL', toStatus: 'LEGAL_REJECTED', decision: 'REJECTED', terminal: true },
   
@@ -147,5 +147,7 @@ CREDIT_CHECKER_APPROVE_TO_CREDIT_MANAGER: {
   LMS_CLOSE_LOAN: { allowedRoles: ['LMS', 'ADMIN'], fromStages: ['LMS'], toStage: 'CLOSED', toStatus: 'CLOSED', decision: 'CLOSED', terminal: true },
   LMS_MOVE_TO_COLLECTION: { allowedRoles: ['LMS', 'ADMIN'], fromStages: ['LMS'], toStage: 'COLLECTION', toStatus: 'COLLECTION_ACTIVE', assignedToRole: 'COLLECTION', decision: 'COLLECTION' },
   COLLECTION_CLOSE_LOAN: { allowedRoles: ['COLLECTION', 'ADMIN'], fromStages: ['COLLECTION'], toStage: 'CLOSED', toStatus: 'CLOSED', decision: 'CLOSED', terminal: true },
-};
+  CREDIT_MANAGER_APPROVE_TO_OPS_MAKER: { allowedRoles: ['CM', 'ADMIN'], fromStages: ['CM'], toStage: 'OPS_MAKER', toStatus: 'OPS_MAKER_PENDING', assignedToRole: 'OPS_MAKER', decision: 'APPROVED' },
+  LEGAL_APPROVE_TO_CREDIT_MANAGER: { allowedRoles: ['LEGAL', 'ADMIN'], fromStages: ['LEGAL'], toStage: 'CM', toStatus: 'CM_FINAL_PENDING', assignedToRole: 'CM', decision: 'APPROVED'},
+}
 

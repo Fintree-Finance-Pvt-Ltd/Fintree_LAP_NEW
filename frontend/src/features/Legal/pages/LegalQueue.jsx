@@ -102,16 +102,17 @@ const todayDate = () => {
 };
 
 const workflowSteps = [
-  { id: 1, label: "Lead", status: "completed" },
-  { id: 2, label: "BM", status: "completed" },
-  { id: 3, label: "CM", status: "completed" },
-  { id: 4, label: "Credit", status: "completed" },
-  { id: 5, label: "Valuation", status: "completed" },
-  { id: 6, label: "Legal", status: "current" },
-  { id: 7, label: "Ops Maker", status: "pending" },
-  { id: 8, label: "Ops Checker", status: "pending" },
-  { id: 9, label: "Agreement", status: "pending" },
-  { id: 10, label: "Disbursement", status: "pending" },
+  { id: 1, key: "LEAD", label: "Lead" },
+  { id: 2, key: "BM_REVIEW", label: "BM Review" },
+  { id: 3, key: "CREDIT_MAKER_INITIAL", label: "Credit Maker" },
+  { id: 4, key: "VALUATION", label: "Valuation" },
+  { id: 5, key: "LEGAL", label: "Legal" },
+  { id: 6, key: "CREDIT_MAKER_FINAL", label: "Credit Maker" },
+  { id: 7, key: "CREDIT_CHECKER", label: "Credit Checker" },
+  { id: 8, key: "CREDIT_MANAGER", label: "Credit Manager" },
+  { id: 9, key: "OPS_MAKER", label: "OPS Maker" },
+  { id: 10, key: "OPS_CHECKER", label: "OPS Checker" },
+  { id: 11, key: "OPS_HEAD", label: "OPS Head" },
 ];
 
 const defaultChecklist = [
@@ -282,9 +283,8 @@ const getCustomerName = (application, customerSnapshot = {}) => {
   const { profile, borrower, applicant, primaryApplicant } =
     getSourceObject(application);
 
-  const joinedProfileName = `${profile?.firstName || ""} ${
-    profile?.middleName || ""
-  } ${profile?.lastName || ""}`
+  const joinedProfileName = `${profile?.firstName || ""} ${profile?.middleName || ""
+    } ${profile?.lastName || ""}`
     .replace(/\s+/g, " ")
     .trim();
 
@@ -368,26 +368,26 @@ const getAddressDetails = (
 
 
     application?.propertyFullAddress,
-application?.fullPropertyAddress,
-application?.fullAddress,
-application?.propertyLocation,
-application?.collateralLocation,
+    application?.fullPropertyAddress,
+    application?.fullAddress,
+    application?.propertyLocation,
+    application?.collateralLocation,
 
-profile?.fullPropertyAddress,
-profile?.fullAddress,
-profile?.propertyLocation,
+    profile?.fullPropertyAddress,
+    profile?.fullAddress,
+    profile?.propertyLocation,
 
-borrower?.fullPropertyAddress,
-borrower?.fullAddress,
-borrower?.propertyLocation,
+    borrower?.fullPropertyAddress,
+    borrower?.fullAddress,
+    borrower?.propertyLocation,
 
-applicant?.fullPropertyAddress,
-applicant?.fullAddress,
-applicant?.propertyLocation,
+    applicant?.fullPropertyAddress,
+    applicant?.fullAddress,
+    applicant?.propertyLocation,
 
-primaryApplicant?.fullPropertyAddress,
-primaryApplicant?.fullAddress,
-primaryApplicant?.propertyLocation,
+    primaryApplicant?.fullPropertyAddress,
+    primaryApplicant?.fullAddress,
+    primaryApplicant?.propertyLocation,
   );
 
   const propertyCity = firstValue(
@@ -535,16 +535,16 @@ primaryApplicant?.propertyLocation,
     primaryApplicant?.currentAddress,
     primaryApplicant?.residenceAddress,
     primaryApplicant?.presentAddress,
-application?.address,
-application?.fullAddress,
-profile?.address,
-profile?.fullAddress,
-borrower?.address,
-borrower?.fullAddress,
-applicant?.address,
-applicant?.fullAddress,
-primaryApplicant?.address,
-primaryApplicant?.fullAddress,
+    application?.address,
+    application?.fullAddress,
+    profile?.address,
+    profile?.fullAddress,
+    borrower?.address,
+    borrower?.fullAddress,
+    applicant?.address,
+    applicant?.fullAddress,
+    primaryApplicant?.address,
+    primaryApplicant?.fullAddress,
 
   );
 
@@ -711,55 +711,82 @@ export default function LegalQueue() {
     retry: false,
   });
 
-  const legalCases = useMemo(() => unwrapList(casesQuery.data), [casesQuery.data]);
+  const legalCases = useMemo(() => {
+    const cases = unwrapList(casesQuery.data);
+
+    return cases.filter((item) => {
+      const stage = String(
+        item?.stage || "",
+      ).toUpperCase();
+
+      const status = String(
+        item?.status || "",
+      ).toUpperCase();
+
+      return (
+        stage === "LEGAL" &&
+        status === "LEGAL_PENDING"
+      );
+    });
+  }, [casesQuery.data]);
 
   const finalSelectedId =
     selectedId || routeApplicationId || legalCases?.[0]?.id || "";
 
-const applicationQuery = useQuery({
-  queryKey: ["legal-application", finalSelectedId],
-  queryFn: () => legalApi.getApplication(finalSelectedId),
-  enabled: Boolean(finalSelectedId),
-  retry: false,
-});
+  const applicationQuery = useQuery({
+    queryKey: ["legal-application", finalSelectedId],
+    queryFn: () => legalApi.getApplication(finalSelectedId),
+    enabled: Boolean(finalSelectedId),
+    retry: false,
+  });
 
-const fullApplicationQuery = useQuery({
-  queryKey: ["legal-full-application", finalSelectedId],
-  queryFn: () => legalApi.getFullApplication(finalSelectedId),
-  enabled:
-    Boolean(finalSelectedId) &&
-    typeof legalApi.getFullApplication === "function",
-  retry: false,
-});
+  const fullApplicationQuery = useQuery({
+    queryKey: ["legal-full-application", finalSelectedId],
+    queryFn: () => legalApi.getFullApplication(finalSelectedId),
+    enabled:
+      Boolean(finalSelectedId) &&
+      typeof legalApi.getFullApplication === "function",
+    retry: false,
+  });
 
-const applicationPayload = unwrapPayload(applicationQuery.data);
-const fullApplicationPayload = unwrapPayload(fullApplicationQuery.data);
+  const applicationPayload = unwrapPayload(applicationQuery.data);
+  const fullApplicationPayload = unwrapPayload(fullApplicationQuery.data);
 
-const legalApplication = getApplicationObject(applicationPayload);
-const fullApplication = getApplicationObject(fullApplicationPayload);
+  const legalApplication = getApplicationObject(applicationPayload);
+  const fullApplication = getApplicationObject(fullApplicationPayload);
 
-const application = mergeApplicationData(
-  legalApplication,
-  fullApplication,
-);
+  const application = mergeApplicationData(
+    legalApplication,
+    fullApplication,
+  );
 
-const legalAssessment =
-  applicationPayload?.legalAssessment ||
-  applicationPayload?.data?.legalAssessment ||
-  null;
+  //legalprocess
+  const canProcessLegalCase =
+    String(
+      application?.stage || "",
+    ).toUpperCase() === "LEGAL" &&
+    String(
+      application?.status || "",
+    ).toUpperCase() ===
+    "LEGAL_PENDING";
 
-const valuationAssessment =
-  applicationPayload?.valuationAssessment ||
-  applicationPayload?.data?.valuationAssessment ||
-  null;
+  const legalAssessment =
+    applicationPayload?.legalAssessment ||
+    applicationPayload?.data?.legalAssessment ||
+    null;
 
-const currentHydrationKey = [
-  finalSelectedId,
-  applicationQuery.dataUpdatedAt,
-  fullApplicationQuery.dataUpdatedAt,
-  legalAssessment?.id,
-  valuationAssessment?.id,
-].join("|");
+  const valuationAssessment =
+    applicationPayload?.valuationAssessment ||
+    applicationPayload?.data?.valuationAssessment ||
+    null;
+
+  const currentHydrationKey = [
+    finalSelectedId,
+    applicationQuery.dataUpdatedAt,
+    fullApplicationQuery.dataUpdatedAt,
+    legalAssessment?.id,
+    valuationAssessment?.id,
+  ].join("|");
 
   useEffect(() => {
     if (!finalSelectedId || !application?.id) return;
@@ -819,9 +846,9 @@ const currentHydrationKey = [
       checklist: previous.checklist.map((item) =>
         item.id === id
           ? {
-              ...item,
-              checked: !item.checked,
-            }
+            ...item,
+            checked: !item.checked,
+          }
           : item,
       ),
     }));
@@ -834,9 +861,9 @@ const currentHydrationKey = [
       titleChain: previous.titleChain.map((item, itemIndex) =>
         itemIndex === index
           ? {
-              ...item,
-              [field]: value,
-            }
+            ...item,
+            [field]: value,
+          }
           : item,
       ),
     }));
@@ -869,9 +896,8 @@ const currentHydrationKey = [
   const completedChecks = form.checklist.filter((item) => item.checked).length;
 
   const selectedCaseText = application?.id
-    ? `${getCustomerName(application) || ""} | ${application?.mobile || ""} | ${
-        application?.pan || ""
-      }`
+    ? `${getCustomerName(application) || ""} | ${application?.mobile || ""} | ${application?.pan || ""
+    }`
     : "";
 
   const buildPayload = () => ({
@@ -912,6 +938,26 @@ const currentHydrationKey = [
     if (!finalSelectedId) {
       setMessageType("error");
       setMessage("Please select Legal case first.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateLegalStage = () => {
+    if (!validateSelection()) {
+      return false;
+    }
+
+    if (!canProcessLegalCase) {
+      setMessageType("error");
+
+      setMessage(
+        `Application cannot be processed from ${application?.stage || "UNKNOWN"
+        }/${application?.status || "UNKNOWN"
+        }. Expected LEGAL/LEGAL_PENDING.`,
+      );
+
       return false;
     }
 
@@ -968,8 +1014,8 @@ const currentHydrationKey = [
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to save Legal draft.",
+        error?.message ||
+        "Unable to save Legal draft.",
       );
     },
   });
@@ -1000,8 +1046,8 @@ const currentHydrationKey = [
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to raise Legal query.",
+        error?.message ||
+        "Unable to raise Legal query.",
       );
     },
   });
@@ -1030,15 +1076,15 @@ const currentHydrationKey = [
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to mark Legal negative.",
+        error?.message ||
+        "Unable to mark Legal negative.",
       );
     },
   });
 
-  const approveToOpsMakerMutation = useMutation({
+  const approveToCreditMakerMutation = useMutation({
     mutationFn: () =>
-      legalApi.approveToOpsMaker(finalSelectedId, {
+      legalApi.approveToCreditMaker(finalSelectedId, {
         ...buildPayload(),
         finalLegalStatus:
           form.finalLegalStatus === "Pending"
@@ -1047,13 +1093,13 @@ const currentHydrationKey = [
         remarks:
           form.legalRemarks ||
           form.opinionSummary ||
-          "Legal approved and moved to Ops Maker.",
+          "Legal approved and moved to Credit Maker.",
       }),
 
     onSuccess: async (response) => {
       setMessageType("success");
       setMessage(
-        response?.data?.message || "Legal approved and moved to Ops Maker.",
+        response?.data?.message || "Legal approved and moved to Credit Maker.",
       );
 
       await Promise.all([
@@ -1064,7 +1110,7 @@ const currentHydrationKey = [
           queryKey: ["legal-application", finalSelectedId],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["ops-maker-cases"],
+          queryKey: ["credit-maker-cases"],
         }),
       ]);
     },
@@ -1073,42 +1119,67 @@ const currentHydrationKey = [
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to move case to Ops Maker.",
+        error?.message ||
+        "Unable to move case to Credit Maker.",
       );
     },
   });
 
+  // const handleSaveDraft = () => {
+  //   if (!validateSelection()) return;
+  //   saveDraftMutation.mutate();
+  // };
+
+  // const handleRaiseQuery = () => {
+  //   if (!validateSelection()) return;
+  //   raiseQueryMutation.mutate();
+  // };
+
+  // const handleMarkNegative = () => {
+  //   if (!validateSelection()) return;
+  //   markNegativeMutation.mutate();
+  // };
+
+  // const handleApproveToCreditMaker = () => {
+  //   if (!validateSelection()) return;
+  //   if (!validateBeforeOps()) return;
+  //   approveToCreditMakerMutation.mutate();
+  // };
+
   const handleSaveDraft = () => {
-    if (!validateSelection()) return;
+    if (!validateLegalStage()) return;
+
     saveDraftMutation.mutate();
   };
 
   const handleRaiseQuery = () => {
-    if (!validateSelection()) return;
+    if (!validateLegalStage()) return;
+
     raiseQueryMutation.mutate();
   };
 
   const handleMarkNegative = () => {
-    if (!validateSelection()) return;
+    if (!validateLegalStage()) return;
+
     markNegativeMutation.mutate();
   };
 
-  const handleApproveToOpsMaker = () => {
-    if (!validateSelection()) return;
+  const handleApproveToCreditMaker = () => {
+    if (!validateLegalStage()) return;
     if (!validateBeforeOps()) return;
-    approveToOpsMakerMutation.mutate();
+
+    approveToCreditMakerMutation.mutate();
   };
 
   const isSubmitting =
     saveDraftMutation.isPending ||
     raiseQueryMutation.isPending ||
     markNegativeMutation.isPending ||
-    approveToOpsMakerMutation.isPending;
+    approveToCreditMakerMutation.isPending;
 
-const isLoadingSelected =
-  Boolean(finalSelectedId) &&
-  (applicationQuery.isLoading || fullApplicationQuery.isLoading);
+  const isLoadingSelected =
+    Boolean(finalSelectedId) &&
+    (applicationQuery.isLoading || fullApplicationQuery.isLoading);
 
   const scoreCards = [
     {
@@ -1163,16 +1234,18 @@ const isLoadingSelected =
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Badge>{`Stage: ${formatStatus(application?.stage)}`}</Badge>
                     <Badge>{`Status: ${formatStatus(application?.status)}`}</Badge>
-                    <Badge>{`Assessment: ${
-                      legalAssessment?.assessmentStatus || "New Draft"
-                    }`}</Badge>
+                    <Badge>{`Assessment: ${legalAssessment?.assessmentStatus || "New Draft"
+                      }`}</Badge>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-3">
                 <HeaderButton
-                  disabled={isSubmitting}
+                  disabled={
+                    isSubmitting ||
+                    !canProcessLegalCase
+                  }
                   onClick={handleSaveDraft}
                   icon={FaSave}
                 >
@@ -1197,12 +1270,12 @@ const isLoadingSelected =
 
                 <HeaderButton
                   disabled={isSubmitting}
-                  onClick={handleApproveToOpsMaker}
+                  onClick={handleApproveToCreditMaker}
                   icon={FaPaperPlane}
                 >
-                  {approveToOpsMakerMutation.isPending
+                  {approveToCreditMakerMutation.isPending
                     ? "Moving..."
-                    : "Approve & Send to Ops Maker"}
+                    : "Approve & Send to Credit Maker"}
                 </HeaderButton>
               </div>
             </div>
@@ -1261,11 +1334,10 @@ const isLoadingSelected =
 
         {message && (
           <div
-            className={`rounded-2xl border p-4 text-sm font-bold ${
-              messageType === "success"
+            className={`rounded-2xl border p-4 text-sm font-bold ${messageType === "success"
                 ? "border-blue-200 bg-blue-50 text-blue-700"
                 : "border-rose-200 bg-rose-50 text-rose-700"
-            }`}
+              }`}
           >
             {message}
           </div>
@@ -1351,110 +1423,110 @@ const isLoadingSelected =
                   />
                 </Panel>
 
-               <Panel
-  title="Property & Assignment"
-  subtitle="Address loaded from Application Data, customer profile, applicant, borrower, valuation and saved legal data."
-  icon={FaHome}
->
-  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-    <Field
-      label="Property Category"
-      value={form.propertyCategory}
-      onChange={(value) => updateForm("propertyCategory", value)}
-    />
+                <Panel
+                  title="Property & Assignment"
+                  subtitle="Address loaded from Application Data, customer profile, applicant, borrower, valuation and saved legal data."
+                  icon={FaHome}
+                >
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <Field
+                      label="Property Category"
+                      value={form.propertyCategory}
+                      onChange={(value) => updateForm("propertyCategory", value)}
+                    />
 
-    <Field
-      label="Property Type *"
-      value={form.propertyType}
-      onChange={(value) => updateForm("propertyType", value)}
-    />
+                    <Field
+                      label="Property Type *"
+                      value={form.propertyType}
+                      onChange={(value) => updateForm("propertyType", value)}
+                    />
 
-    <Field
-      label="Current Owner *"
-      value={form.currentOwner}
-      onChange={(value) => updateForm("currentOwner", value)}
-    />
+                    <Field
+                      label="Current Owner *"
+                      value={form.currentOwner}
+                      onChange={(value) => updateForm("currentOwner", value)}
+                    />
 
-    <Field
-      label="City"
-      value={form.propertyCity}
-      onChange={(value) => updateAddressField("propertyCity", value)}
-    />
+                    <Field
+                      label="City"
+                      value={form.propertyCity}
+                      onChange={(value) => updateAddressField("propertyCity", value)}
+                    />
 
-    <Field
-      label="State"
-      value={form.propertyState}
-      onChange={(value) => updateAddressField("propertyState", value)}
-    />
+                    <Field
+                      label="State"
+                      value={form.propertyState}
+                      onChange={(value) => updateAddressField("propertyState", value)}
+                    />
 
-    <Field
-      label="Pincode"
-      value={form.propertyPincode}
-      onChange={(value) => updateAddressField("propertyPincode", value)}
-    />
+                    <Field
+                      label="Pincode"
+                      value={form.propertyPincode}
+                      onChange={(value) => updateAddressField("propertyPincode", value)}
+                    />
 
-    <Field
-      label="Law Firm / Advocate *"
-      value={form.lawFirmAdvocate}
-      onChange={(value) => updateForm("lawFirmAdvocate", value)}
-    />
+                    <Field
+                      label="Law Firm / Advocate *"
+                      value={form.lawFirmAdvocate}
+                      onChange={(value) => updateForm("lawFirmAdvocate", value)}
+                    />
 
-    <Field
-      label="Assignment Date *"
-      type="date"
-      value={form.assignmentDate}
-      onChange={(value) => updateForm("assignmentDate", value)}
-    />
+                    <Field
+                      label="Assignment Date *"
+                      type="date"
+                      value={form.assignmentDate}
+                      onChange={(value) => updateForm("assignmentDate", value)}
+                    />
 
-    <SelectField
-      label="Mortgage Method"
-      value={form.mortgageMethod}
-      options={[
-        "",
-        "Equitable Mortgage / MODT",
-        "Registered Mortgage",
-        "Simple Mortgage",
-      ]}
-      onChange={(value) => updateForm("mortgageMethod", value)}
-    />
+                    <SelectField
+                      label="Mortgage Method"
+                      value={form.mortgageMethod}
+                      options={[
+                        "",
+                        "Equitable Mortgage / MODT",
+                        "Registered Mortgage",
+                        "Simple Mortgage",
+                      ]}
+                      onChange={(value) => updateForm("mortgageMethod", value)}
+                    />
 
-    <Field
-      label="Legal Report Reference"
-      value={form.legalReportReference}
-      onChange={(value) => updateForm("legalReportReference", value)}
-    />
-  </div>
+                    <Field
+                      label="Legal Report Reference"
+                      value={form.legalReportReference}
+                      onChange={(value) => updateForm("legalReportReference", value)}
+                    />
+                  </div>
 
-  <TextArea
-    label="Property Address *"
-    rows={3}
-    value={form.propertyAddress}
-    onChange={(value) => updateAddressField("propertyAddress", value)}
-  />
+                  <TextArea
+                    label="Property Address *"
+                    rows={3}
+                    value={form.propertyAddress}
+                    onChange={(value) => updateAddressField("propertyAddress", value)}
+                  />
 
-  <TextArea
-    label="Full Property Address"
-    rows={3}
-    value={form.fullPropertyAddress}
-    onChange={(value) => updateForm("fullPropertyAddress", value)}
-  />
+                  <TextArea
+                    label="Full Property Address"
+                    rows={3}
+                    value={form.fullPropertyAddress}
+                    onChange={(value) => updateForm("fullPropertyAddress", value)}
+                  />
 
-  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-    <TextArea
-      label="Current / Residence Address"
-      rows={3}
-      value={form.currentAddress}
-      onChange={(value) => updateForm("currentAddress", value)}
-    />
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <TextArea
+                      label="Current / Residence Address"
+                      rows={3}
+                      value={form.currentAddress}
+                      onChange={(value) => updateForm("currentAddress", value)}
+                    />
 
-    <TextArea
-      label="Permanent Address"
-      rows={3}
-      value={form.permanentAddress}
-      onChange={(value) => updateForm("permanentAddress", value)}
-    />
-  </div>
-</Panel>
+                    <TextArea
+                      label="Permanent Address"
+                      rows={3}
+                      value={form.permanentAddress}
+                      onChange={(value) => updateForm("permanentAddress", value)}
+                    />
+                  </div>
+                </Panel>
 
                 <Panel
                   title="Title Chain"
@@ -1674,12 +1746,12 @@ const isLoadingSelected =
                     <button
                       type="button"
                       disabled={isSubmitting}
-                      onClick={handleApproveToOpsMaker}
+                      onClick={handleApproveToCreditMaker}
                       className="rounded-xl bg-[#0f2942] px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-[#183d62] disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
-                      {approveToOpsMakerMutation.isPending
+                      {approveToCreditMakerMutation.isPending
                         ? "Moving..."
-                        : "Approve & Send to Ops Maker"}
+                        : "Approve & Send to Credit Maker"}
                     </button>
                   </div>
                 </div>
@@ -1712,13 +1784,12 @@ function WorkflowCard() {
             >
               <div className="flex items-center gap-4">
                 <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${
-                    completed
+                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${completed
                       ? "bg-emerald-500 text-white"
                       : current
                         ? "bg-purple-600 text-white ring-8 ring-purple-100"
                         : "bg-slate-100 text-slate-400"
-                  }`}
+                    }`}
                 >
                   {completed ? <FaCheck /> : step.id}
                 </div>
@@ -1729,9 +1800,8 @@ function WorkflowCard() {
               </div>
 
               <p
-                className={`mt-3 text-xs font-black ${
-                  current ? "text-purple-700" : "text-slate-700"
-                }`}
+                className={`mt-3 text-xs font-black ${current ? "text-purple-700" : "text-slate-700"
+                  }`}
               >
                 {step.label}
               </p>

@@ -25,4 +25,7 @@ export const legalApi = {
 
   approveToOpsMaker: (applicationId, payload = {}) =>
     apiClient.post(`/legal/${applicationId}/approve-to-ops-maker`, payload),
+
+  approveToCreditMaker: (applicationId, payload = {}) =>
+  apiClient.post(`/legal/${applicationId}/approve-to-credit-maker`,payload),
 };

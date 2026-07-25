@@ -73,11 +73,10 @@ export class LegalService {
 async getCasesRequiringAttention() {
   const applications =
     await this.applicationsRepo.find({
-      where: {
-        stage: In([
-          'LEGAL',
-          'LEGAL_VALUATION',
-        ] as Application['stage'][]),
+       where: {
+        stage: 'LEGAL' as Application['stage'],
+        status:
+          'LEGAL_PENDING' as Application['status'],
       },
       select: {
         id: true,
@@ -267,50 +266,106 @@ async getStatus(id: number) {
     });
   }
 
-async approveToOpsMaker(applicationId: number, body: any, actor: ActorLike) {
-  return this.dataSource.transaction(async (manager) => {
-    const application = await this.getApplicationOrFail(
-      applicationId,
-      manager,
-      true,
-    );
+// async approveToOpsMaker(applicationId: number, body: any, actor: ActorLike) {
+//   return this.dataSource.transaction(async (manager) => {
+//     const application = await this.getApplicationOrFail(
+//       applicationId,
+//       manager,
+//       true,
+//     );
 
-    const movement = await this.workflowTransitions.move({
-      applicationId, action: 'LEGAL_APPROVE_TO_OPS_MAKER', remarks: body?.remarks,
-      payload: body, actor, manager,
-    });
-    const savedApplication = movement.data.application;
+//     const movement = await this.workflowTransitions.move({
+//       applicationId, action: 'LEGAL_APPROVE_TO_OPS_MAKER', remarks: body?.remarks,
+//       payload: body, actor, manager,
+//     });
+//     const savedApplication = movement.data.application;
 
-    const legalAssessment = await this.saveAssessment(
-      savedApplication,
-      {
-        ...body,
-        finalLegalStatus: body?.finalLegalStatus || 'Positive',
-      },
-      actor,
-      LegalAssessmentStatus.APPROVED_TO_OPS_MAKER,
-      manager,
-    );
+//     const legalAssessment = await this.saveAssessment(
+//       savedApplication,
+//       {
+//         ...body,
+//         finalLegalStatus: body?.finalLegalStatus || 'Positive',
+//       },
+//       actor,
+//       LegalAssessmentStatus.APPROVED_TO_OPS_MAKER,
+//       manager,
+//     );
 
-    const loanAccount = await this.createLoanAccountAfterLegalApproval(
-      savedApplication,
-      legalAssessment,
-      actor,
-      manager,
-      body?.partnerCode || DEFAULT_PARTNER_CODE,
-    );
+//     const loanAccount = await this.createLoanAccountAfterLegalApproval(
+//       savedApplication,
+//       legalAssessment,
+//       actor,
+//       manager,
+//       body?.partnerCode || DEFAULT_PARTNER_CODE,
+//     );
 
-    return {
-      success: true,
-      message:
-        'Legal approved, LAN generated and case moved to Ops Maker successfully.',
-      data: {
-        application: savedApplication,
-        legalAssessment,
-        loanAccount,
-      },
-    };
-  });
+//     return {
+//       success: true,
+//       message:
+//         'Legal approved, LAN generated and case moved to Ops Maker successfully.',
+//       data: {
+//         application: savedApplication,
+//         legalAssessment,
+//         loanAccount,
+//       },
+//     };
+//   });
+// }
+
+async approveToCreditMaker(
+  applicationId: number,
+  body: any,
+  actor: ActorLike,
+) {
+  return this.dataSource.transaction(
+    async (manager) => {
+      const application =
+        await this.getApplicationOrFail(
+          applicationId,
+          manager,
+          true,
+        );
+
+      const movement =
+        await this.workflowTransitions.move({
+          applicationId,
+          action:
+            'LEGAL_APPROVE_TO_CREDIT_MAKER',
+          remarks: body?.remarks,
+          payload: body,
+          actor,
+          manager,
+        });
+
+      const savedApplication =
+        movement.data.application;
+
+      const legalAssessment =
+        await this.saveAssessment(
+          savedApplication,
+          {
+            ...body,
+            finalLegalStatus:
+              body?.finalLegalStatus ||
+              'Positive',
+          },
+          actor,
+          LegalAssessmentStatus
+            .APPROVED_TO_CREDIT_MAKER,
+          manager,
+        );
+
+      return {
+        success: true,
+        message:
+          'Legal approved and case moved to Credit Maker successfully.',
+        data: {
+          application: savedApplication,
+          legalAssessment,
+        },
+      };
+    },
+  );
 }
 
   private async getApplicationOrFail(

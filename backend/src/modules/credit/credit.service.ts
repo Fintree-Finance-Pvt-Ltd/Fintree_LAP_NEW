@@ -373,30 +373,132 @@ private ensureCmCase(application: Application) {
   }
 }
 
-async getCreditAssessment(applicationId: number) {
+async getCreditAssessment(
+  applicationId: number,
+) {
   const application = await this.dataSource
     .getRepository(Application)
     .findOne({
-      where: { id: applicationId },
+      where: {
+        id: applicationId,
+      },
     });
 
   if (!application) {
-    throw new NotFoundException('Application not found');
+    throw new NotFoundException(
+      'Application not found',
+    );
   }
 
-  const assessment = await this.dataSource
-    .getRepository(CreditAssessment)
-    .findOne({
-      where: { applicationId },
-    });
+  const creditAssessment =
+    await this.dataSource
+      .getRepository(CreditAssessment)
+      .findOne({
+        where: {
+          applicationId,
+        },
+      });
 
   return {
     success: true,
     data: {
       application,
-      creditAssessment: assessment,
+      creditAssessment,
     },
   };
+}
+
+async getFinalCreditManagerCases() {
+  const applications = await this.dataSource
+    .getRepository(Application)
+    .createQueryBuilder('application')
+    .where('application.stage = :stage', {
+      stage: ApplicationStage.CM,
+    })
+    .andWhere('application.status = :status', {
+      status: ApplicationStatus.CM_PENDING,
+    })
+    .orderBy('application.updatedAt', 'DESC')
+    .getMany();
+
+  return {
+    success: true,
+    message:
+      'Final Credit Manager cases fetched successfully.',
+    data: applications,
+  };
+}
+
+async creditManagerApproveToOpsMaker(
+  applicationId: number,
+  dto: any,
+  actor: Actor,
+) {
+  return this.dataSource.transaction(
+    async (manager) => {
+      const application =
+        await manager.findOne(Application, {
+          where: {
+            id: applicationId,
+          },
+          lock: {
+            mode: 'pessimistic_write',
+          },
+        });
+
+      if (!application) {
+        throw new NotFoundException(
+          'Application not found.',
+        );
+      }
+
+      const stage = String(
+        application.stage || '',
+      )
+        .trim()
+        .toUpperCase();
+
+      const status = String(
+        application.status || '',
+      )
+        .trim()
+        .toUpperCase();
+
+      if (
+        stage !== ApplicationStage.CM ||
+        status !==
+          ApplicationStatus.CM_PENDING
+      ) {
+        throw new BadRequestException(
+          `Application must be in CM/CM_FINAL_PENDING. Current state is ${stage}/${status}.`,
+        );
+      }
+
+      const movement =
+        await this.workflowTransitions.move({
+          applicationId,
+          action:
+            'CREDIT_MANAGER_APPROVE_TO_OPS_MAKER',
+          remarks:
+            dto?.remarks ||
+            dto?.cmRemarks ||
+            'Approved by Credit Manager.',
+          payload: dto,
+          actor,
+          manager,
+        });
+
+      return {
+        success: true,
+        message:
+          'Credit Manager approved the case and sent it to Ops Maker.',
+        data: {
+          application:
+            movement.data.application,
+        },
+      };
+    },
+  );
 }
 
 async cmSaveDraft(

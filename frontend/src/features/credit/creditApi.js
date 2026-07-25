@@ -32,6 +32,12 @@ export const creditApi = {
   checkerCases: () =>
     apiClient.get("/credit/checker/cases"),
 
+  // credit manager
+   getFinalCreditManagerCases: () =>
+  apiClient.get(
+    "/credit/final-credit-manager/cases",
+  ),
+
   getCreditApplication: (applicationId) =>
     apiClient.get(`/credit/${applicationId}`),
 
@@ -44,6 +50,15 @@ export const creditApi = {
   cmRecommendToCreditMaker: (applicationId, payload = {}) =>
     apiClient.post(`/credit/${applicationId}/cm/recommend`, payload),
 
+  creditManagerApproveToOpsMaker: (
+    applicationId,
+    payload = {},
+  ) =>
+    apiClient.post(
+      `/credit/${applicationId}/credit-manager/approve-to-ops-maker`,
+      payload,
+    ),
+    
   creditMakerSaveDraft: (applicationId, payload = {}) =>
     apiClient.post(`/credit/${applicationId}/maker/save-draft`, payload),
 

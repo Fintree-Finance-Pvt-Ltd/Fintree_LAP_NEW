@@ -381,16 +381,20 @@ const buildInitialForm = (application, creditAssessment) => {
   };
 };
 
+const FINAL_CM_STAGE = "CM";
+const FINAL_CM_STATUS = "CM_PENDING";
+
 const workflowSteps = [
   { id: 1, label: "Lead", status: "completed" },
   { id: 2, label: "Field Visit", status: "completed" },
   { id: 3, label: "BM Review", status: "completed" },
-  { id: 4, label: "CM Screening", status: "current" },
-  { id: 5, label: "Credit Maker", status: "pending" },
-  { id: 6, label: "Credit Checker", status: "pending" },
-  { id: 7, label: "Valuation", status: "pending" },
-  { id: 8, label: "Legal", status: "pending" },
-  { id: 9, label: "Ops", status: "pending" },
+  { id: 4, label: "CM Screening", status: "completed" },
+  { id: 5, label: "Credit Maker", status: "completed" },
+  { id: 6, label: "Credit Checker", status: "completed" },
+  { id: 7, label: "Valuation", status: "completed" },
+  { id: 8, label: "Legal", status: "completed" },
+  { id: 9, label: "Credit Manager", status: "current" },
+  { id: 10, label: "Ops Maker", status: "pending" },
 ];
 
 export default function CmPreliminaryCreditScreening() {
@@ -404,27 +408,29 @@ export default function CmPreliminaryCreditScreening() {
   const [hydratedKey, setHydratedKey] = useState("");
 
   const applicationsQuery = useQuery({
-    queryKey: ["cm-screening-applications"],
-    queryFn: () => creditApi.applications({ page: 1, limit: 500 }),
-    retry: false,
-  });
-
-  const applicationRows = normalizeRows(unwrapPayload(applicationsQuery.data));
+  queryKey: [
+    "credit-manager-final-cases",
+  ],
+  queryFn: () =>
+    creditApi.getFinalCreditManagerCases(),
+  retry: false,
+});
 
   const cmCases = useMemo(() => {
-    return applicationRows.filter((item) => {
-      const status = String(item.status || "").toUpperCase();
-      const stage = String(item.stage || "").toUpperCase();
+    const rows = normalizeRows(unwrapPayload(applicationsQuery.data));
 
-      return (
-        stage === "CM" ||
-        status === "CM_PENDING" ||
-        status === "CM_QUERY" ||
-        status === "BM_APPROVED" ||
-        status === "BM_PENDING"
-      );
+    return rows.filter((item) => {
+      const stage = String(item?.stage || "")
+        .trim()
+        .toUpperCase();
+
+      const status = String(item?.status || "")
+        .trim()
+        .toUpperCase();
+
+      return stage === FINAL_CM_STAGE && status === FINAL_CM_STATUS;
     });
-  }, [applicationRows]);
+  }, [applicationsQuery.data]);
 
   const finalSelectedId = selectedId || cmCases?.[0]?.id || "";
 
@@ -602,14 +608,21 @@ export default function CmPreliminaryCreditScreening() {
   const saveDraftMutation = useMutation({
     mutationFn: () => {
       if (!finalSelectedId) {
-        throw new Error("Please select CM case first.");
+        throw new Error("Please select Credit Manager case first.");
       }
 
-      return creditApi.cmSaveDraft(finalSelectedId, buildPayload(form.decision || "RECOMMEND"));
+      return creditApi.creditManagerSaveDraft(
+        finalSelectedId,
+        buildPayload(form.decision || "RECOMMEND"),
+      );
     },
 
     onSuccess: async (response) => {
-      setMessage(response?.data?.message || "CM screening draft saved successfully.");
+      setMessage(
+        response?.message ||
+          response?.data?.message ||
+          "Credit Manager draft saved successfully.",
+      );
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["credit-assessment", finalSelectedId] }),
@@ -621,7 +634,7 @@ export default function CmPreliminaryCreditScreening() {
       setMessage(
         error?.response?.data?.message ||
           error?.message ||
-          "Unable to save CM draft.",
+          "Unable to save Credit Manager draft.",
       );
     },
   });
@@ -629,21 +642,47 @@ export default function CmPreliminaryCreditScreening() {
   const decisionMutation = useMutation({
     mutationFn: (decisionType) => {
       if (!finalSelectedId) {
-        throw new Error("Please select CM case first.");
+        throw new Error("Please select Credit Manager case first.");
       }
 
-      return creditApi.cmRecommendToCreditMaker(finalSelectedId, buildPayload(decisionType));
+      if (decisionType === "RECOMMEND") {
+        return creditApi.creditManagerApproveToOpsMaker(
+          finalSelectedId,
+          buildPayload(decisionType),
+        );
+      }
+
+      if (decisionType === "HOLD_QUERY") {
+        return creditApi.creditManagerRaiseQuery(
+          finalSelectedId,
+          buildPayload(decisionType),
+        );
+      }
+
+      if (decisionType === "REJECT") {
+        return creditApi.creditManagerReject(
+          finalSelectedId,
+          buildPayload(decisionType),
+        );
+      }
+
+      throw new Error(`Unsupported Credit Manager decision: ${decisionType}`);
     },
 
     onSuccess: async (response) => {
-      setMessage(response?.data?.message || "CM decision completed successfully.");
+      setMessage(
+        response?.message ||
+          response?.data?.message ||
+          "Credit Manager decision completed successfully.",
+      );
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["cm-screening-applications"] }),
+        queryClient.invalidateQueries({ queryKey: ["credit-manager-final-cases"] }),
         queryClient.invalidateQueries({ queryKey: ["cm-screening-application", finalSelectedId] }),
         queryClient.invalidateQueries({ queryKey: ["cm-credit-application", finalSelectedId] }),
         queryClient.invalidateQueries({ queryKey: ["credit-assessment", finalSelectedId] }),
         queryClient.invalidateQueries({ queryKey: ["credit-manager-dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["ops-maker-cases"] }),
       ]);
     },
 
@@ -651,24 +690,24 @@ export default function CmPreliminaryCreditScreening() {
       setMessage(
         error?.response?.data?.message ||
           error?.message ||
-          "Unable to complete CM decision.",
+          "Unable to complete Credit Manager decision.",
       );
     },
   });
 
   const validateBeforeSubmit = (decisionType) => {
     if (!finalSelectedId) {
-      setMessage("Please select CM case first.");
+      setMessage("Please select Credit Manager case first.");
       return false;
     }
 
     if (!form.remarks || String(form.remarks).trim().length < 5) {
-      setMessage("Please enter clear CM remarks before action.");
+      setMessage("Please enter clear Credit Manager remarks before action.");
       return false;
     }
 
     if (decisionType === "RECOMMEND" && !toNumber(form.recommendedAmount)) {
-      setMessage("Please enter recommended amount before approving to Credit Maker.");
+      setMessage("Please enter recommended amount before approving to Ops Maker.");
       return false;
     }
 
@@ -705,11 +744,11 @@ export default function CmPreliminaryCreditScreening() {
 
               <div>
                 <h1 className="text-3xl font-black tracking-tight md:text-4xl">
-                  CM Preliminary Credit Screening
+                  Credit Manager Screening
                 </h1>
 
                 <p className="mt-2 max-w-3xl text-sm font-semibold leading-relaxed text-white/90">
-                  Review customer, KYC, property, eligibility and bureau details before sending the case to Credit Maker.
+                  Review customer, KYC, property, eligibility and bureau details before sending the case to Ops Maker.
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -746,7 +785,7 @@ export default function CmPreliminaryCreditScreening() {
               />
 
               <ActionButton
-                label={decisionMutation.isPending ? "Sending..." : "Approve & Send to Credit Maker"}
+                label={decisionMutation.isPending ? "Sending..." : "Approve & Send to Ops Maker"}
                 icon={FaArrowRight}
                 disabled={decisionMutation.isPending}
                 onClick={() => handleDecision("RECOMMEND")}
@@ -768,7 +807,7 @@ export default function CmPreliminaryCreditScreening() {
                 }}
                 className="h-12 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-black text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               >
-                <option value="">Select CM Case</option>
+                <option value="">Select Credit Manager Case</option>
                 {cmCases.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.applicationNumber || item.id} - {item.customerName || item.customer_name || "Customer"}
@@ -807,7 +846,7 @@ export default function CmPreliminaryCreditScreening() {
 
           {applicationsQuery.isError && (
             <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm font-black text-rose-700">
-              Unable to load CM case list.
+              Unable to load Credit Manager case list.
             </div>
           )}
         </div>
@@ -816,13 +855,13 @@ export default function CmPreliminaryCreditScreening() {
 
         {isLoading && (
           <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center text-sm font-black text-slate-500 shadow-sm">
-            Loading CM case details...
+            Loading Credit Manager case details...
           </div>
         )}
 
         {!isLoading && !finalSelectedId && (
           <div className="rounded-2xl border border-amber-100 bg-amber-50 p-8 text-center text-sm font-black text-amber-700 shadow-sm">
-            Please select a CM case to start screening.
+            Please select a Credit Manager case to start screening.
           </div>
         )}
 
@@ -988,7 +1027,7 @@ export default function CmPreliminaryCreditScreening() {
 
               <div className="space-y-6">
                 <div className="sticky top-6 space-y-6">
-                  <SectionCard title="CM Decision" icon={FaClipboardCheck}>
+                  <SectionCard title="Credit Manager Decision" icon={FaClipboardCheck}>
                     <div className="mb-5">
                       <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-wide text-slate-500">
                         <span>Preliminary Risk Score</span>
@@ -1013,7 +1052,7 @@ export default function CmPreliminaryCreditScreening() {
                           onChange={(event) => updateForm("decision", event.target.value)}
                           className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                         >
-                          <option value="RECOMMEND">Approve & Send to Credit Maker</option>
+                          <option value="RECOMMEND">Approve & Send to Ops Maker</option>
                           <option value="HOLD_QUERY">Hold / Query</option>
                           <option value="REJECT">Reject</option>
                         </select>
@@ -1028,13 +1067,13 @@ export default function CmPreliminaryCreditScreening() {
 
                       <div>
                         <label className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                          CM Remarks *
+                          Credit Manager Remarks *
                         </label>
                         <textarea
                           rows={7}
                           value={form.remarks}
                           onChange={(event) => updateForm("remarks", event.target.value)}
-                          placeholder="Enter CM screening remarks, file observations, deviation notes or query reason."
+                          placeholder="Enter Credit Manager remarks, file observations, deviation notes or query reason."
                           className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white p-4 text-sm font-semibold leading-relaxed text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                         />
                       </div>
@@ -1057,7 +1096,7 @@ export default function CmPreliminaryCreditScreening() {
                           className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                         >
                           <FaArrowRight />
-                          Approve & Send to Credit Maker
+                          Approve & Send to Ops Maker
                         </button>
 
                         <div className="grid grid-cols-2 gap-3">
@@ -1088,20 +1127,20 @@ export default function CmPreliminaryCreditScreening() {
                   <SectionCard title="Approve Flow" icon={FaArrowRight}>
                     <FlowRow
                       title="Approve"
-                      value="CM_APPROVED / CREDIT_MAKER_PENDING"
-                      description="Case moves to Credit Maker for detailed underwriting."
+                      value="OPS_MAKER / OPS_MAKER_PENDING"
+                      description="Case moves to Ops Maker for operations processing."
                       tone="green"
                     />
                     <FlowRow
                       title="Hold / Query"
-                      value="CM_QUERY"
-                      description="Case remains in CM queue with query remarks."
+                      value="CM / CM_FINAL_QUERY"
+                      description="Case remains with Credit Manager under final query status."
                       tone="orange"
                     />
                     <FlowRow
                       title="Reject"
-                      value="CM_REJECTED"
-                      description="Case is rejected at CM screening level."
+                      value="CM / CM_FINAL_REJECTED"
+                      description="Case is rejected at the final Credit Manager stage."
                       tone="red"
                     />
                   </SectionCard>

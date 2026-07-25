@@ -24,16 +24,16 @@ import { creditApi } from "../creditApi.js";
 
 const BASE_WORKFLOW_STEPS = [
   { id: 1, key: "LEAD", label: "Lead" },
-  { id: 2, key: "FIELD", label: "Field Verification" },
-  { id: 3, key: "BM", label: "BM Review" },
-  { id: 4, key: "CM", label: "CM Screening" },
-  { id: 5, key: "CREDIT_MAKER", label: "Credit Maker" },
-  { id: 6, key: "CREDIT_CHECKER", label: "Credit Checker" },
-  { id: 7, key: "VALUATION", label: "Valuation" },
-  { id: 8, key: "LEGAL", label: "Legal" },
-  { id: 9, key: "SANCTION", label: "Sanction" },
-  { id: 10, key: "AGREEMENT", label: "Agreement" },
-  { id: 11, key: "DISBURSEMENT", label: "Disbursement" },
+  { id: 2, key: "BM_REVIEW", label: "BM Review" },
+  { id: 3, key: "CREDIT_MAKER_INITIAL", label: "Credit Maker" },
+  { id: 4, key: "VALUATION", label: "Valuation" },
+  { id: 5, key: "LEGAL", label: "Legal" },
+  { id: 6, key: "CREDIT_MAKER_FINAL", label: "Credit Maker" },
+  { id: 7, key: "CREDIT_CHECKER", label: "Credit Checker" },
+  { id: 8, key: "CREDIT_MANAGER", label: "Credit Manager" },
+  { id: 9, key: "OPS_MAKER", label: "OPS Maker" },
+  { id: 10, key: "OPS_CHECKER", label: "OPS Checker" },
+  { id: 11, key: "OPS_HEAD", label: "OPS Head" },
 ];
 
 const unwrapPayload = (response) => {

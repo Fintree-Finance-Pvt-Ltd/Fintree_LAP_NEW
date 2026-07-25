@@ -112,14 +112,14 @@ getCasesRequiringAttention() {
     );
   }
 
-  @Post(':applicationId/approve-to-ops-maker')
-  approveToOpsMaker(
+  @Post(':applicationId/approve-to-credit-maker')
+  approveToCreditMaker(
     @Param('applicationId', ParseIntPipe)
     applicationId: number,
     @Body() body: any,
     @CurrentUser() user: Actor,
   ) {
-    return this.service.approveToOpsMaker(
+    return this.service.approveToCreditMaker(
       applicationId,
       body,
       user,

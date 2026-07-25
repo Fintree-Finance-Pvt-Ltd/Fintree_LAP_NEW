@@ -12,6 +12,9 @@ export enum ApplicationStatus {
   BM_REJECTED = 'BM_REJECTED',
 
  
+  
+  'CM_FINAL_PENDING' = 'CM_FINAL_PENDING',
+
   // Credit maker/checker flow
   CREDIT_MAKER_PENDING = 'CREDIT_MAKER_PENDING',
   CREDIT_MAKER_QUERY = 'CREDIT_MAKER_QUERY',

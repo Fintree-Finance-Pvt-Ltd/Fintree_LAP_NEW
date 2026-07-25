@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FaCheck,
   FaChevronDown,
-  FaClipboardCheck,
   FaHome,
   FaPaperPlane,
   FaQuestionCircle,
@@ -11,7 +10,7 @@ import {
   FaSearch,
   FaTimesCircle,
 } from "react-icons/fa";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { valuationApi } from "../valuationApi.js";
 
@@ -69,14 +68,88 @@ const parseJson = (value, fallback) => {
 };
 
 const workflowSteps = [
-  { id: 1, label: "Lead", status: "completed" },
-  { id: 2, label: "BM Review", status: "completed" },
-  { id: 3, label: "CM", status: "completed" },
-  { id: 4, label: "Credit", status: "completed" },
-  { id: 5, label: "Valuation", status: "current" },
-  { id: 6, label: "Legal", status: "pending" },
-  { id: 7, label: "Sanction", status: "pending" },
+  { id: 1, key: "LEAD", label: "Lead" },
+  { id: 2, key: "BM_REVIEW", label: "BM Review" },
+  { id: 3, key: "CREDIT_MAKER_INITIAL", label: "Credit Maker" },
+  { id: 4, key: "VALUATION", label: "Valuation" },
+  { id: 5, key: "LEGAL", label: "Legal" },
+  { id: 6, key: "CREDIT_MAKER_FINAL", label: "Credit Maker" },
+  { id: 7, key: "CREDIT_CHECKER", label: "Credit Checker" },
+  { id: 8, key: "CREDIT_MANAGER", label: "Credit Manager" },
+  { id: 9, key: "OPS_MAKER", label: "OPS Maker" },
+  { id: 10, key: "OPS_CHECKER", label: "OPS Checker" },
+  { id: 11, key: "OPS_HEAD", label: "OPS Head" },
 ];
+
+const normalizeWorkflowValue = (value) =>
+  String(value || "")
+    .trim()
+    .toUpperCase();
+
+const getCurrentWorkflowIndex = (application) => {
+  const stage = normalizeWorkflowValue(application?.stage);
+  const status = normalizeWorkflowValue(application?.status);
+
+  if (stage === "OPS_HEAD" || status.includes("OPS_HEAD")) return 10;
+  if (stage === "OPS_CHECKER" || status.includes("OPS_CHECKER")) return 9;
+  if (
+    stage === "OPS_MAKER" ||
+    stage === "OPS" ||
+    stage === "OPERATIONS" ||
+    status.includes("OPS_MAKER")
+  ) {
+    return 8;
+  }
+
+  if (stage === "CREDIT_MANAGER" || status.includes("CREDIT_MANAGER")) {
+    return 7;
+  }
+
+  if (stage === "CREDIT_CHECKER" || status.includes("CREDIT_CHECKER")) {
+    return 6;
+  }
+
+  if (
+    stage === "CREDIT_MAKER_FINAL" ||
+    stage === "POST_LEGAL_CREDIT_MAKER" ||
+    status.includes("CREDIT_MAKER_FINAL") ||
+    status.includes("POST_LEGAL_CREDIT_MAKER")
+  ) {
+    return 5;
+  }
+
+  if (stage === "LEGAL" || status.startsWith("LEGAL_")) return 4;
+  if (stage === "VALUATION" || status.startsWith("VALUATION_")) return 3;
+
+  if (
+    stage === "CREDIT" ||
+    stage === "CREDIT_MAKER" ||
+    stage === "CM" ||
+    status.includes("CREDIT_MAKER") ||
+    status.startsWith("CREDIT_")
+  ) {
+    return 2;
+  }
+
+  if (
+    stage === "BM" ||
+    stage === "BM_REVIEW" ||
+    status.startsWith("BM_")
+  ) {
+    return 1;
+  }
+
+  if (
+    stage === "LEAD" ||
+    stage === "RM" ||
+    status.startsWith("LEAD_") ||
+    status.startsWith("RM_")
+  ) {
+    return 0;
+  }
+
+  return -1;
+};
 
 const defaultForm = {
   valuer: "",
@@ -218,6 +291,7 @@ const buildInitialForm = (application, assessment) => {
 
 export default function ValuationPage() {
   const { applicationId: routeApplicationId } = useParams();
+  const navigate = useNavigate();
 
   const [selectedId, setSelectedId] = useState(routeApplicationId || "");
   const [hydratedApplicationId, setHydratedApplicationId] = useState("");
@@ -236,8 +310,7 @@ export default function ValuationPage() {
     return unwrapList(casesQuery.data);
   }, [casesQuery.data]);
 
-  const finalSelectedId =
-    selectedId || routeApplicationId || valuationCases?.[0]?.id || "";
+  const finalSelectedId = selectedId || routeApplicationId || "";
 
   const applicationQuery = useQuery({
     queryKey: ["valuation-application", finalSelectedId],
@@ -255,6 +328,17 @@ export default function ValuationPage() {
 
   const valuationAssessment =
     applicationPayload?.valuationAssessment || null;
+
+  const currentStage = normalizeWorkflowValue(application?.stage);
+  const currentStatus = normalizeWorkflowValue(application?.status);
+
+  const canApproveToLegal =
+    currentStage === "VALUATION" &&
+    currentStatus === "VALUATION_PENDING";
+
+  const alreadySentToLegal =
+    currentStage === "LEGAL" &&
+    currentStatus === "LEGAL_PENDING";
 
   useEffect(() => {
     if (!finalSelectedId || !application?.id) return;
@@ -468,22 +552,34 @@ export default function ValuationPage() {
       }),
 
     onSuccess: async (response) => {
-      setMessage(
+      const approvedApplicationId = String(finalSelectedId);
+      const successMessage =
         response?.data?.message ||
-          "Valuation accepted and case sent to Legal successfully.",
-      );
+        "Valuation accepted and case sent to Legal successfully.";
+
+      setSelectedId("");
+      setHydratedApplicationId("");
+      setForm(defaultForm);
+
+      queryClient.removeQueries({
+        queryKey: ["valuation-application", approvedApplicationId],
+        exact: true,
+      });
 
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["valuation-cases"],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["valuation-application", finalSelectedId],
-        }),
-        queryClient.invalidateQueries({
           queryKey: ["legal-cases"],
         }),
       ]);
+
+      navigate("/valuation", {
+        replace: true,
+      });
+
+      setMessage(successMessage);
     },
 
     onError: (error) => {
@@ -512,7 +608,20 @@ export default function ValuationPage() {
 
   const handleApprove = () => {
     if (!validateSelection()) return;
+
+    if (!canApproveToLegal) {
+      setMessage(
+        alreadySentToLegal
+          ? "This application has already been sent to Legal."
+          : `Application cannot be approved from ${
+              application?.stage || "UNKNOWN"
+            }/${application?.status || "UNKNOWN"}.`,
+      );
+      return;
+    }
+
     if (!validateBeforeApprove()) return;
+
     approveMutation.mutate();
   };
 
@@ -607,7 +716,7 @@ export default function ValuationPage() {
 
               <div className="flex flex-wrap gap-3">
                 <HeaderButton
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canApproveToLegal}
                   onClick={handleSaveDraft}
                   icon={FaSave}
                 >
@@ -615,7 +724,7 @@ export default function ValuationPage() {
                 </HeaderButton>
 
                 <HeaderButton
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canApproveToLegal}
                   onClick={handleRaiseQuery}
                   icon={FaQuestionCircle}
                 >
@@ -623,7 +732,7 @@ export default function ValuationPage() {
                 </HeaderButton>
 
                 <HeaderButton
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canApproveToLegal}
                   onClick={handleMarkNegative}
                   icon={FaTimesCircle}
                 >
@@ -631,13 +740,15 @@ export default function ValuationPage() {
                 </HeaderButton>
 
                 <HeaderButton
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canApproveToLegal}
                   onClick={handleApprove}
                   icon={FaPaperPlane}
                 >
                   {approveMutation.isPending
                     ? "Sending..."
-                    : "Accept & Send to Legal"}
+                    : alreadySentToLegal
+                      ? "Already Sent to Legal"
+                      : "Accept & Send to Legal"}
                 </HeaderButton>
               </div>
             </div>
@@ -697,7 +808,7 @@ export default function ValuationPage() {
           </div>
         )}
 
-        <WorkflowCard />
+        <WorkflowCard application={application} />
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           {scoreCards.map((card) => (
@@ -801,7 +912,7 @@ export default function ValuationPage() {
               <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canApproveToLegal}
                   onClick={handleSaveDraft}
                   className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-50"
                 >
@@ -810,7 +921,7 @@ export default function ValuationPage() {
 
                 <button
                   type="button"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canApproveToLegal}
                   onClick={handleRaiseQuery}
                   className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:opacity-50"
                 >
@@ -819,7 +930,7 @@ export default function ValuationPage() {
 
                 <button
                   type="button"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canApproveToLegal}
                   onClick={handleMarkNegative}
                   className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-rose-700 shadow-sm transition-all hover:bg-rose-100 disabled:opacity-50"
                 >
@@ -828,13 +939,15 @@ export default function ValuationPage() {
 
                 <button
                   type="button"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canApproveToLegal}
                   onClick={handleApprove}
                   className="rounded-xl bg-[#0f2942] px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-[#183d62] disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   {approveMutation.isPending
                     ? "Sending..."
-                    : "Accept & Send to Legal"}
+                    : alreadySentToLegal
+                      ? "Already Sent to Legal"
+                      : "Accept & Send to Legal"}
                 </button>
               </div>
             </div>
@@ -849,35 +962,62 @@ export default function ValuationPage() {
   );
 }
 
-function WorkflowCard() {
+function WorkflowCard({ application }) {
+  const currentStepIndex = getCurrentWorkflowIndex(application);
+
   return (
     <div className="rounded-[26px] border border-blue-100 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between gap-6 overflow-x-auto">
         {workflowSteps.map((step, index) => {
-          const completed = step.status === "completed";
-          const current = step.status === "current";
+          const completed = currentStepIndex >= 0 && index < currentStepIndex;
+          const current = currentStepIndex >= 0 && index === currentStepIndex;
 
           return (
-            <div key={step.id} className="flex min-w-[120px] flex-1 flex-col items-center text-center">
+            <div
+              key={step.key}
+              className="flex min-w-[120px] flex-1 flex-col items-center text-center"
+            >
               <div className="flex items-center gap-4">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${
-                  completed
-                    ? "bg-emerald-500 text-white"
-                    : current
-                      ? "bg-teal-600 text-white ring-8 ring-teal-100"
-                      : "bg-slate-100 text-slate-400"
-                }`}>
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${
+                    completed
+                      ? "bg-emerald-500 text-white"
+                      : current
+                        ? "bg-teal-600 text-white ring-8 ring-teal-100"
+                        : "bg-slate-100 text-slate-400"
+                  }`}
+                >
                   {completed ? <FaCheck /> : step.id}
                 </div>
 
                 {index < workflowSteps.length - 1 && (
-                  <div className="hidden h-0.5 w-14 bg-teal-200 xl:block" />
+                  <div
+                    className={`hidden h-0.5 w-14 xl:block ${
+                      index < currentStepIndex
+                        ? "bg-emerald-400"
+                        : "bg-slate-200"
+                    }`}
+                  />
                 )}
               </div>
 
-              <p className={`mt-3 text-xs font-black ${current ? "text-teal-700" : "text-slate-700"}`}>
+              <p
+                className={`mt-3 text-xs font-black ${
+                  current
+                    ? "text-teal-700"
+                    : completed
+                      ? "text-emerald-700"
+                      : "text-slate-500"
+                }`}
+              >
                 {step.label}
               </p>
+
+              {current && (
+                <span className="mt-1 rounded-full bg-teal-50 px-2 py-1 text-[9px] font-black uppercase text-teal-700">
+                  Current
+                </span>
+              )}
             </div>
           );
         })}

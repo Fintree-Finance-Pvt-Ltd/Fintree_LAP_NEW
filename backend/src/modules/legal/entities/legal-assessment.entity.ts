@@ -17,7 +17,10 @@ export enum LegalAssessmentStatus {
   DRAFT = 'DRAFT',
   QUERY = 'QUERY',
   NEGATIVE = 'NEGATIVE',
-  APPROVED_TO_OPS_MAKER = 'APPROVED_TO_OPS_MAKER',
+  // APPROVED_TO_OPS_MAKER = 'APPROVED_TO_OPS_MAKER',
+    APPROVED_TO_CREDIT_MAKER =
+    'APPROVED_TO_CREDIT_MAKER',
+
 }
 
 @Entity('legal_assessments')
