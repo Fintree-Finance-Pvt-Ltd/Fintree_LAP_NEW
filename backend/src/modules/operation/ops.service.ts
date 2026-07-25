@@ -1241,7 +1241,7 @@ async approveByOpsMaker(
 ) {
   return this.workflowTransitions.move({
     applicationId,
-    action: 'OPS_MAKER_APPROVE_TO_OPS_HEAD',
+    action: 'OPS_MAKER_APPROVE_TO_OPS_CHECKER',
     remarks: 'Approved by Operations Maker.',
     actor: user,
   });
@@ -1254,7 +1254,7 @@ async approveByOpsHead(
 ) {
   return this.workflowTransitions.move({
     applicationId,
-    action: 'OPS_HEAD_APPROVE_TO_OPS_CHECKER',
+    action: 'OPS_HEAD_APPROVE_TO_DISBURSEMENT',
     remarks: 'Approved by Operations Head.',
     actor: user,
   });
@@ -1267,7 +1267,7 @@ async approveByOpsChecker(
 ) {
   return this.workflowTransitions.move({
     applicationId,
-    action: 'OPS_CHECKER_APPROVE_TO_DISBURSEMENT',
+    action: 'OPS_CHECKER_APPROVE_TO_OPS_HEAD',
     remarks: 'Approved by Operations Checker.',
     actor: user,
   });

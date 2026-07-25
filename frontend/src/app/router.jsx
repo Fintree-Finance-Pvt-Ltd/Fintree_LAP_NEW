@@ -72,6 +72,7 @@ import OpsHead from '../features/Operation/pages/OpsHead.jsx';
 
 
 import LmsDashboard from "../features/lms/pages/LmsDashboard.jsx";
+import LegalApprovedCases from '../features/credit/pages/LegalApprovedCases.jsx';
 
 const protectedChildren = [
   { path: '/dashboard', element: <RoleDashboardRedirect /> },
@@ -130,6 +131,8 @@ const protectedChildren = [
   { path: "/credit-maker/:applicationId", element: <CreditMakerProposal /> },
   { path: "/credit-checker", element: <CreditCheckerReview /> },
   { path: "/credit-checker/:applicationId", element: <CreditCheckerReview /> },
+    { path: "/legal-approved-to-credit-maker", element: <LegalApprovedCases /> },
+
 
   // Legal Officer route
   { path: "/legal-dashboard", element: <LegalDashboard /> },

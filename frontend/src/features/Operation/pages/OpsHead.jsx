@@ -1259,7 +1259,7 @@ if (caseError) {
 
   {decisionSubmitting
     ? "Approving..."
-    : "Approve & Send to Ops Head"}
+    : "Approve & Send to Disbursed"}
 </button>
           </div>
         </section>

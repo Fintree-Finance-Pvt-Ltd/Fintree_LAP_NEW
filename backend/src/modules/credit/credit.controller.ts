@@ -28,6 +28,31 @@ export class CreditController {
   }
 
 
+  @Post(
+  ':applicationId/maker/submit-to-valuation',
+)
+creditMakerSubmitToValuation(
+  @Param(
+    'applicationId',
+    ParseIntPipe,
+  )
+  applicationId: number,
+
+  @Body()
+  body: any,
+
+  @CurrentUser()
+  actor: Actor,
+) {
+  return this.creditService
+    .creditMakerSubmitToValuation(
+      applicationId,
+      body,
+      actor,
+    );
+}
+
+
 
 
   // CM SAVE DRAFT
@@ -70,6 +95,12 @@ getCreditAssessment(
     return this.creditService.getCreditApplication(applicationId);
   }
 
+
+  @Get('maker/final/cases')
+getFinalCreditMakerCases() {
+  return this.creditService
+    .getFinalCreditMakerCases();
+}
   // CREDIT MAKER SAVE DRAFT
   @Post(':applicationId/maker/save-draft')
   creditMakerSaveDraft(

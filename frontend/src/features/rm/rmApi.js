@@ -433,6 +433,15 @@ submitToBm: (applicationId) =>
 
 submitToCm: (applicationId) =>
   apiClient.post(`/applications/${applicationId}/submit-to-cm`),
+
+submitToCredit: (
+  applicationId,
+  payload = {},
+) =>
+  apiClient.post(
+    `/applications/${applicationId}/submit-to-credit`,
+    payload,
+  ),
   
   createLapPaymentLink: (applicationId, payload) =>
   apiClient.post(

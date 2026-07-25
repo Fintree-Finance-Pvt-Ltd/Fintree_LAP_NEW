@@ -592,22 +592,108 @@ async cmRecommendToCreditMaker(
     }
   }
 
-  private ensureCreditMakerCase(application: Application) {
-    const stage = String(application.stage || '').toUpperCase();
-    const status = String(application.status || '').toUpperCase();
+  // private ensureCreditMakerCase(application: Application) {
+  //   const stage = String(application.stage || '').toUpperCase();
+  //   const status = String(application.status || '').toUpperCase();
 
-    if (
-      ![ApplicationStage.CREDIT, ApplicationStage.CREDIT_MAKER].includes(stage as ApplicationStage) ||
-      ![
-        ApplicationStatus.CREDIT_MAKER_PENDING,
-        ApplicationStatus.CREDIT_MAKER_QUERY,
-      ].includes(status as ApplicationStatus)
-    ) {
-      throw new BadRequestException(
-        'Application must be in Credit Maker stage.',
-      );
-    }
+  //   if (
+  //     ![ApplicationStage.CREDIT, ApplicationStage.CREDIT_MAKER].includes(stage as ApplicationStage) ||
+  //     ![
+  //       ApplicationStatus.CREDIT_MAKER_PENDING,
+  //       ApplicationStatus.CREDIT_MAKER_QUERY,
+  //     ].includes(status as ApplicationStatus)
+  //   ) {
+  //     throw new BadRequestException(
+  //       'Application must be in Credit Maker stage.',
+  //     );
+  //   }
+  // }
+
+  private ensureInitialCreditMakerCase(
+  application: Application,
+) {
+  const stage = String(
+    application.stage || '',
+  ).toUpperCase();
+
+  const status = String(
+    application.status || '',
+  ).toUpperCase();
+
+  const validStage =
+    stage === ApplicationStage.CREDIT_MAKER;
+
+  const validStatus = [
+    ApplicationStatus.CREDIT_MAKER_PENDING,
+    ApplicationStatus.CREDIT_MAKER_QUERY,
+  ].includes(status as ApplicationStatus);
+
+  if (!validStage || !validStatus) {
+    throw new BadRequestException(
+      `Application must be in ` +
+        `CREDIT_MAKER/CREDIT_MAKER_PENDING. ` +
+        `Current state is ${stage}/${status}.`,
+    );
   }
+}
+
+private ensureFinalCreditMakerCase(
+  application: Application,
+) {
+  const stage = String(
+    application.stage || '',
+  ).toUpperCase();
+
+  const status = String(
+    application.status || '',
+  ).toUpperCase();
+
+  if (
+    stage !==
+      ApplicationStage.CREDIT_MAKER_FINAL ||
+    status !==
+      ApplicationStatus.CREDIT_MAKER_FINAL_PENDING
+  ) {
+    throw new BadRequestException(
+      `Application must be in ` +
+        `CREDIT_MAKER_FINAL/` +
+        `CREDIT_MAKER_FINAL_PENDING. ` +
+        `Current state is ${stage}/${status}.`,
+    );
+  }
+}
+
+private ensureAnyCreditMakerCase(
+  application: Application,
+) {
+  const stage = String(
+    application.stage || '',
+  ).toUpperCase();
+
+  const status = String(
+    application.status || '',
+  ).toUpperCase();
+
+  const initialCase =
+    stage === ApplicationStage.CREDIT_MAKER &&
+    [
+      ApplicationStatus.CREDIT_MAKER_PENDING,
+      ApplicationStatus.CREDIT_MAKER_QUERY,
+    ].includes(status as ApplicationStatus);
+
+  const finalCase =
+    stage ===
+      ApplicationStage.CREDIT_MAKER_FINAL &&
+    status ===
+      ApplicationStatus.CREDIT_MAKER_FINAL_PENDING;
+
+  if (!initialCase && !finalCase) {
+    throw new BadRequestException(
+      `Application is not available for Credit Maker. ` +
+        `Current state is ${stage}/${status}.`,
+    );
+  }
+}
 
   private ensureCreditChecker(actor: Actor) {
   const roles = this.getActorRoles(actor);
@@ -619,36 +705,82 @@ async cmRecommendToCreditMaker(
   }
 }
 
-private ensureCreditCheckerCase(application: Application) {
-  const stage = String(application.stage || '').toUpperCase();
-  const status = String(application.status || '').toUpperCase();
+// private ensureCreditCheckerCase(application: Application) {
+//   const stage = String(application.stage || '').toUpperCase();
+//   const status = String(application.status || '').toUpperCase();
+
+//   if (
+//     ![ApplicationStage.CREDIT, ApplicationStage.CREDIT_MAKER_FINAL].includes(stage as ApplicationStage) ||
+//     ![
+//       ApplicationStatus.CREDIT_MAKER_FINAL_QUERY,
+//       ApplicationStatus.CREDIT_MAKER_FINAL_QUERY,
+//     ].includes(status as ApplicationStatus)
+//   ) {
+//     throw new BadRequestException(
+//       'Application must be in Credit Checker stage.',
+//     );
+//   }
+// }
+
+private ensureCreditCheckerCase(
+  application: Application,
+) {
+  const stage = String(
+    application.stage || '',
+  ).toUpperCase();
+
+  const status = String(
+    application.status || '',
+  ).toUpperCase();
 
   if (
-    ![ApplicationStage.CREDIT, ApplicationStage.CREDIT_CHECKER].includes(stage as ApplicationStage) ||
-    ![
-      ApplicationStatus.CREDIT_CHECKER_PENDING,
-      ApplicationStatus.CREDIT_CHECKER_QUERY,
-    ].includes(status as ApplicationStatus)
+    stage !==
+      ApplicationStage.CREDIT_MAKER_FINAL ||
+    status !==
+      ApplicationStatus
+        .CREDIT_MAKER_FINAL_PENDING
   ) {
     throw new BadRequestException(
-      'Application must be in Credit Checker stage.',
+      `Application must be in ` +
+        `CREDIT_MAKER_FINAL/` +
+        `CREDIT_MAKER_FINAL_PENDING. ` +
+        `Current state is ${stage}/${status}.`,
     );
   }
 }
 
+async getFinalCreditMakerCases() {
+  const applications = await this.dataSource
+    .getRepository(Application)
+    .createQueryBuilder('application')
+    .where('application.stage = :stage', {
+      stage: ApplicationStage.CREDIT_MAKER_FINAL,
+    })
+    .andWhere('application.status = :status', {
+      status:
+        ApplicationStatus.CREDIT_MAKER_FINAL_PENDING,
+    })
+    .orderBy('application.updatedAt', 'DESC')
+    .getMany();
 
-
+  return {
+    success: true,
+    message:
+      'Final Credit Maker cases fetched successfully.',
+    data: applications,
+  };
+}
   async getCreditMakerCases() {
     const rows = await this.dataSource
       .getRepository(Application)
       .createQueryBuilder('a')
       .where('a.stage IN (:...stages)', {
-        stages: [ApplicationStage.CREDIT, ApplicationStage.CREDIT_MAKER],
+        stages: [ ApplicationStage.CREDIT_MAKER],
       })
       .andWhere('a.status IN (:...statuses)', {
         statuses: [
           ApplicationStatus.CREDIT_MAKER_PENDING,
-          ApplicationStatus.CREDIT_MAKER_QUERY,
+          
         ],
       })
       .orderBy('a.updatedAt', 'DESC')
@@ -660,17 +792,17 @@ private ensureCreditCheckerCase(application: Application) {
     };
   }
 
-  async getCreditCheckerCases() {
+  async  getCreditCheckerCases() {
     const rows = await this.dataSource
       .getRepository(Application)
       .createQueryBuilder('a')
       .where('a.stage IN (:...stages)', {
-        stages: [ApplicationStage.CREDIT, ApplicationStage.CREDIT_CHECKER],
+        stages: [ApplicationStage.CREDIT, ApplicationStage.CREDIT_MAKER_FINAL],
       })
       .andWhere('a.status IN (:...statuses)', {
         statuses: [
-          ApplicationStatus.CREDIT_CHECKER_PENDING,
-          ApplicationStatus.CREDIT_CHECKER_QUERY,
+          ApplicationStatus.CREDIT_MAKER_FINAL_PENDING,
+          ApplicationStatus.CREDIT_MAKER_FINAL_QUERY,
         ],
       })
       .orderBy('a.updatedAt', 'DESC')
@@ -733,7 +865,7 @@ private ensureCreditCheckerCase(application: Application) {
         throw new NotFoundException('Application not found');
       }
 
-      this.ensureCreditMakerCase(application);
+      this.ensureAnyCreditMakerCase(application);
 
       const remarks =
         dto?.remarks ||
@@ -831,7 +963,7 @@ private ensureCreditCheckerCase(application: Application) {
         throw new NotFoundException('Application not found');
       }
 
-      this.ensureCreditMakerCase(application);
+      this.ensureInitialCreditMakerCase(application);
 
       const movement = await this.workflowTransitions.move({
         applicationId, action: 'CREDIT_MAKER_QUERY',
@@ -935,15 +1067,29 @@ private ensureCreditCheckerCase(application: Application) {
         throw new NotFoundException('Application not found');
       }
 
-      this.ensureCreditMakerCase(application);
+      this.ensureFinalCreditMakerCase(application);
 
       const fromStage = application.stage;
       const fromStatus = application.status;
 
-      const movement = await this.workflowTransitions.move({
-        applicationId, action: 'CREDIT_MAKER_SUBMIT_TO_CHECKER',
-        remarks: dto?.remarks || dto?.makerRecommendation, payload: dto, actor, manager,
-      });
+    const movement =
+  await this.workflowTransitions.move({
+    applicationId,
+
+    action:
+      'CREDIT_MAKER_FINAL_APPROVE_TO_CHECKER',
+
+    remarks:
+      dto?.remarks ||
+      dto?.makerRecommendation ||
+      'Final Credit Maker approval completed and application submitted to Credit Checker.',
+
+    payload: dto,
+    actor,
+    manager,
+  });
+
+
       const saved = movement.data.application;
 
       const remarks =
@@ -1023,6 +1169,360 @@ private ensureCreditCheckerCase(application: Application) {
 };
     });
   }
+
+  async creditMakerSubmitToValuation(
+  applicationId: number,
+  dto: any,
+  actor: Actor,
+) {
+  this.ensureCreditMaker(actor);
+
+  return this.dataSource.transaction(
+    async (manager) => {
+      const application =
+        await manager.findOne(Application, {
+          where: {
+            id: applicationId,
+          },
+          lock: {
+            mode:
+              'pessimistic_write',
+          },
+        });
+
+      if (!application) {
+        throw new NotFoundException(
+          'Application not found',
+        );
+      }
+
+      this.ensureInitialCreditMakerCase(
+        application,
+      );
+
+      const fromStage =
+        application.stage;
+
+      const fromStatus =
+        application.status;
+
+      const remarks =
+        dto?.remarks ||
+        dto?.makerRecommendation ||
+        'Credit Maker approved and submitted the application to Valuation.';
+
+      const movement =
+        await this.workflowTransitions.move({
+          applicationId,
+
+          action:
+            'CREDIT_MAKER_APPROVE_TO_VALUATION',
+
+          remarks,
+          payload:
+            dto,
+
+          actor,
+          manager,
+        });
+
+      const saved =
+        movement.data.application;
+
+      const workflowPayload = {
+        applicationId,
+
+        currentStage:
+          saved.stage,
+
+        currentStatus:
+          saved.status,
+
+        assignedTo:
+          'VALUATION',
+
+        currentOwner:
+          actor.id,
+
+        lastAction:
+          'CREDIT_MAKER_APPROVED_TO_VALUATION' as any,
+
+        lastRemarks:
+          remarks,
+      };
+
+      let workflow =
+        await manager.findOne(
+          Workflow,
+          {
+            where: {
+              applicationId,
+            },
+          },
+        );
+
+      if (workflow) {
+        Object.assign(
+          workflow,
+          workflowPayload,
+        );
+
+        await manager.save(
+          workflow,
+        );
+      } else {
+        workflow =
+          manager.create(
+            Workflow,
+            workflowPayload,
+          );
+
+        await manager.save(
+          workflow,
+        );
+      }
+
+      await manager.save(
+        WorkflowHistory,
+        manager.create(
+          WorkflowHistory,
+          {
+            applicationId,
+
+            fromRole:
+              fromStage,
+
+            toRole:
+              saved.stage,
+
+            action:
+              'CREDIT_MAKER_APPROVED_TO_VALUATION' as any,
+
+            remarks,
+
+            actionBy:
+              actor.id,
+          },
+        ),
+      );
+
+      await manager.save(
+        AuditLog,
+        manager.create(AuditLog, {
+          action:
+            'CREDIT_MAKER_APPROVED_TO_VALUATION',
+
+          entityName:
+            'applications',
+
+          entityId:
+            applicationId,
+
+          snapshot: {
+            fromStage,
+            fromStatus,
+
+            toStage:
+              saved.stage,
+
+            toStatus:
+              saved.status,
+
+            assignedTo:
+              'VALUATION',
+
+            makerAssessment:
+              dto,
+          },
+
+          createdBy:
+            actor.id,
+        }),
+      );
+
+      const creditAssessment =
+        await this.saveCreditMakerAssessment(
+          saved,
+          dto,
+          actor,
+          manager,
+          CreditAssessmentStatus
+            .MAKER_SUBMITTED,
+        );
+
+      return {
+        success: true,
+
+        message:
+          'Application approved by Credit Maker and submitted to Valuation successfully.',
+
+        data: {
+          application:
+            saved,
+
+          creditAssessment,
+        },
+      };
+    },
+  );
+}
+
+// async creditCheckerApprove(
+//   applicationId: number,
+//   dto: any,
+//   actor: Actor,
+// ) {
+//   this.ensureCreditChecker(actor);
+
+//   return this.dataSource.transaction(async (manager) => {
+//     const application = await manager.findOne(Application, {
+//       where: {
+//         id: applicationId,
+//       },
+//       lock: {
+//         mode: 'pessimistic_write',
+//       },
+//     });
+
+//     if (!application) {
+//       throw new NotFoundException('Application not found');
+//     }
+
+//     this.ensureCreditCheckerCase(application);
+
+//     const fromStage = application.stage;
+//     const fromStatus = application.status;
+
+   
+// const movement =
+//   await this.workflowTransitions.move({
+//     applicationId,
+
+//     action:
+//       'CREDIT_CHECKER_APPROVE_TO_CREDIT_MANAGER',
+
+ 
+//     payload: dto,
+//     actor,
+//     manager,
+//   });
+
+//     // const movement = await this.workflowTransitions.move({
+//     //   applicationId, action: 'CREDIT_CHECKER_APPROVE_TO_CREDIT_MANAGER',
+//     //   remarks: dto?.remarks || dto?.checkerRemarks, payload: dto, actor, manager,
+//     // });
+//     const saved = movement.data.application;
+
+//     const remarks =
+//       dto?.remarks ||
+//       dto?.checkerRemarks ||
+//       'Credit Checker approved and sent case to Credit Manager.';
+
+//     const workflowPayload = {
+//       applicationId,
+//       currentStage: saved.stage,
+//       currentStatus: saved.status,
+//       assignedTo: 'CM',
+//       currentOwner: actor.id,
+//       lastAction: 'CREDIT_CHECKER_APPROVED_SENT_TO_CREDIT_MANAGER' as any,
+//       lastRemarks: remarks,
+//     };
+
+//     let workflow = await manager.findOne(Workflow, {
+//       where: {
+//         applicationId,
+//       },
+//     });
+
+//     if (workflow) {
+//       Object.assign(workflow, workflowPayload);
+//       await manager.save(workflow);
+//     } else {
+//       workflow = manager.create(Workflow, workflowPayload);
+//       await manager.save(workflow);
+//     }
+
+//     await manager.save(
+//   AuditLog,
+//   manager.create(AuditLog, {
+//     action:
+//       'CREDIT_CHECKER_APPROVED_TO_CREDIT_MANAGER',
+
+//     entityName:
+//       'applications',
+
+//     entityId:
+//       applicationId,
+
+//     snapshot: {
+//       fromStage,
+//       fromStatus,
+
+//       toStage:
+//         saved.stage,
+
+//       toStatus:
+//         saved.status,
+
+//       assignedTo:
+//         'CM',
+
+//       checkerReview:
+//         dto,
+//     },
+
+//     createdBy:
+//       actor.id,
+//   }),
+// );
+//     // await manager.save(
+//     //   WorkflowHistory,
+//     //   manager.create(WorkflowHistory, {
+//     //     applicationId,
+//     //     fromRole: fromStage,
+//     //     toRole: saved.stage,
+//     //     action: 'CREDIT_CHECKER_APPROVED_SENT_TO_CREDIT_MANAGER' as any,
+//     //     remarks,
+//     //     actionBy: actor.id,
+//     //   }),
+//     // );
+
+//     await manager.save(
+//       AuditLog,
+//       manager.create(AuditLog, {
+//         action: 'CREDIT_CHECKER_APPROVED_SENT_TO_CREDIT_MANAGER',
+//         entityName: 'applications',
+//         entityId: applicationId,
+//         snapshot: {
+//           fromStage,
+//           fromStatus,
+//           toStage: saved.stage,
+//           toStatus: saved.status,
+//           assignedTo: 'CREDIT_MANAGER',
+//           checkerReview: dto,
+//         },
+//         createdBy: actor.id,
+//       }),
+//     );
+// const creditAssessment = await this.saveCreditCheckerAssessment(
+//   saved,
+//   dto,
+//   actor,
+//   manager,
+//   CreditAssessmentStatus.CHECKER_APPROVED,
+// );
+//  return {
+//   success: true,
+//   message:
+//     'Application approved by Credit Checker and sent to Valuation successfully.',
+//   data: {
+//     application: saved,
+//     creditAssessment,
+//   },
+// };
+//   });
+// }
+
 async creditCheckerApprove(
   applicationId: number,
   dto: any,
@@ -1030,108 +1530,189 @@ async creditCheckerApprove(
 ) {
   this.ensureCreditChecker(actor);
 
-  return this.dataSource.transaction(async (manager) => {
-    const application = await manager.findOne(Application, {
-      where: {
-        id: applicationId,
-      },
-      lock: {
-        mode: 'pessimistic_write',
-      },
-    });
+  return this.dataSource.transaction(
+    async (manager) => {
+      const application =
+        await manager.findOne(Application, {
+          where: {
+            id: applicationId,
+          },
+          lock: {
+            mode: 'pessimistic_write',
+          },
+        });
 
-    if (!application) {
-      throw new NotFoundException('Application not found');
-    }
+      if (!application) {
+        throw new NotFoundException(
+          'Application not found',
+        );
+      }
 
-    this.ensureCreditCheckerCase(application);
+      this.ensureCreditCheckerCase(
+        application,
+      );
 
-    const fromStage = application.stage;
-    const fromStatus = application.status;
+      const fromStage =
+        application.stage;
 
-    const movement = await this.workflowTransitions.move({
-      applicationId, action: 'CREDIT_CHECKER_APPROVE_TO_VALUATION',
-      remarks: dto?.remarks || dto?.checkerRemarks, payload: dto, actor, manager,
-    });
-    const saved = movement.data.application;
+      const fromStatus =
+        application.status;
 
-    const remarks =
-      dto?.remarks ||
-      dto?.checkerRemarks ||
-      'Credit Checker approved and sent case to Valuation.';
+      const remarks =
+        dto?.remarks ||
+        dto?.checkerRemarks ||
+        'Credit Checker approved and submitted the application to Credit Manager.';
 
-    const workflowPayload = {
-      applicationId,
-      currentStage: saved.stage,
-      currentStatus: saved.status,
-      assignedTo: 'VALUATION',
-      currentOwner: actor.id,
-      lastAction: 'CREDIT_CHECKER_APPROVED_SENT_TO_VALUATION' as any,
-      lastRemarks: remarks,
-    };
+      const movement =
+        await this.workflowTransitions.move({
+          applicationId,
 
-    let workflow = await manager.findOne(Workflow, {
-      where: {
+          action:
+            'CREDIT_CHECKER_APPROVE_TO_CREDIT_MANAGER',
+
+          remarks,
+          payload: dto,
+          actor,
+          manager,
+        });
+
+      const saved =
+        movement.data.application;
+
+      const workflowPayload = {
         applicationId,
-      },
-    });
 
-    if (workflow) {
-      Object.assign(workflow, workflowPayload);
-      await manager.save(workflow);
-    } else {
-      workflow = manager.create(Workflow, workflowPayload);
-      await manager.save(workflow);
-    }
+        currentStage:
+          saved.stage,
 
-    await manager.save(
-      WorkflowHistory,
-      manager.create(WorkflowHistory, {
-        applicationId,
-        fromRole: fromStage,
-        toRole: saved.stage,
-        action: 'CREDIT_CHECKER_APPROVED_SENT_TO_VALUATION' as any,
-        remarks,
-        actionBy: actor.id,
-      }),
-    );
+        currentStatus:
+          saved.status,
 
-    await manager.save(
-      AuditLog,
-      manager.create(AuditLog, {
-        action: 'CREDIT_CHECKER_APPROVED_SENT_TO_VALUATION',
-        entityName: 'applications',
-        entityId: applicationId,
-        snapshot: {
-          fromStage,
-          fromStatus,
-          toStage: saved.stage,
-          toStatus: saved.status,
-          assignedTo: 'VALUATION',
-          checkerReview: dto,
+        assignedTo:
+          'CM',
+
+        currentOwner:
+          actor.id,
+
+        lastAction:
+          'CREDIT_CHECKER_APPROVED_TO_CREDIT_MANAGER' as any,
+
+        lastRemarks:
+          remarks,
+      };
+
+      let workflow =
+        await manager.findOne(Workflow, {
+          where: {
+            applicationId,
+          },
+        });
+
+      if (workflow) {
+        Object.assign(
+          workflow,
+          workflowPayload,
+        );
+
+        await manager.save(
+          workflow,
+        );
+      } else {
+        workflow =
+          manager.create(
+            Workflow,
+            workflowPayload,
+          );
+
+        await manager.save(
+          workflow,
+        );
+      }
+
+      await manager.save(
+        WorkflowHistory,
+        manager.create(
+          WorkflowHistory,
+          {
+            applicationId,
+
+            fromRole:
+              fromStage,
+
+            toRole:
+              saved.stage,
+
+            action:
+              'CREDIT_CHECKER_APPROVED_TO_CREDIT_MANAGER' as any,
+
+            remarks,
+
+            actionBy:
+              actor.id,
+          },
+        ),
+      );
+
+      await manager.save(
+        AuditLog,
+        manager.create(AuditLog, {
+          action:
+            'CREDIT_CHECKER_APPROVED_TO_CREDIT_MANAGER',
+
+          entityName:
+            'applications',
+
+          entityId:
+            applicationId,
+
+          snapshot: {
+            fromStage,
+            fromStatus,
+
+            toStage:
+              saved.stage,
+
+            toStatus:
+              saved.status,
+
+            assignedTo:
+              'CM',
+
+            checkerReview:
+              dto,
+          },
+
+          createdBy:
+            actor.id,
+        }),
+      );
+
+      const creditAssessment =
+        await this.saveCreditCheckerAssessment(
+          saved,
+          dto,
+          actor,
+          manager,
+          CreditAssessmentStatus
+            .CHECKER_APPROVED,
+        );
+
+      return {
+        success: true,
+
+        message:
+          'Application approved and sent to Credit Manager successfully.',
+
+        data: {
+          application:
+            saved,
+
+          creditAssessment,
         },
-        createdBy: actor.id,
-      }),
-    );
-const creditAssessment = await this.saveCreditCheckerAssessment(
-  saved,
-  dto,
-  actor,
-  manager,
-  CreditAssessmentStatus.CHECKER_APPROVED,
-);
- return {
-  success: true,
-  message:
-    'Application approved by Credit Checker and sent to Valuation successfully.',
-  data: {
-    application: saved,
-    creditAssessment,
-  },
-};
-  });
+      };
+    },
+  );
 }
-
 
 async creditCheckerReturnToMaker(
   applicationId: number,

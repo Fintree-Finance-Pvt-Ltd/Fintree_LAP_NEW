@@ -34,8 +34,9 @@ const BASE_WORKFLOW_STEPS = [
   { id: 1, key: "LEAD", label: "Lead" },
   { id: 2, key: "FIELD", label: "Field Verification" },
   { id: 3, key: "BM", label: "BM Review" },
-  { id: 4, key: "CM", label: "CM Screening" },
-  { id: 5, key: "CREDIT_MAKER", label: "Credit Maker" },
+    { id: 4, key: "CREDIT_MAKER", label: "Credit Maker" },
+
+  { id: 5, key: "CM", label: "CM Screening" },
   { id: 6, key: "CREDIT_CHECKER", label: "Credit Checker" },
   { id: 7, key: "VALUATION", label: "Valuation" },
   { id: 8, key: "LEGAL", label: "Legal" },
@@ -169,12 +170,12 @@ const filterApplicationsByRole = (rows, activeRole, roles) => {
       );
     }
 
-    if (activeRole === "CREDIT_MAKER") {
-      return (
-        stage === "CREDIT" ||
-        includesStatus(status, CREDIT_MAKER_VISIBLE_STATUSES)
-      );
-    }
+  if (activeRole === "CREDIT_MAKER") {
+  return (
+    stage === "CREDIT_MAKER" &&
+    status === "CREDIT_MAKER_PENDING"
+  );
+}
 
     if (activeRole === "CREDIT_CHECKER") {
       return (
@@ -208,14 +209,34 @@ const filterApplicationsByRole = (rows, activeRole, roles) => {
   });
 };
 
-const fetchApplicationList = (activeRole) => {
-  if (typeof creditApi.applications === "function") {
-    return creditApi.applications({
-      page: 1,
-      limit: 500,
-    });
-  }
+// const fetchApplicationList = (activeRole) => {
+//   if (typeof creditApi.applications === "function") {
+//     return creditApi.applications({
+//       page: 1,
+//       limit: 500,
+//     });
+//   }
 
+//   if (
+//     activeRole === "CREDIT_MAKER" &&
+//     typeof creditApi.makerCases === "function"
+//   ) {
+//     return creditApi.makerCases();
+//   }
+
+//   if (
+//     activeRole === "CREDIT_CHECKER" &&
+//     typeof creditApi.checkerCases === "function"
+//   ) {
+//     return creditApi.checkerCases();
+//   }
+
+//   throw new Error(
+//     "creditApi.applications is required for common application data screen.",
+//   );
+// };
+
+const fetchApplicationList = (activeRole) => {
   if (
     activeRole === "CREDIT_MAKER" &&
     typeof creditApi.makerCases === "function"
@@ -230,8 +251,17 @@ const fetchApplicationList = (activeRole) => {
     return creditApi.checkerCases();
   }
 
+  if (
+    typeof creditApi.applications === "function"
+  ) {
+    return creditApi.applications({
+      page: 1,
+      limit: 500,
+    });
+  }
+
   throw new Error(
-    "creditApi.applications is required for common application data screen.",
+    "Application list API is not available.",
   );
 };
 

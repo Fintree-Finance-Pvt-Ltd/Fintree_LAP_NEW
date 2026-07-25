@@ -1,3 +1,4 @@
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -21,6 +22,10 @@ import {
 import { useParams } from "react-router-dom";
 
 import { creditApi } from "../creditApi.js";
+
+const FINAL_MAKER_STAGE ="CREDIT_MAKER_FINAL";
+const FINAL_MAKER_STATUS = "CREDIT_MAKER_FINAL_PENDING";
+
 
 const BASE_WORKFLOW_STEPS = [
   { id: 1, key: "LEAD", label: "Lead" },
@@ -799,14 +804,16 @@ const buildInitialForm = (application, creditAssessment) => {
   };
 };
 
-const fetchMakerCaseList = () => {
-  if (typeof creditApi.makerCases === "function") {
-    return creditApi.makerCases();
+const fetchFinalMakerCaseList = () => {
+  if (typeof creditApi.finalMakerCases === "function") {
+    return creditApi.finalMakerCases();
   }
 
   return creditApi.applications({
     page: 1,
     limit: 500,
+    stage: FINAL_MAKER_STAGE,
+    status: FINAL_MAKER_STATUS,
   });
 };
 
@@ -818,7 +825,7 @@ const fetchFullApplication = (applicationId) => {
   return creditApi.getCreditApplication(applicationId);
 };
 
-export default function CreditMakerProposal() {
+export default function LegalApprovedCases() {
   const { applicationId: routeApplicationId } = useParams();
 
   const [selectedId, setSelectedId] = useState(routeApplicationId || "");
@@ -829,19 +836,39 @@ export default function CreditMakerProposal() {
 
   const queryClient = useQueryClient();
 
-  const makerCasesQuery = useQuery({
-    queryKey: ["credit-maker-cases"],
-    queryFn: fetchMakerCaseList,
-    retry: false,
+  const finalMakerCasesQuery = useQuery({
+  queryKey: ["credit-maker-final-cases"],
+  queryFn: fetchFinalMakerCaseList,
+  retry: false,
+});
+
+ const finalCreditMakerCases = useMemo(() => {
+  const payload = unwrapPayload(
+    finalMakerCasesQuery.data,
+  );
+
+  return normalizeRows(payload).filter((item) => {
+    const stage = String(
+      item?.stage || "",
+    ).toUpperCase();
+
+    const status = String(
+      item?.status || "",
+    ).toUpperCase();
+
+    return (
+      stage === FINAL_MAKER_STAGE &&
+      status === FINAL_MAKER_STATUS
+    );
   });
+}, [finalMakerCasesQuery.data]);
 
-  const creditMakerCases = useMemo(() => {
-    const payload = unwrapPayload(makerCasesQuery.data);
-    return normalizeRows(payload);
-  }, [makerCasesQuery.data]);
 
-  const finalSelectedId =
-    selectedId || routeApplicationId || creditMakerCases?.[0]?.id || "";
+const finalSelectedId =
+  selectedId ||
+  routeApplicationId ||
+  finalCreditMakerCases?.[0]?.id ||
+  "";
 
   const applicationQuery = useQuery({
     queryKey: ["credit-maker-full-application", finalSelectedId],
@@ -1189,50 +1216,10 @@ export default function CreditMakerProposal() {
     },
   });
 
-  // const submitToCheckerMutation = useMutation({
-  //   mutationFn: () =>
-  //     creditApi.creditMakerSubmitToChecker(
-  //       finalSelectedId,
-  //       buildPayload("SUBMIT"),
-  //     ),
 
-  //   onSuccess: async (response) => {
-  //     setMessage(
-  //       response?.data?.message ||
-  //         "Application submitted to Credit Checker successfully.",
-  //     );
-
-  //     await Promise.all([
-  //       queryClient.invalidateQueries({
-  //         queryKey: ["credit-maker-cases"],
-  //       }),
-  //       queryClient.invalidateQueries({
-  //         queryKey: ["credit-assessment", finalSelectedId],
-  //       }),
-  //       queryClient.invalidateQueries({
-  //         queryKey: ["credit-maker-full-application", finalSelectedId],
-  //       }),
-  //       queryClient.invalidateQueries({
-  //         queryKey: ["credit-maker-application-extra", finalSelectedId],
-  //       }),
-  //       queryClient.invalidateQueries({
-  //         queryKey: ["credit-manager-dashboard"],
-  //       }),
-  //     ]);
-  //   },
-
-  //   onError: (error) => {
-  //     setMessage(
-  //       error?.response?.data?.message ||
-  //         error?.message ||
-  //         "Unable to submit case to Credit Checker.",
-  //     );
-  //   },
-  // });
-
-  const submitToValuationMutation = useMutation({
+const submitToCheckerMutation = useMutation({
   mutationFn: () =>
-    creditApi.creditMakerSubmitToValuation(
+    creditApi.creditMakerSubmitToChecker(
       finalSelectedId,
       buildPayload("SUBMIT"),
     ),
@@ -1240,12 +1227,24 @@ export default function CreditMakerProposal() {
   onSuccess: async (response) => {
     setMessage(
       response?.data?.message ||
-        "Application submitted to Valuation successfully.",
+        "Application submitted to Credit Checker successfully.",
     );
+
+    setSelectedId("");
+    setHydratedApplicationId("");
+    setForm(defaultMakerForm);
 
     await Promise.all([
       queryClient.invalidateQueries({
-        queryKey: ["credit-maker-cases"],
+        queryKey: [
+          "credit-maker-final-cases",
+        ],
+      }),
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "credit-checker-cases",
+        ],
       }),
 
       queryClient.invalidateQueries({
@@ -1268,14 +1267,6 @@ export default function CreditMakerProposal() {
           finalSelectedId,
         ],
       }),
-
-      queryClient.invalidateQueries({
-        queryKey: ["valuation-cases"],
-      }),
-
-      queryClient.invalidateQueries({
-        queryKey: ["valuation-dashboard"],
-      }),
     ]);
   },
 
@@ -1283,7 +1274,7 @@ export default function CreditMakerProposal() {
     setMessage(
       error?.response?.data?.message ||
         error?.message ||
-        "Unable to submit case to Valuation.",
+        "Unable to submit case to Credit Checker.",
     );
   },
 });
@@ -1300,13 +1291,13 @@ export default function CreditMakerProposal() {
 
   const handleSubmitToChecker = () => {
     if (!validateBeforeAction("SUBMIT")) return;
-    submitToValuationMutation.mutate();
+    submitToCheckerMutation.mutate();
   };
 
   const submitting =
     saveDraftMutation.isPending ||
     raiseQueryMutation.isPending ||
-    submitToValuationMutation.isPending;
+    submitToCheckerMutation.isPending;
 
   const isLoadingSelected =
     Boolean(finalSelectedId) &&
@@ -1397,9 +1388,9 @@ export default function CreditMakerProposal() {
                   icon={FaPaperPlane}
                   onClick={handleSubmitToChecker}
                 >
-                  {submitToValuationMutation.isPending
+                  {submitToCheckerMutation.isPending
                     ? "Submitting..."
-                    : "Submit to Valuation"}
+                    : "Submit to Checker"}
                 </ActionButton>
               </div>
             </div>
@@ -1410,7 +1401,7 @@ export default function CreditMakerProposal() {
               <select
                 value={finalSelectedId}
                 disabled={
-                  makerCasesQuery.isLoading || creditMakerCases.length === 0
+                  finalMakerCasesQuery.isLoading || finalCreditMakerCases.length === 0
                 }
                 onChange={(event) => {
                   setSelectedId(event.target.value);
@@ -1420,14 +1411,14 @@ export default function CreditMakerProposal() {
                 }}
                 className="h-12 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-sm font-extrabold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
               >
-                {makerCasesQuery.isLoading ? (
+                {finalMakerCasesQuery.isLoading ? (
                   <option value="">Loading Credit Maker cases...</option>
-                ) : creditMakerCases.length === 0 ? (
+                ) : finalCreditMakerCases.length === 0 ? (
                   <option value="">No Credit Maker cases available</option>
                 ) : (
                   <>
                     <option value="">Select Credit Maker Case</option>
-                    {creditMakerCases.map((item) => (
+                    {finalCreditMakerCases.map((item) => (
                       <option key={item.id} value={item.id}>
                         ID: {item.id} |{" "}
                         {item.applicationNumber || `APP-${item.id}`} -{" "}
@@ -2126,7 +2117,7 @@ export default function CreditMakerProposal() {
                       onClick={handleSubmitToChecker}
                       className="rounded-xl bg-[#0f2942] px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-[#183d62] disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
-                      {submitToValuationMutation.isPending
+                      {submitToCheckerMutation.isPending
                         ? "Submitting..."
                         : "Submit to Credit Checker"}
                     </button>

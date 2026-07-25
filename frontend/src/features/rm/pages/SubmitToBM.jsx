@@ -67,12 +67,20 @@ export default function SubmitToBM() {
       return {
         title: "Branch Manager Review",
         subtitle: "Validate sourcing quality, geography, visits and basic eligibility.",
-        buttonText: "Approve to CM",
-        loadingText: "Submitting to CM...",
-        successText: "Application submitted to CM successfully.",
-        actionName: "SUBMITTED_TO_CM",
+        buttonText: "Approve to Credit Maker",
+        loadingText: "Submitting to Credit Maker...",
+        successText: "Application submitted to Credit Maker successfully.",
+        // actionName: "SUBMITTED_TO_CM",
         allowedStatuses: ["BM_PENDING", "SUBMITTED_TO_BM", "BM_REVIEW"],
-        mutationFn: (id) => rmApi.submitToCm(id),
+        // mutationFn: (id) => rmApi.submitToCredit(id),
+         mutationFn: (id) =>
+      rmApi.submitToCredit(id, {
+        decision: "RECOMMENDED",
+
+        remarks:
+          remarks.trim() ||
+          "BM approved application and submitted it to Credit Maker.",
+      }),
       };
     }
 
@@ -139,26 +147,76 @@ export default function SubmitToBM() {
       if (!id) throw new Error("Please select application first.");
       return pageConfig.mutationFn(id);
     },
+    // onSuccess: async (response) => {
+    //   setMessage(response?.data?.message || pageConfig.successText);
+
+    //   await rmApi
+    //     .recordWorkflowStep(selectedId, {
+    //       action: pageConfig.actionName,
+    //       remarks: remarks || pageConfig.successText,
+    //     })
+    //     .catch(() => undefined);
+
+    //   await Promise.all([
+    //     queryClient.invalidateQueries({ queryKey: ["submit-applications", role] }),
+    //     queryClient.invalidateQueries({ queryKey: ["rm-applications"] }),
+    //     queryClient.invalidateQueries({ queryKey: ["rm-application", selectedId] }),
+    //     queryClient.invalidateQueries({ queryKey: ["customer-profile", selectedId] }),
+    //     queryClient.invalidateQueries({ queryKey: ["rm-workflow", selectedId] }),
+    //     queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] }),
+    //     queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] }),
+    //   ]);
+    // },
     onSuccess: async (response) => {
-      setMessage(response?.data?.message || pageConfig.successText);
+  setMessage(
+    response?.data?.message ||
+      pageConfig.successText,
+  );
 
-      await rmApi
-        .recordWorkflowStep(selectedId, {
-          action: pageConfig.actionName,
-          remarks: remarks || pageConfig.successText,
-        })
-        .catch(() => undefined);
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: [
+        "submit-applications",
+        role,
+      ],
+    }),
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["submit-applications", role] }),
-        queryClient.invalidateQueries({ queryKey: ["rm-applications"] }),
-        queryClient.invalidateQueries({ queryKey: ["rm-application", selectedId] }),
-        queryClient.invalidateQueries({ queryKey: ["customer-profile", selectedId] }),
-        queryClient.invalidateQueries({ queryKey: ["rm-workflow", selectedId] }),
-        queryClient.invalidateQueries({ queryKey: ["rm-workflow-overview"] }),
-        queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] }),
-      ]);
-    },
+    queryClient.invalidateQueries({
+      queryKey: ["rm-applications"],
+    }),
+
+    queryClient.invalidateQueries({
+      queryKey: [
+        "rm-application",
+        selectedId,
+      ],
+    }),
+
+    queryClient.invalidateQueries({
+      queryKey: [
+        "customer-profile",
+        selectedId,
+      ],
+    }),
+
+    queryClient.invalidateQueries({
+      queryKey: [
+        "rm-workflow",
+        selectedId,
+      ],
+    }),
+
+    queryClient.invalidateQueries({
+      queryKey: [
+        "rm-workflow-overview",
+      ],
+    }),
+
+    queryClient.invalidateQueries({
+      queryKey: ["rm-dashboard"],
+    }),
+  ]);
+},
     onError: (error) => {
       setMessage(
         error?.response?.data?.message ||

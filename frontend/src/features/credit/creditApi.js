@@ -50,6 +50,11 @@ export const creditApi = {
   creditMakerRaiseQuery: (applicationId, payload = {}) =>
     apiClient.post(`/credit/${applicationId}/maker/raise-query`, payload),
 
+  finalMakerCases: () =>
+  apiClient.get(
+    "/credit/maker/final/cases",
+  ),
+
   creditMakerSubmitToChecker: (applicationId, payload = {}) =>
     apiClient.post(`/credit/${applicationId}/maker/submit-to-checker`, payload),
 
@@ -61,4 +66,14 @@ export const creditApi = {
 
   creditCheckerReject: (applicationId, payload = {}) =>
     apiClient.post(`/credit/${applicationId}/checker/reject`, payload),
+
+
+  creditMakerSubmitToValuation: (
+  applicationId,
+  payload = {},
+) =>
+  apiClient.post(
+    `/credit/${applicationId}/maker/submit-to-valuation`,
+    payload,
+  ),
 };

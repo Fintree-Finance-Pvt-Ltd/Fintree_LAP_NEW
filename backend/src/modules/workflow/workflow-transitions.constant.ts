@@ -10,7 +10,86 @@ type TransitionRule = {
 
 export const WORKFLOW_TRANSITIONS: Record<string, TransitionRule> = {
   RM_SUBMIT_TO_BM: { allowedRoles: ['RM', 'ADMIN'], fromStages: ['RM'], toStage: 'BM', toStatus: 'BM_PENDING', assignedToRole: 'BM' },
-  BM_APPROVE_TO_CM: { allowedRoles: ['BM', 'ADMIN'], fromStages: ['BM'], toStage: 'CM', toStatus: 'CM_PENDING', assignedToRole: 'CM', decision: 'APPROVED' },
+  BM_APPROVE_TO_CREDIT_MAKER: {
+    allowedRoles: ['BM', 'ADMIN'],
+    fromStages: ['BM'],
+    toStage: 'CREDIT_MAKER',
+    toStatus: 'CREDIT_MAKER_PENDING',
+    assignedToRole: 'CREDIT_MAKER',
+    decision: 'APPROVED',
+  },
+
+  CREDIT_MAKER_APPROVE_TO_VALUATION: {
+  allowedRoles: [
+    'CREDIT_MAKER',
+    'ADMIN',
+  ],
+
+  fromStages: [
+    'CREDIT_MAKER',
+    'CREDIT',
+  ],
+
+  toStage:
+    'VALUATION',
+
+  toStatus:
+    'VALUATION_PENDING',
+
+  assignedToRole:
+    'VALUATION',
+
+  decision:
+    'APPROVED',
+},
+
+CREDIT_MAKER_FINAL_APPROVE_TO_CHECKER: {
+  allowedRoles: [
+    'CREDIT_MAKER',
+    'ADMIN',
+  ],
+
+  fromStages: [
+    'CREDIT_MAKER_FINAL',
+  ],
+
+
+  toStage:
+    'CREDIT_CHECKER',
+
+  toStatus:
+    'CREDIT_CHECKER_PENDING',
+
+  assignedToRole:
+    'CREDIT_CHECKER',
+
+  decision:
+    'APPROVED',
+},
+CREDIT_CHECKER_APPROVE_TO_CREDIT_MANAGER: {
+  allowedRoles: [
+    'CREDIT_CHECKER',
+    'ADMIN',
+  ],
+
+  fromStages: [
+    'CREDIT_MAKER_FINAL',
+  ],
+
+
+  toStage:
+    'CM',
+
+  toStatus:
+    'CM_PENDING',
+
+  assignedToRole:
+    'CM',
+
+  decision:
+    'APPROVED',
+},
+  // BM_APPROVE_TO_CM: { allowedRoles: ['BM', 'ADMIN'], fromStages: ['BM'], toStage: 'CM', toStatus: 'CM_PENDING', assignedToRole: 'CM', decision: 'APPROVED' },
   BM_QUERY_TO_RM: { allowedRoles: ['BM', 'ADMIN'], fromStages: ['BM'], toStage: 'RM', toStatus: 'BM_QUERY', assignedToRole: 'RM', decision: 'QUERY' },
   BM_REJECT: { allowedRoles: ['BM', 'ADMIN'], fromStages: ['BM'], toStage: 'BM', toStatus: 'BM_REJECTED', decision: 'REJECTED', terminal: true },
   CM_APPROVE_TO_CREDIT_MAKER: { allowedRoles: ['CM', 'ADMIN'], fromStages: ['CM'], toStage: 'CREDIT_MAKER', toStatus: 'CREDIT_MAKER_PENDING', assignedToRole: 'CREDIT_MAKER', decision: 'APPROVED' },
@@ -28,10 +107,37 @@ export const WORKFLOW_TRANSITIONS: Record<string, TransitionRule> = {
   LEGAL_APPROVE_TO_OPS_MAKER: { allowedRoles: ['LEGAL', 'ADMIN'], fromStages: ['LEGAL'], toStage: 'OPS_MAKER', toStatus: 'OPS_MAKER_PENDING', assignedToRole: 'OPS_MAKER', decision: 'APPROVED' },
   LEGAL_QUERY: { allowedRoles: ['LEGAL', 'ADMIN'], fromStages: ['LEGAL'], toStage: 'LEGAL', toStatus: 'LEGAL_QUERY', assignedToRole: 'LEGAL', decision: 'QUERY' },
   LEGAL_REJECT: { allowedRoles: ['LEGAL', 'ADMIN'], fromStages: ['LEGAL'], toStage: 'LEGAL', toStatus: 'LEGAL_REJECTED', decision: 'REJECTED', terminal: true },
-  OPS_MAKER_APPROVE_TO_OPS_HEAD: { allowedRoles: ['OPS_MAKER', 'ADMIN'], fromStages: ['OPS_MAKER'], toStage: 'OPS_HEAD', toStatus: 'OPS_HEAD_PENDING', assignedToRole: 'OPS_HEAD', decision: 'APPROVED' },
+  
+  OPS_MAKER_APPROVE_TO_OPS_CHECKER: {
+  allowedRoles: ['OPS_MAKER', 'ADMIN'],
+  fromStages: ['OPS_MAKER'],
+  toStage: 'OPS_CHECKER',
+  toStatus: 'OPS_CHECKER_PENDING',
+  assignedToRole: 'OPS_CHECKER',
+  decision: 'APPROVED',
+},
+
+  OPS_CHECKER_APPROVE_TO_OPS_HEAD: {
+  allowedRoles: ['OPS_CHECKER', 'ADMIN'],
+  fromStages: ['OPS_CHECKER'],
+  toStage: 'OPS_HEAD',
+  toStatus: 'OPS_HEAD_PENDING',
+  assignedToRole: 'OPS_HEASD',
+  decision: 'APPROVED',
+},
+
+  OPS_HEAD_APPROVE_TO_DISBURSEMENT: {
+  allowedRoles: ['OPS_HEAD', 'ADMIN'],
+  fromStages: ['OPS_HEAD'],
+  toStage: 'DISBURSEMENT',
+  toStatus: 'DISBURSEMENT_PENDING',
+  assignedToRole: 'OPS_HEAD',
+  decision: 'APPROVED',
+},
+
   OPS_MAKER_QUERY: { allowedRoles: ['OPS_MAKER', 'ADMIN'], fromStages: ['OPS_MAKER'], toStage: 'OPS_MAKER', toStatus: 'OPS_MAKER_QUERY', assignedToRole: 'OPS_MAKER', decision: 'QUERY' },
   OPS_MAKER_REJECT: { allowedRoles: ['OPS_MAKER', 'ADMIN'], fromStages: ['OPS_MAKER'], toStage: 'OPS_MAKER', toStatus: 'OPS_MAKER_REJECTED', decision: 'REJECTED', terminal: true },
-  OPS_HEAD_APPROVE_TO_OPS_CHECKER: { allowedRoles: ['OPS_HEAD', 'ADMIN'], fromStages: ['OPS_HEAD'], toStage: 'OPS_CHECKER', toStatus: 'OPS_CHECKER_PENDING', assignedToRole: 'OPS_CHECKER', decision: 'APPROVED' },
+  // OPS_HEAD_APPROVE_TO_OPS_CHECKER: { allowedRoles: ['OPS_HEAD', 'ADMIN'], fromStages: ['OPS_HEAD'], toStage: 'OPS_CHECKER', toStatus: 'OPS_CHECKER_PENDING', assignedToRole: 'OPS_CHECKER', decision: 'APPROVED' },
   OPS_HEAD_QUERY: { allowedRoles: ['OPS_HEAD', 'ADMIN'], fromStages: ['OPS_HEAD'], toStage: 'OPS_HEAD', toStatus: 'OPS_HEAD_QUERY', assignedToRole: 'OPS_HEAD', decision: 'QUERY' },
   OPS_HEAD_REJECT: { allowedRoles: ['OPS_HEAD', 'ADMIN'], fromStages: ['OPS_HEAD'], toStage: 'OPS_HEAD', toStatus: 'OPS_HEAD_REJECTED', decision: 'REJECTED', terminal: true },
   OPS_CHECKER_APPROVE_TO_DISBURSEMENT: { allowedRoles: ['OPS_CHECKER', 'ADMIN'], fromStages: ['OPS_CHECKER'], toStage: 'DISBURSEMENT', toStatus: 'DISBURSEMENT_PENDING', assignedToRole: 'DISBURSEMENT', decision: 'APPROVED' },

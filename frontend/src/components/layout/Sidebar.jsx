@@ -64,48 +64,6 @@ const rolesConfig = {
   ],
 
 
-  // ADMIN: [
-  //   {
-  //     category: "PRIMARY",
-  //     items: [{ to: "/adminDashboard", label: "My Work", Icon: FaBriefcase }],
-  //   },
-  //   {
-  //     category: "MODULES",
-  //     items: [
-  //       {
-  //         to: "/roles-access",
-  //         label: "Users & Roles",
-  //         Icon: FaUsers,
-  //       },
-
-  //       {
-  //         to: "/admin/partners",
-  //         label: "Partners",
-  //         Icon: FaHandshake,
-  //       },
-
-  //       {
-  //         to: "/admin/hub",
-  //         label: "Hub",
-  //         Icon: FaBuilding,
-  //       },
-
-  //       {
-  //         label: "Spokes",
-  //         path: "/admin/spokes",
-  //         icon: FaRoute,
-  //       },
-
-  //       {
-  //         to: "/payment-management",
-  //         label: "Payment Management",
-  //         Icon: FaCreditCard,
-  //       },
-  //       // { to: "/submit-bm", label: "Submit to BM", Icon: FaPaperPlane },
-  //     ],
-  //   },
-  // ],
-
   ADMIN: [
   {
     category: "PRIMARY",
@@ -274,6 +232,11 @@ const rolesConfig = {
         {
           to: "/credit-maker",
           label: "Underwriting Proposal",
+          Icon: FaFileAlt,
+        },
+        {
+          to: "/legal-approved-to-credit-maker",
+          label: "Legal Approved Cases",
           Icon: FaFileAlt,
         },
 

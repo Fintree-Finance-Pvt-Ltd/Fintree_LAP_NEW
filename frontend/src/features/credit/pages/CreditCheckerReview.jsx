@@ -35,14 +35,9 @@ const BASE_WORKFLOW_STEPS = [
   { id: 11, key: "DISBURSEMENT", label: "Disbursement" },
 ];
 
-const CHECKER_VISIBLE_STATUSES = [
-  "CREDIT_MAKER_RECOMMENDED",
-  "SUBMITTED_TO_CREDIT_CHECKER",
-  "CREDIT_CHECKER_PENDING",
-  "CREDIT_CHECKER_QUERY",
-  "CREDIT_CHECKER_APPROVED",
-  "CREDIT_CHECKER_REJECTED",
-];
+
+const REQUIRED_STAGE = "CREDIT_MAKER_FINAL";
+const REQUIRED_STATUS = "CREDIT_MAKER_FINAL_PENDING";
 
 const unwrapPayload = (response) => {
   if (response?.data?.data !== undefined) return response.data.data;
@@ -795,6 +790,8 @@ const fetchCheckerCaseList = () => {
   return creditApi.applications({
     page: 1,
     limit: 500,
+     stage: REQUIRED_STAGE,
+    status: REQUIRED_STATUS,
   });
 };
 
@@ -810,9 +807,9 @@ const isCheckerVisibleCase = (application) => {
   const stage = String(application?.stage || "").toUpperCase();
   const status = String(application?.status || "").toUpperCase();
 
-  return (
-    stage === "CREDIT" ||
-    CHECKER_VISIBLE_STATUSES.includes(status)
+    return (
+    stage === REQUIRED_STAGE &&
+    status === REQUIRED_STATUS
   );
 };
 
@@ -1012,75 +1009,223 @@ export default function CreditCheckerReview() {
     };
   };
 
-  const validateBeforeAction = (actionType) => {
-    if (!finalSelectedId) {
-      setMessage("Please select Credit Checker case first.");
-      return false;
-    }
+  // const validateBeforeAction = (actionType) => {
+  //   if (!finalSelectedId) {
+  //     setMessage("Please select Credit Checker case first.");
+  //     return false;
+  //   }
 
-    if (actionType === "APPROVE") {
-      const errors = [];
+  //   if (actionType === "APPROVE") {
+  //     const errors = [];
 
-      if (!review.checkerApprovedAmount) errors.push("Approved Amount");
-      if (!review.checkerApprovedTenure) errors.push("Approved Tenure");
-      if (!review.checkerApprovedRoi) errors.push("Approved ROI");
-      if (!review.checkerRemarks) errors.push("Checker Remarks");
+  //     if (!review.checkerApprovedAmount) errors.push("Approved Amount");
+  //     if (!review.checkerApprovedTenure) errors.push("Approved Tenure");
+  //     if (!review.checkerApprovedRoi) errors.push("Approved ROI");
+  //     if (!review.checkerRemarks) errors.push("Checker Remarks");
 
-      if (errors.length) {
-        setMessage(`Please fill required fields: ${errors.join(", ")}.`);
-        return false;
-      }
-    }
+  //     if (errors.length) {
+  //       setMessage(`Please fill required fields: ${errors.join(", ")}.`);
+  //       return false;
+  //     }
+  //   }
 
-    if (
-      (actionType === "RETURN" || actionType === "REJECT") &&
-      !String(review.checkerRemarks || "").trim()
-    ) {
-      setMessage("Checker remarks are required.");
-      return false;
-    }
+  //   if (
+  //     (actionType === "RETURN" || actionType === "REJECT") &&
+  //     !String(review.checkerRemarks || "").trim()
+  //   ) {
+  //     setMessage("Checker remarks are required.");
+  //     return false;
+  //   }
 
-    return true;
-  };
+  //   return true;
+  // };
+const validateBeforeAction = (actionType) => {
+  if (!finalSelectedId) {
+    setMessage(
+      "Please select a case first.",
+    );
+    return false;
+  }
+
+  const currentStage = String(
+    caseDetails?.stage || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  const currentStatus = String(
+    caseDetails?.status || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  if (
+    currentStage !== REQUIRED_STAGE ||
+    currentStatus !== REQUIRED_STATUS
+  ) {
+    setMessage(
+      `Only CREDIT_MAKER_FINAL / ` +
+        `CREDIT_MAKER_FINAL_PENDING cases can be approved. ` +
+        `Current state is ${currentStage}/${currentStatus}.`,
+    );
+
+    return false;
+  }
+
+  if (
+    actionType === "APPROVE" &&
+    !String(
+      review.checkerRemarks || "",
+    ).trim()
+  ) {
+    setMessage(
+      "Checker remarks are required.",
+    );
+    return false;
+  }
+
+  if (
+    (actionType === "RETURN" ||
+      actionType === "REJECT") &&
+    !String(
+      review.checkerRemarks || "",
+    ).trim()
+  ) {
+    setMessage(
+      "Checker remarks are required.",
+    );
+    return false;
+  }
+
+  return true;
+};
+  // const approveMutation = useMutation({
+  //   mutationFn: () =>
+  //     creditApi.creditCheckerApprove(
+  //       finalSelectedId,
+  //       buildPayload("APPROVE"),
+  //     ),
+
+  //   onSuccess: async (response) => {
+  //     setMessage(
+  //       response?.data?.message ||
+  //         "Application approved and sent to Valuation successfully.",
+  //     );
+
+  //     await Promise.all([
+  //       queryClient.invalidateQueries({ queryKey: ["credit-checker-cases"] }),
+  //       queryClient.invalidateQueries({
+  //         queryKey: ["credit-checker-full-application", finalSelectedId],
+  //       }),
+  //       queryClient.invalidateQueries({
+  //         queryKey: ["credit-checker-application-extra", finalSelectedId],
+  //       }),
+  //       queryClient.invalidateQueries({
+  //         queryKey: ["credit-assessment", finalSelectedId],
+  //       }),
+  //       queryClient.invalidateQueries({
+  //         queryKey: ["valuation-cases"],
+  //       }),
+  //     ]);
+  //   },
+
+  //   onError: (error) => {
+  //     setMessage(
+  //       error?.response?.data?.message ||
+  //         error?.message ||
+  //         "Unable to approve and send case to Credit Manager.",
+  //     );
+  //   },
+  // });
+
 
   const approveMutation = useMutation({
-    mutationFn: () =>
-      creditApi.creditCheckerApprove(
-        finalSelectedId,
-        buildPayload("APPROVE"),
-      ),
-
-    onSuccess: async (response) => {
-      setMessage(
-        response?.data?.message ||
-          "Application approved and sent to Valuation successfully.",
+  mutationFn: async () => {
+    if (
+      typeof creditApi
+        .creditCheckerApprove !==
+      "function"
+    ) {
+      throw new Error(
+        "creditCheckerApprove API method is not configured.",
       );
+    }
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["credit-checker-cases"] }),
-        queryClient.invalidateQueries({
-          queryKey: ["credit-checker-full-application", finalSelectedId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["credit-checker-application-extra", finalSelectedId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["credit-assessment", finalSelectedId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["valuation-cases"],
-        }),
-      ]);
-    },
+    return creditApi.creditCheckerApprove(
+      finalSelectedId,
+      buildPayload("APPROVE"),
+    );
+  },
 
-    onError: (error) => {
-      setMessage(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Unable to approve and send case to Valuation.",
-      );
-    },
-  });
+  onSuccess: async (response) => {
+    setMessage(
+      response?.data?.message ||
+        "Application approved and sent to Credit Manager successfully.",
+    );
+
+    setSelectedId("");
+    setHydratedKey("");
+    setReview(defaultReview);
+
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: [
+          "credit-checker-cases",
+        ],
+      }),
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "credit-manager-cases",
+        ],
+      }),
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "credit-manager-dashboard",
+        ],
+      }),
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "credit-checker-full-application",
+          finalSelectedId,
+        ],
+      }),
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "credit-checker-application-extra",
+          finalSelectedId,
+        ],
+      }),
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "credit-assessment",
+          finalSelectedId,
+        ],
+      }),
+    ]);
+  },
+
+  onError: (error) => {
+    console.error(
+      "Credit Checker approval failed:",
+      error,
+    );
+
+    setMessage(
+      error?.response?.data?.message ||
+        error?.response?.data?.errors?.join?.(
+          ", ",
+        ) ||
+        error?.message ||
+        "Unable to send case to Credit Manager.",
+    );
+  },
+});
+
 
   const returnMutation = useMutation({
     mutationFn: () =>
@@ -1199,7 +1344,7 @@ export default function CreditCheckerReview() {
     },
     {
       label: "Next Stage",
-      value: "Valuation",
+  value: "Credit Manager",
       icon: FaHome,
     },
   ];
@@ -1267,7 +1412,7 @@ export default function CreditCheckerReview() {
                 >
                   {approveMutation.isPending
                     ? "Approving..."
-                    : "Approve & Send to Valuation"}
+                    : "Approve & Send to Credit Manager"}
                 </ActionButton>
               </div>
             </div>
@@ -1687,7 +1832,7 @@ export default function CreditCheckerReview() {
                     >
                       {approveMutation.isPending
                         ? "Approving..."
-                        : "Approve & Send to Valuation"}
+                        : "Approve & Send to Credit Manager"}
                     </button>
                   </div>
                 </div>

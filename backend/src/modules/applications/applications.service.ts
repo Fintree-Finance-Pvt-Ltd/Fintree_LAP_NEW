@@ -558,6 +558,160 @@ async submitToCm(
   };
 }
 
+// async submitToCredit(
+//   applicationId: number,
+//   dto: any,
+//   actor: Actor,
+// ) {
+//   return this.dataSource.transaction(async (manager) => {
+//     const application = await manager.findOne(Application, {
+//       where: {
+//         id: applicationId,
+//       },
+//       lock: {
+//         mode: 'pessimistic_write',
+//       },
+//     });
+
+//     if (!application) {
+//       throw new NotFoundException('Application not found');
+//     }
+
+//     const roles = (actor?.roles || []).map((role) =>
+//       String(role).toUpperCase(),
+//     );
+
+//     if (!roles.includes('BM')) {
+//       throw new ForbiddenException(
+//         'Only BM can submit application to Credit.',
+//       );
+//     }
+
+//     const currentStage = String(application.stage || '').toUpperCase();
+//     const currentStatus = String(application.status || '').toUpperCase();
+
+//     if (
+//       currentStage !== ApplicationStage.BM &&
+//       currentStatus !== ApplicationStatus.BM_PENDING &&
+//       currentStatus !== ApplicationStatus.BM_APPROVED 
+//     ) {
+//       throw new BadRequestException(
+//         'Application must be in BM screening before submitting to Credit.',
+//       );
+//     }
+
+//     const decision = String(dto?.decision || 'RECOMMENDED').toUpperCase();
+
+//     const fromStage = application.stage;
+//     const fromStatus = application.status;
+
+//     let assignedTo = 'CM';
+//     let lastAction: any = 'CM_SCREENING_UPDATED';
+//     let lastRemarks =
+//       dto?.remarks || 'CM screening decision updated.';
+
+//     if (decision === 'REJECTED') {
+//       assignedTo = 'BM';
+//       lastAction = 'BM_REJECTED';
+//       lastRemarks =
+//         dto?.remarks || 'BM rejected application.';
+//     } else if (decision === 'HOLD_QUERY') {
+//       assignedTo = 'BM';
+//       lastAction = 'BM_QUERY_RAISED';
+//       lastRemarks =
+//         dto?.remarks || 'BM kept application on hold/query.';
+//     } else {
+//       assignedTo = 'CREDIT_CHECKER';
+//       lastAction = 'SUBMITTED_TO_CREDIT_CHECKER';
+//       lastRemarks =
+//         dto?.remarks ||
+//         'Credit Maker recommended application and submitted to CM.';
+//     }
+
+//     const movement = await this.workflowTransitions.move({
+//       applicationId,
+//       action: decision === 'REJECTED'
+//         ? 'CREDIT_MAKER_REJECT'
+//         : decision === 'HOLD_QUERY'
+//           ? 'CREDIT_MAKER_QUERY'
+//           : 'CREDIT_MAKER_APPROVE_TO_CREDIT_CHECKER',
+//       remarks: lastRemarks,
+//       payload: dto,
+//       actor,
+//       manager,
+//     });
+//     const saved = movement.data.application;
+
+//     let workflow = await manager.findOne(Workflow, {
+//       where: {
+//         applicationId,
+//       },
+//     });
+
+//     const workflowPayload = {
+//       applicationId,
+//       currentStage: saved.stage,
+//       currentStatus: saved.status,
+//       assignedTo,
+//       currentOwner: actor.id,
+//       lastAction,
+//       lastRemarks,
+//     };
+
+//     if (workflow) {
+//       Object.assign(workflow, workflowPayload);
+//       workflow = await manager.save(workflow);
+//     } else {
+//       workflow = manager.create(Workflow, workflowPayload);
+//       workflow = await manager.save(workflow);
+//     }
+
+//     await manager.save(
+//       WorkflowHistory,
+//       manager.create(WorkflowHistory, {
+//         applicationId,
+//         fromRole: fromStage,
+//         toRole: saved.stage,
+//         action: lastAction,
+//         remarks: lastRemarks,
+//         actionBy: actor.id,
+//       }),
+//     );
+
+//     await manager.save(
+//       AuditLog,
+//       manager.create(AuditLog, {
+//         action: lastAction,
+//         entityName: 'applications',
+//         entityId: applicationId,
+//         snapshot: {
+//           decision,
+//           fromStage,
+//           fromStatus,
+//           toStage: saved.stage,
+//           toStatus: saved.status,
+//           assignedTo,
+//           recommendedAmount: dto?.recommendedAmount ?? null,
+//           riskScore: dto?.riskScore ?? null,
+//         },
+//         createdBy: actor.id,
+//       }),
+//     );
+
+//     return {
+//       success: true,
+//       message:
+//         decision === 'RECOMMENDED'
+//           ? 'Application recommended and submitted to CM successfully.'
+//           : decision === 'HOLD_QUERY'
+//             ? 'Application marked as Hold / Query.'
+//             : 'Application rejected by CREDIT MAKER.',
+//       data: saved,
+//     };
+//   });
+// }
+
+
 async submitToCredit(
   applicationId: number,
   dto: any,
@@ -574,74 +728,120 @@ async submitToCredit(
     });
 
     if (!application) {
-      throw new NotFoundException('Application not found');
+      throw new NotFoundException(
+        'Application not found',
+      );
     }
 
     const roles = (actor?.roles || []).map((role) =>
-      String(role).toUpperCase(),
+      String(role)
+        .trim()
+        .toUpperCase(),
     );
 
-    if (!roles.includes('CM')) {
+    if (
+      !roles.includes('BM') &&
+      !roles.includes('ADMIN')
+    ) {
       throw new ForbiddenException(
-        'Only CM can submit application to Credit.',
+        'Only BM can submit application to Credit Maker.',
       );
     }
 
-    const currentStage = String(application.stage || '').toUpperCase();
-    const currentStatus = String(application.status || '').toUpperCase();
+    const currentStage = String(
+      application.stage || '',
+    )
+      .trim()
+      .toUpperCase();
 
+    const currentStatus = String(
+      application.status || '',
+    )
+      .trim()
+      .toUpperCase();
+
+    /*
+     * Exact state required before BM decision:
+     *
+     * stage  = BM
+     * status = BM_PENDING
+     */
     if (
-      currentStage !== ApplicationStage.CM &&
-      currentStatus !== ApplicationStatus.CM_PENDING &&
-      currentStatus !== ApplicationStatus.CM_APPROVED &&
-      currentStatus !== ApplicationStatus.BM_APPROVED
+      currentStage !== ApplicationStage.BM ||
+      currentStatus !== ApplicationStatus.BM_PENDING
     ) {
       throw new BadRequestException(
-        'Application must be in CM screening before submitting to Credit.',
+        `Application must be in BM/BM_PENDING before BM decision. ` +
+          `Current state is ${currentStage}/${currentStatus}.`,
       );
     }
 
-    const decision = String(dto?.decision || 'RECOMMENDED').toUpperCase();
+    const decision = String(
+      dto?.decision || 'RECOMMENDED',
+    )
+      .trim()
+      .toUpperCase();
 
     const fromStage = application.stage;
     const fromStatus = application.status;
 
-    let assignedTo = 'CM';
-    let lastAction: any = 'CM_SCREENING_UPDATED';
-    let lastRemarks =
-      dto?.remarks || 'CM screening decision updated.';
+    let assignedTo: string;
+    let workflowAction: string;
+    let lastAction: any;
+    let lastRemarks: string;
 
-    if (decision === 'REJECTED') {
-      assignedTo = 'CM';
-      lastAction = 'CM_REJECTED';
-      lastRemarks =
-        dto?.remarks || 'CM rejected application.';
-    } else if (decision === 'HOLD_QUERY') {
-      assignedTo = 'CM';
-      lastAction = 'CM_QUERY_RAISED';
-      lastRemarks =
-        dto?.remarks || 'CM kept application on hold/query.';
-    } else {
-      assignedTo = 'CREDIT_MAKER';
-      lastAction = 'SUBMITTED_TO_CREDIT_MAKER';
+    if (
+      decision === 'REJECTED' ||
+      decision === 'REJECT'
+    ) {
+      assignedTo = 'BM';
+
+      workflowAction = 'BM_REJECT';
+
+      lastAction = 'BM_REJECTED';
+
       lastRemarks =
         dto?.remarks ||
-        'CM recommended application and submitted to Credit Maker.';
+        'BM rejected application.';
+    } else if (
+      decision === 'HOLD_QUERY' ||
+      decision === 'QUERY'
+    ) {
+      assignedTo = 'RM';
+
+      workflowAction = 'BM_QUERY_TO_RM';
+
+      lastAction = 'BM_QUERY_RAISED';
+
+      lastRemarks =
+        dto?.remarks ||
+        'BM raised a query and returned the application to RM.';
+    } else {
+      assignedTo = 'CREDIT_MAKER';
+
+      workflowAction =
+        'BM_APPROVE_TO_CREDIT_MAKER';
+
+      lastAction =
+        'BM_APPROVED_TO_CREDIT_MAKER';
+
+      lastRemarks =
+        dto?.remarks ||
+        'BM approved application and submitted it to Credit Maker.';
     }
 
-    const movement = await this.workflowTransitions.move({
-      applicationId,
-      action: decision === 'REJECTED'
-        ? 'CM_REJECT'
-        : decision === 'HOLD_QUERY'
-          ? 'CM_QUERY'
-          : 'CM_APPROVE_TO_CREDIT_MAKER',
-      remarks: lastRemarks,
-      payload: dto,
-      actor,
-      manager,
-    });
-    const saved = movement.data.application;
+    const movement =
+      await this.workflowTransitions.move({
+        applicationId,
+        action: workflowAction,
+        remarks: lastRemarks,
+        payload: dto,
+        actor,
+        manager,
+      });
+
+    const saved =
+      movement.data.application;
 
     let workflow = await manager.findOne(Workflow, {
       where: {
@@ -660,11 +860,21 @@ async submitToCredit(
     };
 
     if (workflow) {
-      Object.assign(workflow, workflowPayload);
-      workflow = await manager.save(workflow);
+      Object.assign(
+        workflow,
+        workflowPayload,
+      );
+
+      workflow =
+        await manager.save(workflow);
     } else {
-      workflow = manager.create(Workflow, workflowPayload);
-      workflow = await manager.save(workflow);
+      workflow = manager.create(
+        Workflow,
+        workflowPayload,
+      );
+
+      workflow =
+        await manager.save(workflow);
     }
 
     await manager.save(
@@ -685,6 +895,7 @@ async submitToCredit(
         action: lastAction,
         entityName: 'applications',
         entityId: applicationId,
+
         snapshot: {
           decision,
           fromStage,
@@ -692,26 +903,42 @@ async submitToCredit(
           toStage: saved.stage,
           toStatus: saved.status,
           assignedTo,
-          recommendedAmount: dto?.recommendedAmount ?? null,
-          riskScore: dto?.riskScore ?? null,
+          recommendedAmount:
+            dto?.recommendedAmount ?? null,
+          riskScore:
+            dto?.riskScore ?? null,
         },
+
         createdBy: actor.id,
       }),
     );
 
+    let message: string;
+
+    if (
+      decision === 'REJECTED' ||
+      decision === 'REJECT'
+    ) {
+      message =
+        'Application rejected by BM.';
+    } else if (
+      decision === 'HOLD_QUERY' ||
+      decision === 'QUERY'
+    ) {
+      message =
+        'Application returned to RM with a BM query.';
+    } else {
+      message =
+        'Application approved by BM and submitted to Credit Maker successfully.';
+    }
+
     return {
       success: true,
-      message:
-        decision === 'RECOMMENDED'
-          ? 'Application recommended and submitted to Credit Maker successfully.'
-          : decision === 'HOLD_QUERY'
-            ? 'Application marked as Hold / Query.'
-            : 'Application rejected by CM.',
+      message,
       data: saved,
     };
   });
 }
-
 async findOne(id: number) {
   const application =
     await this.applications.findOne({
