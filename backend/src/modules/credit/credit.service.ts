@@ -899,7 +899,7 @@ async getFinalCreditMakerCases() {
       .getRepository(Application)
       .createQueryBuilder('a')
       .where('a.stage IN (:...stages)', {
-        stages: [ApplicationStage.CREDIT, ApplicationStage.CREDIT_MAKER_FINAL],
+        stages: [ApplicationStage.CREDIT_MAKER_FINAL, ApplicationStage.CREDIT_MAKER_FINAL],
       })
       .andWhere('a.status IN (:...statuses)', {
         statuses: [
