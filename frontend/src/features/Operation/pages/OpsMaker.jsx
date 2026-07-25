@@ -1290,7 +1290,7 @@ const displayedDocuments = useMemo(
 
               {decisionSubmitting
                 ? "Approving..."
-                : "Approve & Send to Ops Head"}
+                : "Approve & Send to Ops Checker"}
             </button>
           </div>
         </section>

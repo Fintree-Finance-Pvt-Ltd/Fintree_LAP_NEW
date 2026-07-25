@@ -343,6 +343,11 @@ const rolesConfig = {
     {
       category: "MODULES",
       items: [
+         {
+          to: "/operations-review",
+          label: "review",
+          Icon: FaFolderOpen,
+        },
         {
           to: "/operations/maker/:applicationId",
           label: "Ops Maker",
@@ -353,11 +358,7 @@ const rolesConfig = {
           label: "Legal Cleared",
           Icon: FaFileAlt,
         },
-        {
-          to: "/operations-review",
-          label: "review",
-          Icon: FaFolderOpen,
-        },
+       
       ],
     },
   ],
@@ -378,15 +379,16 @@ const rolesConfig = {
       category: "MODULES",
       items: [
         {
-          to: "/operations/head",
-          label: "Ops Head",
-          Icon: FaShieldAlt,
-        },
-        {
           to: "/operations-review",
           label: "review",
           Icon: FaFolderOpen,
         },
+        {
+          to: "/operations/head",
+          label: "Ops Head",
+          Icon: FaShieldAlt,
+        },
+        
       ],
     },
   ],
@@ -404,6 +406,11 @@ const rolesConfig = {
     {
       category: "MODULES",
       items: [
+         {
+          to: "/operations-review",
+          label: "review",
+          Icon: FaFolderOpen,
+        },
         {
           to: "/operations/checker/:applicationId",
           label: "Ops Checker",
