@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FaArrowRight,
   FaBuilding,
@@ -20,6 +20,8 @@ import {
   FaUniversity,
   FaUserTie,
 } from "react-icons/fa";
+
+import { operationApi } from "../operationapi.js";
 
 const metrics = [
   {
@@ -124,134 +126,203 @@ const workflowSteps = [
     state: "pending",
   },
 ];
+// Old invalid implementation kept for reference:
+// const [applications, setApplications] = useState([]);
+// const operationsCases = [
+//   {
+//     id: "FTLIP-2026-0002",
+//     applicant: "Meera Iyer",
+//     initials: "MI",
+//     amount: "₹80,00,000",
+//     branch: "Delhi Hub",
+//     stage: "PDD Review",
+//     status: "Pending Documents",
+//     priority: "High",
+//     assignedTo: "Neha Sharma",
+//     aging: "5h 12m",
+//     completion: 82,
+//     requestedAmount: "₹80,00,000",
+//     sanctionedAmount: "₹75,00,000",
+//     netDisbursal: "₹72,84,500",
+//     propertyType: "Self-Occupied Residential Flat",
+//     propertyLocation: "Dwarka, New Delhi",
+//     bankName: "HDFC Bank",
+//     accountNumber: "XXXX XXXX 4821",
+//     bankStatus: "Verified",
+//     pddStatus: "8 of 10 completed",
+//     utrStatus: "Pending",
+//     makerStatus: "Completed",
+//     checkerStatus: "Pending",
+//   },
+//   {
+//     id: "FTLIP-2026-0014",
+//     applicant: "Arjun Malhotra",
+//     initials: "AM",
+//     amount: "₹42,00,000",
+//     branch: "Gurugram Hub",
+//     stage: "Bank Verification",
+//     status: "Ready",
+//     priority: "Normal",
+//     assignedTo: "Ojas Batra",
+//     aging: "2h 05m",
+//     completion: 100,
+//     requestedAmount: "₹42,00,000",
+//     sanctionedAmount: "₹40,00,000",
+//     netDisbursal: "₹38,92,000",
+//     propertyType: "Residential Apartment",
+//     propertyLocation: "Sector 56, Gurugram",
+//     bankName: "ICICI Bank",
+//     accountNumber: "XXXX XXXX 1754",
+//     bankStatus: "Verified",
+//     pddStatus: "Completed",
+//     utrStatus: "Ready to Generate",
+//     makerStatus: "Completed",
+//     checkerStatus: "Approved",
+//   },
+//   {
+//     id: "FTLIP-2026-0021",
+//     applicant: "Naina Shah",
+//     initials: "NS",
+//     amount: "₹65,00,000",
+//     branch: "Noida Hub",
+//     stage: "Checker Review",
+//     status: "Exception",
+//     priority: "Critical",
+//     assignedTo: "Rohan Kumar",
+//     aging: "3h 20m",
+//     completion: 91,
+//     requestedAmount: "₹65,00,000",
+//     sanctionedAmount: "₹60,00,000",
+//     netDisbursal: "₹58,47,500",
+//     propertyType: "Commercial Office",
+//     propertyLocation: "Sector 62, Noida",
+//     bankName: "Axis Bank",
+//     accountNumber: "XXXX XXXX 6347",
+//     bankStatus: "Verified",
+//     pddStatus: "Original title deed pending",
+//     utrStatus: "Blocked",
+//     makerStatus: "Completed",
+//     checkerStatus: "Exception Raised",
+//   },
+//   {
+//     id: "FTLIP-2026-0018",
+//     applicant: "Kabir Mehta",
+//     initials: "KM",
+//     amount: "₹28,75,000",
+//     branch: "Faridabad Hub",
+//     stage: "PDD Review",
+//     status: "In Progress",
+//     priority: "Normal",
+//     assignedTo: "Neha Sharma",
+//     aging: "1h 48m",
+//     completion: 68,
+//     requestedAmount: "₹28,75,000",
+//     sanctionedAmount: "₹27,00,000",
+//     netDisbursal: "₹26,28,000",
+//     propertyType: "Independent House",
+//     propertyLocation: "Sector 15, Faridabad",
+//     bankName: "State Bank of India",
+//     accountNumber: "XXXX XXXX 9012",
+//     bankStatus: "Pending",
+//     pddStatus: "6 of 10 completed",
+//     utrStatus: "Pending",
+//     makerStatus: "In Progress",
+//     checkerStatus: "Not Started",
+//   },
+//   {
+//     id: "FTLIP-2026-0009",
+//     applicant: "Priya Kapoor",
+//     initials: "PK",
+//     amount: "₹31,20,000",
+//     branch: "Ghaziabad Hub",
+//     stage: "Disbursement",
+//     status: "Ready",
+//     priority: "High",
+//     assignedTo: "Ojas Batra",
+//     aging: "48m",
+//     completion: 100,
+//     requestedAmount: "₹31,20,000",
+//     sanctionedAmount: "₹30,00,000",
+//     netDisbursal: "₹29,16,000",
+//     propertyType: "Builder Floor",
+//     propertyLocation: "Indirapuram, Ghaziabad",
+//     bankName: "Kotak Mahindra Bank",
+//     accountNumber: "XXXX XXXX 3284",
+//     bankStatus: "Verified",
+//     pddStatus: "Completed",
+//     utrStatus: "Ready to Generate",
+//     makerStatus: "Completed",
+//     checkerStatus: "Approved",
+//   },
+// ];
 
-const operationsCases = [
-  {
-    id: "FTLIP-2026-0002",
-    applicant: "Meera Iyer",
-    initials: "MI",
-    amount: "₹80,00,000",
-    branch: "Delhi Hub",
-    stage: "PDD Review",
-    status: "Pending Documents",
-    priority: "High",
-    assignedTo: "Neha Sharma",
-    aging: "5h 12m",
-    completion: 82,
-    requestedAmount: "₹80,00,000",
-    sanctionedAmount: "₹75,00,000",
-    netDisbursal: "₹72,84,500",
-    propertyType: "Self-Occupied Residential Flat",
-    propertyLocation: "Dwarka, New Delhi",
-    bankName: "HDFC Bank",
-    accountNumber: "XXXX XXXX 4821",
-    bankStatus: "Verified",
-    pddStatus: "8 of 10 completed",
-    utrStatus: "Pending",
-    makerStatus: "Completed",
-    checkerStatus: "Pending",
-  },
-  {
-    id: "FTLIP-2026-0014",
-    applicant: "Arjun Malhotra",
-    initials: "AM",
-    amount: "₹42,00,000",
-    branch: "Gurugram Hub",
-    stage: "Bank Verification",
-    status: "Ready",
-    priority: "Normal",
-    assignedTo: "Ojas Batra",
-    aging: "2h 05m",
-    completion: 100,
-    requestedAmount: "₹42,00,000",
-    sanctionedAmount: "₹40,00,000",
-    netDisbursal: "₹38,92,000",
-    propertyType: "Residential Apartment",
-    propertyLocation: "Sector 56, Gurugram",
-    bankName: "ICICI Bank",
-    accountNumber: "XXXX XXXX 1754",
-    bankStatus: "Verified",
-    pddStatus: "Completed",
-    utrStatus: "Ready to Generate",
-    makerStatus: "Completed",
-    checkerStatus: "Approved",
-  },
-  {
-    id: "FTLIP-2026-0021",
-    applicant: "Naina Shah",
-    initials: "NS",
-    amount: "₹65,00,000",
-    branch: "Noida Hub",
-    stage: "Checker Review",
-    status: "Exception",
-    priority: "Critical",
-    assignedTo: "Rohan Kumar",
-    aging: "3h 20m",
-    completion: 91,
-    requestedAmount: "₹65,00,000",
-    sanctionedAmount: "₹60,00,000",
-    netDisbursal: "₹58,47,500",
-    propertyType: "Commercial Office",
-    propertyLocation: "Sector 62, Noida",
-    bankName: "Axis Bank",
-    accountNumber: "XXXX XXXX 6347",
-    bankStatus: "Verified",
-    pddStatus: "Original title deed pending",
-    utrStatus: "Blocked",
-    makerStatus: "Completed",
-    checkerStatus: "Exception Raised",
-  },
-  {
-    id: "FTLIP-2026-0018",
-    applicant: "Kabir Mehta",
-    initials: "KM",
-    amount: "₹28,75,000",
-    branch: "Faridabad Hub",
-    stage: "PDD Review",
-    status: "In Progress",
-    priority: "Normal",
-    assignedTo: "Neha Sharma",
-    aging: "1h 48m",
-    completion: 68,
-    requestedAmount: "₹28,75,000",
-    sanctionedAmount: "₹27,00,000",
-    netDisbursal: "₹26,28,000",
-    propertyType: "Independent House",
-    propertyLocation: "Sector 15, Faridabad",
-    bankName: "State Bank of India",
-    accountNumber: "XXXX XXXX 9012",
-    bankStatus: "Pending",
-    pddStatus: "6 of 10 completed",
-    utrStatus: "Pending",
-    makerStatus: "In Progress",
-    checkerStatus: "Not Started",
-  },
-  {
-    id: "FTLIP-2026-0009",
-    applicant: "Priya Kapoor",
-    initials: "PK",
-    amount: "₹31,20,000",
-    branch: "Ghaziabad Hub",
-    stage: "Disbursement",
-    status: "Ready",
-    priority: "High",
-    assignedTo: "Ojas Batra",
-    aging: "48m",
-    completion: 100,
-    requestedAmount: "₹31,20,000",
-    sanctionedAmount: "₹30,00,000",
-    netDisbursal: "₹29,16,000",
-    propertyType: "Builder Floor",
-    propertyLocation: "Indirapuram, Ghaziabad",
-    bankName: "Kotak Mahindra Bank",
-    accountNumber: "XXXX XXXX 3284",
-    bankStatus: "Verified",
-    pddStatus: "Completed",
-    utrStatus: "Ready to Generate",
-    makerStatus: "Completed",
-    checkerStatus: "Approved",
-  },
-];
+// Old invalid implementation kept for reference:
+// const operationsCases = useMemo(() => {
+//   return (applications || []).map((app) => ({
+//     id: app.id,
+//     applicationId: app.id,
+//     applicationNumber: app.applicationNumber,
+//
+//     applicant: app.customerName,
+//
+//     initials: app.customerName
+//       ?.split(" ")
+//       .map((word) => word[0])
+//       .join("")
+//       .substring(0, 2)
+//       .toUpperCase(),
+//
+//     amount: Number(app.requestedAmount || 0).toLocaleString("en-IN", {
+//       style: "currency",
+//       currency: "INR",
+//       maximumFractionDigits: 0,
+//     }),
+//
+//     branch: app.assignedTo || "-",
+//
+//     stage: app.stage
+//       ?.replaceAll("_", " ")
+//       .replace(/\b\w/g, (c) => c.toUpperCase()),
+//
+//     status: app.status
+//       ?.replaceAll("_", " ")
+//       .replace(/\b\w/g, (c) => c.toUpperCase()),
+//
+//     priority: "Normal",
+//
+//     assignedTo: app.assignedTo || "-",
+//
+//     aging: "-",
+//
+//     completion: 0,
+//
+//     requestedAmount: app.requestedAmount,
+//
+//     sanctionedAmount: "-",
+//
+//     netDisbursal: "-",
+//
+//     propertyType: "-",
+//
+//     propertyLocation: "-",
+//
+//     bankName: "-",
+//
+//     accountNumber: "-",
+//
+//     bankStatus: "-",
+//
+//     pddStatus: "-",
+//
+//     utrStatus: "-",
+//
+//     makerStatus: "-",
+//
+//     checkerStatus: "-",
+//
+//     raw: app,
+//   }));
+// }, [applications]);
 
 const readinessItems = [
   {
@@ -353,16 +424,261 @@ function DetailRow({
 export default function OperationsDashboard() {
   const workflowRef = useRef(null);
 
-  const [selectedCaseId, setSelectedCaseId] = useState(
-    operationsCases[0].id,
-  );
+  const [applications, setApplications] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchOperationsQueue = async () => {
+      try {
+        const response = await operationApi.getOpsQueue();
+
+        const payload =
+          response?.data?.data ??
+          response?.data ??
+          response ??
+          [];
+
+        const rows = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.items)
+              ? payload.items
+              : Array.isArray(payload?.applications)
+                ? payload.applications
+                : [];
+
+        if (active) {
+          setApplications(rows);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to fetch operations queue:",
+          error,
+        );
+
+        if (active) {
+          setApplications([]);
+        }
+      }
+    };
+
+    fetchOperationsQueue();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const operationsCases = useMemo(() => {
+    return (applications || []).map((app) => {
+      const customerName =
+        app.customerName ||
+        app.customer?.name ||
+        app.customerProfile?.fullName ||
+        [
+          app.customerProfile?.firstName,
+          app.customerProfile?.middleName,
+          app.customerProfile?.lastName,
+        ]
+          .filter(Boolean)
+          .join(" ") ||
+        "-";
+
+      const requestedAmount =
+        app.requestedAmount ??
+        app.loanAmount ??
+        app.amount ??
+        0;
+
+      const formattedRequestedAmount =
+        Number(requestedAmount || 0).toLocaleString(
+          "en-IN",
+          {
+            style: "currency",
+            currency: "INR",
+            maximumFractionDigits: 0,
+          },
+        );
+
+      return {
+        id:
+          app.applicationNumber ||
+          app.id ||
+          app.applicationId,
+        applicationId:
+          app.applicationId || app.id,
+        applicationNumber:
+          app.applicationNumber,
+
+        applicant: customerName,
+
+        initials: customerName
+          .split(" ")
+          .filter(Boolean)
+          .map((word) => word[0])
+          .join("")
+          .substring(0, 2)
+          .toUpperCase(),
+
+        amount: formattedRequestedAmount,
+
+        branch:
+          app.branch ||
+          app.branchName ||
+          app.assignedTo ||
+          "-",
+
+        stage: String(app.stage || "-")
+          .replaceAll("_", " ")
+          .replace(/\b\w/g, (c) =>
+            c.toUpperCase(),
+          ),
+
+        status: String(app.status || "-")
+          .replaceAll("_", " ")
+          .replace(/\b\w/g, (c) =>
+            c.toUpperCase(),
+          ),
+
+        priority: app.priority || "Normal",
+
+        assignedTo:
+          app.assignedToName ||
+          app.assignedUser?.name ||
+          app.assignedTo ||
+          "-",
+
+        aging: app.aging || "-",
+
+        completion:
+          Number(app.completion ?? 0) || 0,
+
+        requestedAmount:
+          app.requestedAmount !== undefined &&
+          app.requestedAmount !== null
+            ? formattedRequestedAmount
+            : "-",
+
+        sanctionedAmount:
+          app.sanctionedAmount !== undefined &&
+          app.sanctionedAmount !== null
+            ? Number(
+                app.sanctionedAmount || 0,
+              ).toLocaleString("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0,
+              })
+            : "-",
+
+        netDisbursal:
+          app.netDisbursal !== undefined &&
+          app.netDisbursal !== null
+            ? Number(
+                app.netDisbursal || 0,
+              ).toLocaleString("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0,
+              })
+            : "-",
+
+        propertyType:
+          app.propertyType ||
+          app.customerProfile?.propertyType ||
+          "-",
+
+        propertyLocation:
+          app.propertyLocation ||
+          app.propertyAddress ||
+          app.customerProfile?.propertyAddress ||
+          "-",
+
+        bankName:
+          app.bankName ||
+          app.disbursement?.bankName ||
+          "-",
+
+        accountNumber:
+          app.accountNumber ||
+          app.disbursement?.accountNumber ||
+          "-",
+
+        bankStatus:
+          app.bankStatus ||
+          app.disbursement?.bankStatus ||
+          "-",
+
+        pddStatus: app.pddStatus || "-",
+
+        utrStatus:
+          app.utrStatus ||
+          app.disbursement?.utrStatus ||
+          "-",
+
+        makerStatus:
+          app.makerStatus ||
+          app.operationsMakerStatus ||
+          "-",
+
+        checkerStatus:
+          app.checkerStatus ||
+          app.operationsCheckerStatus ||
+          "-",
+
+        raw: app,
+      };
+    });
+  }, [applications]);
+
+  // const [selectedCaseId, setSelectedCaseId] = useState(
+  //   operationsCases[0].id,
+  // );
+  const [selectedCaseId, setSelectedCaseId] = useState(null);
+
+  useEffect(() => {
+  if (
+    operationsCases.length > 0 &&
+    !selectedCaseId
+  ) {
+    setSelectedCaseId(operationsCases[0].id);
+  }
+}, [operationsCases, selectedCaseId]);
+
   const [searchText, setSearchText] = useState("");
   const [stageFilter, setStageFilter] = useState("All");
 
   const selectedCase =
     operationsCases.find(
       (item) => item.id === selectedCaseId,
-    ) || operationsCases[0];
+    ) ||
+    operationsCases[0] || {
+      id: "-",
+      applicant: "-",
+      initials: "-",
+      amount: "-",
+      branch: "-",
+      stage: "-",
+      status: "-",
+      priority: "Normal",
+      assignedTo: "-",
+      aging: "-",
+      completion: 0,
+      requestedAmount: "-",
+      sanctionedAmount: "-",
+      netDisbursal: "-",
+      propertyType: "-",
+      propertyLocation: "-",
+      bankName: "-",
+      accountNumber: "-",
+      bankStatus: "-",
+      pddStatus: "-",
+      utrStatus: "-",
+      makerStatus: "-",
+      checkerStatus: "-",
+    };
 
   const filteredCases = useMemo(() => {
     const normalizedSearch = searchText
@@ -382,7 +698,7 @@ export default function OperationsDashboard() {
       const matchesSearch =
         !normalizedSearch ||
         searchableValues.some((value) =>
-          value
+          String(value ?? "")
             .toLowerCase()
             .includes(normalizedSearch),
         );
@@ -393,7 +709,7 @@ export default function OperationsDashboard() {
 
       return matchesSearch && matchesStage;
     });
-  }, [searchText, stageFilter]);
+  }, [operationsCases, searchText, stageFilter]);
 
   const completedReadinessItems =
     readinessItems.filter(

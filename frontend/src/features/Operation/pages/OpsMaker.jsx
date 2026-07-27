@@ -1165,14 +1165,14 @@ const displayedDocuments = useMemo(
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f7fb] p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-[1700px] space-y-6">
+    <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-[#f3f7fb] p-4 box-border sm:p-5 lg:p-6 xl:p-8">
+      <div className="mx-auto w-full min-w-0 max-w-none space-y-6">
         {/* Payment Gate */}
         <section className="relative overflow-hidden rounded-3xl border border-amber-200 bg-gradient-to-r from-[#fffaf0] to-[#fffdf8] px-5 py-5 shadow-sm sm:px-7">
           <div className="absolute bottom-0 right-0 h-full w-24 rounded-l-full bg-emerald-400/15" />
 
           <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-6xl">
+            <div className="min-w-0 flex-1">
               <p className="text-sm leading-7 text-[#8b641f] sm:text-base">
                 <strong className="font-black">
                   Pre-disbursement charges payment gate:
@@ -1201,7 +1201,7 @@ const displayedDocuments = useMemo(
           <div className="absolute left-[25%] top-0 -z-10 h-full w-56 skew-x-[-14deg] bg-indigo-500/40" />
           <div className="absolute -bottom-40 -right-20 -z-10 h-96 w-96 rounded-full border-[70px] border-white/5" />
 
-          <div className="relative max-w-4xl">
+          <div className="relative min-w-0 flex-1">
             <span className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-xs font-black uppercase tracking-[0.14em] backdrop-blur">
               <FaShieldAlt size={14} />
               Independent Checker Control
@@ -1245,7 +1245,7 @@ const displayedDocuments = useMemo(
             </div>
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-3 xl:mt-0 xl:max-w-[390px] xl:justify-end">
+          <div className="mt-8 flex w-full min-w-0 flex-wrap gap-3 xl:mt-0 xl:w-auto xl:max-w-[430px] xl:shrink-0 xl:justify-end">
             <button
               type="button"
               onClick={() => {
@@ -1455,12 +1455,12 @@ const displayedDocuments = useMemo(
             </div>
           </div>
         </section>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(330px,1fr)]">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-6">
 
           {/* Main Content */}
-          <div className="space-y-6">
+          <div className="w-full min-w-0 space-y-6">
             {/* Maker Submission Summary */}
-            {/* <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            {/* <section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <SectionHeading
                 eyebrow="Maker submission"
                 title="Instruction Submitted for Approval"
@@ -1528,7 +1528,7 @@ const displayedDocuments = useMemo(
             </section>
 
             {/* Verification Checklist */}
-            {/* <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            {/* <section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <SectionHeading
                 eyebrow="Independent verification"
                 title="Operations Checker Checklist"
@@ -1553,7 +1553,7 @@ const displayedDocuments = useMemo(
                 />
               </div>
 
-              <div className="mt-6 grid gap-3 md:grid-cols-2">
+              <div className="mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                 {verificationItems.map((item) => (
                   <label
                     key={item.id}
@@ -1696,9 +1696,9 @@ const displayedDocuments = useMemo(
             </section> */}
 
             {/* Customer and Disbursement Summary */}
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid w-full min-w-0 grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
               {/* Customer & Loan Summary */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section className="h-full min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                   <FaFileAlt className="text-[#234a82]" size={14} />
 
@@ -1707,7 +1707,7 @@ const displayedDocuments = useMemo(
                   </h2>
                 </div>
 
-                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-1 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
                   {customerLoanDetails.map((detail) => (
                     <div
                       key={detail.label}
@@ -1726,7 +1726,7 @@ const displayedDocuments = useMemo(
               </section>
 
               {/* Disbursement Instruction */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section className="h-full min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
                     <FaFileAlt className="text-[#234a82]" size={14} />
@@ -1742,11 +1742,11 @@ const displayedDocuments = useMemo(
                   </span>
                 </div>
 
-                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2">
+                <div className="mt-1 grid min-w-0 grid-cols-1 sm:grid-cols-2">
                   {disbursementDetails.map((detail) => (
                     <div
                       key={detail.label}
-                      className="grid grid-cols-[minmax(100px,0.85fr)_minmax(0,1fr)] items-center gap-3 border-b border-slate-100 px-2 py-3"
+                      className="grid min-w-0 grid-cols-[minmax(95px,0.8fr)_minmax(0,1.2fr)] items-center gap-3 border-b border-slate-100 px-2 py-3"
                     >
                       <span className="text-[9px] font-semibold text-slate-500">
                         {detail.label}
@@ -1773,7 +1773,7 @@ const displayedDocuments = useMemo(
             </div>
 
             {/* Grouped Verification Checklist */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-sm font-black text-[#1c365f]">
                   Independent Verification Checklist
@@ -1789,7 +1789,7 @@ const displayedDocuments = useMemo(
                 </strong>
               </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="mt-4 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                 {checklistGroups.map((group) => {
                   const GroupIcon = group.icon;
 
@@ -1808,7 +1808,7 @@ const displayedDocuments = useMemo(
                   return (
                     <div
                       key={group.id}
-                      className={`overflow-hidden rounded-xl border transition ${complete
+                      className={`min-w-0 overflow-hidden rounded-xl border transition ${complete
                         ? "border-emerald-200 bg-emerald-50/40"
                         : "border-slate-200 bg-slate-50/60"
                         }`}
@@ -1908,7 +1908,7 @@ const displayedDocuments = useMemo(
               </div>
             </section>
             {/* Charges */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <SectionHeading
                 eyebrow="Payment control"
                 title="Charges Reconciliation"
@@ -1920,8 +1920,8 @@ const displayedDocuments = useMemo(
                 }
               />
 
-              <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200">
-                <table className="w-full min-w-[650px] border-collapse text-left">
+              <div className="mt-6 w-full max-w-full overflow-x-auto rounded-2xl border border-slate-200">
+                <table className="w-full min-w-[620px] table-fixed border-collapse text-left">
                   <thead>
                     <tr className="bg-slate-50">
                       <th className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-400">
@@ -1975,14 +1975,14 @@ const displayedDocuments = useMemo(
               </div>
             </section>
 {/* Documents */}
-<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+<section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
   <SectionHeading
     eyebrow="Document control"
     title="Documents Submitted by Maker"
   />
 
   {documentsLoading ? (
-    <div className="mt-6 grid gap-3 md:grid-cols-2">
+    <div className="mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
       {[1, 2, 3, 4].map((item) => (
         <div
           key={item}
@@ -2021,11 +2021,11 @@ const displayedDocuments = useMemo(
       </p>
     </div>
   ) : (
-    <div className="mt-6 grid gap-3 md:grid-cols-2">
+    <div className="mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
       {displayedDocuments.map((document) => (
         <div
           key={document.id}
-          className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+          className="flex min-w-0 items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
         >
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-700">
             <FaFileAlt size={17} />
@@ -2078,7 +2078,7 @@ const displayedDocuments = useMemo(
   )}
 </section>
             {/* Remarks and Declaration */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <section className="w-full min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <SectionHeading
                 eyebrow="Final checker control"
                 title="Checker Remarks & Declaration"
@@ -2096,11 +2096,11 @@ const displayedDocuments = useMemo(
                     setCheckerRemarks(event.target.value)
                   }
                   placeholder="Enter independent checker observations, validations or conditions..."
-                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-50"
+                  className="block w-full max-w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-50"
                 />
               </label>
 
-              <label className="mt-5 flex cursor-pointer items-start gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
+              <label className="mt-5 flex w-full min-w-0 cursor-pointer items-start gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
                 <input
                   type="checkbox"
                   checked={declarationAccepted}
@@ -2110,7 +2110,7 @@ const displayedDocuments = useMemo(
                   className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-emerald-600"
                 />
 
-                <div>
+                <div className="min-w-0 flex-1">
                   <strong className="text-sm font-extrabold text-slate-800">
                     Independent Checker Declaration
                   </strong>
@@ -2221,7 +2221,7 @@ const displayedDocuments = useMemo(
                       setReturnReason(event.target.value)
                     }
                     placeholder="Clearly mention the discrepancy or correction required from the maker..."
-                    className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-50"
+                    className="block w-full max-w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-50"
                   />
                 </label>
               )}
