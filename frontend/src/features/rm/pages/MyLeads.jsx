@@ -457,10 +457,10 @@ export default function MyLeads() {
                       const continueRoute =
                         nextStep === "create-lead"
                           ? `/create-lead/${lead.id}`
-                          : nextStep === "customer-visit"
-                            ? `/customer-visit/${lead.id}`
-                            : nextStep === "geo-verification"
-                              ? `/geo-verification/${lead.id}`
+                          // : nextStep === "customer-visit"
+                          //   ? `/customer-visit/${lead.id}`
+                          //   : nextStep === "geo-verification"
+                          //     ? `/geo-verification/${lead.id}`
                               : nextStep === "kyc-documents"
                                 ? `/kyc-documents/${lead.id}`
                                 : `/submit-bm/${lead.id}`;
