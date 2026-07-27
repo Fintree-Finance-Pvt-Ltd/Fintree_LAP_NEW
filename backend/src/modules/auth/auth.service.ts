@@ -57,7 +57,11 @@ export class AuthService {
       sameSite: 'lax',
     });
 
+    // Dynamic login message based on the assigned role
+    const roleName = user.roles?.[0]?.name ?? 'User';
+
     return {
+      message: `Logged in as ${roleName}`,
       data: {
         accessToken,
         user: {
