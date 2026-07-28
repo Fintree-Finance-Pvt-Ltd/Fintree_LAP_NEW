@@ -899,12 +899,12 @@ async getFinalCreditMakerCases() {
       .getRepository(Application)
       .createQueryBuilder('a')
       .where('a.stage IN (:...stages)', {
-        stages: [ApplicationStage.CREDIT_MAKER_FINAL, ApplicationStage.CREDIT_MAKER_FINAL],
+        stages: [ApplicationStage.CREDIT_CHECKER, ApplicationStage.CREDIT_CHECKER],
       })
       .andWhere('a.status IN (:...statuses)', {
         statuses: [
-          ApplicationStatus.CREDIT_MAKER_FINAL_PENDING,
-          ApplicationStatus.CREDIT_MAKER_FINAL_QUERY,
+          ApplicationStatus.CREDIT_CHECKER_PENDING,
+          ApplicationStatus.CREDIT_CHECKER_QUERY,
         ],
       })
       .orderBy('a.updatedAt', 'DESC')

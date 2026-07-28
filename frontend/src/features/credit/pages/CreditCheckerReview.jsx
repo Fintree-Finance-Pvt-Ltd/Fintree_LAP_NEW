@@ -36,8 +36,8 @@ const BASE_WORKFLOW_STEPS = [
 ];
 
 
-const REQUIRED_STAGE = "CREDIT_MAKER_FINAL";
-const REQUIRED_STATUS = "CREDIT_MAKER_FINAL_PENDING";
+const REQUIRED_STAGE = "CREDIT_CHECKER";
+const REQUIRED_STATUS = "CREDIT_CHECKER_PENDING";
 
 const unwrapPayload = (response) => {
   if (response?.data?.data !== undefined) return response.data.data;
