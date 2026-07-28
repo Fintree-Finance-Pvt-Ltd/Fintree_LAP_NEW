@@ -2,18 +2,18 @@ import { apiClient } from "../../services/apiClient.js";
 
 export const operationApi = {
   // Existing operation APIs...
- getOpsQueue: (config = {}) =>
+  getOpsQueue: (config = {}) =>
     apiClient.get(
       "/operations/queue",
       config,
     ),
-    
 
-     getOpsMakerCase: (applicationId) =>
+
+  getOpsMakerCase: (applicationId) =>
     apiClient.get(`/operations/maker/${applicationId}`),
 
 
-      getOpsheadCase: (applicationId) =>
+  getOpsheadCase: (applicationId) =>
     apiClient.get(`/operations/head/${applicationId}`),
 
 
@@ -21,7 +21,7 @@ export const operationApi = {
     apiClient.get(`/operations/checker/${applicationId}`),
 
 
- getHeadCase: (applicationId) =>
+  getHeadCase: (applicationId) =>
     apiClient.get(`/operations/head/${applicationId}`),
 
 
@@ -30,7 +30,7 @@ export const operationApi = {
 
 
 
-    approveCheckerCase: (applicationId, payload) =>
+  approveCheckerCase: (applicationId, payload) =>
     apiClient.post(
       `/operations/checker/${applicationId}/approve`,
       payload,
@@ -42,38 +42,40 @@ export const operationApi = {
       payload,
     ),
 
-    approveByOpsMaker: (applicationId, payload = {}) =>
+  approveByOpsMaker: (applicationId, payload = {}) =>
     apiClient.patch(
       `/operations/maker/${applicationId}/approve`,
       payload,
     ),
 
-    approveByOpsHead: (applicationId, payload = {}) =>
+  approveByOpsHead: (applicationId, payload = {}) =>
     apiClient.patch(
       `/operations/head/${applicationId}/approve`,
       payload,
     ),
 
 
-    approveByOpsChecker: (applicationId, payload = {}) =>
+  approveByOpsChecker: (applicationId, payload = {}) =>
     apiClient.patch(
       `/operations/checker/${applicationId}/approve`,
       payload,
     ),
 
-      getApplicationDocuments: (applicationId) =>
+  getApplicationDocuments: (applicationId) =>
     apiClient.get(
       // `/documents/application/${applicationId}`,
-          `/applications/${applicationId}/documents`,
+      `/applications/${applicationId}/documents`,
 
     ),
 
-    uploadDocument: (formData) =>
-  apiClient.post("/documents/upload", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  }),
-
-  
+  uploadDocument: (formData) =>
+    apiClient.post(
+      "/documents/upload",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    ),
 };

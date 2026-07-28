@@ -12,6 +12,7 @@ import { createReferenceNumber } from '../../common/utils/reference-number.util'
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { CustomerProfile } from '../customer-profiles/entities/customer-profile.entity';
 import { Document } from '../documents/entities/document.entity';
+import { DocumentsService } from '../documents/documents.service';
 
 import { Visit } from '../visits/entities/visit.entity';
 import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
@@ -34,6 +35,7 @@ export class ApplicationsService {
     @InjectRepository(CustomerProfile) private readonly profiles: Repository<CustomerProfile>,
     private readonly dataSource: DataSource,
     private readonly workflowTransitions: WorkflowTransitionService,
+    private readonly documentsService: DocumentsService,
   ) {}
 
   private isWorkflowLogAction(
@@ -1268,9 +1270,15 @@ async addVisit(
     return { data: document };
   }
 
+  // async listDocuments(applicationId: number) {
+  //   return { data: await this.documents.find({ where: { applicationId }, order: { id: 'DESC' } }) };
+  // }
+
   async listDocuments(applicationId: number) {
-    return { data: await this.documents.find({ where: { applicationId }, order: { id: 'DESC' } }) };
-  }
+  return this.documentsService.findAllByApplication(
+    applicationId,
+  );
+}
 
   async transition(applicationId: number, dto: any, actor: Actor) {
     if (!actor.permissions?.includes(PERMISSIONS.APPLICATION_TRANSITION)) throw new ForbiddenException('Missing workflow permission');

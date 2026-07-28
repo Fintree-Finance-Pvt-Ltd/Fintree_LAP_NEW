@@ -518,7 +518,7 @@ const requiredDocumentSections = [
 ];
 
 export default function OpsChecker() {
-  
+
   const params = useParams();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -545,9 +545,9 @@ export default function OpsChecker() {
   const [documentsError, setDocumentsError] = useState("");
 
   const [selectedFiles, setSelectedFiles] = useState({});
-const [uploadingDocuments, setUploadingDocuments] = useState({});
-const [uploadedDocuments, setUploadedDocuments] = useState({});
-const [uploadErrors, setUploadErrors] = useState({});
+  const [uploadingDocuments, setUploadingDocuments] = useState({});
+  const [uploadedDocuments, setUploadedDocuments] = useState({});
+  const [uploadErrors, setUploadErrors] = useState({});
 
   const [checkerRemarks, setCheckerRemarks] = useState("");
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
@@ -635,43 +635,41 @@ const [uploadErrors, setUploadErrors] = useState({});
         label: "Requested Amount",
         value: formatCurrency(
           caseData?.application?.requestedAmount ??
-            caseData?.requestedAmount,
+          caseData?.requestedAmount,
         ),
       },
       {
         label: "Sanctioned Amount",
         value: formatCurrency(
           caseData?.sanction?.sanctionedAmount ??
-            caseData?.sanctionedAmount,
+          caseData?.sanctionedAmount,
         ),
       },
       {
         label: "Loan Tenure",
         value:
           caseData?.sanction?.loanTenure ||
-          caseData?.loanTenure
-            ? `${
-                caseData?.sanction?.loanTenure ||
-                caseData?.loanTenure
-              } Months`
+            caseData?.loanTenure
+            ? `${caseData?.sanction?.loanTenure ||
+            caseData?.loanTenure
+            } Months`
             : "-",
       },
       {
         label: "Interest Rate",
         value:
           caseData?.sanction?.interestRate ||
-          caseData?.interestRate
-            ? `${
-                caseData?.sanction?.interestRate ||
-                caseData?.interestRate
-              }% p.a.`
+            caseData?.interestRate
+            ? `${caseData?.sanction?.interestRate ||
+            caseData?.interestRate
+            }% p.a.`
             : "-",
       },
       {
         label: "Monthly EMI",
         value: formatCurrency(
           caseData?.sanction?.monthlyEmi ??
-            caseData?.monthlyEmi,
+          caseData?.monthlyEmi,
         ),
       },
       {
@@ -713,7 +711,7 @@ const [uploadErrors, setUploadErrors] = useState({});
         label: "Disbursement Amount",
         value: formatCurrency(
           caseData?.disbursement?.amount ??
-            caseData?.disbursementAmount,
+          caseData?.disbursementAmount,
         ),
       },
       {
@@ -727,7 +725,7 @@ const [uploadErrors, setUploadErrors] = useState({});
         label: "Disbursement Date",
         value: formatDate(
           caseData?.disbursement?.disbursementDate ??
-            caseData?.disbursementDate,
+          caseData?.disbursementDate,
         ),
       },
       {
@@ -749,10 +747,10 @@ const [uploadErrors, setUploadErrors] = useState({});
         label: "Penny Drop Match",
         value:
           caseData?.disbursement?.pennyDropMatch !== null &&
-          caseData?.disbursement?.pennyDropMatch !== undefined
+            caseData?.disbursement?.pennyDropMatch !== undefined
             ? `${caseData.disbursement.pennyDropMatch}%`
             : caseData?.pennyDropMatch !== null &&
-                caseData?.pennyDropMatch !== undefined
+              caseData?.pennyDropMatch !== undefined
               ? `${caseData.pennyDropMatch}%`
               : "-",
         tone: "success",
@@ -836,212 +834,212 @@ const [uploadErrors, setUploadErrors] = useState({});
   //   }
   // }, [applicationId]);
 
-const handleDocumentFileChange = (documentId, file) => {
-  if (!file) {
-    setSelectedFiles((current) => {
-      const updated = { ...current };
-      delete updated[documentId];
-      return updated;
-    });
+  const handleDocumentFileChange = (documentId, file) => {
+    if (!file) {
+      setSelectedFiles((current) => {
+        const updated = { ...current };
+        delete updated[documentId];
+        return updated;
+      });
 
-    return;
-  }
+      return;
+    }
 
-  const allowedMimeTypes = [
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-  ];
+    const allowedMimeTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+    ];
 
-  if (!allowedMimeTypes.includes(file.type)) {
-    setUploadErrors((current) => ({
+    if (!allowedMimeTypes.includes(file.type)) {
+      setUploadErrors((current) => ({
+        ...current,
+        [documentId]: "Only PDF, JPG, JPEG and PNG files are allowed.",
+      }));
+
+      return;
+    }
+
+    const maximumSize = 15 * 1024 * 1024;
+
+    if (file.size > maximumSize) {
+      setUploadErrors((current) => ({
+        ...current,
+        [documentId]: "File size must not exceed 15 MB.",
+      }));
+
+      return;
+    }
+
+    setSelectedFiles((current) => ({
       ...current,
-      [documentId]: "Only PDF, JPG, JPEG and PNG files are allowed.",
-    }));
-
-    return;
-  }
-
-  const maximumSize = 15 * 1024 * 1024;
-
-  if (file.size > maximumSize) {
-    setUploadErrors((current) => ({
-      ...current,
-      [documentId]: "File size must not exceed 15 MB.",
-    }));
-
-    return;
-  }
-
-  setSelectedFiles((current) => ({
-    ...current,
-    [documentId]: file,
-  }));
-
-  setUploadErrors((current) => ({
-    ...current,
-    [documentId]: "",
-  }));
-};
-
-const handleUploadDocument = async (documentItem) => {
-  const file = selectedFiles[documentItem.id];
-
-  if (!file) {
-    setUploadErrors((current) => ({
-      ...current,
-      [documentItem.id]: "Please select a file.",
-    }));
-
-    return;
-  }
-
-  const normalizedApplicationId = Number(applicationId);
-
-  if (
-    !Number.isInteger(normalizedApplicationId) ||
-    normalizedApplicationId <= 0
-  ) {
-    setUploadErrors((current) => ({
-      ...current,
-      [documentItem.id]: "Valid application ID is required.",
-    }));
-
-    return;
-  }
-
-  try {
-    setUploadingDocuments((current) => ({
-      ...current,
-      [documentItem.id]: true,
+      [documentId]: file,
     }));
 
     setUploadErrors((current) => ({
       ...current,
-      [documentItem.id]: "",
+      [documentId]: "",
     }));
+  };
 
-    const formData = new FormData();
+  const handleUploadDocument = async (documentItem) => {
+    const file = selectedFiles[documentItem.id];
 
-    formData.append(
-      "applicationId",
-      String(normalizedApplicationId),
-    );
+    if (!file) {
+      setUploadErrors((current) => ({
+        ...current,
+        [documentItem.id]: "Please select a file.",
+      }));
 
-    formData.append(
-      "documentType",
-      documentItem.documentType,
-    );
+      return;
+    }
 
-    formData.append(
-      "documentName",
-      documentItem.name,
-    );
+    const normalizedApplicationId = Number(applicationId);
 
-    formData.append(
-      "documentSource",
-      "OPS_HEAD",
-    );
+    if (
+      !Number.isInteger(normalizedApplicationId) ||
+      normalizedApplicationId <= 0
+    ) {
+      setUploadErrors((current) => ({
+        ...current,
+        [documentItem.id]: "Valid application ID is required.",
+      }));
 
-    formData.append("file", file);
+      return;
+    }
 
-    const response =
-      await operationApi.uploadDocument(formData);
+    try {
+      setUploadingDocuments((current) => ({
+        ...current,
+        [documentItem.id]: true,
+      }));
 
-    const uploadedDocument =
-      response?.data?.data?.data ??
-      response?.data?.data ??
-      response?.data ??
-      null;
+      setUploadErrors((current) => ({
+        ...current,
+        [documentItem.id]: "",
+      }));
 
-    setUploadedDocuments((current) => ({
-      ...current,
-      [documentItem.id]: uploadedDocument || {
-        documentName: documentItem.name,
-        fileName: file.name,
-      },
-    }));
+      const formData = new FormData();
 
-    setSelectedFiles((current) => {
-      const updated = { ...current };
-      delete updated[documentItem.id];
-      return updated;
-    });
+      formData.append(
+        "applicationId",
+        String(normalizedApplicationId),
+      );
 
-    await fetchApplicationDocuments();
-  } catch (error) {
-    const message =
-      error?.response?.data?.message ??
-      error?.message ??
-      "Unable to upload document.";
+      formData.append(
+        "documentType",
+        documentItem.documentType,
+      );
 
-    setUploadErrors((current) => ({
-      ...current,
-      [documentItem.id]: Array.isArray(message)
-        ? message.join(", ")
-        : String(message),
-    }));
-  } finally {
-    setUploadingDocuments((current) => ({
-      ...current,
-      [documentItem.id]: false,
-    }));
-  }
-};
+      formData.append(
+        "documentName",
+        documentItem.name,
+      );
+
+      formData.append(
+        "documentSource",
+        "OPS_HEAD",
+      );
+
+      formData.append("file", file);
+
+      const response =
+        await operationApi.uploadDocument(formData);
+
+      const uploadedDocument =
+        response?.data?.data?.data ??
+        response?.data?.data ??
+        response?.data ??
+        null;
+
+      setUploadedDocuments((current) => ({
+        ...current,
+        [documentItem.id]: uploadedDocument || {
+          documentName: documentItem.name,
+          fileName: file.name,
+        },
+      }));
+
+      setSelectedFiles((current) => {
+        const updated = { ...current };
+        delete updated[documentItem.id];
+        return updated;
+      });
+
+      await fetchApplicationDocuments();
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ??
+        error?.message ??
+        "Unable to upload document.";
+
+      setUploadErrors((current) => ({
+        ...current,
+        [documentItem.id]: Array.isArray(message)
+          ? message.join(", ")
+          : String(message),
+      }));
+    } finally {
+      setUploadingDocuments((current) => ({
+        ...current,
+        [documentItem.id]: false,
+      }));
+    }
+  };
 
 
   const fetchApplicationDocuments = useCallback(async () => {
-  const normalizedApplicationId = Number(applicationId);
+    const normalizedApplicationId = Number(applicationId);
 
-  if (
-    !Number.isInteger(normalizedApplicationId) ||
-    normalizedApplicationId <= 0
-  ) {
-    setDocuments([]);
-    setDocumentsError("Valid application ID is required.");
-    return;
-  }
+    if (
+      !Number.isInteger(normalizedApplicationId) ||
+      normalizedApplicationId <= 0
+    ) {
+      setDocuments([]);
+      setDocumentsError("Valid application ID is required.");
+      return;
+    }
 
-  try {
-    setDocumentsLoading(true);
-    setDocumentsError("");
+    try {
+      setDocumentsLoading(true);
+      setDocumentsError("");
 
-    const response =
-      await operationApi.getApplicationDocuments(
-        normalizedApplicationId,
+      const response =
+        await operationApi.getApplicationDocuments(
+          normalizedApplicationId,
+        );
+
+      const rows = extractArrayPayload(response, [
+        "documents",
+        "items",
+        "rows",
+        "results",
+        "data",
+      ]);
+
+      setDocuments(rows);
+    } catch (error) {
+      console.error(
+        "Failed to fetch application documents:",
+        error,
       );
 
-    const rows = extractArrayPayload(response, [
-      "documents",
-      "items",
-      "rows",
-      "results",
-      "data",
-    ]);
+      setDocumentsError(
+        normalizeApiError(
+          error,
+          "Unable to fetch application documents.",
+        ),
+      );
 
-    setDocuments(rows);
-  } catch (error) {
-    console.error(
-      "Failed to fetch application documents:",
-      error,
-    );
+      setDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [applicationId]);
 
-    setDocumentsError(
-      normalizeApiError(
-        error,
-        "Unable to fetch application documents.",
-      ),
-    );
-
-    setDocuments([]);
-  } finally {
-    setDocumentsLoading(false);
-  }
-}, [applicationId]);
-
-useEffect(() => {
-  fetchApplicationDocuments();
-}, [fetchApplicationDocuments]);
+  useEffect(() => {
+    fetchApplicationDocuments();
+  }, [fetchApplicationDocuments]);
   // useEffect(() => {
   //   fetchApplicationDocuments();
   // }, [fetchApplicationDocuments]);
@@ -1086,10 +1084,10 @@ useEffect(() => {
 
         setPageStatus(
           result?.disbursement?.paymentStatus ||
-            result?.paymentStatus ||
-            result?.pageStatus ||
-            result?.status ||
-            "Awaiting checker",
+          result?.paymentStatus ||
+          result?.pageStatus ||
+          result?.status ||
+          "Awaiting checker",
         );
 
         const savedChecklist =
@@ -1108,8 +1106,8 @@ useEffect(() => {
                 (entry) =>
                   Number(
                     entry.itemId ??
-                      entry.item_id ??
-                      entry.id,
+                    entry.item_id ??
+                    entry.id,
                   ) === Number(item.id),
               );
 
@@ -1119,9 +1117,9 @@ useEffect(() => {
                 ...item,
                 checked: toBoolean(
                   savedItem.checked ??
-                    savedItem.isVerified ??
-                    savedItem.is_verified ??
-                    savedItem.value,
+                  savedItem.isVerified ??
+                  savedItem.is_verified ??
+                  savedItem.value,
                 ),
               };
             }),
@@ -1195,12 +1193,8 @@ useEffect(() => {
         fileUrl:
           document?.fileUrl ??
           document?.file_url ??
-          document?.downloadUrl ??
-          document?.download_url ??
-          document?.url ??
           document?.filePath ??
           document?.file_path ??
-          document?.file?.url ??
           "",
         fileName:
           document?.fileName ??
@@ -1335,45 +1329,84 @@ useEffect(() => {
   //   return `${backendUrl}${path.startsWith("/") ? "" : "/"}${path}`;
   // };
 
+  //   const getDocumentUrl = (document) => {
+  //   const path = String(
+  //     document?.fileUrl ??
+  //       document?.file_url ??
+  //       document?.downloadUrl ??
+  //       document?.download_url ??
+  //       document?.filePath ??
+  //       document?.file_path ??
+  //       document?.url ??
+  //       "",
+  //   ).trim();
+
+  //   if (!path) return "";
+
+  //   if (
+  //     path.startsWith("http://") ||
+  //     path.startsWith("https://") ||
+  //     path.startsWith("blob:")
+  //   ) {
+  //     return path;
+  //   }
+
+  //   const backendUrl = String(
+  //     import.meta.env.VITE_BACKEND_URL ?? "",
+  //   )
+  //     .trim()
+  //     .replace(/\/$/, "");
+
+  //   const cleanPath =
+  //     path.startsWith("/") ? path : `/${path}`;
+
+  //   return `${backendUrl}${cleanPath}`;
+  // };
+
   const getDocumentUrl = (document) => {
-  const path = String(
+  const rawUrl =
     document?.fileUrl ??
-      document?.file_url ??
-      document?.downloadUrl ??
-      document?.download_url ??
-      document?.filePath ??
-      document?.file_path ??
-      document?.url ??
-      "",
-  ).trim();
+    document?.file_url ??
+    "";
 
-  if (!path) return "";
-
-  if (
-    path.startsWith("http://") ||
-    path.startsWith("https://") ||
-    path.startsWith("blob:")
-  ) {
-    return path;
+  if (!rawUrl) {
+    return "";
   }
 
-  const backendUrl = String(
-    import.meta.env.VITE_BACKEND_URL ?? "",
-  )
-    .trim()
-    .replace(/\/$/, "");
+  if (
+    rawUrl.startsWith("http://") ||
+    rawUrl.startsWith("https://")
+  ) {
+    return rawUrl;
+  }
 
-  const cleanPath =
-    path.startsWith("/") ? path : `/${path}`;
-
-  return `${backendUrl}${cleanPath}`;
+  return `${window.location.origin}/${rawUrl.replace(/^\/+/, "")}`;
 };
-  const previewDocument = (document) => {
-    const url = getDocumentUrl(document);
 
-    if (url) {
-      window.open(url, "_blank", "noopener,noreferrer");
+  // const previewDocument = (document) => {
+  //   const url = getDocumentUrl(document);
+
+  //   if (url) {
+  //     window.open(url, "_blank", "noopener,noreferrer");
+  //   }
+  // };
+
+  const previewDocument = (document) => {
+    const documentUrl = getDocumentUrl(document);
+
+    console.log("PREVIEW DOCUMENT:", document);
+    console.log("DOCUMENT FILE URL:", documentUrl);
+
+    if (!documentUrl) {
+      showToast("Uploaded file URL is not available.");
+      return;
     }
+
+    window.open(
+      documentUrl,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   const downloadDocument = (document) => {
@@ -1576,11 +1609,10 @@ useEffect(() => {
 
           <div className="flex items-center gap-3 bg-white p-4">
             <span
-              className={`grid h-9 w-9 place-items-center rounded-[10px] ${
-                requiredItemsVerified
+              className={`grid h-9 w-9 place-items-center rounded-[10px] ${requiredItemsVerified
                   ? "bg-emerald-50 text-emerald-700"
                   : "bg-amber-50 text-amber-700"
-              }`}
+                }`}
             >
               {requiredItemsVerified ? (
                 <FaCheck size={11} />
@@ -1616,11 +1648,10 @@ useEffect(() => {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`whitespace-nowrap rounded-[10px] px-4 py-2.5 text-[11px] font-black transition ${
-                activeTab === tab.id
+              className={`whitespace-nowrap rounded-[10px] px-4 py-2.5 text-[11px] font-black transition ${activeTab === tab.id
                   ? "bg-white text-[#173f7a] shadow-[0_3px_10px_rgba(15,23,42,0.08)]"
                   : "text-slate-500 hover:text-[#173f7a]"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -1746,11 +1777,10 @@ useEffect(() => {
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className={`h-full rounded-full ${
-                        requiredItemsVerified
+                      className={`h-full rounded-full ${requiredItemsVerified
                           ? "bg-emerald-500"
                           : "bg-gradient-to-r from-amber-500 to-amber-400"
-                      }`}
+                        }`}
                       style={{ width: `${completionPercentage}%` }}
                     />
                   </div>
@@ -1772,25 +1802,22 @@ useEffect(() => {
                     return (
                       <div
                         key={group.id}
-                        className={`overflow-hidden rounded-[14px] border ${
-                          complete
+                        className={`overflow-hidden rounded-[14px] border ${complete
                             ? "border-emerald-200"
                             : "border-slate-200"
-                        }`}
+                          }`}
                       >
                         <button
                           type="button"
                           onClick={() => toggleChecklistGroup(group.id)}
-                          className={`flex w-full items-center gap-3 p-3 text-left ${
-                            complete ? "bg-emerald-50" : "bg-slate-50"
-                          }`}
+                          className={`flex w-full items-center gap-3 p-3 text-left ${complete ? "bg-emerald-50" : "bg-slate-50"
+                            }`}
                         >
                           <span
-                            className={`grid h-9 w-9 shrink-0 place-items-center rounded-[10px] ${
-                              complete
+                            className={`grid h-9 w-9 shrink-0 place-items-center rounded-[10px] ${complete
                                 ? "bg-emerald-100 text-emerald-700"
                                 : "bg-slate-200 text-slate-600"
-                            }`}
+                              }`}
                           >
                             <GroupIcon size={14} />
                           </span>
@@ -1809,11 +1836,10 @@ useEffect(() => {
                           </strong>
 
                           <span
-                            className={`grid h-7 w-7 place-items-center rounded-full ${
-                              complete
+                            className={`grid h-7 w-7 place-items-center rounded-full ${complete
                                 ? "bg-emerald-500 text-white"
                                 : "bg-amber-100 text-amber-700"
-                            }`}
+                              }`}
                           >
                             {complete ? (
                               <FaCheck size={9} />
@@ -1824,9 +1850,8 @@ useEffect(() => {
 
                           <FaChevronDown
                             size={9}
-                            className={`text-slate-400 transition-transform ${
-                              expanded ? "rotate-180" : ""
-                            }`}
+                            className={`text-slate-400 transition-transform ${expanded ? "rotate-180" : ""
+                              }`}
                           />
                         </button>
 
@@ -1938,274 +1963,273 @@ useEffect(() => {
             )}
 
             {activeTab === "documents" && (
-              
+
               <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-  <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-    <div className="flex items-center gap-3">
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-[#173f7a]">
-        <FaFileAlt size={15} />
-      </span>
+                <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-[#173f7a]">
+                      <FaFileAlt size={15} />
+                    </span>
 
-      <div>
-        <h2 className="text-[15px] font-black text-[#173f7a]">
-          Application Documents
-        </h2>
-        <p className="mt-1 text-[10px] text-slate-400">
-          Upload and track all required documents for this application
-        </p>
-      </div>
-    </div>
+                    <div>
+                      <h2 className="text-[15px] font-black text-[#173f7a]">
+                        Application Documents
+                      </h2>
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        Upload and track all required documents for this application
+                      </p>
+                    </div>
+                  </div>
 
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="rounded-full bg-blue-50 px-3 py-1.5 text-[9px] font-black text-blue-700">
-        {displayedDocuments.length} uploaded
-      </span>
-      <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[9px] font-black text-slate-500">
-        PDF, JPG, PNG · Max 15 MB
-      </span>
-    </div>
-  </div>
-
-  <div className="space-y-4 p-4 sm:p-5">
-    
-    {documentsLoading && (
-  <div className="rounded-xl bg-blue-50 px-4 py-3 text-[10px] font-bold text-blue-700">
-    Loading uploaded documents...
-  </div>
-)}
-
-{documentsError && (
-  <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-    <p className="text-[10px] font-bold text-rose-700">
-      {documentsError}
-    </p>
-
-    <button
-      type="button"
-      onClick={fetchApplicationDocuments}
-      className="rounded-lg bg-rose-700 px-3 py-2 text-[9px] font-black text-white"
-    >
-      Retry
-    </button>
-  </div>
-)}
-
-
-{/* Already uploaded documents */}
-{!documentsLoading &&
-  !documentsError &&
-  displayedDocuments.length > 0 && (
-    <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white">
-      <div className="flex flex-col gap-3 border-b border-emerald-100 bg-emerald-50/60 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
-            <FaCheckCircle size={13} />
-          </span>
-
-          <div>
-            <h3 className="text-[12px] font-black text-slate-800">
-              Already Uploaded Documents
-            </h3>
-
-            <p className="mt-1 text-[9px] text-slate-500">
-              Documents already available for this application
-            </p>
-          </div>
-        </div>
-
-        <span className="rounded-full bg-white px-3 py-1.5 text-[9px] font-black text-emerald-700 ring-1 ring-emerald-200">
-          {displayedDocuments.length} documents
-        </span>
-      </div>
-
-      <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
-        {displayedDocuments.map((document) => {
-          const documentUrl =
-            getDocumentUrl(document);
-
-          return (
-            <div
-              key={document.id}
-              className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-blue-200 hover:bg-white hover:shadow-sm"
-            >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-700">
-                <FaFileAlt size={14} />
-              </span>
-
-              <div className="min-w-0 flex-1">
-                <strong className="block truncate text-[10px] font-black text-slate-800">
-                  {document.name}
-                </strong>
-
-                <p className="mt-1 truncate text-[8px] text-slate-500">
-                  {String(document.type)
-                    .replaceAll("_", " ")}
-                </p>
-
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[7px] font-black text-emerald-700">
-                    {String(document.status)
-                      .replaceAll("_", " ")}
-                  </span>
-
-                  <span className="truncate text-[7px] text-slate-400">
-                    Uploaded by {document.uploadedBy}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  disabled={!documentUrl}
-                  onClick={() =>
-                    previewDocument(document)
-                  }
-                  title={`Preview ${document.name}`}
-                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <FaEye size={10} />
-                </button>
-
-                <button
-                  type="button"
-                  disabled={!documentUrl}
-                  onClick={() =>
-                    downloadDocument(document)
-                  }
-                  title={`Download ${document.name}`}
-                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <FaDownload size={9} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  )}
-
-    {requiredDocumentSections.map((section) => {
-
-      
-      const completedCount = section.documents.filter(
-        (item) => uploadedDocuments[item.id],
-      ).length;
-
-      const totalCount = section.documents.length;
-
-      return (
-        <div
-          key={section.id}
-          className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
-        >
-          <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-[12px] font-black text-slate-800">
-                {section.title}
-              </h3>
-              <p className="mt-1 text-[9px] text-slate-400">
-                {completedCount} of {totalCount} documents uploaded
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className="h-full rounded-full bg-emerald-500 transition-all"
-                  style={{
-                    width: `${
-                      totalCount === 0
-                        ? 0
-                        : Math.round(
-                            (completedCount / totalCount) * 100,
-                          )
-                    }%`,
-                  }}
-                />
-              </div>
-              <span className="text-[9px] font-black text-slate-500">
-                {completedCount}/{totalCount}
-              </span>
-            </div>
-          </div>
-
-          <div className="divide-y divide-slate-100">
-            {section.documents.map((documentItem, index) => {
-              const selectedFile = selectedFiles[documentItem.id];
-              const uploading = uploadingDocuments[documentItem.id];
-              const uploaded = uploadedDocuments[documentItem.id];
-              const uploadedFileName =
-  uploaded?.fileName ??
-  uploaded?.file_name ??
-  uploaded?.documentName ??
-  uploaded?.document_name ??
-  documentItem.name;
-
-const uploadedFileMeta =
-  uploaded?.mimeType ??
-  uploaded?.mime_type ??
-  uploaded?.documentType ??
-  uploaded?.document_type ??
-  "Uploaded document";
-              const error = uploadErrors[documentItem.id];
-
-              return (
-                <div
-                  key={documentItem.id}
-                  className="grid gap-4 px-4 py-4 transition hover:bg-slate-50/70 lg:grid-cols-[40px_minmax(0,1.35fr)_minmax(0,1fr)_minmax(280px,0.95fr)_120px]"
-                >
-                  <div className="hidden lg:flex lg:items-center">
-                    <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-100 text-[9px] font-black text-slate-500">
-                      {index + 1}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-blue-50 px-3 py-1.5 text-[9px] font-black text-blue-700">
+                      {displayedDocuments.length} uploaded
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[9px] font-black text-slate-500">
+                      PDF, JPG, PNG · Max 15 MB
                     </span>
                   </div>
+                </div>
 
-                  <div className="min-w-0">
-                    <div className="flex items-start gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700">
-                        <FaFileAlt size={13} />
-                      </span>
+                <div className="space-y-4 p-4 sm:p-5">
 
-                      <div className="min-w-0">
-                        <strong className="block text-[10px] font-black text-slate-800">
-                          {documentItem.name}
-                        </strong>
+                  {documentsLoading && (
+                    <div className="rounded-xl bg-blue-50 px-4 py-3 text-[10px] font-bold text-blue-700">
+                      Loading uploaded documents...
+                    </div>
+                  )}
 
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[7px] font-black text-slate-500">
-                            {documentItem.documentType}
-                          </span>
+                  {documentsError && (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                      <p className="text-[10px] font-bold text-rose-700">
+                        {documentsError}
+                      </p>
 
-                          {uploaded && (
-                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[7px] font-black text-emerald-700">
-                              Uploaded
+                      <button
+                        type="button"
+                        onClick={fetchApplicationDocuments}
+                        className="rounded-lg bg-rose-700 px-3 py-2 text-[9px] font-black text-white"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+
+
+                  {/* Already uploaded documents */}
+                  {!documentsLoading &&
+                    !documentsError &&
+                    displayedDocuments.length > 0 && (
+                      <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white">
+                        <div className="flex flex-col gap-3 border-b border-emerald-100 bg-emerald-50/60 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
+                              <FaCheckCircle size={13} />
                             </span>
-                          )}
+
+                            <div>
+                              <h3 className="text-[12px] font-black text-slate-800">
+                                Already Uploaded Documents
+                              </h3>
+
+                              <p className="mt-1 text-[9px] text-slate-500">
+                                Documents already available for this application
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="rounded-full bg-white px-3 py-1.5 text-[9px] font-black text-emerald-700 ring-1 ring-emerald-200">
+                            {displayedDocuments.length} documents
+                          </span>
                         </div>
 
-                        {error && (
-                          <p className="mt-1.5 text-[8px] font-bold text-rose-600">
-                            {error}
-                          </p>
-                        )}
+                        <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+                          {displayedDocuments.map((document) => {
+                            const documentUrl =
+                              getDocumentUrl(document);
+
+                            return (
+                              <div
+                                key={document.id}
+                                className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-blue-200 hover:bg-white hover:shadow-sm"
+                              >
+                                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-700">
+                                  <FaFileAlt size={14} />
+                                </span>
+
+                                <div className="min-w-0 flex-1">
+                                  <strong className="block truncate text-[10px] font-black text-slate-800">
+                                    {document.name}
+                                  </strong>
+
+                                  <p className="mt-1 truncate text-[8px] text-slate-500">
+                                    {String(document.type)
+                                      .replaceAll("_", " ")}
+                                  </p>
+
+                                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[7px] font-black text-emerald-700">
+                                      {String(document.status)
+                                        .replaceAll("_", " ")}
+                                    </span>
+
+                                    <span className="truncate text-[7px] text-slate-400">
+                                      Uploaded by {document.uploadedBy}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex shrink-0 items-center gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={!documentUrl}
+                                    onClick={() =>
+                                      previewDocument(document)
+                                    }
+                                    title={`Preview ${document.name}`}
+                                    className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    <FaEye size={10} />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={!documentUrl}
+                                    onClick={() =>
+                                      downloadDocument(document)
+                                    }
+                                    title={`Download ${document.name}`}
+                                    className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    <FaDownload size={9} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    )}
 
-                  <div className="flex items-center">
-                    <div>
-                      <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">
-                        Applicable for
-                      </p>
-                      <p className="mt-1 text-[9px] leading-4 text-slate-600">
-                        {documentItem.applicableFor}
-                      </p>
-                    </div>
-                  </div>
+                  {requiredDocumentSections.map((section) => {
 
-                  {/* <div className="flex items-center">
+
+                    const completedCount = section.documents.filter(
+                      (item) => uploadedDocuments[item.id],
+                    ).length;
+
+                    const totalCount = section.documents.length;
+
+                    return (
+                      <div
+                        key={section.id}
+                        className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                      >
+                        <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <h3 className="text-[12px] font-black text-slate-800">
+                              {section.title}
+                            </h3>
+                            <p className="mt-1 text-[9px] text-slate-400">
+                              {completedCount} of {totalCount} documents uploaded
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200">
+                              <div
+                                className="h-full rounded-full bg-emerald-500 transition-all"
+                                style={{
+                                  width: `${totalCount === 0
+                                      ? 0
+                                      : Math.round(
+                                        (completedCount / totalCount) * 100,
+                                      )
+                                    }%`,
+                                }}
+                              />
+                            </div>
+                            <span className="text-[9px] font-black text-slate-500">
+                              {completedCount}/{totalCount}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="divide-y divide-slate-100">
+                          {section.documents.map((documentItem, index) => {
+                            const selectedFile = selectedFiles[documentItem.id];
+                            const uploading = uploadingDocuments[documentItem.id];
+                            const uploaded = uploadedDocuments[documentItem.id];
+                            const uploadedFileName =
+                              uploaded?.fileName ??
+                              uploaded?.file_name ??
+                              uploaded?.documentName ??
+                              uploaded?.document_name ??
+                              documentItem.name;
+
+                            const uploadedFileMeta =
+                              uploaded?.mimeType ??
+                              uploaded?.mime_type ??
+                              uploaded?.documentType ??
+                              uploaded?.document_type ??
+                              "Uploaded document";
+                            const error = uploadErrors[documentItem.id];
+
+                            return (
+                              <div
+                                key={documentItem.id}
+                                className="grid gap-4 px-4 py-4 transition hover:bg-slate-50/70 lg:grid-cols-[40px_minmax(0,1.35fr)_minmax(0,1fr)_minmax(280px,0.95fr)_120px]"
+                              >
+                                <div className="hidden lg:flex lg:items-center">
+                                  <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-100 text-[9px] font-black text-slate-500">
+                                    {index + 1}
+                                  </span>
+                                </div>
+
+                                <div className="min-w-0">
+                                  <div className="flex items-start gap-3">
+                                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700">
+                                      <FaFileAlt size={13} />
+                                    </span>
+
+                                    <div className="min-w-0">
+                                      <strong className="block text-[10px] font-black text-slate-800">
+                                        {documentItem.name}
+                                      </strong>
+
+                                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[7px] font-black text-slate-500">
+                                          {documentItem.documentType}
+                                        </span>
+
+                                        {uploaded && (
+                                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[7px] font-black text-emerald-700">
+                                            Uploaded
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {error && (
+                                        <p className="mt-1.5 text-[8px] font-bold text-rose-600">
+                                          {error}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center">
+                                  <div>
+                                    <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">
+                                      Applicable for
+                                    </p>
+                                    <p className="mt-1 text-[9px] leading-4 text-slate-600">
+                                      {documentItem.applicableFor}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* <div className="flex items-center">
                     <label
                       className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition ${
                         selectedFile
@@ -2247,120 +2271,118 @@ const uploadedFileMeta =
                   </div> */}
 
 
-<div className="flex items-center">
-  {uploaded ? (
-    <div className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 py-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
-        <FaCheckCircle size={12} />
-      </span>
+                                <div className="flex items-center">
+                                  {uploaded ? (
+                                    <div className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 py-3">
+                                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
+                                        <FaCheckCircle size={12} />
+                                      </span>
 
-      <div className="min-w-0 flex-1">
-        <strong className="block truncate text-[9px] font-black text-slate-800">
-          {uploadedFileName}
-        </strong>
+                                      <div className="min-w-0 flex-1">
+                                        <strong className="block truncate text-[9px] font-black text-slate-800">
+                                          {uploadedFileName}
+                                        </strong>
 
-        <span className="mt-0.5 block truncate text-[8px] text-slate-500">
-          {uploadedFileMeta}
-        </span>
+                                        <span className="mt-0.5 block truncate text-[8px] text-slate-500">
+                                          {uploadedFileMeta}
+                                        </span>
 
-        <span className="mt-1 block text-[8px] font-black text-emerald-700">
-          Uploaded successfully
-        </span>
-      </div>
-    </div>
-  ) : (
-    <label
-      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition ${
-        selectedFile
-          ? "border-blue-200 bg-blue-50/50"
-          : "border-dashed border-slate-300 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/30"
-      }`}
-    >
-      <span
-        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
-          selectedFile
-            ? "bg-blue-600 text-white"
-            : "bg-blue-100 text-blue-700"
-        }`}
-      >
-        <FaUpload size={11} />
-      </span>
+                                        <span className="mt-1 block text-[8px] font-black text-emerald-700">
+                                          Uploaded successfully
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <label
+                                      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition ${selectedFile
+                                          ? "border-blue-200 bg-blue-50/50"
+                                          : "border-dashed border-slate-300 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/30"
+                                        }`}
+                                    >
+                                      <span
+                                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${selectedFile
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-blue-100 text-blue-700"
+                                          }`}
+                                      >
+                                        <FaUpload size={11} />
+                                      </span>
 
-      <span className="min-w-0 flex-1">
-        <strong className="block truncate text-[9px] font-black text-slate-700">
-          {selectedFile
-            ? selectedFile.name
-            : "Choose file"}
-        </strong>
+                                      <span className="min-w-0 flex-1">
+                                        <strong className="block truncate text-[9px] font-black text-slate-700">
+                                          {selectedFile
+                                            ? selectedFile.name
+                                            : "Choose file"}
+                                        </strong>
 
-        <span className="mt-0.5 block text-[8px] text-slate-400">
-          PDF, JPG or PNG · Max 15 MB
-        </span>
-      </span>
+                                        <span className="mt-0.5 block text-[8px] text-slate-400">
+                                          PDF, JPG or PNG · Max 15 MB
+                                        </span>
+                                      </span>
 
-      <input
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
-        className="hidden"
-        onChange={(event) =>
-          handleDocumentFileChange(
-            documentItem.id,
-            event.target.files?.[0],
-          )
-        }
-      />
-    </label>
-  )}
-</div>
+                                      <input
+                                        type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        className="hidden"
+                                        onChange={(event) =>
+                                          handleDocumentFileChange(
+                                            documentItem.id,
+                                            event.target.files?.[0],
+                                          )
+                                        }
+                                      />
+                                    </label>
+                                  )}
+                                </div>
 
 
-<div className="flex items-center justify-start gap-2 lg:justify-end">
-  {uploaded ? (
-    <>
-      <button
-        type="button"
-        disabled={!getDocumentUrl(uploaded)}
-        onClick={() =>
-          previewDocument(uploaded)
-        }
-        title="Preview document"
-        className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <FaEye size={11} />
-      </button>
+                                <div className="flex items-center justify-start gap-2 lg:justify-end">
+                                  {uploaded ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        disabled={!getDocumentUrl(uploaded)}
+                                        onClick={() =>
+                                          previewDocument(uploaded)
+                                        }
+                                        title="Preview document"
+                                        className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                      >
+                                        <FaEye size={11} />
+                                      </button>
 
-      <button
-        type="button"
-        disabled={!getDocumentUrl(uploaded)}
-        onClick={() =>
-          downloadDocument(uploaded)
-        }
-        title="Download document"
-        className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <FaDownload size={10} />
-      </button>
-    </>
-  ) : (
-    <button
-      type="button"
-      disabled={!selectedFile || uploading}
-      onClick={() =>
-        handleUploadDocument(documentItem)
-      }
-      className="inline-flex h-9 min-w-[100px] items-center justify-center gap-2 rounded-xl bg-[#173f7a] px-3 text-[9px] font-black text-white transition hover:bg-[#102f5e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-    >
-      <FaUpload size={10} />
+                                      <button
+                                        type="button"
+                                        disabled={!getDocumentUrl(uploaded)}
+                                        onClick={() =>
+                                          downloadDocument(uploaded)
+                                        }
+                                        title="Download document"
+                                        className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                      >
+                                        <FaDownload size={10} />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      disabled={!selectedFile || uploading}
+                                      onClick={() =>
+                                        handleUploadDocument(documentItem)
+                                      }
+                                      className="inline-flex h-9 min-w-[100px] items-center justify-center gap-2 rounded-xl bg-[#173f7a] px-3 text-[9px] font-black text-white transition hover:bg-[#102f5e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                                    >
+                                      <FaUpload size={10} />
 
-      {uploading
-        ? "Uploading..."
-        : "Upload"}
-    </button>
-  )}
-</div>
+                                      {uploading
+                                        ? "Uploading..."
+                                        : "Upload"}
+                                    </button>
+                                  )}
+                                </div>
 
 
-                  {/* <div className="flex items-center justify-start lg:justify-end">
+                                {/* <div className="flex items-center justify-start lg:justify-end">
                     {uploaded ? (
                       <span className="inline-flex h-9 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-[9px] font-black text-emerald-700">
                         <FaCheckCircle size={10} />
@@ -2378,16 +2400,16 @@ const uploadedFileMeta =
                       </button>
                     )}
                   </div> */}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    })}
-  </div>
-</section>
-        
+              </section>
+
               // <section className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
               //   <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-[18px]">
               //     <div>
@@ -2531,22 +2553,20 @@ const uploadedFileMeta =
 
                   <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className={`h-full rounded-full ${
-                        requiredItemsVerified
+                      className={`h-full rounded-full ${requiredItemsVerified
                           ? "bg-emerald-500"
                           : "bg-amber-500"
-                      }`}
+                        }`}
                       style={{ width: `${completionPercentage}%` }}
                     />
                   </div>
                 </div>
 
                 <span
-                  className={`grid h-9 w-9 place-items-center rounded-xl text-[9px] font-black ${
-                    requiredItemsVerified
+                  className={`grid h-9 w-9 place-items-center rounded-xl text-[9px] font-black ${requiredItemsVerified
                       ? "bg-emerald-50 text-emerald-700"
                       : "bg-amber-50 text-amber-700"
-                  }`}
+                    }`}
                 >
                   {completionPercentage}%
                 </span>
@@ -2556,121 +2576,118 @@ const uploadedFileMeta =
             <div className="p-5">
               <div>
                 <div className="flex items-center justify-between rounded-[13px] border border-slate-100 bg-slate-50 p-3">
-                <strong className="text-[11px] text-slate-800">
-                  Review completion
-                </strong>
-                <span
-                  className={`text-[11px] font-black ${
-                    requiredItemsVerified
-                      ? "text-emerald-700"
-                      : "text-amber-700"
-                  }`}
-                >
-                  {verifiedCount} / {verificationItems.length}
-                </span>
-              </div>
-
-              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className={`h-full rounded-full ${
-                    requiredItemsVerified
-                      ? "bg-emerald-500"
-                      : "bg-amber-500"
-                  }`}
-                  style={{ width: `${completionPercentage}%` }}
-                />
-              </div>
-
-              {!requiredItemsVerified && (
-                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                  <strong className="text-[9px] font-black text-amber-800">
-                    Pending mandatory controls
+                  <strong className="text-[11px] text-slate-800">
+                    Review completion
                   </strong>
-                  <ul className="mt-1.5 space-y-1 pl-4 text-[8px] leading-4 text-amber-800">
-                    {pendingRequiredItems.map((item) => (
-                      <li key={item.id}>{item.title}</li>
-                    ))}
-                  </ul>
+                  <span
+                    className={`text-[11px] font-black ${requiredItemsVerified
+                        ? "text-emerald-700"
+                        : "text-amber-700"
+                      }`}
+                  >
+                    {verifiedCount} / {verificationItems.length}
+                  </span>
                 </div>
-              )}
+
+                <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className={`h-full rounded-full ${requiredItemsVerified
+                        ? "bg-emerald-500"
+                        : "bg-amber-500"
+                      }`}
+                    style={{ width: `${completionPercentage}%` }}
+                  />
+                </div>
+
+                {!requiredItemsVerified && (
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <strong className="text-[9px] font-black text-amber-800">
+                      Pending mandatory controls
+                    </strong>
+                    <ul className="mt-1.5 space-y-1 pl-4 text-[8px] leading-4 text-amber-800">
+                      {pendingRequiredItems.map((item) => (
+                        <li key={item.id}>{item.title}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
               </div>
 
               <div>
                 <label className="block">
-                <span className="mb-1.5 block text-[10px] font-black text-slate-600">
-                  Checker Remarks
-                </span>
-                <textarea
-                  rows={4}
-                  value={checkerRemarks}
-                  onChange={(event) =>
-                    setCheckerRemarks(event.target.value)
-                  }
-                  placeholder="Enter observations, validations or conditions..."
-                  className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[10px] font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                />
-              </label>
-
-              <label
-                className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 ${
-                  declarationAccepted
-                    ? "border-emerald-200 bg-emerald-50"
-                    : "border-slate-200 bg-slate-50"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={declarationAccepted}
-                  onChange={(event) =>
-                    setDeclarationAccepted(event.target.checked)
-                  }
-                  className="mt-0.5 h-3.5 w-3.5 accent-emerald-600"
-                />
-
-                <span>
-                  <strong className="block text-[10px] font-black text-slate-800">
-                    Independent Checker Declaration
-                  </strong>
-                  <span className="mt-1 block text-[8px] leading-4 text-slate-500">
-                    I independently reviewed the maker instruction,
-                    beneficiary details, charges, compliance controls and
-                    supporting documents.
+                  <span className="mb-1.5 block text-[10px] font-black text-slate-600">
+                    Checker Remarks
                   </span>
-                </span>
-              </label>
+                  <textarea
+                    rows={4}
+                    value={checkerRemarks}
+                    onChange={(event) =>
+                      setCheckerRemarks(event.target.value)
+                    }
+                    placeholder="Enter observations, validations or conditions..."
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[10px] font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  />
+                </label>
 
-              <div className="mt-4 grid gap-2">
-                <button
-                  type="button"
-                  disabled={!approvalReady || decisionSubmitting}
-                  onClick={() => openDecisionModal("approve")}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#173f7a] px-4 text-[10px] font-black text-white hover:bg-[#102f5e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                <label
+                  className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 ${declarationAccepted
+                      ? "border-emerald-200 bg-emerald-50"
+                      : "border-slate-200 bg-slate-50"
+                    }`}
                 >
-                  <FaCheckCircle size={11} />
-                  Approve & Send to Ops Head
-                </button>
+                  <input
+                    type="checkbox"
+                    checked={declarationAccepted}
+                    onChange={(event) =>
+                      setDeclarationAccepted(event.target.checked)
+                    }
+                    className="mt-0.5 h-3.5 w-3.5 accent-emerald-600"
+                  />
 
-                <button
-                  type="button"
-                  onClick={() => openDecisionModal("return")}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 text-[10px] font-black text-rose-700 hover:bg-rose-50"
-                >
-                  <FaUndo size={10} />
-                  Return to Maker
-                </button>
+                  <span>
+                    <strong className="block text-[10px] font-black text-slate-800">
+                      Independent Checker Declaration
+                    </strong>
+                    <span className="mt-1 block text-[8px] leading-4 text-slate-500">
+                      I independently reviewed the maker instruction,
+                      beneficiary details, charges, compliance controls and
+                      supporting documents.
+                    </span>
+                  </span>
+                </label>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    showToast("Checker review saved as draft.")
-                  }
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 text-[10px] font-black text-slate-600 hover:bg-slate-200"
-                >
-                  <FaSave size={10} />
-                  Save Review
-                </button>
-              </div>
+                <div className="mt-4 grid gap-2">
+                  <button
+                    type="button"
+                    disabled={!approvalReady || decisionSubmitting}
+                    onClick={() => openDecisionModal("approve")}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#173f7a] px-4 text-[10px] font-black text-white hover:bg-[#102f5e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                  >
+                    <FaCheckCircle size={11} />
+                    Approve & Send to Ops Head
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openDecisionModal("return")}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 text-[10px] font-black text-rose-700 hover:bg-rose-50"
+                  >
+                    <FaUndo size={10} />
+                    Return to Maker
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      showToast("Checker review saved as draft.")
+                    }
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 text-[10px] font-black text-slate-600 hover:bg-slate-200"
+                  >
+                    <FaSave size={10} />
+                    Save Review
+                  </button>
+                </div>
 
                 <p className="mt-3 text-center text-[8px] text-slate-400">
                   Every action will be recorded in the workflow audit trail.
@@ -2685,11 +2702,10 @@ const uploadedFileMeta =
         <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div
-              className={`px-5 py-5 text-white ${
-                decisionModal === "approve"
+              className={`px-5 py-5 text-white ${decisionModal === "approve"
                   ? "bg-gradient-to-r from-[#173f7a] to-[#0f766e]"
                   : "bg-gradient-to-r from-rose-800 to-rose-600"
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -2763,11 +2779,10 @@ const uploadedFileMeta =
                   type="button"
                   disabled={decisionSubmitting}
                   onClick={confirmDecision}
-                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[10px] font-black text-white disabled:cursor-not-allowed disabled:opacity-60 ${
-                    decisionModal === "approve"
+                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[10px] font-black text-white disabled:cursor-not-allowed disabled:opacity-60 ${decisionModal === "approve"
                       ? "bg-[#173f7a] hover:bg-[#102f5e]"
                       : "bg-rose-700 hover:bg-rose-800"
-                  }`}
+                    }`}
                 >
                   {decisionModal === "approve" ? (
                     <>

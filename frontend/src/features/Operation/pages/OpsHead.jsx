@@ -1,29 +1,17 @@
-
-import { useCallback,useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  FaArrowLeft,
-  FaArrowRight,
-  FaBan,
   FaBuilding,
-  FaCalendarAlt,
   FaCheck,
   FaCheckCircle,
   FaChevronDown,
-  FaChevronLeft,
-  FaChevronRight,
   FaClock,
+  FaUpload,
   FaDownload,
   FaExclamationTriangle,
   FaEye,
   FaFileAlt,
-  FaHistory,
-  FaKey,
   FaLandmark,
   FaLock,
-  FaMoneyCheckAlt,
-  FaPaperPlane,
-  FaPrint,
-  FaRoute,
   FaSave,
   FaShieldAlt,
   FaTimes,
@@ -31,14 +19,10 @@ import {
   FaUniversity,
   FaUserTie,
 } from "react-icons/fa";
-
-import {
-  useLocation,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import { operationApi } from "../operationApi.js";
+
 const workflowSteps = [
   { id: 1, label: "Lead", state: "completed" },
   { id: 2, label: "Verification", state: "completed" },
@@ -48,7 +32,6 @@ const workflowSteps = [
   { id: 6, label: "Operations", state: "current" },
   { id: 7, label: "Disbursement", state: "pending" },
 ];
-
 
 const initialVerificationItems = [
   {
@@ -137,7 +120,6 @@ const initialVerificationItems = [
   },
 ];
 
-
 const checklistGroups = [
   {
     id: "kyc",
@@ -169,14 +151,51 @@ const checklistGroups = [
   },
 ];
 
-const unwrapApiResponse = (response) => {
-  return (
-    response?.data?.data ??
-    response?.data ??
-    response ??
-    null
-  );
+const unwrapApiResponse = (response) =>
+  response?.data?.data ?? response?.data ?? response ?? null;
+
+const normalizeApiError = (error, fallbackMessage) => {
+  const message =
+    error?.response?.data?.message ??
+    error?.response?.data?.error ??
+    error?.message ??
+    fallbackMessage;
+
+  return Array.isArray(message)
+    ? message.join(", ")
+    : String(message);
 };
+
+const extractArrayPayload = (response, possibleKeys = []) => {
+  const candidates = [
+    response?.data?.data?.data,
+    response?.data?.data,
+    response?.data,
+    response,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate;
+    }
+
+    if (candidate && typeof candidate === "object") {
+      for (const key of possibleKeys) {
+        if (Array.isArray(candidate[key])) {
+          return candidate[key];
+        }
+      }
+    }
+  }
+
+  return [];
+};
+
+const toBoolean = (value) =>
+  value === true ||
+  value === 1 ||
+  value === "1" ||
+  value === "true";
 
 const formatCurrency = (value) => {
   const amount = Number(value ?? 0);
@@ -193,9 +212,7 @@ const formatCurrency = (value) => {
 };
 
 const formatDate = (value) => {
-  if (!value) {
-    return "-";
-  }
+  if (!value) return "-";
 
   const date = new Date(value);
 
@@ -211,9 +228,7 @@ const formatDate = (value) => {
 };
 
 const formatDateTime = (value) => {
-  if (!value) {
-    return "-";
-  }
+  if (!value) return "-";
 
   const date = new Date(value);
 
@@ -230,157 +245,123 @@ const formatDateTime = (value) => {
   }).format(date);
 };
 
-const charges = [
+const normalizeStatus = (value) =>
+  String(value || "Awaiting head").replaceAll("_", " ");
+
+function DetailCell({ label, value, valueClassName = "text-slate-800" }) {
+  return (
+    <div className="flex min-h-[70px] flex-col justify-center rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 transition hover:border-blue-200 hover:bg-white hover:shadow-sm">
+      <p className="text-[8px] font-black uppercase tracking-[0.08em] text-slate-400">
+        {label}
+      </p>
+      <p className={`mt-1.5 break-words text-[11px] font-extrabold ${valueClassName}`}>
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
+function StatusBadge({ children, tone = "neutral" }) {
+  const toneClasses = {
+    neutral: "bg-slate-100 text-slate-600",
+    blue: "bg-blue-50 text-blue-700",
+    success: "bg-emerald-50 text-emerald-700",
+    warning: "bg-amber-50 text-amber-700",
+    danger: "bg-rose-50 text-rose-700",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-black ${toneClasses[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+
+const requiredDocumentSections = [
   {
-    label: "Processing Fee",
-    amount: "₹34,810",
-    status: "Collected",
+    id: "login-application",
+    title: "B. Login and Application Documents",
+    documents: [
+      { srNo: 1, id: "loan-application-form", name: "Loan application form duly filled and signed", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "Received", documentType: "OTHER" },
+      { srNo: 2, id: "applicant-photograph", name: "Applicant photograph", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "Received", documentType: "PHOTO" },
+      { srNo: 3, id: "partner-login-sheet", name: "Partner login sheet / SFTP upload confirmation", applicableFor: "SFT Finance / Partner", remarks: "NA", documentType: "OTHER" },
+      { srNo: 4, id: "customer-consent", name: "Customer consent for bureau, KYC verification and data sharing", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "NA", documentType: "OTHER" },
+    ],
   },
   {
-    label: "Documentation Fee",
-    amount: "₹4,130",
-    status: "Collected",
+    id: "kyc-documents",
+    title: "C. KYC Documents",
+    documents: [
+      { srNo: 5, id: "pan-card", name: "PAN card", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "Received", documentType: "PAN" },
+      { srNo: 6, id: "aadhaar-card", name: "Aadhaar card", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "Received", documentType: "AADHAAR" },
+      { srNo: 7, id: "address-proof", name: "Address proof - any one: Aadhaar, passport, voter ID, driving licence, utility bill, rent agreement or bank statement", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "Received", documentType: "OTHER" },
+      { srNo: 8, id: "ckyc-form", name: "CKYC Form", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "Pending", documentType: "OTHER" },
+    ],
   },
   {
-    label: "Stamp Duty / eStamp",
-    amount: "₹8,000",
-    status: "Collected",
+    id: "income-banking",
+    title: "D. Income and Banking Documents",
+    documents: [
+      { srNo: 9, id: "bank-statement", name: "Latest 6 months bank statement", applicableFor: "Applicant / Business / Salary Account", remarks: "Received", documentType: "BANK_STATEMENT" },
+      { srNo: 10, id: "itr-financials", name: "ITR with computation / financials, if applicable", applicableFor: "Applicant / Business Entity", remarks: "NA", documentType: "INCOME_PROOF" },
+      { srNo: 11, id: "salary-slips", name: "Salary slips / Form 16, if salaried", applicableFor: "Salaried Applicant", remarks: "NA", documentType: "INCOME_PROOF" },
+      { srNo: 12, id: "gst-business-proof", name: "GST returns / business proof, if self-employed", applicableFor: "Self-employed Applicant / Entity", remarks: "NA", documentType: "INCOME_PROOF" },
+    ],
   },
   {
-    label: "MODT / Mortgage Registration",
-    amount: "₹8,000",
-    status: "Collected",
+    id: "bureau-credit-verification",
+    title: "E. Bureau, Credit and Verification",
+    documents: [
+      { srNo: 13, id: "bureau-report", name: "Bureau report", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "Received", documentType: "OTHER" },
+      { srNo: 14, id: "pd-sheet", name: "PD sheet / customer discussion note", applicableFor: "Credit / Partner", remarks: "Received", documentType: "OTHER" },
+      { srNo: 15, id: "cam-credit-appraisal", name: "CAM / credit appraisal note", applicableFor: "Credit Team", remarks: "Received", documentType: "OTHER" },
+      { srNo: 16, id: "fi-fcu-verification", name: "FI / residence / office verification, if applicable & FCU", applicableFor: "Verification Agency / Credit", remarks: "FCU pending", documentType: "OTHER" },
+      { srNo: 17, id: "approval-sanction-conditions", name: "Approval note and sanction Conditions", applicableFor: "Credit Approver", remarks: "Received", documentType: "OTHER" },
+    ],
   },
   {
-    label: "CERSAI Registration",
-    amount: "₹590",
-    status: "Collected",
+    id: "property-documents",
+    title: "F. Property Documents",
+    documents: [
+      { srNo: 18, id: "property-title-documents", name: "Property title documents / chain documents", applicableFor: "Property Owner", remarks: "Copy Received", documentType: "PROPERTY_DOCUMENT" },
+      { srNo: 19, id: "property-tax-utility", name: "Latest property tax receipt / electricity bill / maintenance bill", applicableFor: "Property Owner", remarks: "Received", documentType: "PROPERTY_DOCUMENT" },
+      { srNo: 20, id: "approved-plan-oc-cc", name: "Approved plan / OC / CC / society NOC, wherever applicable", applicableFor: "Property Owner / Builder / Society", remarks: "NA", documentType: "PROPERTY_DOCUMENT" },
+      { srNo: 21, id: "legal-search-report", name: "Legal search report / title clearance report", applicableFor: "Empanelled Advocate", remarks: "Received", documentType: "PROPERTY_DOCUMENT" },
+      { srNo: 22, id: "technical-valuation-report", name: "Technical valuation report", applicableFor: "Empanelled Valuer", remarks: "Received", documentType: "PROPERTY_DOCUMENT" },
+      { srNo: 23, id: "cersai-report", name: "CERSAI search / report, if applicable", applicableFor: "Credit / Legal", remarks: "Received", documentType: "PROPERTY_DOCUMENT" },
+    ],
   },
   {
-    label: "NACH / eMandate Setup",
-    amount: "₹354",
-    status: "Collected",
+    id: "sanction-documentation-disbursement",
+    title: "G. Sanction, Documentation and Disbursement",
+    documents: [
+      { srNo: 24, id: "accepted-sanction-letter", name: "Sanction letter accepted by borrower", applicableFor: "Applicant / Co-applicant", remarks: "Received", documentType: "OTHER" },
+      { srNo: 25, id: "executed-loan-agreement", name: "Loan agreement and all standard loan documents executed", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "Received", documentType: "OTHER" },
+      { srNo: 26, id: "nach-cancelled-cheque", name: "NACH / repayment mandate and cancelled cheque", applicableFor: "Applicant / Borrower Bank Account", remarks: "Registered", documentType: "OTHER" },
+      { srNo: 27, id: "mortgage-documents", name: "Mortgage creation documents executed", applicableFor: "Borrower / Property Owner", remarks: "Received", documentType: "PROPERTY_DOCUMENT" },
+      { srNo: 28, id: "original-title-deeds", name: "Original title deeds received for custody", applicableFor: "Fintree Custody / Branch Hub", remarks: "Received", documentType: "PROPERTY_DOCUMENT" },
+      { srNo: 29, id: "security-cheques", name: "Security cheques, if applicable", applicableFor: "Applicant / Co-applicant / Guarantor", remarks: "Received", documentType: "OTHER" },
+      { srNo: 30, id: "final-disbursement-memo", name: "Final disbursement memo / checklist approved", applicableFor: "Credit / Operations / Authorised Signatory", remarks: "Fintree will share", documentType: "OTHER" },
+      { srNo: 31, id: "beneficiary-bank-verification", name: "Beneficiary bank details verified", applicableFor: "Operations", remarks: "Verify", documentType: "OTHER" },
+      { srNo: 32, id: "disbursement-utr", name: "Disbursement UTR / payment confirmation", applicableFor: "Accounts / Operations", remarks: "NA", documentType: "OTHER" },
+    ],
   },
   {
-    label: "Broken Period Interest",
-    amount: "₹26,082",
-    status: "Collected",
+    id: "post-disbursement",
+    title: "H. Post Disbursement",
+    documents: [
+      { srNo: 33, id: "custody-acknowledgement", name: "Document custody acknowledgement", applicableFor: "Fintree Custody / Branch Hub", remarks: "Received", documentType: "PROPERTY_DOCUMENT" },
+      { srNo: 34, id: "pdd-otc-tracker", name: "PDD / OTC tracker updated, if any", applicableFor: "Operations", remarks: "Received", documentType: "OTHER" },
+      { srNo: 35, id: "post-disbursement-mis", name: "Post-disbursement MIS shared with partner", applicableFor: "MIS Team", remarks: "", documentType: "OTHER" },
+    ],
   },
 ];
 
-
-const progressWidthClasses = {
-  0: "w-0",
-  1: "w-[8%]",
-  2: "w-[17%]",
-  3: "w-1/4",
-  4: "w-1/3",
-  5: "w-[42%]",
-  6: "w-1/2",
-  7: "w-[58%]",
-  8: "w-2/3",
-  9: "w-3/4",
-  10: "w-[83%]",
-  11: "w-[92%]",
-  12: "w-full",
-};
-
-function SectionHeading({ eyebrow, title, rightContent }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        {eyebrow && (
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-            {eyebrow}
-          </p>
-        )}
-
-        <h2 className="mt-1 text-lg font-extrabold tracking-tight text-[#1c365f] sm:text-xl">
-          {title}
-        </h2>
-
-        <div className="mt-3 h-1 w-12 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
-      </div>
-
-      {rightContent}
-    </div>
-  );
-}
-
-function ReadOnlyField({
-  label,
-  value,
-  icon: Icon,
-  valueClass = "text-[#31476d]",
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-extrabold text-slate-600">
-        {label}
-      </span>
-
-      <div className="flex min-h-14 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
-        {Icon && (
-          <Icon className="shrink-0 text-slate-400" size={15} />
-        )}
-
-        <span
-          className={`min-w-0 flex-1 truncate text-sm font-semibold ${valueClass}`}
-        >
-          {value}
-        </span>
-
-        <FaLock className="shrink-0 text-slate-300" size={11} />
-      </div>
-    </label>
-  );
-}
-
-function InfoRow({ label, value, children }) {
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(120px,1fr)] items-start gap-4 border-b border-slate-100 py-4 last:border-b-0">
-      <span className="text-xs font-medium leading-5 text-slate-500">
-        {label}
-      </span>
-
-      {children || (
-        <strong className="text-right text-xs font-extrabold leading-5 text-[#243f6d]">
-          {value}
-        </strong>
-      )}
-    </div>
-  );
-}
-
 export default function OpsHead() {
-  // const workflowRef = useRef(null);
-  const [expandedChecklistGroups, setExpandedChecklistGroups] = useState([]);
-  const [verificationItems, setVerificationItems] = useState(
-    initialVerificationItems,
-  );
-
-  const [declarationAccepted, setDeclarationAccepted] = useState(false);
-  const [checkerRemarks, setCheckerRemarks] = useState("");
-  const [returnReason, setReturnReason] = useState("");
-  const [decisionModal, setDecisionModal] = useState(null);
-  const [decisionError, setDecisionError] = useState("");
-  const [pageStatus, setPageStatus] = useState("Awaiting checker");
-  const [toastMessage, setToastMessage] = useState("");
-
-  const [decisionSubmitting, setDecisionSubmitting] =
-  useState(false);
-
-  const verifiedCount = useMemo(
-    () => verificationItems.filter((item) => item.checked).length,
-    [verificationItems],
-  );
-    const [documents, setDocuments] = useState([]);
-const [documentsLoading, setDocumentsLoading] =
-  useState(false);
-const [documentsError, setDocumentsError] =
-  useState("");
-
-
+  
   const params = useParams();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -390,96 +371,42 @@ const [documentsError, setDocumentsError] =
     location.state?.applicationId ||
     searchParams.get("applicationId");
 
-      const fetchApplicationDocuments =
-          useCallback(async () => {
-            const normalizedApplicationId =
-              Number(applicationId);
-        
-            if (
-              !Number.isInteger(
-                normalizedApplicationId,
-              ) ||
-              normalizedApplicationId <= 0
-            ) {
-              setDocuments([]);
-              setDocumentsError(
-                "Valid application ID is required.",
-              );
-              return;
-            }
-        
-            try {
-              setDocumentsLoading(true);
-              setDocumentsError("");
-        
-              const response =
-                await  operationApi.getApplicationDocuments(
-                  normalizedApplicationId,
-                );
-        
-              /*
-                Possible response formats:
-        
-                1. Service:
-                {
-                  data: [...],
-                  message: "Documents fetched successfully"
-                }
-        
-                2. Global response wrapper:
-                {
-                  success: true,
-                  data: {
-                    data: [...],
-                    message: "Documents fetched successfully"
-                  }
-                }
-              */
-        
-              const payload =
-                response?.data?.data ??
-                response?.data ??
-                {};
-        
-              const documentRows = Array.isArray(payload)
-                ? payload
-                : Array.isArray(payload?.data)
-                  ? payload.data
-                  : [];
-        
-              setDocuments(documentRows);
-            } catch (error) {
-              console.error(
-                "Failed to fetch application documents:",
-                error,
-              );
-        
-              const message =
-                error?.response?.data?.message ??
-                error?.message ??
-                "Unable to fetch application documents.";
-        
-              setDocumentsError(
-                Array.isArray(message)
-                  ? message.join(", ")
-                  : String(message),
-              );
-        
-              setDocuments([]);
-            } finally {
-              setDocumentsLoading(false);
-            }
-          }, [applicationId]);
-        
-        
-        useEffect(() => {
-          fetchApplicationDocuments();
-        }, [fetchApplicationDocuments]);
-        
-    
   const [caseData, setCaseData] = useState(null);
   const [caseLoading, setCaseLoading] = useState(true);
   const [caseError, setCaseError] = useState("");
+
+  const [verificationItems, setVerificationItems] = useState(
+    initialVerificationItems,
+  );
+  const [expandedChecklistGroups, setExpandedChecklistGroups] = useState([
+    "kyc",
+    "bank",
+  ]);
+
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState("");
+
+  const [selectedFiles, setSelectedFiles] = useState({});
+const [uploadingDocuments, setUploadingDocuments] = useState({});
+const [uploadedDocuments, setUploadedDocuments] = useState({});
+const [uploadErrors, setUploadErrors] = useState({});
+
+  const [checkerRemarks, setCheckerRemarks] = useState("");
+  const [declarationAccepted, setDeclarationAccepted] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [decisionModal, setDecisionModal] = useState(null);
+  const [decisionError, setDecisionError] = useState("");
+  const [decisionSubmitting, setDecisionSubmitting] = useState(false);
+  const [pageStatus, setPageStatus] = useState("Awaiting head");
+  const [toastMessage, setToastMessage] = useState("");
+  const [activeTab, setActiveTab] = useState("overview");
+
+  const verifiedCount = useMemo(
+    () => verificationItems.filter((item) => item.checked).length,
+    [verificationItems],
+  );
+
   const requiredItemsVerified = useMemo(
     () =>
       verificationItems
@@ -488,338 +415,664 @@ const [documentsError, setDocumentsError] =
     [verificationItems],
   );
 
+  const pendingRequiredItems = useMemo(
+    () =>
+      verificationItems.filter(
+        (item) => item.required && !item.checked,
+      ),
+    [verificationItems],
+  );
+
   const approvalReady =
     requiredItemsVerified && declarationAccepted;
 
-    const customerLoanDetails = useMemo(
-  () => [
-    {
-      label: "Customer Name",
-      value:
-        caseData?.customer?.name ||
-        caseData?.customerName ||
-        "-",
-    },
-    {
-      label: "Application No.",
-      value:
-        caseData?.application
-          ?.applicationNumber ||
-        caseData?.applicationNumber ||
-        "-",
-    },
-    {
-      label: "LAN",
-      value:
-        caseData?.disbursement?.lan ||
-        caseData?.lan ||
-        "Pending booking",
-    },
-    {
-      label: "Product",
-      value:
-        caseData?.application?.product ||
-        caseData?.product ||
-        "Loan Against Property",
-    },
-    {
-      label: "Property Type",
-      value:
-        caseData?.application?.propertyType ||
-        caseData?.propertyType ||
-        "-",
-    },
-    {
-      label: "Branch",
-      value:
-        caseData?.application?.branch ||
-        caseData?.branch ||
-        "-",
-    },
-    {
-      label: "Requested Amount",
-      value: formatCurrency(
-        caseData?.application
-          ?.requestedAmount ??
-          caseData?.requestedAmount,
-      ),
-    },
-    {
-      label: "Sanctioned Amount",
-      value: formatCurrency(
-        caseData?.sanction
-          ?.sanctionedAmount ??
-          caseData?.sanctionedAmount,
-      ),
-    },
-    {
-      label: "Loan Tenure",
-      value:
-        caseData?.sanction?.loanTenure ||
-        caseData?.loanTenure
-          ? `${
-              caseData?.sanction?.loanTenure ||
-              caseData?.loanTenure
-            } Months`
-          : "-",
-    },
-    {
-      label: "Interest Rate",
-      value:
-        caseData?.sanction?.interestRate ||
-        caseData?.interestRate
-          ? `${
-              caseData?.sanction?.interestRate ||
-              caseData?.interestRate
-            }% p.a.`
-          : "-",
-    },
-    {
-      label: "ROI / Monthly EMI",
-      value: formatCurrency(
-        caseData?.sanction?.monthlyEmi ??
-          caseData?.monthlyEmi,
-      ),
-    },
-    {
-      label: "Loan Purpose",
-      value:
-        caseData?.application?.loanPurpose ||
-        caseData?.loanPurpose ||
-        "-",
-    },
-  ],
-  [caseData],
-);
+  const completionPercentage = Math.round(
+    (verifiedCount / verificationItems.length) * 100,
+  );
 
-
-const disbursementDetails = useMemo(
-  () => [
-    {
-      label: "Beneficiary Name",
-      value:
-        caseData?.disbursement
-          ?.beneficiaryName ||
-        caseData?.customer?.name ||
-        caseData?.customerName ||
-        "-",
-    },
-    {
-      label: "Disbursement Type",
-      value:
-        caseData?.disbursement?.type ||
-        caseData?.disbursementType ||
-        "-",
-    },
-    {
-      label: "Bank Name",
-      value:
-        caseData?.disbursement?.bankName ||
-        caseData?.bankName ||
-        "-",
-    },
-    {
-      label: "Disbursement Amount",
-      value: formatCurrency(
-        caseData?.disbursement?.amount ??
-          caseData?.disbursementAmount,
-      ),
-    },
-    {
-      label: "Account Number",
-      value:
-        caseData?.disbursement
-          ?.accountNumber ||
-        caseData?.accountNumber ||
-        "-",
-    },
-    {
-      label: "Disbursement Date",
-      value: formatDate(
-        caseData?.disbursement
-          ?.disbursementDate ??
-          caseData?.disbursementDate,
-      ),
-    },
-    {
-      label: "IFSC Code",
-      value:
-        caseData?.disbursement?.ifsc ||
-        caseData?.ifsc ||
-        "-",
-    },
-    {
-      label: "Payment Status",
-      value:
-        caseData?.disbursement
-          ?.paymentStatus ||
-        caseData?.paymentStatus ||
-        "Pending Checker Approval",
-      status: "pending",
-    },
-    {
-      label: "Penny Drop Match",
-      value:
-        caseData?.disbursement
-          ?.pennyDropMatch !== null &&
-        caseData?.disbursement
-          ?.pennyDropMatch !== undefined
-          ? `${caseData.disbursement.pennyDropMatch}%`
-          : caseData?.pennyDropMatch !==
-                null &&
-              caseData?.pennyDropMatch !==
-                undefined
-            ? `${caseData.pennyDropMatch}%`
+  const customerLoanDetails = useMemo(
+    () => [
+      {
+        label: "Customer Name",
+        value:
+          caseData?.customer?.name ||
+          caseData?.customerName ||
+          "-",
+      },
+      {
+        label: "Application No.",
+        value:
+          caseData?.application?.applicationNumber ||
+          caseData?.applicationNumber ||
+          "-",
+      },
+      {
+        label: "LAN",
+        value:
+          caseData?.disbursement?.lan ||
+          caseData?.lan ||
+          "Pending booking",
+      },
+      {
+        label: "Product",
+        value:
+          caseData?.application?.product ||
+          caseData?.product ||
+          "Loan Against Property",
+      },
+      {
+        label: "Property Type",
+        value:
+          caseData?.application?.propertyType ||
+          caseData?.propertyType ||
+          "-",
+      },
+      {
+        label: "Branch",
+        value:
+          caseData?.application?.branch ||
+          caseData?.branch ||
+          "-",
+      },
+      {
+        label: "Requested Amount",
+        value: formatCurrency(
+          caseData?.application?.requestedAmount ??
+            caseData?.requestedAmount,
+        ),
+      },
+      {
+        label: "Sanctioned Amount",
+        value: formatCurrency(
+          caseData?.sanction?.sanctionedAmount ??
+            caseData?.sanctionedAmount,
+        ),
+      },
+      {
+        label: "Loan Tenure",
+        value:
+          caseData?.sanction?.loanTenure ||
+          caseData?.loanTenure
+            ? `${
+                caseData?.sanction?.loanTenure ||
+                caseData?.loanTenure
+              } Months`
             : "-",
-      status: "success",
-    },
-    {
-      label: "UTR Number",
-      value:
-        caseData?.disbursement
-          ?.utrNumber ||
-        caseData?.utrNumber ||
-        "Generated after bank success",
-    },
-  ],
-  [caseData],
-);
+      },
+      {
+        label: "Interest Rate",
+        value:
+          caseData?.sanction?.interestRate ||
+          caseData?.interestRate
+            ? `${
+                caseData?.sanction?.interestRate ||
+                caseData?.interestRate
+              }% p.a.`
+            : "-",
+      },
+      {
+        label: "Monthly EMI",
+        value: formatCurrency(
+          caseData?.sanction?.monthlyEmi ??
+            caseData?.monthlyEmi,
+        ),
+      },
+      {
+        label: "Loan Purpose",
+        value:
+          caseData?.application?.loanPurpose ||
+          caseData?.loanPurpose ||
+          "-",
+      },
+    ],
+    [caseData],
+  );
+
+  const disbursementDetails = useMemo(
+    () => [
+      {
+        label: "Beneficiary Name",
+        value:
+          caseData?.disbursement?.beneficiaryName ||
+          caseData?.customer?.name ||
+          caseData?.customerName ||
+          "-",
+      },
+      {
+        label: "Disbursement Type",
+        value:
+          caseData?.disbursement?.type ||
+          caseData?.disbursementType ||
+          "-",
+      },
+      {
+        label: "Bank Name",
+        value:
+          caseData?.disbursement?.bankName ||
+          caseData?.bankName ||
+          "-",
+      },
+      {
+        label: "Disbursement Amount",
+        value: formatCurrency(
+          caseData?.disbursement?.amount ??
+            caseData?.disbursementAmount,
+        ),
+      },
+      {
+        label: "Account Number",
+        value:
+          caseData?.disbursement?.accountNumber ||
+          caseData?.accountNumber ||
+          "-",
+      },
+      {
+        label: "Disbursement Date",
+        value: formatDate(
+          caseData?.disbursement?.disbursementDate ??
+            caseData?.disbursementDate,
+        ),
+      },
+      {
+        label: "IFSC Code",
+        value:
+          caseData?.disbursement?.ifsc ||
+          caseData?.ifsc ||
+          "-",
+      },
+      {
+        label: "Payment Status",
+        value:
+          caseData?.disbursement?.paymentStatus ||
+          caseData?.paymentStatus ||
+          "Pending Head Approval",
+        tone: "warning",
+      },
+      {
+        label: "Penny Drop Match",
+        value:
+          caseData?.disbursement?.pennyDropMatch !== null &&
+          caseData?.disbursement?.pennyDropMatch !== undefined
+            ? `${caseData.disbursement.pennyDropMatch}%`
+            : caseData?.pennyDropMatch !== null &&
+                caseData?.pennyDropMatch !== undefined
+              ? `${caseData.pennyDropMatch}%`
+              : "-",
+        tone: "success",
+      },
+      {
+        label: "UTR Number",
+        value:
+          caseData?.disbursement?.utrNumber ||
+          caseData?.utrNumber ||
+          "Generated after bank success",
+      },
+    ],
+    [caseData],
+  );
+
+  const caseCharges = useMemo(() => {
+    const rows =
+      caseData?.charges ??
+      caseData?.paymentCharges ??
+      caseData?.chargeDetails ??
+      caseData?.reconciliation?.charges ??
+      [];
+
+    return Array.isArray(rows) ? rows : [];
+  }, [caseData]);
+
+  const totalCharges = useMemo(
+    () =>
+      caseCharges.reduce(
+        (total, charge) => total + Number(charge?.amount || 0),
+        0,
+      ),
+    [caseCharges],
+  );
+
+  // const fetchApplicationDocuments = useCallback(async () => {
+  //   const normalizedApplicationId = Number(applicationId);
+
+  //   if (
+  //     !Number.isInteger(normalizedApplicationId) ||
+  //     normalizedApplicationId <= 0
+  //   ) {
+  //     setDocuments([]);
+  //     setDocumentsError("Valid application ID is required.");
+  //     return;
+  //   }
+
+  //   try {
+  //     setDocumentsLoading(true);
+  //     setDocumentsError("");
+
+  //     const response =
+  //       await operationApi.findAllByApplication(
+  //         normalizedApplicationId,
+  //       );
+
+  //     const rows = extractArrayPayload(response, [
+  //       "documents",
+  //       "items",
+  //       "rows",
+  //       "results",
+  //       "data",
+  //     ]);
+
+  //     setDocuments(rows);
+  //   } catch (error) {
+  //     console.error(
+  //       "Failed to fetch application documents:",
+  //       error,
+  //     );
+
+  //     setDocumentsError(
+  //       normalizeApiError(
+  //         error,
+  //         "Unable to fetch application documents.",
+  //       ),
+  //     );
+  //     setDocuments([]);
+  //   } finally {
+  //     setDocumentsLoading(false);
+  //   }
+  // }, [applicationId]);
+
+const handleDocumentFileChange = (documentId, file) => {
+  if (!file) {
+    setSelectedFiles((current) => {
+      const updated = { ...current };
+      delete updated[documentId];
+      return updated;
+    });
+
+    return;
+  }
+
+  const allowedMimeTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+  ];
+
+  if (!allowedMimeTypes.includes(file.type)) {
+    setUploadErrors((current) => ({
+      ...current,
+      [documentId]: "Only PDF, JPG, JPEG and PNG files are allowed.",
+    }));
+
+    return;
+  }
+
+  const maximumSize = 15 * 1024 * 1024;
+
+  if (file.size > maximumSize) {
+    setUploadErrors((current) => ({
+      ...current,
+      [documentId]: "File size must not exceed 15 MB.",
+    }));
+
+    return;
+  }
+
+  setSelectedFiles((current) => ({
+    ...current,
+    [documentId]: file,
+  }));
+
+  setUploadErrors((current) => ({
+    ...current,
+    [documentId]: "",
+  }));
+};
+
+const handleUploadDocument = async (documentItem) => {
+  const file = selectedFiles[documentItem.id];
+
+  if (!file) {
+    setUploadErrors((current) => ({
+      ...current,
+      [documentItem.id]: "Please select a file.",
+    }));
+
+    return;
+  }
+
+  const normalizedApplicationId = Number(applicationId);
+
+  if (
+    !Number.isInteger(normalizedApplicationId) ||
+    normalizedApplicationId <= 0
+  ) {
+    setUploadErrors((current) => ({
+      ...current,
+      [documentItem.id]: "Valid application ID is required.",
+    }));
+
+    return;
+  }
+
+  try {
+    setUploadingDocuments((current) => ({
+      ...current,
+      [documentItem.id]: true,
+    }));
+
+    setUploadErrors((current) => ({
+      ...current,
+      [documentItem.id]: "",
+    }));
+
+    const formData = new FormData();
+
+    formData.append(
+      "applicationId",
+      String(normalizedApplicationId),
+    );
+
+    formData.append(
+      "documentType",
+      documentItem.documentType,
+    );
+
+    formData.append(
+      "documentName",
+      documentItem.name,
+    );
+
+    formData.append(
+      "documentSource",
+      "OPS_HEAD",
+    );
+
+    formData.append("file", file);
+
+    const response =
+      await operationApi.uploadDocument(formData);
+
+    const uploadedDocument =
+      response?.data?.data?.data ??
+      response?.data?.data ??
+      response?.data ??
+      null;
+
+    setUploadedDocuments((current) => ({
+      ...current,
+      [documentItem.id]: uploadedDocument || {
+        documentName: documentItem.name,
+        fileName: file.name,
+      },
+    }));
+
+    setSelectedFiles((current) => {
+      const updated = { ...current };
+      delete updated[documentItem.id];
+      return updated;
+    });
+
+    await fetchApplicationDocuments();
+  } catch (error) {
+    const message =
+      error?.response?.data?.message ??
+      error?.message ??
+      "Unable to upload document.";
+
+    setUploadErrors((current) => ({
+      ...current,
+      [documentItem.id]: Array.isArray(message)
+        ? message.join(", ")
+        : String(message),
+    }));
+  } finally {
+    setUploadingDocuments((current) => ({
+      ...current,
+      [documentItem.id]: false,
+    }));
+  }
+};
+
+
+  const fetchApplicationDocuments = useCallback(async () => {
+  const normalizedApplicationId = Number(applicationId);
+
+  if (
+    !Number.isInteger(normalizedApplicationId) ||
+    normalizedApplicationId <= 0
+  ) {
+    setDocuments([]);
+    setDocumentsError("Valid application ID is required.");
+    return;
+  }
+
+  try {
+    setDocumentsLoading(true);
+    setDocumentsError("");
+
+    const response =
+      await operationApi.getApplicationDocuments(
+        normalizedApplicationId,
+      );
+
+    const rows = extractArrayPayload(response, [
+      "documents",
+      "items",
+      "rows",
+      "results",
+      "data",
+    ]);
+
+    setDocuments(rows);
+  } catch (error) {
+    console.error(
+      "Failed to fetch application documents:",
+      error,
+    );
+
+    setDocumentsError(
+      normalizeApiError(
+        error,
+        "Unable to fetch application documents.",
+      ),
+    );
+
+    setDocuments([]);
+  } finally {
+    setDocumentsLoading(false);
+  }
+}, [applicationId]);
+
+useEffect(() => {
+  fetchApplicationDocuments();
+}, [fetchApplicationDocuments]);
+  // useEffect(() => {
+  //   fetchApplicationDocuments();
+  // }, [fetchApplicationDocuments]);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchCheckerCase = async () => {
+      if (!applicationId) {
+        if (active) {
+          setCaseError(
+            "Application ID is missing. Open this page from the Operations Dashboard.",
+          );
+          setCaseLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setCaseLoading(true);
+        setCaseError("");
+
+        const response =
+          await operationApi.getHeadCase(applicationId);
+
+        const rawResult = unwrapApiResponse(response);
+        const result =
+          rawResult?.case ??
+          rawResult?.review ??
+          rawResult?.applicationReview ??
+          rawResult;
+
+        if (!result || typeof result !== "object") {
+          throw new Error(
+            "Head case details were not returned.",
+          );
+        }
+
+        if (!active) return;
+
+        setCaseData(result);
+
+        setPageStatus(
+          result?.disbursement?.paymentStatus ||
+            result?.paymentStatus ||
+            result?.pageStatus ||
+            result?.status ||
+            "Awaiting head",
+        );
+
+        const savedChecklist =
+          result?.checklist ??
+          result?.verificationChecklist ??
+          result?.checkerChecklist ??
+          [];
+
+        if (
+          Array.isArray(savedChecklist) &&
+          savedChecklist.length > 0
+        ) {
+          setVerificationItems((currentItems) =>
+            currentItems.map((item) => {
+              const savedItem = savedChecklist.find(
+                (entry) =>
+                  Number(
+                    entry.itemId ??
+                      entry.item_id ??
+                      entry.id,
+                  ) === Number(item.id),
+              );
+
+              if (!savedItem) return item;
+
+              return {
+                ...item,
+                checked: toBoolean(
+                  savedItem.checked ??
+                    savedItem.isVerified ??
+                    savedItem.is_verified ??
+                    savedItem.value,
+                ),
+              };
+            }),
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Failed to fetch operations head case:",
+          error,
+        );
+
+        if (active) {
+          setCaseError(
+            normalizeApiError(
+              error,
+              "Failed to load operations head case.",
+            ),
+          );
+        }
+      } finally {
+        if (active) {
+          setCaseLoading(false);
+        }
+      }
+    };
+
+    fetchCheckerCase();
+
+    return () => {
+      active = false;
+    };
+  }, [applicationId]);
+
+  const displayedDocuments = useMemo(
+    () =>
+      documents.map((document, index) => ({
+        id:
+          document?.id ??
+          document?.documentId ??
+          document?.document_id ??
+          `document-${index}`,
+        name:
+          document?.name ??
+          document?.documentName ??
+          document?.document_name ??
+          document?.fileName ??
+          document?.file_name ??
+          "Application Document",
+        type:
+          document?.type ??
+          document?.documentType ??
+          document?.document_type ??
+          document?.mimeType ??
+          document?.mime_type ??
+          "Document",
+        uploadedBy:
+          document?.uploadedByName ??
+          document?.uploaded_by_name ??
+          document?.uploadedBy ??
+          document?.uploaded_by ??
+          document?.createdByName ??
+          document?.created_by_name ??
+          document?.createdBy ??
+          document?.created_by ??
+          "-",
+        status:
+          document?.status ??
+          document?.documentStatus ??
+          document?.document_status ??
+          "UPLOADED",
+        fileUrl:
+          document?.fileUrl ??
+          document?.file_url ??
+          document?.downloadUrl ??
+          document?.download_url ??
+          document?.url ??
+          document?.filePath ??
+          document?.file_path ??
+          document?.file?.url ??
+          "",
+        fileName:
+          document?.fileName ??
+          document?.file_name ??
+          document?.documentName ??
+          document?.document_name ??
+          document?.name ??
+          "document",
+      })),
+    [documents],
+  );
 
   const toggleVerification = (itemId) => {
     setVerificationItems((currentItems) =>
       currentItems.map((item) =>
         item.id === itemId
-          ? {
-            ...item,
-            checked: !item.checked,
-          }
+          ? { ...item, checked: !item.checked }
           : item,
       ),
     );
   };
 
-  const toBoolean = (value) => {
-  return (
-    value === true ||
-    value === 1 ||
-    value === "1" ||
-    value === "true"
-  );
-};
-useEffect(() => {
-  let active = true;
-
-  const fetchCheckerCase = async () => {
-    if (!applicationId) {
-      if (active) {
-        setCaseError(
-          "Application ID is missing. Open this page from the Operations Dashboard.",
-        );
-        setCaseLoading(false);
-      }
-
-      return;
-    }
-
-    try {
-      setCaseLoading(true);
-      setCaseError("");
-
-      const response =
-        await operationApi.getHeadCase(
-          applicationId,
-        );
-
-      const result = unwrapApiResponse(response);
-
-      if (!result) {
-        throw new Error(
-          "Checker case details were not returned.",
-        );
-      }
-
-      if (!active) {
-        return;
-      }
-
-      setCaseData(result);
-
-      setPageStatus(
-        result?.disbursement?.paymentStatus ||
-          result?.pageStatus ||
-          "Awaiting checker",
-      );
-
-      if (
-        Array.isArray(result?.checklist) &&
-        result.checklist.length > 0
-      ) {
-        setVerificationItems((currentItems) =>
-          currentItems.map((item) => {
-            const databaseItem =
-              result.checklist.find(
-                (savedItem) =>
-                  Number(
-                    savedItem.itemId ??
-                      savedItem.item_id,
-                  ) === Number(item.id),
-              );
-
-            if (!databaseItem) {
-              return item;
-            }
-
-            return {
-              ...item,
-              checked: toBoolean(
-                databaseItem.checked ??
-                  databaseItem.isVerified ??
-                  databaseItem.is_verified,
-              ),
-            };
-          }),
-        );
-      }
-    } catch (error) {
-      console.error(
-        "Failed to fetch operations checker case:",
-        error,
-      );
-
-      if (active) {
-        setCaseError(
-          error?.response?.data?.message ||
-            error?.message ||
-            "Failed to load operations checker case.",
-        );
-      }
-    } finally {
-      if (active) {
-        setCaseLoading(false);
-      }
-    }
-  };
-
-  fetchCheckerCase();
-
-  return () => {
-    active = false;
-  };
-}, [applicationId]);
   const toggleChecklistGroup = (groupId) => {
-    setExpandedChecklistGroups((currentGroups) =>
-      currentGroups.includes(groupId)
-        ? currentGroups.filter((id) => id !== groupId)
-        : [...currentGroups, groupId],
+    setExpandedChecklistGroups((current) =>
+      current.includes(groupId)
+        ? current.filter((id) => id !== groupId)
+        : [...current, groupId],
     );
   };
-
-  // const scrollWorkflow = (direction) => {
-  //   workflowRef.current?.scrollBy({
-  //     left: direction === "left" ? -360 : 360,
-  //     behavior: "smooth",
-  //   });
-  // };
 
   const showToast = (message) => {
     setToastMessage(message);
@@ -839,65 +1092,61 @@ useEffect(() => {
     setDecisionError("");
     setReturnReason("");
   };
-  // const { applicationId } = useParams();
 
-const confirmDecision = async () => {
-  if (decisionModal === "approve") {
-    if (!approvalReady) {
-      setDecisionError(
-        "Complete all mandatory verification points and accept the declaration before approval.",
-      );
+  const confirmDecision = async () => {
+    if (decisionModal === "approve") {
+      if (!approvalReady) {
+        setDecisionError(
+          "Complete all mandatory verification points and accept the declaration before approval.",
+        );
+        return;
+      }
+
+      try {
+        setDecisionSubmitting(true);
+        setDecisionError("");
+
+        const response =
+          await operationApi.approveByOpsHead(
+            applicationId,
+          );
+
+        const result =
+          response?.data?.data ??
+          response?.data ??
+          {};
+
+        setPageStatus(
+          result?.status || "OPS_HEAD_APPROVED",
+        );
+
+        closeDecisionModal();
+        showToast(
+          "Case approved and sent for disbursement.",
+        );
+      } catch (error) {
+        console.error(
+          "Unable to approve by Operations Head:",
+          error,
+        );
+
+        const message =
+          error?.response?.data?.message ??
+          error?.message ??
+          "Unable to approve the application.";
+
+        setDecisionError(
+          Array.isArray(message)
+            ? message.join(", ")
+            : String(message),
+        );
+      } finally {
+        setDecisionSubmitting(false);
+      }
+
       return;
     }
 
-    try {
-      setDecisionSubmitting(true);
-      setDecisionError("");
-
-      const response =
-        await operationApi.approveByOpsHead(
-          applicationId,
-        );
-
-      const result =
-        response?.data?.data ??
-        response?.data ??
-        {};
-
-      setPageStatus(
-        result?.status ||
-          "OPS_HEAD_APPROVED",
-      );
-
-      closeDecisionModal();
-
-      showToast(
-        "Case approved and submitted to Operations Head.",
-      );
-    } catch (error) {
-      console.error(
-        "Unable to approve by Operations Head:",
-        error,
-      );
-
-      const message =
-        error?.response?.data?.message ??
-        error?.message ??
-        "Unable to approve the application.";
-
-      setDecisionError(
-        Array.isArray(message)
-          ? message.join(", ")
-          : String(message),
-      );
-    } finally {
-      setDecisionSubmitting(false);
-    }
-
-    return;
-  }
-
-  if (decisionModal === "return") {
     if (!returnReason.trim()) {
       setDecisionError(
         "Please enter the reason for returning the case.",
@@ -908,84 +1157,40 @@ const confirmDecision = async () => {
     setPageStatus("Returned");
     closeDecisionModal();
     showToast("Case returned successfully.");
-  }
-};
+  };
 
-const fetchDocuments = useCallback(async () => {
-  const normalizedApplicationId =
-    Number(applicationId);
+  // const getDocumentUrl = (document) => {
+  //   const path = String(document?.fileUrl ?? "").trim();
 
-  if (
-    !Number.isInteger(normalizedApplicationId) ||
-    normalizedApplicationId <= 0
-  ) {
-    setDocuments([]);
-    setDocumentsError(
-      "Valid application ID is required.",
-    );
-    return;
-  }
+  //   if (!path) return "";
 
-  try {
-    setDocumentsLoading(true);
-    setDocumentsError("");
+  //   if (
+  //     path.startsWith("http://") ||
+  //     path.startsWith("https://") ||
+  //     path.startsWith("blob:")
+  //   ) {
+  //     return path;
+  //   }
 
-    const response =
-      await documentApi.findAllByApplication(
-        normalizedApplicationId,
-      );
+  //   const backendUrl =
+  //     import.meta.env.VITE_BACKEND_URL ?? "";
 
-    /*
-      Direct service response:
-      response.data.data
-
-      With global response wrapper:
-      response.data.data.data
-    */
-    const responsePayload =
-      response?.data?.data ?? response?.data ?? {};
-
-    const documentRows = Array.isArray(
-      responsePayload,
-    )
-      ? responsePayload
-      : Array.isArray(responsePayload?.data)
-        ? responsePayload.data
-        : [];
-
-    setDocuments(documentRows);
-  } catch (error) {
-    console.error(
-      "Unable to fetch application documents:",
-      error,
-    );
-
-    const message =
-      error?.response?.data?.message ??
-      error?.message ??
-      "Unable to fetch application documents.";
-
-    setDocumentsError(
-      Array.isArray(message)
-        ? message.join(", ")
-        : String(message),
-    );
-
-    setDocuments([]);
-  } finally {
-    setDocumentsLoading(false);
-  }
-}, [applicationId]);
-
+  //   return `${backendUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+  // };
 
   const getDocumentUrl = (document) => {
   const path = String(
-    document?.fileUrl ?? "",
+    document?.fileUrl ??
+      document?.file_url ??
+      document?.downloadUrl ??
+      document?.download_url ??
+      document?.filePath ??
+      document?.file_path ??
+      document?.url ??
+      "",
   ).trim();
 
-  if (!path) {
-    return "";
-  }
+  if (!path) return "";
 
   if (
     path.startsWith("http://") ||
@@ -995,1261 +1200,1432 @@ const fetchDocuments = useCallback(async () => {
     return path;
   }
 
-  const backendUrl =
-    import.meta.env.VITE_BACKEND_URL ??
-    "";
+  const backendUrl = String(
+    import.meta.env.VITE_BACKEND_URL ?? "",
+  )
+    .trim()
+    .replace(/\/$/, "");
 
-  return `${backendUrl}${
-    path.startsWith("/") ? "" : "/"
-  }${path}`;
+  const cleanPath =
+    path.startsWith("/") ? path : `/${path}`;
+
+  return `${backendUrl}${cleanPath}`;
 };
+  const previewDocument = (document) => {
+    const url = getDocumentUrl(document);
 
-const previewDocument = (document) => {
-  const url = getDocumentUrl(document);
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  };
 
-  if (!url) {
-    return;
+  const downloadDocument = (document) => {
+    const url = getDocumentUrl(document);
+
+    if (!url) return;
+
+    const anchor = window.document.createElement("a");
+    anchor.href = url;
+    anchor.download = document.fileName || "document";
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+
+    window.document.body.appendChild(anchor);
+    anchor.click();
+    window.document.body.removeChild(anchor);
+  };
+
+  if (caseLoading) {
+    return (
+      <div className="grid min-h-[500px] place-items-center bg-slate-100">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
+          <p className="mt-4 text-sm font-bold text-slate-600">
+            Loading head case...
+          </p>
+        </div>
+      </div>
+    );
   }
 
-  window.open(
-    url,
-    "_blank",
-    "noopener,noreferrer",
-  );
-};
-
-const downloadDocument = (document) => {
-  const url = getDocumentUrl(document);
-
-  if (!url) {
-    return;
+  if (caseError) {
+    return (
+      <div className="grid min-h-[500px] place-items-center bg-slate-100 p-5">
+        <div className="w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm">
+          <FaExclamationTriangle
+            className="mx-auto text-rose-600"
+            size={28}
+          />
+          <h2 className="mt-4 text-lg font-black text-slate-800">
+            Unable to load head case
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            {caseError}
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-black text-white"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
-  const anchor =
-    window.document.createElement("a");
+  const applicationNumber =
+    caseData?.application?.applicationNumber ||
+    caseData?.applicationNumber ||
+    "-";
 
-  anchor.href = url;
-  anchor.download =
-    document.fileName || "document";
-  anchor.target = "_blank";
-  anchor.rel = "noopener noreferrer";
+  const customerName =
+    caseData?.customer?.name ||
+    caseData?.customerName ||
+    "-";
 
-  window.document.body.appendChild(anchor);
-  anchor.click();
-  window.document.body.removeChild(anchor);
-};
+  const branch =
+    caseData?.application?.branch ||
+    caseData?.branch ||
+    "-";
 
-const displayedDocuments = useMemo(
-  () =>
-    documents.map((document, index) => ({
-      id:
-        document?.id ??
-        document?.documentId ??
-        `document-${index}`,
+  const sanctionedAmount =
+    caseData?.sanction?.sanctionedAmount ??
+    caseData?.sanctionedAmount;
 
-      name:
-        document?.name ??
-        document?.documentName ??
-        document?.fileName ??
-        "Application Document",
+  const disbursementAmount =
+    caseData?.disbursement?.amount ??
+    caseData?.disbursementAmount;
 
-      type:
-        document?.type ??
-        document?.documentType ??
-        document?.mimeType ??
-        "Document",
-
-      uploadedBy:
-        document?.uploadedByName ??
-        document?.uploadedBy ??
-        document?.createdByName ??
-        document?.createdBy ??
-        "-",
-
-      status:
-        document?.status ??
-        "UPLOADED",
-
-      fileUrl:
-        document?.fileUrl ??
-        document?.downloadUrl ??
-        document?.url ??
-        document?.filePath ??
-        "",
-
-      fileName:
-        document?.fileName ??
-        document?.documentName ??
-        document?.name ??
-        "document",
-    })),
-  [documents],
-);
-
-
-if (caseLoading) {
-  return (
-    <div className="grid min-h-[500px] place-items-center bg-[#f3f7fb]">
-      <div className="text-center">
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-600" />
-
-        <p className="mt-4 text-sm font-bold text-slate-600">
-          Loading checker case...
-        </p>
-      </div>
-    </div>
-  );
-}
-
-if (caseError) {
-  return (
-    <div className="grid min-h-[500px] place-items-center bg-[#f3f7fb] p-5">
-      <div className="w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm">
-        <FaExclamationTriangle
-          className="mx-auto text-rose-600"
-          size={28}
-        />
-
-        <h2 className="mt-4 text-lg font-black text-slate-800">
-          Unable to load checker case
-        </h2>
-
-        <p className="mt-2 text-sm text-slate-500">
-          {caseError}
-        </p>
-
-        <button
-          type="button"
-          onClick={() =>
-            window.location.reload()
-          }
-          className="mt-5 rounded-xl bg-[#234a82] px-5 py-2.5 text-xs font-black text-white"
-        >
-          Retry
-        </button>
-      </div>
-    </div>
-  );
-}
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "checklist", label: "Checklist" },
+    { id: "charges", label: "Charges" },
+    { id: "documents", label: "Documents" },
+    { id: "audit", label: "Audit Trail" },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#f3f7fb] p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-[1700px] space-y-6">
-        {/* Payment Gate */}
-        <section className="relative overflow-hidden rounded-3xl border border-amber-200 bg-gradient-to-r from-[#fffaf0] to-[#fffdf8] px-5 py-5 shadow-sm sm:px-7">
-          <div className="absolute bottom-0 right-0 h-full w-24 rounded-l-full bg-emerald-400/15" />
+    <div className="min-h-screen bg-[#f5f7fb] px-3 py-4 sm:px-5 lg:px-6">
+      <div className="mx-auto max-w-[1600px]">
+        {/* Command banner */}
+        <section className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#102a56] via-[#173f7a] to-[#0f766e] p-5 text-white shadow-[0_20px_50px_rgba(23,63,122,0.18)] sm:p-6">
+          <div className="pointer-events-none absolute -right-40 -top-44 h-[360px] w-[360px] rounded-full border-[55px] border-white/5" />
 
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-6xl">
-              <p className="text-sm leading-7 text-[#8b641f] sm:text-base">
-                <strong className="font-black">
-                  Pre-disbursement charges payment gate:
-                </strong>{" "}
-                Processing Fee ₹34,810 · Documentation Fee ₹4,130 · Stamp
-                Duty / eStamp ₹8,000 · MODT / Mortgage Registration ₹8,000 ·
-                CERSAI Registration Charge ₹590 · NACH / eMandate Setup Fee
-                ₹354 · Broken Period Interest / Advance EMI ₹26,082
+          <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_450px] xl:items-center">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-300">
+                Operations Head Review
               </p>
 
-              <p className="mt-1 text-xs font-medium text-[#9a6e29]">
-                All mandatory charges must be collected and reconciled before
-                checker approval.
+              <h1 className="mt-2 text-[30px] font-black leading-none tracking-tight">
+                {applicationNumber}
+              </h1>
+
+              <p className="mt-3 max-w-3xl text-[12px] font-medium leading-5 text-blue-100">
+                Verify disbursement instruction, beneficiary details, charges
+                and all mandatory controls.
               </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-[10px] bg-white/10 px-3 py-2 text-[10px] font-semibold text-slate-100">
+                  <FaBuilding size={11} />
+                  {branch}
+                </span>
+
+                <span className="inline-flex items-center gap-2 rounded-[10px] bg-white/10 px-3 py-2 text-[10px] font-semibold text-slate-100">
+                  <FaUserTie size={11} />
+                  {customerName}
+                </span>
+
+                <span className="inline-flex items-center gap-2 rounded-[10px] bg-white/10 px-3 py-2 text-[10px] font-semibold text-slate-100">
+                  Maker: {caseData?.maker?.name || "-"}
+                </span>
+
+                <span className="inline-flex items-center gap-2 rounded-[10px] bg-white/10 px-3 py-2 text-[10px] font-semibold text-slate-100">
+                  <FaClock size={10} />
+                  {formatDateTime(caseData?.maker?.submittedAt)}
+                </span>
+              </div>
             </div>
 
-            <span className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-xs font-black text-emerald-700">
-              Payment verified
-            </span>
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              <div className="rounded-[14px] border border-white/15 bg-white/10 p-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.08em] text-blue-200">
+                  Sanctioned
+                </p>
+                <p className="mt-2 text-[17px] font-black">
+                  {formatCurrency(sanctionedAmount)}
+                </p>
+                <span className="mt-1 block text-[9px] text-slate-300">
+                  Approved by credit
+                </span>
+              </div>
+
+              <div className="rounded-[14px] border border-white/15 bg-white/10 p-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.08em] text-blue-200">
+                  Disbursement
+                </p>
+                <p className="mt-2 text-[17px] font-black">
+                  {formatCurrency(disbursementAmount)}
+                </p>
+                <span className="mt-1 block text-[9px] text-slate-300">
+                  {caseData?.disbursement?.type ||
+                    caseData?.disbursementType ||
+                    "Single disbursement"}
+                </span>
+              </div>
+
+              <div className="rounded-[14px] border border-white/15 bg-white/10 p-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.08em] text-blue-200">
+                  Current Status
+                </p>
+                <p className="mt-2 break-words text-[13px] font-black">
+                  {normalizeStatus(pageStatus)}
+                </p>
+                <span className="mt-1 block text-[9px] text-slate-300">
+                  {pendingRequiredItems.length} controls pending
+                </span>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Checker Hero */}
-        <section className="relative isolate overflow-hidden rounded-[30px] bg-gradient-to-r from-[#0c8066] via-[#178f72] to-[#56bf7b] px-6 py-8 text-white shadow-[0_24px_60px_rgba(17,130,102,0.25)] sm:px-8 sm:py-10 xl:flex xl:min-h-[230px] xl:items-center xl:justify-between xl:gap-10">
-          <div className="absolute -left-24 -top-28 -z-10 h-80 w-80 rounded-full bg-cyan-400/25" />
-          <div className="absolute left-[25%] top-0 -z-10 h-full w-56 skew-x-[-14deg] bg-indigo-500/40" />
-          <div className="absolute -bottom-40 -right-20 -z-10 h-96 w-96 rounded-full border-[70px] border-white/5" />
-
-          <div className="relative max-w-4xl">
-            <span className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-xs font-black uppercase tracking-[0.14em] backdrop-blur">
-              <FaShieldAlt size={14} />
-              Independent Checker Control
+        {/* Status strip */}
+        <section className="mt-4 grid overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 shadow-[0_10px_30px_rgba(15,23,42,0.06)] sm:grid-cols-2 xl:grid-cols-4">
+          <div className="flex items-center gap-3 bg-white p-4">
+            <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-emerald-50 text-emerald-700">
+              <FaCheck size={11} />
             </span>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400">Charges</p>
+              <p className="mt-0.5 text-[12px] font-black text-slate-800">
+                {caseCharges.length > 0 ? "Fully reconciled" : "No records"}
+              </p>
+            </div>
+          </div>
 
-            <h1 className="mt-5 text-3xl font-black leading-tight tracking-tight sm:text-4xl xl:text-[44px]">
-              Operations HEAD Review
-            </h1>
+          <div className="flex items-center gap-3 bg-white p-4">
+            <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-emerald-50 text-emerald-700">
+              <FaFileAlt size={12} />
+            </span>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400">Documents</p>
+              <p className="mt-0.5 text-[12px] font-black text-slate-800">
+                {displayedDocuments.length} available
+              </p>
+            </div>
+          </div>
 
-            <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-emerald-50/90 sm:text-base">
-  {caseData?.application?.applicationNumber || "-"} · Independently verify
-  maker instructions, beneficiary details, compliance checks and final
-  disbursement amount.
-</p>
+          <div className="flex items-center gap-3 bg-white p-4">
+            <span
+              className={`grid h-9 w-9 place-items-center rounded-[10px] ${
+                requiredItemsVerified
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              {requiredItemsVerified ? (
+                <FaCheck size={11} />
+              ) : (
+                <FaExclamationTriangle size={11} />
+              )}
+            </span>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400">Checklist</p>
+              <p className="mt-0.5 text-[12px] font-black text-slate-800">
+                {verifiedCount} of {verificationItems.length} complete
+              </p>
+            </div>
+          </div>
 
-            <div className="mt-6 flex flex-wrap gap-2.5">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-slate-950/15 px-3 py-2 text-xs font-semibold">
-  <FaBuilding size={13} />
-  {caseData?.application?.branch || "-"}
-</span>
+          <div className="flex items-center gap-3 bg-white p-4">
+            <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-blue-50 text-blue-700">
+              <FaCheckCircle size={12} />
+            </span>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400">Next Stage</p>
+              <p className="mt-0.5 text-[12px] font-black text-slate-800">
+                Disbursement
+              </p>
+            </div>
+          </div>
+        </section>
 
-              <span className="inline-flex items-center gap-2 rounded-xl bg-slate-950/15 px-3 py-2 text-xs font-semibold">
-  <FaUserTie size={13} />
-  Maker: {caseData?.maker?.name || "-"}
-</span>
-              <span className="inline-flex items-center gap-2 rounded-xl bg-slate-950/15 px-3 py-2 text-xs font-semibold">
-  <FaClock size={13} />
-  Submitted {formatDateTime(caseData?.maker?.submittedAt)}
-</span>
+        {/* Tabs */}
+        <nav className="mt-5 flex w-full gap-1 overflow-x-auto rounded-[14px] bg-[#eaf0f7] p-1.5 sm:w-fit">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`whitespace-nowrap rounded-[10px] px-4 py-2.5 text-[11px] font-black transition ${
+                activeTab === tab.id
+                  ? "bg-white text-[#173f7a] shadow-[0_3px_10px_rgba(15,23,42,0.08)]"
+                  : "text-slate-500 hover:text-[#173f7a]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
 
-              <span
-                className={`inline-flex items-center rounded-xl px-3 py-2 text-xs font-black ${pageStatus === "Approved"
-                  ? "bg-white text-emerald-700"
-                  : pageStatus === "Returned to maker"
-                    ? "bg-rose-100 text-rose-700"
-                    : "bg-amber-100 text-amber-700"
-                  }`}
-              >
-                {pageStatus}
+        <div className="mt-5 space-y-5">
+          <main className="min-w-0">
+            {activeTab === "overview" && (
+              <section className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-[18px]">
+                  <div>
+                    <h2 className="text-[14px] font-black text-[#173f7a]">
+                      Case Overview
+                    </h2>
+                    <p className="mt-1 text-[10px] text-slate-400">
+                      Customer, sanction and bank instruction details
+                    </p>
+                  </div>
+                  <StatusBadge tone="blue">Read only</StatusBadge>
+                </div>
+
+                <div className="grid gap-0 xl:grid-cols-2">
+                  {/* Customer and loan panel */}
+                  <div className="p-5">
+                    <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-blue-100 text-blue-700">
+                        <FaUserTie size={13} />
+                      </span>
+
+                      <div>
+                        <h3 className="text-[11px] font-black text-[#173f7a]">
+                          Customer & Loan
+                        </h3>
+                        <p className="mt-0.5 text-[8px] text-slate-500">
+                          Borrower, product and sanction information
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {customerLoanDetails.map((detail) => (
+                        <DetailCell
+                          key={detail.label}
+                          label={detail.label}
+                          value={detail.value}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Disbursement panel */}
+                  <div className="border-t border-slate-100 p-5 xl:border-l xl:border-t-0">
+                    <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-emerald-100 text-emerald-700">
+                          <FaUniversity size={13} />
+                        </span>
+
+                        <div className="min-w-0">
+                          <h3 className="text-[11px] font-black text-[#173f7a]">
+                            Disbursement Instruction
+                          </h3>
+                          <p className="mt-0.5 truncate text-[8px] text-slate-500">
+                            Beneficiary bank and payment instruction
+                          </p>
+                        </div>
+                      </div>
+
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[8px] font-black text-slate-500 ring-1 ring-slate-200">
+                        <FaLock size={7} />
+                        Read only
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {disbursementDetails.map((detail) => (
+                        <DetailCell
+                          key={detail.label}
+                          label={detail.label}
+                          value={detail.value}
+                          valueClassName={
+                            detail.tone === "success"
+                              ? "text-emerald-700"
+                              : detail.tone === "warning"
+                                ? "text-amber-700"
+                                : "text-slate-800"
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {activeTab === "checklist" && (
+              <section className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-[18px]">
+                  <div>
+                    <h2 className="text-[14px] font-black text-[#173f7a]">
+                      Operations Head Verification Checklist
+                    </h2>
+                    <p className="mt-1 text-[10px] text-slate-400">
+                      Head confirmation required before final approval
+                    </p>
+                  </div>
+                  <StatusBadge
+                    tone={
+                      verifiedCount === verificationItems.length
+                        ? "success"
+                        : "warning"
+                    }
+                  >
+                    {verifiedCount} / {verificationItems.length} complete
+                  </StatusBadge>
+                </div>
+
+                <div className="px-5 pt-4">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
+                    <span>Mandatory control completion</span>
+                    <strong>{completionPercentage}%</strong>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full ${
+                        requiredItemsVerified
+                          ? "bg-emerald-500"
+                          : "bg-gradient-to-r from-amber-500 to-amber-400"
+                      }`}
+                      style={{ width: `${completionPercentage}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 p-5 md:grid-cols-2">
+                  {checklistGroups.map((group) => {
+                    const GroupIcon = group.icon;
+                    const groupItems = verificationItems.filter((item) =>
+                      group.itemIds.includes(item.id),
+                    );
+                    const completedCount = groupItems.filter(
+                      (item) => item.checked,
+                    ).length;
+                    const complete = completedCount === groupItems.length;
+                    const expanded =
+                      expandedChecklistGroups.includes(group.id);
+
+                    return (
+                      <div
+                        key={group.id}
+                        className={`overflow-hidden rounded-[14px] border ${
+                          complete
+                            ? "border-emerald-200"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleChecklistGroup(group.id)}
+                          className={`flex w-full items-center gap-3 p-3 text-left ${
+                            complete ? "bg-emerald-50" : "bg-slate-50"
+                          }`}
+                        >
+                          <span
+                            className={`grid h-9 w-9 shrink-0 place-items-center rounded-[10px] ${
+                              complete
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-slate-200 text-slate-600"
+                            }`}
+                          >
+                            <GroupIcon size={14} />
+                          </span>
+
+                          <span className="min-w-0 flex-1">
+                            <strong className="block text-[11px] font-black text-[#263f68]">
+                              {group.title}
+                            </strong>
+                            <span className="mt-0.5 block truncate text-[8px] text-slate-500">
+                              {group.description}
+                            </span>
+                          </span>
+
+                          <strong className="text-[10px] font-black text-slate-700">
+                            {completedCount}/{groupItems.length}
+                          </strong>
+
+                          <span
+                            className={`grid h-7 w-7 place-items-center rounded-full ${
+                              complete
+                                ? "bg-emerald-500 text-white"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {complete ? (
+                              <FaCheck size={9} />
+                            ) : (
+                              <FaExclamationTriangle size={9} />
+                            )}
+                          </span>
+
+                          <FaChevronDown
+                            size={9}
+                            className={`text-slate-400 transition-transform ${
+                              expanded ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {expanded && (
+                          <div className="bg-white px-3 py-2">
+                            {groupItems.map((item) => (
+                              <label
+                                key={item.id}
+                                className="flex cursor-pointer items-start gap-2.5 border-b border-slate-100 py-2.5 last:border-b-0"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={item.checked}
+                                  onChange={() =>
+                                    toggleVerification(item.id)
+                                  }
+                                  className="mt-0.5 h-3.5 w-3.5 accent-emerald-600"
+                                />
+                                <span>
+                                  <strong className="block text-[10px] font-black text-slate-700">
+                                    {item.title}
+                                  </strong>
+                                  <span className="mt-0.5 block text-[8px] leading-4 text-slate-500">
+                                    {item.description}
+                                  </span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {activeTab === "charges" && (
+              <section className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-[18px]">
+                  <div>
+                    <h2 className="text-[14px] font-black text-[#173f7a]">
+                      Charges Reconciliation
+                    </h2>
+                    <p className="mt-1 text-[10px] text-slate-400">
+                      Pre-disbursement payment controls
+                    </p>
+                  </div>
+                  <StatusBadge tone="success">Fully collected</StatusBadge>
+                </div>
+
+                <div className="overflow-x-auto p-5">
+                  {caseCharges.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center">
+                      <p className="text-[11px] font-bold text-slate-600">
+                        No charge records available
+                      </p>
+                    </div>
+                  ) : (
+                    <table className="w-full min-w-[650px] border-collapse text-left">
+                      <thead>
+                        <tr className="bg-slate-50">
+                          <th className="px-4 py-3 text-[8px] font-black uppercase tracking-wider text-slate-400">
+                            Charge
+                          </th>
+                          <th className="px-4 py-3 text-[8px] font-black uppercase tracking-wider text-slate-400">
+                            Amount
+                          </th>
+                          <th className="px-4 py-3 text-[8px] font-black uppercase tracking-wider text-slate-400">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {caseCharges.map((charge) => (
+                          <tr
+                            key={charge.id ?? charge.label}
+                            className="border-b border-slate-100"
+                          >
+                            <td className="px-4 py-3 text-[10px] font-bold text-slate-700">
+                              {charge.label}
+                            </td>
+                            <td className="px-4 py-3 text-[10px] font-black text-slate-800">
+                              {formatCurrency(charge.amount)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusBadge tone="success">
+                                {charge.status || "Collected"}
+                              </StatusBadge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-slate-50">
+                          <td className="px-4 py-3 text-[10px] font-black text-slate-700">
+                            Total Charges Collected
+                          </td>
+                          <td className="px-4 py-3 text-[11px] font-black text-emerald-700">
+                            {formatCurrency(totalCharges)}
+                          </td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {activeTab === "documents" && (
+              
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex items-center gap-3">
+      <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-[#173f7a]">
+        <FaFileAlt size={15} />
+      </span>
+
+      <div>
+        <h2 className="text-[15px] font-black text-[#173f7a]">
+          Application Documents
+        </h2>
+        <p className="mt-1 text-[10px] text-slate-400">
+          Upload and track all required documents for this application
+        </p>
+      </div>
+    </div>
+
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="rounded-full bg-blue-50 px-3 py-1.5 text-[9px] font-black text-blue-700">
+        {displayedDocuments.length} uploaded
+      </span>
+      <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[9px] font-black text-slate-500">
+        PDF, JPG, PNG · Max 15 MB
+      </span>
+    </div>
+  </div>
+
+  <div className="space-y-4 p-4 sm:p-5">
+    
+    {documentsLoading && (
+  <div className="rounded-xl bg-blue-50 px-4 py-3 text-[10px] font-bold text-blue-700">
+    Loading uploaded documents...
+  </div>
+)}
+
+{documentsError && (
+  <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+    <p className="text-[10px] font-bold text-rose-700">
+      {documentsError}
+    </p>
+
+    <button
+      type="button"
+      onClick={fetchApplicationDocuments}
+      className="rounded-lg bg-rose-700 px-3 py-2 text-[9px] font-black text-white"
+    >
+      Retry
+    </button>
+  </div>
+)}
+
+
+{/* Already uploaded documents */}
+{!documentsLoading &&
+  !documentsError &&
+  displayedDocuments.length > 0 && (
+    <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white">
+      <div className="flex flex-col gap-3 border-b border-emerald-100 bg-emerald-50/60 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
+            <FaCheckCircle size={13} />
+          </span>
+
+          <div>
+            <h3 className="text-[12px] font-black text-slate-800">
+              Already Uploaded Documents
+            </h3>
+
+            <p className="mt-1 text-[9px] text-slate-500">
+              Documents already available for this application
+            </p>
+          </div>
+        </div>
+
+        <span className="rounded-full bg-white px-3 py-1.5 text-[9px] font-black text-emerald-700 ring-1 ring-emerald-200">
+          {displayedDocuments.length} documents
+        </span>
+      </div>
+
+      <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+        {displayedDocuments.map((document) => {
+          const documentUrl =
+            getDocumentUrl(document);
+
+          return (
+            <div
+              key={document.id}
+              className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-blue-200 hover:bg-white hover:shadow-sm"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-700">
+                <FaFileAlt size={14} />
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <strong className="block truncate text-[10px] font-black text-slate-800">
+                  {document.name}
+                </strong>
+
+                <p className="mt-1 truncate text-[8px] text-slate-500">
+                  {String(document.type)
+                    .replaceAll("_", " ")}
+                </p>
+
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[7px] font-black text-emerald-700">
+                    {String(document.status)
+                      .replaceAll("_", " ")}
+                  </span>
+
+                  <span className="truncate text-[7px] text-slate-400">
+                    Uploaded by {document.uploadedBy}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!documentUrl}
+                  onClick={() =>
+                    previewDocument(document)
+                  }
+                  title={`Preview ${document.name}`}
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <FaEye size={10} />
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!documentUrl}
+                  onClick={() =>
+                    downloadDocument(document)
+                  }
+                  title={`Download ${document.name}`}
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <FaDownload size={9} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )}
+
+    {requiredDocumentSections.map((section) => {
+
+      
+      const completedCount = section.documents.filter(
+        (item) => uploadedDocuments[item.id],
+      ).length;
+
+      const totalCount = section.documents.length;
+
+      return (
+        <div
+          key={section.id}
+          className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+        >
+          <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-[12px] font-black text-slate-800">
+                {section.title}
+              </h3>
+              <p className="mt-1 text-[9px] text-slate-400">
+                {completedCount} of {totalCount} documents uploaded
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  style={{
+                    width: `${
+                      totalCount === 0
+                        ? 0
+                        : Math.round(
+                            (completedCount / totalCount) * 100,
+                          )
+                    }%`,
+                  }}
+                />
+              </div>
+              <span className="text-[9px] font-black text-slate-500">
+                {completedCount}/{totalCount}
               </span>
             </div>
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-3 xl:mt-0 xl:max-w-[390px] xl:justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                showToast("Checker review saved as draft.");
-              }}
-              className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-5 text-sm font-black text-white backdrop-blur transition hover:bg-white/20 xl:flex-none"
-            >
-              <FaSave size={14} />
-              Save Review
-            </button>
+          <div className="divide-y divide-slate-100">
+            {section.documents.map((documentItem, index) => {
+              const selectedFile = selectedFiles[documentItem.id];
+              const uploading = uploadingDocuments[documentItem.id];
+              const uploaded = uploadedDocuments[documentItem.id];
+              const uploadedFileName =
+  uploaded?.fileName ??
+  uploaded?.file_name ??
+  uploaded?.documentName ??
+  uploaded?.document_name ??
+  documentItem.name;
 
-            <button
-              type="button"
-              onClick={() => openDecisionModal("return")}
-              className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-rose-600 shadow-lg transition hover:-translate-y-0.5 hover:bg-rose-50 xl:flex-none"
-            >
-              <FaUndo size={13} />
-              Return to Maker
-            </button>
+const uploadedFileMeta =
+  uploaded?.mimeType ??
+  uploaded?.mime_type ??
+  uploaded?.documentType ??
+  uploaded?.document_type ??
+  "Uploaded document";
+              const error = uploadErrors[documentItem.id];
 
-            {/* <button
-              type="button"
-              onClick={() => openDecisionModal("approve")}
-              className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm font-black shadow-lg transition xl:w-auto ${approvalReady
-                ? "bg-[#173c70] text-white hover:-translate-y-0.5 hover:bg-[#102e58]"
-                : "cursor-not-allowed bg-slate-200 text-slate-500"
-                }`}
-            >
-              <FaCheckCircle size={15} />
-              Approve Disbursement
-            </button> */}
-            <button
-  type="button"
-  disabled={decisionSubmitting}
-  onClick={() => openDecisionModal("approve")}
-  className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm font-black shadow-lg transition xl:w-auto ${
-    decisionSubmitting
-      ? "cursor-not-allowed bg-slate-200 text-slate-500"
-      : "bg-[#173c70] text-white hover:-translate-y-0.5 hover:bg-[#102e58]"
-  }`}
->
-  <FaCheckCircle size={15} />
-
-  {decisionSubmitting
-    ? "Approving..."
-    : "Approve & Send to Disbursed"}
-</button>
-          </div>
-        </section>
-
-        {/* Workflow */}
-        {/* <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:items-center sm:px-7">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                Application journey
-              </p>
-
-              <h2 className="mt-1 text-lg font-extrabold text-[#1c365f] sm:text-xl">
-                LAP Workflow
-              </h2>
-            </div>
-
-            <span className="hidden rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 sm:inline-flex">
-              Operations Checker Review
-            </span>
-          </div>
-
-          <div
-            ref={workflowRef}
-            className="overflow-x-auto scroll-smooth px-5 py-7 sm:px-7"
-          >
-            <div className="flex min-w-[1180px]">
-              {workflowSteps.map((step, index) => {
-                const completed = step.state === "completed";
-                const current = step.state === "current";
-                const lastStep = index === workflowSteps.length - 1;
-
-                return (
-                  <div key={step.id} className="flex flex-1 items-start">
-                    <div className="w-[112px] shrink-0 text-center">
-                      <span
-                        className={`mx-auto grid h-12 w-12 place-items-center rounded-full border-[7px] text-sm font-black shadow-sm ${
-                          completed
-                            ? "border-emerald-100 bg-emerald-500 text-white"
-                            : current
-                              ? "border-emerald-100 bg-emerald-600 text-white ring-4 ring-emerald-100"
-                              : "border-slate-50 bg-slate-100 text-slate-400"
-                        }`}
-                      >
-                        {completed ? <FaCheck size={14} /> : step.id}
-                      </span>
-
-                      <strong
-                        className={`mt-3 block whitespace-nowrap text-xs font-extrabold ${
-                          current
-                            ? "text-emerald-700"
-                            : completed
-                              ? "text-slate-700"
-                              : "text-slate-500"
-                        }`}
-                      >
-                        {step.label}
-                      </strong>
-
-                      <span
-                        className={`mt-1 block text-[10px] font-medium ${
-                          current
-                            ? "text-emerald-600"
-                            : completed
-                              ? "text-emerald-600"
-                              : "text-slate-400"
-                        }`}
-                      >
-                        {step.status}
-                      </span>
-                    </div>
-
-                    {!lastStep && (
-                      <span
-                        className={`mt-6 h-[3px] flex-1 rounded-full ${
-                          completed ? "bg-emerald-400" : "bg-slate-200"
-                        }`}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4 sm:px-7">
-            <button
-              type="button"
-              aria-label="Scroll workflow left"
-              onClick={() => scrollWorkflow("left")}
-              className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-            >
-              <FaChevronLeft size={12} />
-            </button>
-
-            <span className="text-[10px] font-medium text-slate-400">
-              Review the completed journey before checker approval
-            </span>
-
-            <button
-              type="button"
-              aria-label="Scroll workflow right"
-              onClick={() => scrollWorkflow("right")}
-              className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-            >
-              <FaChevronRight size={12} />
-            </button>
-          </div>
-        </section> */}
-
-
-        {/* Compact Workflow */}
-        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm sm:px-6">
-          <div className="overflow-x-auto">
-            <div className="flex min-w-[720px] items-start">
-              {workflowSteps.map((step, index) => {
-                const completed = step.state === "completed";
-                const current = step.state === "current";
-                const lastStep = index === workflowSteps.length - 1;
-
-                return (
-                  <div key={step.id} className="flex flex-1 items-start">
-                    <div className="w-[92px] shrink-0 text-center">
-                      <span
-                        className={`mx-auto grid h-8 w-8 place-items-center rounded-full border text-xs font-black ${completed
-                          ? "border-emerald-500 bg-emerald-500 text-white shadow-[0_0_0_4px_rgba(16,185,129,0.10)]"
-                          : current
-                            ? "border-blue-600 bg-blue-600 text-white shadow-[0_0_0_4px_rgba(37,99,235,0.10)]"
-                            : "border-slate-200 bg-slate-100 text-slate-400"
-                          }`}
-                      >
-                        {completed ? (
-                          <FaCheck size={11} />
-                        ) : current ? (
-                          <FaUserTie size={11} />
-                        ) : (
-                          <FaClock size={10} />
-                        )}
-                      </span>
-
-                      <strong
-                        className={`mt-2 block whitespace-nowrap text-[10px] font-extrabold ${current
-                          ? "text-blue-700"
-                          : completed
-                            ? "text-[#1c365f]"
-                            : "text-slate-500"
-                          }`}
-                      >
-                        {step.label}
-                      </strong>
-                    </div>
-
-                    {!lastStep && (
-                      <span
-                        className={`mt-4 h-px flex-1 ${completed ? "bg-emerald-400" : "bg-slate-200"
-                          }`}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(330px,1fr)]">
-
-          {/* Main Content */}
-          <div className="space-y-6">
-            {/* Maker Submission Summary */}
-            {/* <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-              <SectionHeading
-                eyebrow="Maker submission"
-                title="Instruction Submitted for Approval"
-                rightContent={
-                  <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2 text-[10px] font-black text-blue-700 ring-1 ring-inset ring-blue-200">
-                    <FaPaperPlane size={11} />
-                    Submitted
-                  </span>
-                }
-              />
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Maker
-                  </p>
-
-                  <strong className="mt-2 block text-sm font-extrabold text-[#263f68]">
-                    Operations User
-                  </strong>
-
-                  <p className="mt-1 text-[10px] text-slate-500">
-                    Neha Sharma
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Submitted At
-                  </p>
-
-                  <strong className="mt-2 block text-sm font-extrabold text-[#263f68]">
-                    20 Jul 2026
-                  </strong>
-
-                  <p className="mt-1 text-[10px] text-slate-500">
-                    04:38 PM
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Instruction Amount
-                  </p>
-
-                  <strong className="mt-2 block text-sm font-extrabold text-emerald-700">
-                    ₹80,00,000
-                  </strong>
-
-                  <p className="mt-1 text-[10px] text-slate-500">
-                    Single disbursement
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Idempotency Key
-                  </p>
-
-                  <strong className="mt-2 block break-all text-xs font-extrabold text-[#263f68]">
-                    DISB-FTLIP-2026-0002-01
-                  </strong>
-                </div>
-              </div>
-            </section>
-
-            {/* Verification Checklist */}
-            {/* <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-              <SectionHeading
-                eyebrow="Independent verification"
-                title="Operations Checker Checklist"
-                rightContent={
-                  <div className="text-right">
-                    <strong className="block text-sm font-black text-emerald-700">
-                      {verifiedCount}/{verificationItems.length}
-                    </strong>
-
-                    <span className="text-[10px] font-medium text-slate-400">
-                      Verified
+              return (
+                <div
+                  key={documentItem.id}
+                  className="grid gap-4 px-4 py-4 transition hover:bg-slate-50/70 lg:grid-cols-[40px_minmax(0,1.35fr)_minmax(0,1fr)_minmax(280px,0.95fr)_120px]"
+                >
+                  <div className="hidden lg:flex lg:items-center">
+                    <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-100 text-[9px] font-black text-slate-500">
+                      {index + 1}
                     </span>
                   </div>
-                }
-              />
 
-              <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
-                <span
-                  className={`block h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-300 ${
-                    progressWidthClasses[verifiedCount]
-                  }`}
-                />
-              </div>
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700">
+                        <FaFileAlt size={13} />
+                      </span>
 
-              <div className="mt-6 grid gap-3 md:grid-cols-2">
-                {verificationItems.map((item) => (
-                  <label
-                    key={item.id}
-                    className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition ${
-                      item.checked
-                        ? "border-emerald-200 bg-emerald-50/50"
-                        : "border-slate-200 bg-white hover:border-amber-200 hover:bg-amber-50/30"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={item.checked}
-                      onChange={() => toggleVerification(item.id)}
-                      className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-emerald-600"
-                    />
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <strong className="text-sm font-extrabold text-slate-800">
-                          {item.title}
+                      <div className="min-w-0">
+                        <strong className="block text-[10px] font-black text-slate-800">
+                          {documentItem.name}
                         </strong>
 
-                        {item.required && (
-                          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-rose-600">
-                            Required
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[7px] font-black text-slate-500">
+                            {documentItem.documentType}
                           </span>
+
+                          {uploaded && (
+                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[7px] font-black text-emerald-700">
+                              Uploaded
+                            </span>
+                          )}
+                        </div>
+
+                        {error && (
+                          <p className="mt-1.5 text-[8px] font-bold text-rose-600">
+                            {error}
+                          </p>
                         )}
                       </div>
-
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
-                        {item.description}
-                      </p>
-
-                      <span
-                        className={`mt-2 inline-flex text-[10px] font-black ${
-                          item.checked
-                            ? "text-emerald-700"
-                            : "text-amber-600"
-                        }`}
-                      >
-                        {item.checked
-                          ? "Checker verified"
-                          : "Verification pending"}
-                      </span>
                     </div>
-                  </label>
-                ))}
-              </div>
-            </section> */}
-
-            {/* Disbursement Instruction */}
-            {/* <section className="rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm sm:p-7">
-              <SectionHeading
-                eyebrow="Locked maker instruction"
-                title="Disbursement Instruction"
-                rightContent={
-                  <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-[10px] font-black text-slate-600">
-                    <FaLock size={10} />
-                    Read only
-                  </span>
-                }
-              />
-
-              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <ReadOnlyField
-                  label="LAN"
-                  value="Auto on booking"
-                  icon={FaKey}
-                />
-
-                <ReadOnlyField
-                  label="Sanction Amount"
-                  value="₹80,00,000"
-                  icon={FaMoneyCheckAlt}
-                />
-
-                <ReadOnlyField
-                  label="Disbursement Amount"
-                  value="₹80,00,000"
-                  icon={FaMoneyCheckAlt}
-                  valueClass="text-emerald-700"
-                />
-
-                <ReadOnlyField
-                  label="Disbursement Type"
-                  value="Single Disbursement"
-                  icon={FaRoute}
-                />
-
-                <ReadOnlyField
-                  label="Beneficiary Name"
-                  value="Meera Iyer"
-                  icon={FaUserTie}
-                />
-
-                <ReadOnlyField
-                  label="Bank Name"
-                  value="HDFC Bank"
-                  icon={FaUniversity}
-                />
-
-                <ReadOnlyField
-                  label="Account Number (Masked)"
-                  value="XXXXXX2048"
-                  icon={FaLandmark}
-                />
-
-                <ReadOnlyField
-                  label="IFSC"
-                  value="HDFC0000123"
-                  icon={FaLandmark}
-                />
-
-                <ReadOnlyField
-                  label="Penny Drop Name Match"
-                  value="98%"
-                  icon={FaCheckCircle}
-                  valueClass="text-emerald-700"
-                />
-
-                <ReadOnlyField
-                  label="UTR Number"
-                  value="Generated after bank success"
-                  icon={FaHistory}
-                />
-
-                <ReadOnlyField
-                  label="Disbursement Date"
-                  value="19-06-2026"
-                  icon={FaCalendarAlt}
-                />
-
-                <ReadOnlyField
-                  label="Payment Status"
-                  value="Pending Checker Approval"
-                  icon={FaClock}
-                  valueClass="text-amber-700"
-                />
-              </div>
-            </section> */}
-
-            {/* Customer and Disbursement Summary */}
-            <div className="grid gap-4 lg:grid-cols-2">
-              {/* Customer & Loan Summary */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <FaFileAlt className="text-[#234a82]" size={14} />
-
-                  <h2 className="text-sm font-black text-[#1c365f]">
-                    Customer & Loan Summary
-                  </h2>
-                </div>
-
-                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                  {customerLoanDetails.map((detail) => (
-                    <div
-                      key={detail.label}
-                      className="border-b border-slate-100 px-2 py-3"
-                    >
-                      <p className="text-[9px] font-semibold text-slate-400">
-                        {detail.label}
-                      </p>
-
-                      <p className="mt-1 break-words text-[11px] font-bold text-[#243f6d]">
-                        {detail.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Disbursement Instruction */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <FaFileAlt className="text-[#234a82]" size={14} />
-
-                    <h2 className="text-sm font-black text-[#1c365f]">
-                      Disbursement Instruction
-                    </h2>
                   </div>
 
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[9px] font-black text-blue-700">
-                    <FaLock size={8} />
-                    HEAD Instruction · Read Only
-                  </span>
-                </div>
+                  <div className="flex items-center">
+                    <div>
+                      <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">
+                        Applicable for
+                      </p>
+                      <p className="mt-1 text-[9px] leading-4 text-slate-600">
+                        {documentItem.applicableFor}
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2">
-                  {disbursementDetails.map((detail) => (
-                    <div
-                      key={detail.label}
-                      className="grid grid-cols-[minmax(100px,0.85fr)_minmax(0,1fr)] items-center gap-3 border-b border-slate-100 px-2 py-3"
+                  {/* <div className="flex items-center">
+                    <label
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition ${
+                        selectedFile
+                          ? "border-blue-200 bg-blue-50/50"
+                          : "border-dashed border-slate-300 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/30"
+                      }`}
                     >
-                      <span className="text-[9px] font-semibold text-slate-500">
-                        {detail.label}
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
+                          selectedFile
+                            ? "bg-blue-600 text-white"
+                            : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        <FaUpload size={11} />
                       </span>
 
-                      {detail.status === "pending" ? (
-                        <span className="w-fit rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-black text-amber-700">
-                          {detail.value}
-                        </span>
-                      ) : (
-                        <strong
-                          className={`break-words text-[10px] font-extrabold ${detail.status === "success"
-                            ? "text-emerald-700"
-                            : "text-[#243f6d]"
-                            }`}
-                        >
-                          {detail.value}
+                      <span className="min-w-0 flex-1">
+                        <strong className="block truncate text-[9px] font-black text-slate-700">
+                          {selectedFile ? selectedFile.name : "Choose file"}
                         </strong>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
+                        <span className="mt-0.5 block text-[8px] text-slate-400">
+                          PDF, JPG or PNG · Max 15 MB
+                        </span>
+                      </span>
 
-            {/* Grouped Verification Checklist */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-sm font-black text-[#1c365f]">
-                  Independent Verification Checklist
-                </h2>
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(event) =>
+                          handleDocumentFileChange(
+                            documentItem.id,
+                            event.target.files?.[0],
+                          )
+                        }
+                      />
+                    </label>
+                  </div> */}
 
-                <strong
-                  className={`text-xs font-black ${verifiedCount === verificationItems.length
-                    ? "text-emerald-700"
-                    : "text-amber-700"
-                    }`}
-                >
-                  {verifiedCount} / {verificationItems.length} Completed
-                </strong>
-              </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {checklistGroups.map((group) => {
-                  const GroupIcon = group.icon;
+<div className="flex items-center">
+  {uploaded ? (
+    <div className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 py-3">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
+        <FaCheckCircle size={12} />
+      </span>
 
-                  const groupItems = verificationItems.filter((item) =>
-                    group.itemIds.includes(item.id),
-                  );
+      <div className="min-w-0 flex-1">
+        <strong className="block truncate text-[9px] font-black text-slate-800">
+          {uploadedFileName}
+        </strong>
 
-                  const completedCount = groupItems.filter(
-                    (item) => item.checked,
-                  ).length;
+        <span className="mt-0.5 block truncate text-[8px] text-slate-500">
+          {uploadedFileMeta}
+        </span>
 
-                  const complete = completedCount === groupItems.length;
+        <span className="mt-1 block text-[8px] font-black text-emerald-700">
+          Uploaded successfully
+        </span>
+      </div>
+    </div>
+  ) : (
+    <label
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition ${
+        selectedFile
+          ? "border-blue-200 bg-blue-50/50"
+          : "border-dashed border-slate-300 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/30"
+      }`}
+    >
+      <span
+        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
+          selectedFile
+            ? "bg-blue-600 text-white"
+            : "bg-blue-100 text-blue-700"
+        }`}
+      >
+        <FaUpload size={11} />
+      </span>
 
-                  const expanded = expandedChecklistGroups.includes(group.id);
+      <span className="min-w-0 flex-1">
+        <strong className="block truncate text-[9px] font-black text-slate-700">
+          {selectedFile
+            ? selectedFile.name
+            : "Choose file"}
+        </strong>
 
-                  return (
-                    <div
-                      key={group.id}
-                      className={`overflow-hidden rounded-xl border transition ${complete
-                        ? "border-emerald-200 bg-emerald-50/40"
-                        : "border-slate-200 bg-slate-50/60"
-                        }`}
-                    >
+        <span className="mt-0.5 block text-[8px] text-slate-400">
+          PDF, JPG or PNG · Max 15 MB
+        </span>
+      </span>
+
+      <input
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        className="hidden"
+        onChange={(event) =>
+          handleDocumentFileChange(
+            documentItem.id,
+            event.target.files?.[0],
+          )
+        }
+      />
+    </label>
+  )}
+</div>
+
+
+<div className="flex items-center justify-start gap-2 lg:justify-end">
+  {uploaded ? (
+    <>
+      <button
+        type="button"
+        disabled={!getDocumentUrl(uploaded)}
+        onClick={() =>
+          previewDocument(uploaded)
+        }
+        title="Preview document"
+        className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <FaEye size={11} />
+      </button>
+
+      <button
+        type="button"
+        disabled={!getDocumentUrl(uploaded)}
+        onClick={() =>
+          downloadDocument(uploaded)
+        }
+        title="Download document"
+        className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <FaDownload size={10} />
+      </button>
+    </>
+  ) : (
+    <button
+      type="button"
+      disabled={!selectedFile || uploading}
+      onClick={() =>
+        handleUploadDocument(documentItem)
+      }
+      className="inline-flex h-9 min-w-[100px] items-center justify-center gap-2 rounded-xl bg-[#173f7a] px-3 text-[9px] font-black text-white transition hover:bg-[#102f5e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+    >
+      <FaUpload size={10} />
+
+      {uploading
+        ? "Uploading..."
+        : "Upload"}
+    </button>
+  )}
+</div>
+
+
+                  {/* <div className="flex items-center justify-start lg:justify-end">
+                    {uploaded ? (
+                      <span className="inline-flex h-9 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-[9px] font-black text-emerald-700">
+                        <FaCheckCircle size={10} />
+                        Uploaded
+                      </span>
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => toggleChecklistGroup(group.id)}
-                        className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-white/60"
+                        disabled={!selectedFile || uploading}
+                        onClick={() => handleUploadDocument(documentItem)}
+                        className="inline-flex h-9 min-w-[100px] items-center justify-center gap-2 rounded-xl bg-[#173f7a] px-3 text-[9px] font-black text-white transition hover:bg-[#102f5e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                       >
-                        <span
-                          className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${complete
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-slate-200 text-slate-600"
-                            }`}
-                        >
-                          <GroupIcon size={15} />
-                        </span>
-
-                        <div className="min-w-0 flex-1">
-                          <strong className="block text-xs font-black text-[#203b68]">
-                            {group.title}
-                          </strong>
-
-                          <span className="mt-1 block truncate text-[9px] text-slate-500">
-                            {group.description}
-                          </span>
-                        </div>
-
-                        <strong
-                          className={`shrink-0 text-xs font-black ${complete ? "text-emerald-700" : "text-slate-500"
-                            }`}
-                        >
-                          {completedCount} / {groupItems.length}
-                        </strong>
-
-                        <span
-                          className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${complete
-                            ? "bg-emerald-500 text-white"
-                            : "bg-amber-100 text-amber-700"
-                            }`}
-                        >
-                          {complete ? (
-                            <FaCheck size={10} />
-                          ) : (
-                            <FaExclamationTriangle size={9} />
-                          )}
-                        </span>
-
-                        <FaChevronDown
-                          size={10}
-                          className={`shrink-0 text-slate-500 transition-transform duration-200 ${expanded ? "rotate-180" : ""
-                            }`}
-                        />
+                        <FaUpload size={10} />
+                        {uploading ? "Uploading..." : "Upload"}
                       </button>
+                    )}
+                  </div> */}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</section>
+        
+              // <section className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              //   <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-[18px]">
+              //     <div>
+              //       <h2 className="text-[14px] font-black text-[#173f7a]">
+              //         Documents Submitted by Maker
+              //       </h2>
+              //       <p className="mt-1 text-[10px] text-slate-400">
+              //         Supporting documents for checker review
+              //       </p>
+              //     </div>
+              //     <StatusBadge tone="blue">
+              //       {displayedDocuments.length} documents
+              //     </StatusBadge>
+              //   </div>
 
-                      {expanded && (
-                        <div className="space-y-2 border-t border-slate-200 bg-white p-3">
-                          {groupItems.map((item) => (
-                            <label
-                              key={item.id}
-                              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${item.checked
-                                ? "border-emerald-100 bg-emerald-50/40"
-                                : "border-amber-100 bg-amber-50/40"
-                                }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={item.checked}
-                                onChange={() => toggleVerification(item.id)}
-                                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-emerald-600"
-                              />
+              //   <div className="p-5">
+              //     {documentsLoading ? (
+              //       <div className="grid gap-3 md:grid-cols-2">
+              //         {[1, 2, 3, 4].map((item) => (
+              //           <div
+              //             key={item}
+              //             className="h-16 animate-pulse rounded-[14px] bg-slate-100"
+              //           />
+              //         ))}
+              //       </div>
+              //     ) : documentsError ? (
+              //       <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+              //         <p className="text-[10px] font-bold text-rose-700">
+              //           {documentsError}
+              //         </p>
+              //         <button
+              //           type="button"
+              //           onClick={fetchApplicationDocuments}
+              //           className="mt-3 rounded-lg bg-rose-700 px-3 py-2 text-[9px] font-black text-white"
+              //         >
+              //           Retry
+              //         </button>
+              //       </div>
+              //     ) : displayedDocuments.length === 0 ? (
+              //       <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center">
+              //         <FaFileAlt
+              //           size={20}
+              //           className="mx-auto text-slate-300"
+              //         />
+              //         <p className="mt-3 text-[11px] font-bold text-slate-600">
+              //           No documents found
+              //         </p>
+              //       </div>
+              //     ) : (
+              //       <div className="grid gap-3 md:grid-cols-2">
+              //         {displayedDocuments.map((document) => (
+              //           <div
+              //             key={document.id}
+              //             className="flex items-center gap-3 rounded-[14px] border border-slate-200 bg-slate-50 p-3"
+              //           >
+              //             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[11px] bg-blue-100 text-blue-700">
+              //               <FaFileAlt size={14} />
+              //             </span>
 
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <strong className="block text-[11px] font-extrabold text-slate-700">
-                                    {item.title}
-                                  </strong>
+              //             <div className="min-w-0 flex-1">
+              //               <strong className="block truncate text-[10px] font-black text-slate-800">
+              //                 {document.name}
+              //               </strong>
+              //               <span className="mt-1 block truncate text-[8px] text-slate-500">
+              //                 {document.type} · Uploaded by{" "}
+              //                 {document.uploadedBy}
+              //               </span>
+              //             </div>
 
-                                  {item.required && (
-                                    <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[7px] font-black uppercase tracking-wide text-rose-600">
-                                      Required
-                                    </span>
-                                  )}
-                                </div>
+              //             <button
+              //               type="button"
+              //               disabled={!document.fileUrl}
+              //               onClick={() => previewDocument(document)}
+              //               className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-700 disabled:opacity-40"
+              //             >
+              //               <FaEye size={11} />
+              //             </button>
 
-                                <span className="mt-1 block text-[9px] leading-4 text-slate-500">
-                                  {item.description}
-                                </span>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-            {/* Charges */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-              <SectionHeading
-                eyebrow="Payment control"
-                title="Charges Reconciliation"
-                rightContent={
-                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-[10px] font-black text-emerald-700">
-                    <FaCheckCircle size={11} />
-                    Fully collected
-                  </span>
-                }
-              />
+              //             <button
+              //               type="button"
+              //               disabled={!document.fileUrl}
+              //               onClick={() => downloadDocument(document)}
+              //               className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-700 disabled:opacity-40"
+              //             >
+              //               <FaDownload size={10} />
+              //             </button>
+              //           </div>
+              //         ))}
+              //       </div>
+              //     )}
+              //   </div>
+              // </section>
 
-              <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200">
-                <table className="w-full min-w-[650px] border-collapse text-left">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      <th className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        Charge
-                      </th>
 
-                      <th className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        Amount
-                      </th>
+            )}
 
-                      <th className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
+            {activeTab === "audit" && (
+              <section className="rounded-[18px] border border-slate-200 bg-white p-8 text-center shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+                <FaClock className="mx-auto text-slate-300" size={24} />
+                <h2 className="mt-3 text-[14px] font-black text-[#173f7a]">
+                  Audit Trail
+                </h2>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Workflow history will appear here when provided by the API.
+                </p>
+              </section>
+            )}
+          </main>
 
-                  <tbody>
-                {(caseData?.charges ?? []).map((charge) => (
-  <tr key={charge.id ?? charge.label}>
-    <td className="px-5 py-4 text-xs font-bold text-slate-700">
-      {charge.label}
-    </td>
-
-    <td className="px-5 py-4 text-xs font-extrabold text-[#263f68]">
-      {formatCurrency(charge.amount)}
-    </td>
-
-    <td className="px-5 py-4">
-      <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700">
-        {charge.status}
-      </span>
-    </td>
-  </tr>
-))}
-                  </tbody>
-
-                  <tfoot>
-                    <tr className="border-t border-slate-200 bg-slate-50">
-                      <td className="px-5 py-4 text-xs font-black text-slate-700">
-                        Total Charges Collected
-                      </td>
-
-                      <td className="px-5 py-4 text-sm font-black text-emerald-700">
-                        ₹81,966
-                      </td>
-
-                      <td className="px-5 py-4" />
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </section>
-
-            {/* Documents */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-                        <SectionHeading
-                          eyebrow="Document control"
-                          title="Documents Submitted by Maker"
-                        />
-                      
-                        {documentsLoading ? (
-                          <div className="mt-6 grid gap-3 md:grid-cols-2">
-                            {[1, 2, 3, 4].map((item) => (
-                              <div
-                                key={item}
-                                className="h-24 animate-pulse rounded-2xl bg-slate-100"
-                              />
-                            ))}
-                          </div>
-                        ) : documentsError ? (
-                          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4">
-                            <p className="text-xs font-bold text-red-700">
-                              {documentsError}
-                            </p>
-                      
-                            <button
-                              type="button"
-                              onClick={fetchApplicationDocuments}
-                              className="mt-3 rounded-xl bg-red-700 px-4 py-2 text-xs font-bold text-white"
-                            >
-                              Retry
-                            </button>
-                          </div>
-                        ) : displayedDocuments.length === 0 ? (
-                          <div className="mt-6 rounded-2xl border border-dashed border-slate-300 p-8 text-center">
-                            <FaFileAlt
-                              size={24}
-                              className="mx-auto text-slate-300"
-                            />
-                      
-                            <p className="mt-3 text-sm font-bold text-slate-600">
-                              No documents found
-                            </p>
-                      
-                            <p className="mt-1 text-xs text-slate-400">
-                              Documents uploaded for this application
-                              will appear here.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="mt-6 grid gap-3 md:grid-cols-2">
-                            {displayedDocuments.map((document) => (
-                              <div
-                                key={document.id}
-                                className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                              >
-                                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-700">
-                                  <FaFileAlt size={17} />
-                                </span>
-                      
-                                <div className="min-w-0 flex-1">
-                                  <strong className="block truncate text-xs font-extrabold text-slate-800">
-                                    {document.name}
-                                  </strong>
-                      
-                                  <span className="mt-1 block text-[10px] text-slate-500">
-                                    {document.type} · Uploaded by{" "}
-                                    {document.uploadedBy}
-                                  </span>
-                      
-                                  <span className="mt-2 inline-flex text-[9px] font-black text-emerald-700">
-                                    {String(document.status)
-                                      .replaceAll("_", " ")}
-                                  </span>
-                                </div>
-                      
-                                <div className="flex shrink-0 gap-2">
-                                  <button
-                                    type="button"
-                                    disabled={!document.fileUrl}
-                                    onClick={() =>
-                                      previewDocument(document)
-                                    }
-                                    title={`Preview ${document.name}`}
-                                    className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                  >
-                                    <FaEye size={13} />
-                                  </button>
-                      
-                                  <button
-                                    type="button"
-                                    disabled={!document.fileUrl}
-                                    onClick={() =>
-                                      downloadDocument(document)
-                                    }
-                                    title={`Download ${document.name}`}
-                                    className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                  >
-                                    <FaDownload size={12} />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </section>
-            
-            {/* Remarks and Declaration */}
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-              <SectionHeading
-                eyebrow="Final checker control"
-                title="Checker Remarks & Declaration"
-              />
-
-              <label className="mt-6 block">
-                <span className="mb-2 block text-xs font-extrabold text-slate-600">
-                  Checker Remarks
+          {/* Sticky review decision */}
+          <aside className="w-full overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+            <div className="flex flex-col gap-3 border-b border-slate-100 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-[#173f7a]">
+                  <FaShieldAlt size={14} />
                 </span>
 
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-[15px] font-black text-[#173f7a]">
+                      Review Decision
+                    </h2>
+
+                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[8px] font-black text-blue-700">
+                      Final Head Control
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-[9px] text-slate-500">
+                    Complete pending controls and approve for disbursement.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 sm:justify-end">
+                <div className="min-w-[150px]">
+                  <div className="flex items-center justify-between text-[8px] font-black text-slate-500">
+                    <span>Review progress</span>
+                    <span>{verifiedCount}/{verificationItems.length}</span>
+                  </div>
+
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full ${
+                        requiredItemsVerified
+                          ? "bg-emerald-500"
+                          : "bg-amber-500"
+                      }`}
+                      style={{ width: `${completionPercentage}%` }}
+                    />
+                  </div>
+                </div>
+
+                <span
+                  className={`grid h-9 w-9 place-items-center rounded-xl text-[9px] font-black ${
+                    requiredItemsVerified
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  {completionPercentage}%
+                </span>
+              </div>
+            </div>
+
+            <div className="p-5">
+              <div>
+                <div className="flex items-center justify-between rounded-[13px] border border-slate-100 bg-slate-50 p-3">
+                <strong className="text-[11px] text-slate-800">
+                  Review completion
+                </strong>
+                <span
+                  className={`text-[11px] font-black ${
+                    requiredItemsVerified
+                      ? "text-emerald-700"
+                      : "text-amber-700"
+                  }`}
+                >
+                  {verifiedCount} / {verificationItems.length}
+                </span>
+              </div>
+
+              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className={`h-full rounded-full ${
+                    requiredItemsVerified
+                      ? "bg-emerald-500"
+                      : "bg-amber-500"
+                  }`}
+                  style={{ width: `${completionPercentage}%` }}
+                />
+              </div>
+
+              {!requiredItemsVerified && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <strong className="text-[9px] font-black text-amber-800">
+                    Pending mandatory controls
+                  </strong>
+                  <ul className="mt-1.5 space-y-1 pl-4 text-[8px] leading-4 text-amber-800">
+                    {pendingRequiredItems.map((item) => (
+                      <li key={item.id}>{item.title}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              </div>
+
+              <div>
+                <label className="block">
+                <span className="mb-1.5 block text-[10px] font-black text-slate-600">
+                  Head Remarks
+                </span>
                 <textarea
                   rows={4}
                   value={checkerRemarks}
                   onChange={(event) =>
                     setCheckerRemarks(event.target.value)
                   }
-                  placeholder="Enter independent checker observations, validations or conditions..."
-                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-50"
+                  placeholder="Enter observations, validations or conditions..."
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[10px] font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
                 />
               </label>
 
-              <label className="mt-5 flex cursor-pointer items-start gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
+              <label
+                className={`mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 ${
+                  declarationAccepted
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-slate-200 bg-slate-50"
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={declarationAccepted}
                   onChange={(event) =>
                     setDeclarationAccepted(event.target.checked)
                   }
-                  className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-emerald-600"
+                  className="mt-0.5 h-3.5 w-3.5 accent-emerald-600"
                 />
 
-                <div>
-                  <strong className="text-sm font-extrabold text-slate-800">
-                    Independent Checker Declaration
+                <span>
+                  <strong className="block text-[10px] font-black text-slate-800">
+                    Operations Head Declaration
                   </strong>
-
-                  <p className="mt-1 text-xs leading-5 text-slate-600">
-                    I confirm that I have independently reviewed the maker
-                    instruction, beneficiary bank details, sanctioned amount,
-                    compliance controls, payment reconciliation and supporting
-                    documents. No prohibited LSP pool or pass-through account
-                    is involved.
-                  </p>
-                </div>
+                  <span className="mt-1 block text-[8px] leading-4 text-slate-500">
+                    I independently reviewed the maker instruction,
+                    beneficiary details, charges, compliance controls and
+                    supporting documents.
+                  </span>
+                </span>
               </label>
 
-              {!approvalReady && (
-                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                  <FaExclamationTriangle
-                    className="mt-0.5 shrink-0 text-amber-600"
-                    size={15}
-                  />
+              <div className="mt-4 grid gap-2">
+                <button
+                  type="button"
+                  disabled={!approvalReady || decisionSubmitting}
+                  onClick={() => openDecisionModal("approve")}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#173f7a] px-4 text-[10px] font-black text-white hover:bg-[#102f5e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                >
+                  <FaCheckCircle size={11} />
+                  Approve & Send to Ops Head
+                </button>
 
-                  <p className="text-xs leading-5 text-amber-800">
-                    Complete every mandatory checker verification and accept
-                    the declaration to enable approval.
-                  </p>
-                </div>
-              )}
-            </section>
-          </div>
+                <button
+                  type="button"
+                  onClick={() => openDecisionModal("return")}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 text-[10px] font-black text-rose-700 hover:bg-rose-50"
+                >
+                  <FaUndo size={10} />
+                  Return Case
+                </button>
 
+                <button
+                  type="button"
+                  onClick={() =>
+                    showToast("Checker review saved as draft.")
+                  }
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 text-[10px] font-black text-slate-600 hover:bg-slate-200"
+                >
+                  <FaSave size={10} />
+                  Save Review
+                </button>
+              </div>
 
+                <p className="mt-3 text-center text-[8px] text-slate-400">
+                  Every action will be recorded in the workflow audit trail.
+                </p>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
 
-      {/* Decision Modal */}
       {decisionModal && (
         <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div
-              className={`px-6 py-6 text-white ${decisionModal === "approve"
-                ? "bg-gradient-to-r from-emerald-700 to-emerald-500"
-                : "bg-gradient-to-r from-rose-700 to-rose-500"
-                }`}
+              className={`px-5 py-5 text-white ${
+                decisionModal === "approve"
+                  ? "bg-gradient-to-r from-[#173f7a] to-[#0f766e]"
+                  : "bg-gradient-to-r from-rose-800 to-rose-600"
+              }`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/70">
-                    Checker Decision
+                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/60">
+                    Head Decision
                   </p>
-
-                  <h2 className="mt-1 text-xl font-black">
+                  <h2 className="mt-1 text-lg font-black">
                     {decisionModal === "approve"
-                      ? "Approve Disbursement"
-                      : "Return Case to Maker"}
+                      ? "Approve Application"
+                      : "Return Case"}
                   </h2>
                 </div>
 
                 <button
                   type="button"
-                  aria-label="Close decision modal"
                   onClick={closeDecisionModal}
-                  className="grid h-9 w-9 place-items-center rounded-xl bg-white/15 transition hover:bg-white/25"
+                  className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 hover:bg-white/20"
                 >
-                  <FaTimes size={13} />
+                  <FaTimes size={11} />
                 </button>
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-5">
               {decisionModal === "approve" ? (
-                <div>
-                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                    <FaCheckCircle
-                      className="mt-0.5 shrink-0 text-emerald-700"
-                      size={17}
-                    />
-
-                    <p className="text-xs leading-6 text-emerald-900">
-                      Approval will lock
-                       {/* the instruction and initiate the bank
-                      payment process for ₹80,00,000 to Meera Iyer, HDFC Bank,
-                      account ending 2048. */}
-                    </p>
-                  </div>
-
-                  {checkerRemarks && (
-                    <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        Checker Remarks
-                      </p>
-
-                      <p className="mt-2 text-xs leading-5 text-slate-600">
-                        {checkerRemarks}
-                      </p>
-                    </div>
-                  )}
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-[10px] leading-5 text-emerald-900">
+                    This will lock the checker review and send the application
+                    to Operations Head.
+                  </p>
                 </div>
               ) : (
                 <label className="block">
-                  <span className="mb-2 block text-xs font-extrabold text-slate-600">
+                  <span className="mb-2 block text-[10px] font-black text-slate-600">
                     Reason for Return
                   </span>
-
                   <textarea
                     rows={4}
                     value={returnReason}
                     onChange={(event) =>
                       setReturnReason(event.target.value)
                     }
-                    placeholder="Clearly mention the discrepancy or correction required from the maker..."
-                    className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-50"
+                    placeholder="Clearly mention the discrepancy or correction required..."
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[11px] outline-none focus:border-rose-300 focus:bg-white"
                   />
                 </label>
               )}
 
               {decisionError && (
-                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                <div className="mt-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
                   <FaExclamationTriangle
                     className="mt-0.5 shrink-0 text-rose-600"
-                    size={14}
+                    size={12}
                   />
-
-                  <p className="text-xs leading-5 text-rose-700">
+                  <p className="text-[9px] leading-4 text-rose-700">
                     {decisionError}
                   </p>
                 </div>
               )}
 
-              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={closeDecisionModal}
-                  className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-xs font-black text-slate-600 transition hover:bg-slate-50"
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-[10px] font-black text-slate-600"
                 >
                   Cancel
                 </button>
-              <button
-  type="button"
-  disabled={decisionSubmitting}
-  onClick={confirmDecision}
-  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-xs font-black text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
->
-  <FaCheckCircle size={13} />
 
-  {decisionSubmitting
-    ? "Approving..."
-    : "Confirm Approval"}
-</button>
-                {/* <button
+                <button
                   type="button"
+                  disabled={decisionSubmitting}
                   onClick={confirmDecision}
-                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-xs font-black text-white transition ${decisionModal === "approve"
-                    ? "bg-emerald-700 hover:bg-emerald-800"
-                    : "bg-rose-700 hover:bg-rose-800"
-                    }`}
+                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[10px] font-black text-white disabled:cursor-not-allowed disabled:opacity-60 ${
+                    decisionModal === "approve"
+                      ? "bg-[#173f7a] hover:bg-[#102f5e]"
+                      : "bg-rose-700 hover:bg-rose-800"
+                  }`}
                 >
                   {decisionModal === "approve" ? (
                     <>
-                      <FaCheckCircle size={13} />
-                      Confirm Approval
+                      <FaCheckCircle size={11} />
+                      {decisionSubmitting
+                        ? "Approving..."
+                        : "Confirm Approval"}
                     </>
                   ) : (
                     <>
-                      <FaUndo size={12} />
-                      Return to Maker
+                      <FaUndo size={10} />
+                      Return Case
                     </>
                   )}
-                </button> */}
+                </button>
               </div>
             </div>
           </div>
@@ -2258,12 +2634,11 @@ if (caseError) {
 
       {/* Toast */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-[120] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-2xl">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
-            <FaCheck size={11} />
+        <div className="fixed bottom-5 right-5 z-[120] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-2xl">
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-600 text-white">
+            <FaCheck size={9} />
           </span>
-
-          <p className="text-xs font-bold text-slate-700">
+          <p className="text-[10px] font-bold text-slate-700">
             {toastMessage}
           </p>
         </div>
