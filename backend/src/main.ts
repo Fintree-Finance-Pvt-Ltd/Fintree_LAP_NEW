@@ -35,7 +35,13 @@ async function bootstrap() {
 
   app.setGlobalPrefix(apiPrefix);
 
-  app.use(helmet());
+  // app.use(helmet());
+  app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  }),
+);
+
   app.use(cookieParser());
   app.enableCors({
     origin: [

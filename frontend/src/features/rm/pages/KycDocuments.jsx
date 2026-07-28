@@ -925,45 +925,89 @@ const getUploadedChecklistDocument = (
     [activeRole],
   );
 
+  // const getUploadUrl = (document) => {
+  //   if (!document) return "";
+
+  //   const directUrl =
+  //     document.fileUrl ||
+  //     document.file_url ||
+  //     document.documentUrl ||
+  //     document.document_url ||
+  //     document.url;
+
+  //   if (directUrl) return directUrl;
+
+  //   const filePath =
+  //     document.filePath ||
+  //     document.file_path ||
+  //     document.path ||
+  //     "";
+
+  //   if (!filePath) return "";
+
+  //   if (String(filePath).startsWith("http")) {
+  //     return filePath;
+  //   }
+
+  //   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+  //   let uploadBaseUrl = "";
+
+  //   try {
+  //     uploadBaseUrl = apiBaseUrl ? new URL(apiBaseUrl).origin : "";
+  //   } catch {
+  //     uploadBaseUrl = "";
+  //   }
+
+  //   if (!uploadBaseUrl) {
+  //     uploadBaseUrl = "http://localhost:9000";
+  //   }
+
+  //   return `${uploadBaseUrl}/${String(filePath).replace(/^\/+/, "")}`;
+  // };
+
   const getUploadUrl = (document) => {
-    if (!document) return "";
+  if (!document) return "";
 
-    const directUrl =
-      document.fileUrl ||
-      document.file_url ||
-      document.documentUrl ||
-      document.document_url ||
-      document.url;
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:9000";
 
-    if (directUrl) return directUrl;
+  let uploadBaseUrl = "";
 
-    const filePath =
-      document.filePath ||
-      document.file_path ||
-      document.path ||
-      "";
+  try {
+    uploadBaseUrl = new URL(apiBaseUrl).origin;
+  } catch {
+    uploadBaseUrl = "http://localhost:9000";
+  }
 
-    if (!filePath) return "";
+  const directUrl =
+    document.fileUrl ||
+    document.file_url ||
+    document.documentUrl ||
+    document.document_url ||
+    document.url;
 
-    if (String(filePath).startsWith("http")) {
-      return filePath;
+  if (directUrl) {
+    if (String(directUrl).startsWith("http")) {
+      return directUrl;
     }
 
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
-    let uploadBaseUrl = "";
+    return `${uploadBaseUrl}/${String(directUrl).replace(/^\/+/, "")}`;
+  }
 
-    try {
-      uploadBaseUrl = apiBaseUrl ? new URL(apiBaseUrl).origin : "";
-    } catch {
-      uploadBaseUrl = "";
-    }
+  const filePath =
+    document.filePath ||
+    document.file_path ||
+    document.path ||
+    "";
 
-    if (!uploadBaseUrl) {
-      uploadBaseUrl = "http://localhost:9000";
-    }
+  if (!filePath) return "";
 
-    return `${uploadBaseUrl}/${String(filePath).replace(/^\/+/, "")}`;
-  };
+  const normalizedPath = String(filePath)
+    .replace(/^\/+/, "")
+    .replace(/^uploads\//, "");
+
+  return `${uploadBaseUrl}/uploads/${normalizedPath}`;
+};
 
   const getDocumentMatchKeys = (document) => {
     const documentType = getDocumentType(document);
@@ -1195,28 +1239,71 @@ const getUploadedChecklistDocument = (
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const handleDownloadUploadedDocument = (document) => {
-  const url = getUploadUrl(document);
+//   const handleDownloadUploadedDocument = (document) => {
+//   const url = getUploadUrl(document);
 
-  if (!url) {
-    setMessage("Document file is not available.");
-    return;
+//   if (!url) {
+//     setMessage("Document file is not available.");
+//     return;
+//   }
+
+//   const anchor = window.document.createElement("a");
+
+//   anchor.href = url;
+//   anchor.download =
+//     getFileName(document) ||
+//     getDocumentName(document) ||
+//     "document";
+
+//   anchor.target = "_blank";
+//   anchor.rel = "noopener noreferrer";
+
+//   // anchor.target = "_self";
+
+//   window.document.body.appendChild(anchor);
+//   anchor.click();
+//   window.document.body.removeChild(anchor);
+// };
+
+  const handleDownloadUploadedDocument = async (document) => {
+  try {
+    const url = getUploadUrl(document);
+
+    if (!url) {
+      setMessage("Document file is not available.");
+      return;
+    }
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error("Failed to download document");
+    }
+
+    const blob = await response.blob();
+
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const anchor = window.document.createElement("a");
+
+    anchor.href = blobUrl;
+    anchor.download =
+      getFileName(document) ||
+      getDocumentName(document) ||
+      "document";
+
+    window.document.body.appendChild(anchor);
+
+    anchor.click();
+
+    window.document.body.removeChild(anchor);
+
+    window.URL.revokeObjectURL(blobUrl);
+
+  } catch (error) {
+    console.error("Document download failed:", error);
+    setMessage("Unable to download document.");
   }
-
-  const anchor = window.document.createElement("a");
-
-  anchor.href = url;
-  anchor.download =
-    getFileName(document) ||
-    getDocumentName(document) ||
-    "document";
-
-  anchor.target = "_blank";
-  anchor.rel = "noopener noreferrer";
-
-  window.document.body.appendChild(anchor);
-  anchor.click();
-  window.document.body.removeChild(anchor);
 };
 
   const upload = useMutation({

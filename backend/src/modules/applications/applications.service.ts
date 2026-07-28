@@ -1265,7 +1265,7 @@ async addVisit(
 
   async addDocument(applicationId: number, documentType: string, file: Express.Multer.File, actor: Actor) {
     await this.findOne(applicationId);
-    const document = await this.documents.save(this.documents.create({ applicationId, documentType: documentType as DocumentType, documentName: documentType, fileName: file.originalname, filePath: file.path ?? file.originalname, fileSize: file.size, mimeType: file.mimetype, uploadedBy: actor.id, createdBy: actor.id, updatedBy: actor.id }));
+    const document = await this.documents.save(this.documents.create({ applicationId, documentType: documentType as DocumentType, documentName: documentType, fileName: file.filename, filePath: `uploads/documents/${file.filename}`, fileSize: file.size, mimeType: file.mimetype, uploadedBy: actor.id, createdBy: actor.id, updatedBy: actor.id }));
     
     return { data: document };
   }

@@ -1409,21 +1409,62 @@ export default function OpsChecker() {
     );
   };
 
-  const downloadDocument = (document) => {
+  // const downloadDocument = (document) => {
+  //   const url = getDocumentUrl(document);
+
+  //   if (!url) return;
+
+  //   const anchor = window.document.createElement("a");
+  //   anchor.href = url;
+  //   anchor.download = document.fileName || "document";
+  //   anchor.target = "_blank";
+  //   anchor.rel = "noopener noreferrer";
+
+  //   window.document.body.appendChild(anchor);
+  //   anchor.click();
+  //   window.document.body.removeChild(anchor);
+  // };
+  const downloadDocument = async (document) => {
+  try {
     const url = getDocumentUrl(document);
 
-    if (!url) return;
+    if (!url) {
+      showToast("Document URL is not available.");
+      return;
+    }
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error("Failed to download document");
+    }
+
+    const blob = await response.blob();
+
+    const blobUrl = window.URL.createObjectURL(blob);
 
     const anchor = window.document.createElement("a");
-    anchor.href = url;
-    anchor.download = document.fileName || "document";
-    anchor.target = "_blank";
-    anchor.rel = "noopener noreferrer";
+
+    anchor.href = blobUrl;
+
+    anchor.download =
+      document.fileName ||
+      document.file_name ||
+      "document";
 
     window.document.body.appendChild(anchor);
+
     anchor.click();
+
     window.document.body.removeChild(anchor);
-  };
+
+    window.URL.revokeObjectURL(blobUrl);
+
+  } catch (error) {
+    console.error("Document download failed:", error);
+    showToast("Unable to download document.");
+  }
+};
 
   if (caseLoading) {
     return (
