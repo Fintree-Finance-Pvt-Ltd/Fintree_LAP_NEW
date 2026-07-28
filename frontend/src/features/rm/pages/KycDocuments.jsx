@@ -13,6 +13,7 @@ import {
   FaShieldAlt,
   FaTimes,
   FaUpload,
+  FaDownload,
   FaUserTag,
 } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router-dom";
@@ -173,6 +174,331 @@ const POST_BM_STAGES = [
   "ACTIVE",
   "COLLECTION",
   "CLOSED",
+];
+
+const APPLICATION_DOCUMENT_SECTIONS = [
+  {
+    id: "login-application",
+    title: "B. Login and Application Documents",
+    documents: [
+      {
+        srNo: 1,
+        id: "loan-application-form",
+        name: "Loan application form duly filled and signed",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 2,
+        id: "applicant-photograph",
+        name: "Applicant photograph",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "PHOTO",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 3,
+        id: "partner-login-sheet",
+        name: "Partner login sheet / SFTP upload confirmation",
+        applicableFor: "SFT Finance / Partner",
+        documentType: "OTHER",
+        defaultRemark: "NA",
+      },
+      {
+        srNo: 4,
+        id: "customer-consent",
+        name: "Customer consent for bureau, KYC verification and data sharing",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+        defaultRemark: "NA",
+      },
+    ],
+  },
+  {
+    id: "kyc-documents",
+    title: "C. KYC Documents",
+    documents: [
+      {
+        srNo: 5,
+        id: "pan-card",
+        name: "PAN card",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "PAN",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 6,
+        id: "aadhaar-card",
+        name: "Aadhaar card",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "AADHAAR",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 7,
+        id: "address-proof",
+        name: "Address proof - any one: Aadhaar, passport, voter ID, driving licence, utility bill, rent agreement or bank statement",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 8,
+        id: "ckyc-form",
+        name: "CKYC Form",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+        defaultRemark: "Pending",
+      },
+    ],
+  },
+  {
+    id: "income-banking",
+    title: "D. Income and Banking Documents",
+    documents: [
+      {
+        srNo: 9,
+        id: "bank-statement",
+        name: "Latest 6 months bank statement",
+        applicableFor: "Applicant / Business / Salary Account",
+        documentType: "BANK_STATEMENT",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 10,
+        id: "itr-financials",
+        name: "ITR with computation / financials, if applicable",
+        applicableFor: "Applicant / Business Entity",
+        documentType: "INCOME_PROOF",
+        defaultRemark: "NA",
+      },
+      {
+        srNo: 11,
+        id: "salary-slips",
+        name: "Salary slips / Form 16, if salaried",
+        applicableFor: "Salaried Applicant",
+        documentType: "INCOME_PROOF",
+        defaultRemark: "NA",
+      },
+      {
+        srNo: 12,
+        id: "gst-business-proof",
+        name: "GST returns / business proof, if self-employed",
+        applicableFor: "Self-employed Applicant / Entity",
+        documentType: "INCOME_PROOF",
+        defaultRemark: "NA",
+      },
+    ],
+  },
+  {
+    id: "bureau-credit-verification",
+    title: "E. Bureau, Credit and Verification",
+    documents: [
+      {
+        srNo: 13,
+        id: "bureau-report",
+        name: "Bureau report",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 14,
+        id: "pd-sheet",
+        name: "PD sheet / customer discussion note",
+        applicableFor: "Credit / Partner",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 15,
+        id: "cam-credit-note",
+        name: "CAM / credit appraisal note",
+        applicableFor: "Credit Team",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 16,
+        id: "fi-fcu-verification",
+        name: "FI / residence / office verification, if applicable & FCU",
+        applicableFor: "Verification Agency / Credit",
+        documentType: "OTHER",
+        defaultRemark: "FCU pending",
+      },
+      {
+        srNo: 17,
+        id: "approval-sanction-conditions",
+        name: "Approval note and sanction Conditions",
+        applicableFor: "Credit Approver",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+    ],
+  },
+  {
+    id: "property-documents",
+    title: "F. Property Documents",
+    documents: [
+      {
+        srNo: 18,
+        id: "property-title-documents",
+        name: "Property title documents / chain documents",
+        applicableFor: "Property Owner",
+        documentType: "PROPERTY_DOCUMENT",
+        defaultRemark: "Copy Received",
+      },
+      {
+        srNo: 19,
+        id: "property-tax-utility-bill",
+        name: "Latest property tax receipt / electricity bill / maintenance bill",
+        applicableFor: "Property Owner",
+        documentType: "PROPERTY_DOCUMENT",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 20,
+        id: "approved-plan-oc-cc",
+        name: "Approved plan / OC / CC / society NOC, wherever applicable",
+        applicableFor: "Property Owner / Builder / Society",
+        documentType: "PROPERTY_DOCUMENT",
+        defaultRemark: "NA",
+      },
+      {
+        srNo: 21,
+        id: "legal-search-report",
+        name: "Legal search report / title clearance report",
+        applicableFor: "Empanelled Advocate",
+        documentType: "PROPERTY_DOCUMENT",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 22,
+        id: "technical-valuation-report",
+        name: "Technical valuation report",
+        applicableFor: "Empanelled Valuer",
+        documentType: "PROPERTY_DOCUMENT",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 23,
+        id: "cersai-report",
+        name: "CERSAI search / report, if applicable",
+        applicableFor: "Credit / Legal",
+        documentType: "PROPERTY_DOCUMENT",
+        defaultRemark: "Received",
+      },
+    ],
+  },
+  {
+    id: "sanction-documentation-disbursement",
+    title: "G. Sanction, Documentation and Disbursement",
+    documents: [
+      {
+        srNo: 24,
+        id: "sanction-letter",
+        name: "Sanction letter accepted by borrower",
+        applicableFor: "Applicant / Co-applicant",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 25,
+        id: "loan-agreement",
+        name: "Loan agreement and all standard loan documents executed",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 26,
+        id: "nach-cancelled-cheque",
+        name: "NACH / repayment mandate and cancelled cheque",
+        applicableFor: "Applicant / Borrower Bank Account",
+        documentType: "OTHER",
+        defaultRemark: "Registered",
+      },
+      {
+        srNo: 27,
+        id: "mortgage-documents",
+        name: "Mortgage creation documents executed",
+        applicableFor: "Borrower / Property Owner",
+        documentType: "PROPERTY_DOCUMENT",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 28,
+        id: "original-title-deeds",
+        name: "Original title deeds received for custody",
+        applicableFor: "Fintree Custody / Branch Hub",
+        documentType: "PROPERTY_DOCUMENT",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 29,
+        id: "security-cheques",
+        name: "Security cheques, if applicable",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 30,
+        id: "final-disbursement-memo",
+        name: "Final disbursement memo / checklist approved",
+        applicableFor: "Credit / Operations / Authorised Signatory",
+        documentType: "OTHER",
+        defaultRemark: "Fintree will share",
+      },
+      {
+        srNo: 31,
+        id: "beneficiary-bank-details",
+        name: "Beneficiary bank details verified",
+        applicableFor: "Operations",
+        documentType: "OTHER",
+        defaultRemark: "Verify",
+      },
+      {
+        srNo: 32,
+        id: "disbursement-utr",
+        name: "Disbursement UTR / payment confirmation",
+        applicableFor: "Accounts / Operations",
+        documentType: "OTHER",
+        defaultRemark: "NA",
+      },
+    ],
+  },
+  {
+    id: "post-disbursement",
+    title: "H. Post Disbursement",
+    documents: [
+      {
+        srNo: 33,
+        id: "custody-acknowledgement",
+        name: "Document custody acknowledgement",
+        applicableFor: "Fintree Custody / Branch Hub",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 34,
+        id: "pdd-otc-tracker",
+        name: "PDD / OTC tracker updated, if any",
+        applicableFor: "Operations",
+        documentType: "OTHER",
+        defaultRemark: "Received",
+      },
+      {
+        srNo: 35,
+        id: "post-disbursement-mis",
+        name: "Post-disbursement MIS shared with partner",
+        applicableFor: "MIS Team",
+        documentType: "OTHER",
+        defaultRemark: "Pending",
+      },
+    ],
+  },
 ];
 
 const POST_BM_STATUSES = [
@@ -383,7 +709,9 @@ const isAllowedUploadFile = (file) => {
 };
 
 const getRoleSpecificChecklist = (role) => {
-  const baseTypes = requiredDocumentTypes.filter((type) => type !== "OTHER");
+  const baseTypes = requiredDocumentTypes.filter(
+    (type) => type !== "OTHER",
+  );
 
   const extraTypes = [];
 
@@ -391,7 +719,10 @@ const getRoleSpecificChecklist = (role) => {
     extraTypes.push("VALUATION_REPORT");
   }
 
-  if (role === "CREDIT_MAKER" || role === "CREDIT_CHECKER") {
+  if (
+    role === "CREDIT_MAKER" ||
+    role === "CREDIT_CHECKER"
+  ) {
     extraTypes.push("CREDIT_MEMO");
   }
 
@@ -403,7 +734,9 @@ const getRoleSpecificChecklist = (role) => {
     extraTypes.push("SANCTION_NOTE");
   }
 
-  return Array.from(new Set([...baseTypes, ...extraTypes]));
+  return Array.from(
+    new Set([...baseTypes, ...extraTypes]),
+  );
 };
 
 export default function KycDocuments() {
@@ -543,21 +876,49 @@ export default function KycDocuments() {
     retry: false,
   });
 
+
+      const normalizeChecklistDocumentName = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[–—]/g, "-");
+
   const uploadedDocuments = useMemo(() => {
-    const payload =
-      documentsQuery.data?.data?.data ??
-      documentsQuery.data?.data ??
-      documentsQuery.data ??
-      [];
+  const payload =
+    documentsQuery.data?.data?.data ??
+    documentsQuery.data?.data ??
+    documentsQuery.data ??
+    [];
 
-    const documents = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.documents)
-        ? payload.documents
-        : [];
+  const documents = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.documents)
+      ? payload.documents
+      : [];
 
-    return documents.filter(Boolean);
-  }, [documentsQuery.data]);
+  return documents.filter(Boolean);
+}, [documentsQuery.data]);
+
+
+const getUploadedChecklistDocument = (
+  checklistDocument,
+) => {
+  const requiredName =
+    normalizeChecklistDocumentName(
+      checklistDocument.name,
+    );
+
+  return uploadedDocuments.find((document) => {
+    const uploadedName =
+      normalizeChecklistDocumentName(
+        getDocumentName(document),
+      );
+
+    return uploadedName === requiredName;
+  });
+};
+
 
   const mandatoryDocumentTypes = useMemo(
     () => getRoleSpecificChecklist(activeRole),
@@ -834,6 +1195,30 @@ export default function KycDocuments() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const handleDownloadUploadedDocument = (document) => {
+  const url = getUploadUrl(document);
+
+  if (!url) {
+    setMessage("Document file is not available.");
+    return;
+  }
+
+  const anchor = window.document.createElement("a");
+
+  anchor.href = url;
+  anchor.download =
+    getFileName(document) ||
+    getDocumentName(document) ||
+    "document";
+
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  window.document.body.removeChild(anchor);
+};
+
   const upload = useMutation({
     mutationFn: ({ applicationId, documentType, documentName, file }) => {
       const normalizedDocumentType = normalizeText(documentType || "OTHER");
@@ -979,6 +1364,27 @@ export default function KycDocuments() {
       file,
     });
   };
+
+  const handleChecklistDocumentUpload = (
+  checklistDocument,
+  file,
+) => {
+  if (!file) return;
+
+  if (!selectedId) {
+    setMessage("Please select an application first.");
+    return;
+  }
+
+  setUploadingType(checklistDocument.id);
+
+  upload.mutate({
+    applicationId: Number(selectedId),
+    documentType: checklistDocument.documentType,
+    documentName: checklistDocument.name,
+    file,
+  });
+};
 
   const handleAddDocument = () => {
     setAddDocumentError("");
@@ -1165,7 +1571,7 @@ export default function KycDocuments() {
           ))}
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+        {/* <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-100 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-extrabold uppercase tracking-wide text-[#0f2942]">
@@ -1347,7 +1753,245 @@ export default function KycDocuments() {
               </tbody>
             </table>
           </div>
+        </div> */}
+
+
+<div className="space-y-4">
+  {APPLICATION_DOCUMENT_SECTIONS.map((section) => {
+    const uploadedCount = section.documents.filter((item) =>
+      Boolean(getUploadedChecklistDocument(item)),
+    ).length;
+
+    return (
+      <section
+        key={section.id}
+        className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+      >
+        {/* Simple section header */}
+        <div className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-[13px] font-black text-[#0f2942]">
+              {section.title}
+            </h3>
+
+            <p className="mt-1 text-[10px] font-medium text-slate-400">
+              Upload and review supporting documents
+            </p>
+          </div>
+
+          <span
+            className={`w-fit rounded-full px-3 py-1 text-[9px] font-black ${
+              uploadedCount === section.documents.length
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-blue-50 text-blue-700"
+            }`}
+          >
+            {uploadedCount}/{section.documents.length} received
+          </span>
         </div>
+
+        {/* Clean document list */}
+        <div className="divide-y divide-slate-100">
+          {section.documents.map((item) => {
+            const uploadedDocument =
+              getUploadedChecklistDocument(item);
+
+            const uploaded = Boolean(uploadedDocument);
+
+            const uploading =
+              upload.isPending &&
+              uploadingType === item.id;
+
+            return (
+              <div
+                key={item.id}
+                className="grid gap-3 px-5 py-4 transition hover:bg-slate-50/60 lg:grid-cols-[45px_minmax(240px,1.5fr)_minmax(180px,1fr)_110px_minmax(180px,1fr)_170px] lg:items-center"
+              >
+                {/* Serial number */}
+                <div>
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-100 text-[9px] font-black text-slate-500">
+                    {item.srNo}
+                  </span>
+                </div>
+
+                {/* Document details */}
+                <div className="min-w-0">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+                        uploaded
+                          ? "bg-emerald-50 text-emerald-600"
+                          : "bg-slate-100 text-slate-400"
+                      }`}
+                    >
+                      <FaFileAlt size={12} />
+                    </span>
+
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black leading-5 text-slate-800">
+                        {item.name}
+                      </p>
+
+                      <span className="mt-1 inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[8px] font-black text-slate-500">
+                        {item.documentType}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Applicable for */}
+                <div>
+                  <p className="mb-1 text-[8px] font-black uppercase tracking-wide text-slate-400 lg:hidden">
+                    Applicable For
+                  </p>
+
+                  <p className="text-[10px] font-medium leading-5 text-slate-600">
+                    {item.applicableFor}
+                  </p>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <p className="mb-1 text-[8px] font-black uppercase tracking-wide text-slate-400 lg:hidden">
+                    Status
+                  </p>
+
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[8px] font-black ${
+                      uploaded
+                        ? "bg-emerald-50 text-emerald-700"
+                        : item.defaultRemark
+                            .toLowerCase()
+                            .includes("pending")
+                          ? "bg-amber-50 text-amber-700"
+                          : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {uploaded && (
+                      <FaCheckCircle size={8} />
+                    )}
+
+                    {uploaded
+                      ? "Received"
+                      : item.defaultRemark}
+                  </span>
+                </div>
+
+                {/* File information */}
+                <div className="min-w-0">
+                  <p className="mb-1 text-[8px] font-black uppercase tracking-wide text-slate-400 lg:hidden">
+                    File
+                  </p>
+
+                  {uploaded ? (
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-600">
+                        <FaCheckCircle size={11} />
+                      </span>
+
+                      <div className="min-w-0">
+                        <p
+                          className="truncate text-[9px] font-black text-slate-700"
+                          title={getFileName(uploadedDocument)}
+                        >
+                          {getFileName(uploadedDocument) ||
+                            item.name}
+                        </p>
+
+                        <p className="mt-0.5 truncate text-[8px] text-slate-400">
+                          {getDocumentSource(
+                            uploadedDocument,
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[9px] font-medium text-slate-400">
+                      No file uploaded
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                  {uploaded &&
+                    getUploadUrl(uploadedDocument) && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleViewUploadedDocument(
+                              uploadedDocument,
+                            )
+                          }
+                          title="Preview document"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          <FaEye size={10} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDownloadUploadedDocument(
+                              uploadedDocument,
+                            )
+                          }
+                          title="Download document"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          <FaDownload size={10} />
+                        </button>
+                      </>
+                    )}
+
+                  <label
+                    className={`inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-[9px] font-black transition ${
+                      uploaded
+                        ? "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                        : "bg-[#0f2942] text-white hover:bg-[#173b5f]"
+                    }`}
+                  >
+                    <FaUpload size={9} />
+
+                    {uploading
+                      ? "Uploading..."
+                      : uploaded
+                        ? "Replace"
+                        : "Upload"}
+
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="hidden"
+                      disabled={
+                        !selectedId ||
+                        upload.isPending
+                      }
+                      onChange={(event) => {
+                        const file =
+                          event.target.files?.[0];
+
+                        if (file) {
+                          handleChecklistDocumentUpload(
+                            item,
+                            file,
+                          );
+                        }
+
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  })}
+</div>
 
         <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 p-6">
