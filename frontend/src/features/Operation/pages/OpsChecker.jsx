@@ -5,6 +5,7 @@ import {
   FaCheckCircle,
   FaChevronDown,
   FaClock,
+  FaUpload,
   FaDownload,
   FaExclamationTriangle,
   FaEye,
@@ -278,7 +279,138 @@ function StatusBadge({ children, tone = "neutral" }) {
   );
 }
 
+
+const requiredDocumentSections = [
+  {
+    id: "login-application",
+    title: "B. Login and Application Documents",
+    documents: [
+      {
+        id: "loan-application-form",
+        name: "Loan application form duly filled and signed",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+      },
+      {
+        id: "applicant-photograph",
+        name: "Applicant photograph",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "PHOTO",
+      },
+      {
+        id: "partner-login-sheet",
+        name: "Partner login sheet / SFTP upload confirmation",
+        applicableFor: "SFT Finance / Partner",
+        documentType: "OTHER",
+      },
+      {
+        id: "customer-consent",
+        name: "Customer consent for bureau, KYC verification and data sharing",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+      },
+    ],
+  },
+  {
+    id: "kyc-documents",
+    title: "C. KYC Documents",
+    documents: [
+      {
+        id: "pan-card",
+        name: "PAN Card",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "PAN",
+      },
+      {
+        id: "aadhaar-card",
+        name: "Aadhaar Card",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "AADHAAR",
+      },
+      {
+        id: "address-proof",
+        name: "Address Proof",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+      },
+      {
+        id: "ckyc-form",
+        name: "CKYC Form",
+        applicableFor: "Applicant / Co-applicant / Guarantor",
+        documentType: "OTHER",
+      },
+    ],
+  },
+  {
+    id: "income-banking",
+    title: "D. Income and Banking Documents",
+    documents: [
+      {
+        id: "bank-statement",
+        name: "Latest 6 months bank statement",
+        applicableFor: "Applicant / Business / Salary",
+        documentType: "BANK_STATEMENT",
+      },
+      {
+        id: "itr-financials",
+        name: "ITR with computation / financials",
+        applicableFor: "Applicant / Business Entity",
+        documentType: "INCOME_PROOF",
+      },
+      {
+        id: "salary-slips",
+        name: "Salary slips / Form 16",
+        applicableFor: "Salaried Applicant",
+        documentType: "INCOME_PROOF",
+      },
+      {
+        id: "gst-business-proof",
+        name: "GST returns / business proof",
+        applicableFor: "Self-employed Applicant / Entity",
+        documentType: "INCOME_PROOF",
+      },
+    ],
+  },
+  {
+    id: "property-documents",
+    title: "E. Property Documents",
+    documents: [
+      {
+        id: "title-deed",
+        name: "Title deed / sale deed",
+        applicableFor: "Property Owner",
+        documentType: "PROPERTY_DOCUMENT",
+      },
+      {
+        id: "property-tax",
+        name: "Property tax receipt",
+        applicableFor: "Property Owner",
+        documentType: "PROPERTY_DOCUMENT",
+      },
+      {
+        id: "approved-plan",
+        name: "Approved building plan",
+        applicableFor: "Property Owner",
+        documentType: "PROPERTY_DOCUMENT",
+      },
+      {
+        id: "occupancy-certificate",
+        name: "Occupancy / completion certificate",
+        applicableFor: "Property Owner",
+        documentType: "PROPERTY_DOCUMENT",
+      },
+      {
+        id: "encumbrance-certificate",
+        name: "Encumbrance certificate",
+        applicableFor: "Property Owner",
+        documentType: "PROPERTY_DOCUMENT",
+      },
+    ],
+  },
+];
+
 export default function OpsChecker() {
+  
   const params = useParams();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -303,6 +435,11 @@ export default function OpsChecker() {
   const [documents, setDocuments] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [documentsError, setDocumentsError] = useState("");
+
+  const [selectedFiles, setSelectedFiles] = useState({});
+const [uploadingDocuments, setUploadingDocuments] = useState({});
+const [uploadedDocuments, setUploadedDocuments] = useState({});
+const [uploadErrors, setUploadErrors] = useState({});
 
   const [checkerRemarks, setCheckerRemarks] = useState("");
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
@@ -590,6 +727,159 @@ export default function OpsChecker() {
   //     setDocumentsLoading(false);
   //   }
   // }, [applicationId]);
+
+const handleDocumentFileChange = (documentId, file) => {
+  if (!file) {
+    setSelectedFiles((current) => {
+      const updated = { ...current };
+      delete updated[documentId];
+      return updated;
+    });
+
+    return;
+  }
+
+  const allowedMimeTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+  ];
+
+  if (!allowedMimeTypes.includes(file.type)) {
+    setUploadErrors((current) => ({
+      ...current,
+      [documentId]: "Only PDF, JPG, JPEG and PNG files are allowed.",
+    }));
+
+    return;
+  }
+
+  const maximumSize = 15 * 1024 * 1024;
+
+  if (file.size > maximumSize) {
+    setUploadErrors((current) => ({
+      ...current,
+      [documentId]: "File size must not exceed 15 MB.",
+    }));
+
+    return;
+  }
+
+  setSelectedFiles((current) => ({
+    ...current,
+    [documentId]: file,
+  }));
+
+  setUploadErrors((current) => ({
+    ...current,
+    [documentId]: "",
+  }));
+};
+
+const handleUploadDocument = async (documentItem) => {
+  const file = selectedFiles[documentItem.id];
+
+  if (!file) {
+    setUploadErrors((current) => ({
+      ...current,
+      [documentItem.id]: "Please select a file.",
+    }));
+
+    return;
+  }
+
+  const normalizedApplicationId = Number(applicationId);
+
+  if (
+    !Number.isInteger(normalizedApplicationId) ||
+    normalizedApplicationId <= 0
+  ) {
+    setUploadErrors((current) => ({
+      ...current,
+      [documentItem.id]: "Valid application ID is required.",
+    }));
+
+    return;
+  }
+
+  try {
+    setUploadingDocuments((current) => ({
+      ...current,
+      [documentItem.id]: true,
+    }));
+
+    setUploadErrors((current) => ({
+      ...current,
+      [documentItem.id]: "",
+    }));
+
+    const formData = new FormData();
+
+    formData.append(
+      "applicationId",
+      String(normalizedApplicationId),
+    );
+
+    formData.append(
+      "documentType",
+      documentItem.documentType,
+    );
+
+    formData.append(
+      "documentName",
+      documentItem.name,
+    );
+
+    formData.append(
+      "documentSource",
+      "OPS_HEAD",
+    );
+
+    formData.append("file", file);
+
+    const response =
+      await operationApi.uploadDocument(formData);
+
+    const uploadedDocument =
+      response?.data?.data?.data ??
+      response?.data?.data ??
+      response?.data ??
+      null;
+
+    setUploadedDocuments((current) => ({
+      ...current,
+      [documentItem.id]: uploadedDocument || {
+        documentName: documentItem.name,
+        fileName: file.name,
+      },
+    }));
+
+    setSelectedFiles((current) => {
+      const updated = { ...current };
+      delete updated[documentItem.id];
+      return updated;
+    });
+
+    await fetchApplicationDocuments();
+  } catch (error) {
+    const message =
+      error?.response?.data?.message ??
+      error?.message ??
+      "Unable to upload document.";
+
+    setUploadErrors((current) => ({
+      ...current,
+      [documentItem.id]: Array.isArray(message)
+        ? message.join(", ")
+        : String(message),
+    }));
+  } finally {
+    setUploadingDocuments((current) => ({
+      ...current,
+      [documentItem.id]: false,
+    }));
+  }
+};
 
 
   const fetchApplicationDocuments = useCallback(async () => {
@@ -918,25 +1208,58 @@ useEffect(() => {
     showToast("Case returned successfully.");
   };
 
+  // const getDocumentUrl = (document) => {
+  //   const path = String(document?.fileUrl ?? "").trim();
+
+  //   if (!path) return "";
+
+  //   if (
+  //     path.startsWith("http://") ||
+  //     path.startsWith("https://") ||
+  //     path.startsWith("blob:")
+  //   ) {
+  //     return path;
+  //   }
+
+  //   const backendUrl =
+  //     import.meta.env.VITE_BACKEND_URL ?? "";
+
+  //   return `${backendUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+  // };
+
   const getDocumentUrl = (document) => {
-    const path = String(document?.fileUrl ?? "").trim();
+  const path = String(
+    document?.fileUrl ??
+      document?.file_url ??
+      document?.downloadUrl ??
+      document?.download_url ??
+      document?.filePath ??
+      document?.file_path ??
+      document?.url ??
+      "",
+  ).trim();
 
-    if (!path) return "";
+  if (!path) return "";
 
-    if (
-      path.startsWith("http://") ||
-      path.startsWith("https://") ||
-      path.startsWith("blob:")
-    ) {
-      return path;
-    }
+  if (
+    path.startsWith("http://") ||
+    path.startsWith("https://") ||
+    path.startsWith("blob:")
+  ) {
+    return path;
+  }
 
-    const backendUrl =
-      import.meta.env.VITE_BACKEND_URL ?? "";
+  const backendUrl = String(
+    import.meta.env.VITE_BACKEND_URL ?? "",
+  )
+    .trim()
+    .replace(/\/$/, "");
 
-    return `${backendUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-  };
+  const cleanPath =
+    path.startsWith("/") ? path : `/${path}`;
 
+  return `${backendUrl}${cleanPath}`;
+};
   const previewDocument = (document) => {
     const url = getDocumentUrl(document);
 
@@ -1507,98 +1830,550 @@ useEffect(() => {
             )}
 
             {activeTab === "documents" && (
-              <section className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-                <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-[18px]">
-                  <div>
-                    <h2 className="text-[14px] font-black text-[#173f7a]">
-                      Documents Submitted by Maker
-                    </h2>
-                    <p className="mt-1 text-[10px] text-slate-400">
-                      Supporting documents for checker review
-                    </p>
-                  </div>
-                  <StatusBadge tone="blue">
-                    {displayedDocuments.length} documents
-                  </StatusBadge>
-                </div>
+              
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex items-center gap-3">
+      <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-[#173f7a]">
+        <FaFileAlt size={15} />
+      </span>
 
-                <div className="p-5">
-                  {documentsLoading ? (
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {[1, 2, 3, 4].map((item) => (
-                        <div
-                          key={item}
-                          className="h-16 animate-pulse rounded-[14px] bg-slate-100"
-                        />
-                      ))}
-                    </div>
-                  ) : documentsError ? (
-                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
-                      <p className="text-[10px] font-bold text-rose-700">
-                        {documentsError}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={fetchApplicationDocuments}
-                        className="mt-3 rounded-lg bg-rose-700 px-3 py-2 text-[9px] font-black text-white"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  ) : displayedDocuments.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center">
-                      <FaFileAlt
-                        size={20}
-                        className="mx-auto text-slate-300"
-                      />
-                      <p className="mt-3 text-[11px] font-bold text-slate-600">
-                        No documents found
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {displayedDocuments.map((document) => (
-                        <div
-                          key={document.id}
-                          className="flex items-center gap-3 rounded-[14px] border border-slate-200 bg-slate-50 p-3"
-                        >
-                          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[11px] bg-blue-100 text-blue-700">
-                            <FaFileAlt size={14} />
+      <div>
+        <h2 className="text-[15px] font-black text-[#173f7a]">
+          Application Documents
+        </h2>
+        <p className="mt-1 text-[10px] text-slate-400">
+          Upload and track all required documents for this application
+        </p>
+      </div>
+    </div>
+
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="rounded-full bg-blue-50 px-3 py-1.5 text-[9px] font-black text-blue-700">
+        {displayedDocuments.length} uploaded
+      </span>
+      <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[9px] font-black text-slate-500">
+        PDF, JPG, PNG · Max 15 MB
+      </span>
+    </div>
+  </div>
+
+  <div className="space-y-4 p-4 sm:p-5">
+    
+    {documentsLoading && (
+  <div className="rounded-xl bg-blue-50 px-4 py-3 text-[10px] font-bold text-blue-700">
+    Loading uploaded documents...
+  </div>
+)}
+
+{documentsError && (
+  <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+    <p className="text-[10px] font-bold text-rose-700">
+      {documentsError}
+    </p>
+
+    <button
+      type="button"
+      onClick={fetchApplicationDocuments}
+      className="rounded-lg bg-rose-700 px-3 py-2 text-[9px] font-black text-white"
+    >
+      Retry
+    </button>
+  </div>
+)}
+
+
+{/* Already uploaded documents */}
+{!documentsLoading &&
+  !documentsError &&
+  displayedDocuments.length > 0 && (
+    <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white">
+      <div className="flex flex-col gap-3 border-b border-emerald-100 bg-emerald-50/60 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
+            <FaCheckCircle size={13} />
+          </span>
+
+          <div>
+            <h3 className="text-[12px] font-black text-slate-800">
+              Already Uploaded Documents
+            </h3>
+
+            <p className="mt-1 text-[9px] text-slate-500">
+              Documents already available for this application
+            </p>
+          </div>
+        </div>
+
+        <span className="rounded-full bg-white px-3 py-1.5 text-[9px] font-black text-emerald-700 ring-1 ring-emerald-200">
+          {displayedDocuments.length} documents
+        </span>
+      </div>
+
+      <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+        {displayedDocuments.map((document) => {
+          const documentUrl =
+            getDocumentUrl(document);
+
+          return (
+            <div
+              key={document.id}
+              className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-blue-200 hover:bg-white hover:shadow-sm"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-700">
+                <FaFileAlt size={14} />
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <strong className="block truncate text-[10px] font-black text-slate-800">
+                  {document.name}
+                </strong>
+
+                <p className="mt-1 truncate text-[8px] text-slate-500">
+                  {String(document.type)
+                    .replaceAll("_", " ")}
+                </p>
+
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[7px] font-black text-emerald-700">
+                    {String(document.status)
+                      .replaceAll("_", " ")}
+                  </span>
+
+                  <span className="truncate text-[7px] text-slate-400">
+                    Uploaded by {document.uploadedBy}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!documentUrl}
+                  onClick={() =>
+                    previewDocument(document)
+                  }
+                  title={`Preview ${document.name}`}
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <FaEye size={10} />
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!documentUrl}
+                  onClick={() =>
+                    downloadDocument(document)
+                  }
+                  title={`Download ${document.name}`}
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <FaDownload size={9} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )}
+
+    {requiredDocumentSections.map((section) => {
+
+      
+      const completedCount = section.documents.filter(
+        (item) => uploadedDocuments[item.id],
+      ).length;
+
+      const totalCount = section.documents.length;
+
+      return (
+        <div
+          key={section.id}
+          className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+        >
+          <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-[12px] font-black text-slate-800">
+                {section.title}
+              </h3>
+              <p className="mt-1 text-[9px] text-slate-400">
+                {completedCount} of {totalCount} documents uploaded
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  style={{
+                    width: `${
+                      totalCount === 0
+                        ? 0
+                        : Math.round(
+                            (completedCount / totalCount) * 100,
+                          )
+                    }%`,
+                  }}
+                />
+              </div>
+              <span className="text-[9px] font-black text-slate-500">
+                {completedCount}/{totalCount}
+              </span>
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {section.documents.map((documentItem, index) => {
+              const selectedFile = selectedFiles[documentItem.id];
+              const uploading = uploadingDocuments[documentItem.id];
+              const uploaded = uploadedDocuments[documentItem.id];
+              const uploadedFileName =
+  uploaded?.fileName ??
+  uploaded?.file_name ??
+  uploaded?.documentName ??
+  uploaded?.document_name ??
+  documentItem.name;
+
+const uploadedFileMeta =
+  uploaded?.mimeType ??
+  uploaded?.mime_type ??
+  uploaded?.documentType ??
+  uploaded?.document_type ??
+  "Uploaded document";
+              const error = uploadErrors[documentItem.id];
+
+              return (
+                <div
+                  key={documentItem.id}
+                  className="grid gap-4 px-4 py-4 transition hover:bg-slate-50/70 lg:grid-cols-[40px_minmax(0,1.35fr)_minmax(0,1fr)_minmax(280px,0.95fr)_120px]"
+                >
+                  <div className="hidden lg:flex lg:items-center">
+                    <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-100 text-[9px] font-black text-slate-500">
+                      {index + 1}
+                    </span>
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700">
+                        <FaFileAlt size={13} />
+                      </span>
+
+                      <div className="min-w-0">
+                        <strong className="block text-[10px] font-black text-slate-800">
+                          {documentItem.name}
+                        </strong>
+
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[7px] font-black text-slate-500">
+                            {documentItem.documentType}
                           </span>
 
-                          <div className="min-w-0 flex-1">
-                            <strong className="block truncate text-[10px] font-black text-slate-800">
-                              {document.name}
-                            </strong>
-                            <span className="mt-1 block truncate text-[8px] text-slate-500">
-                              {document.type} · Uploaded by{" "}
-                              {document.uploadedBy}
+                          {uploaded && (
+                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[7px] font-black text-emerald-700">
+                              Uploaded
                             </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            disabled={!document.fileUrl}
-                            onClick={() => previewDocument(document)}
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-700 disabled:opacity-40"
-                          >
-                            <FaEye size={11} />
-                          </button>
-
-                          <button
-                            type="button"
-                            disabled={!document.fileUrl}
-                            onClick={() => downloadDocument(document)}
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-700 disabled:opacity-40"
-                          >
-                            <FaDownload size={10} />
-                          </button>
+                          )}
                         </div>
-                      ))}
+
+                        {error && (
+                          <p className="mt-1.5 text-[8px] font-bold text-rose-600">
+                            {error}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="flex items-center">
+                    <div>
+                      <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">
+                        Applicable for
+                      </p>
+                      <p className="mt-1 text-[9px] leading-4 text-slate-600">
+                        {documentItem.applicableFor}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* <div className="flex items-center">
+                    <label
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition ${
+                        selectedFile
+                          ? "border-blue-200 bg-blue-50/50"
+                          : "border-dashed border-slate-300 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/30"
+                      }`}
+                    >
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
+                          selectedFile
+                            ? "bg-blue-600 text-white"
+                            : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        <FaUpload size={11} />
+                      </span>
+
+                      <span className="min-w-0 flex-1">
+                        <strong className="block truncate text-[9px] font-black text-slate-700">
+                          {selectedFile ? selectedFile.name : "Choose file"}
+                        </strong>
+                        <span className="mt-0.5 block text-[8px] text-slate-400">
+                          PDF, JPG or PNG · Max 15 MB
+                        </span>
+                      </span>
+
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(event) =>
+                          handleDocumentFileChange(
+                            documentItem.id,
+                            event.target.files?.[0],
+                          )
+                        }
+                      />
+                    </label>
+                  </div> */}
+
+
+<div className="flex items-center">
+  {uploaded ? (
+    <div className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 py-3">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
+        <FaCheckCircle size={12} />
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <strong className="block truncate text-[9px] font-black text-slate-800">
+          {uploadedFileName}
+        </strong>
+
+        <span className="mt-0.5 block truncate text-[8px] text-slate-500">
+          {uploadedFileMeta}
+        </span>
+
+        <span className="mt-1 block text-[8px] font-black text-emerald-700">
+          Uploaded successfully
+        </span>
+      </div>
+    </div>
+  ) : (
+    <label
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition ${
+        selectedFile
+          ? "border-blue-200 bg-blue-50/50"
+          : "border-dashed border-slate-300 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/30"
+      }`}
+    >
+      <span
+        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
+          selectedFile
+            ? "bg-blue-600 text-white"
+            : "bg-blue-100 text-blue-700"
+        }`}
+      >
+        <FaUpload size={11} />
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <strong className="block truncate text-[9px] font-black text-slate-700">
+          {selectedFile
+            ? selectedFile.name
+            : "Choose file"}
+        </strong>
+
+        <span className="mt-0.5 block text-[8px] text-slate-400">
+          PDF, JPG or PNG · Max 15 MB
+        </span>
+      </span>
+
+      <input
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        className="hidden"
+        onChange={(event) =>
+          handleDocumentFileChange(
+            documentItem.id,
+            event.target.files?.[0],
+          )
+        }
+      />
+    </label>
+  )}
+</div>
+
+
+<div className="flex items-center justify-start gap-2 lg:justify-end">
+  {uploaded ? (
+    <>
+      <button
+        type="button"
+        disabled={!getDocumentUrl(uploaded)}
+        onClick={() =>
+          previewDocument(uploaded)
+        }
+        title="Preview document"
+        className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <FaEye size={11} />
+      </button>
+
+      <button
+        type="button"
+        disabled={!getDocumentUrl(uploaded)}
+        onClick={() =>
+          downloadDocument(uploaded)
+        }
+        title="Download document"
+        className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <FaDownload size={10} />
+      </button>
+    </>
+  ) : (
+    <button
+      type="button"
+      disabled={!selectedFile || uploading}
+      onClick={() =>
+        handleUploadDocument(documentItem)
+      }
+      className="inline-flex h-9 min-w-[100px] items-center justify-center gap-2 rounded-xl bg-[#173f7a] px-3 text-[9px] font-black text-white transition hover:bg-[#102f5e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+    >
+      <FaUpload size={10} />
+
+      {uploading
+        ? "Uploading..."
+        : "Upload"}
+    </button>
+  )}
+</div>
+
+
+                  {/* <div className="flex items-center justify-start lg:justify-end">
+                    {uploaded ? (
+                      <span className="inline-flex h-9 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-[9px] font-black text-emerald-700">
+                        <FaCheckCircle size={10} />
+                        Uploaded
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={!selectedFile || uploading}
+                        onClick={() => handleUploadDocument(documentItem)}
+                        className="inline-flex h-9 min-w-[100px] items-center justify-center gap-2 rounded-xl bg-[#173f7a] px-3 text-[9px] font-black text-white transition hover:bg-[#102f5e] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                      >
+                        <FaUpload size={10} />
+                        {uploading ? "Uploading..." : "Upload"}
+                      </button>
+                    )}
+                  </div> */}
                 </div>
-              </section>
+              );
+            })}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</section>
+        
+              // <section className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              //   <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-[18px]">
+              //     <div>
+              //       <h2 className="text-[14px] font-black text-[#173f7a]">
+              //         Documents Submitted by Maker
+              //       </h2>
+              //       <p className="mt-1 text-[10px] text-slate-400">
+              //         Supporting documents for checker review
+              //       </p>
+              //     </div>
+              //     <StatusBadge tone="blue">
+              //       {displayedDocuments.length} documents
+              //     </StatusBadge>
+              //   </div>
+
+              //   <div className="p-5">
+              //     {documentsLoading ? (
+              //       <div className="grid gap-3 md:grid-cols-2">
+              //         {[1, 2, 3, 4].map((item) => (
+              //           <div
+              //             key={item}
+              //             className="h-16 animate-pulse rounded-[14px] bg-slate-100"
+              //           />
+              //         ))}
+              //       </div>
+              //     ) : documentsError ? (
+              //       <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+              //         <p className="text-[10px] font-bold text-rose-700">
+              //           {documentsError}
+              //         </p>
+              //         <button
+              //           type="button"
+              //           onClick={fetchApplicationDocuments}
+              //           className="mt-3 rounded-lg bg-rose-700 px-3 py-2 text-[9px] font-black text-white"
+              //         >
+              //           Retry
+              //         </button>
+              //       </div>
+              //     ) : displayedDocuments.length === 0 ? (
+              //       <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center">
+              //         <FaFileAlt
+              //           size={20}
+              //           className="mx-auto text-slate-300"
+              //         />
+              //         <p className="mt-3 text-[11px] font-bold text-slate-600">
+              //           No documents found
+              //         </p>
+              //       </div>
+              //     ) : (
+              //       <div className="grid gap-3 md:grid-cols-2">
+              //         {displayedDocuments.map((document) => (
+              //           <div
+              //             key={document.id}
+              //             className="flex items-center gap-3 rounded-[14px] border border-slate-200 bg-slate-50 p-3"
+              //           >
+              //             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[11px] bg-blue-100 text-blue-700">
+              //               <FaFileAlt size={14} />
+              //             </span>
+
+              //             <div className="min-w-0 flex-1">
+              //               <strong className="block truncate text-[10px] font-black text-slate-800">
+              //                 {document.name}
+              //               </strong>
+              //               <span className="mt-1 block truncate text-[8px] text-slate-500">
+              //                 {document.type} · Uploaded by{" "}
+              //                 {document.uploadedBy}
+              //               </span>
+              //             </div>
+
+              //             <button
+              //               type="button"
+              //               disabled={!document.fileUrl}
+              //               onClick={() => previewDocument(document)}
+              //               className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-700 disabled:opacity-40"
+              //             >
+              //               <FaEye size={11} />
+              //             </button>
+
+              //             <button
+              //               type="button"
+              //               disabled={!document.fileUrl}
+              //               onClick={() => downloadDocument(document)}
+              //               className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-700 disabled:opacity-40"
+              //             >
+              //               <FaDownload size={10} />
+              //             </button>
+              //           </div>
+              //         ))}
+              //       </div>
+              //     )}
+              //   </div>
+              // </section>
+
+
             )}
 
             {activeTab === "audit" && (

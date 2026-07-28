@@ -67,4 +67,13 @@ export const operationApi = {
           `/applications/${applicationId}/documents`,
 
     ),
+
+    uploadDocument: (formData) =>
+  apiClient.post("/documents/upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  }),
+
+  
 };
