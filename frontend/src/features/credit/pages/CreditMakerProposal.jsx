@@ -454,7 +454,7 @@ const defaultMakerForm = {
   recommendedRoi: "",
   makerRiskGrade: "",
   makerRecommendation: "",
-
+  recommendationNote: "",
   borrowerAssessment: "",
   bankingAssessment: "",
   propertyAssessment: "",
@@ -776,6 +776,8 @@ const buildInitialForm = (application, creditAssessment) => {
     ),
 
     makerRecommendation: valueOrEmpty(makerPayload?.makerRecommendation),
+    recommendationNote: valueOrEmpty(firstValue(makerPayload?.recommendationNote,
+    makerPayload?.recommendationText,creditAssessment?.recommendationNote,),),
 
     borrowerAssessment: valueOrEmpty(makerPayload?.borrowerAssessment),
     bankingAssessment: valueOrEmpty(makerPayload?.bankingAssessment),
@@ -826,6 +828,7 @@ export default function CreditMakerProposal() {
   const [message, setMessage] = useState("");
   const [form, setForm] = useState(defaultMakerForm);
   const [showCreditMemo, setShowCreditMemo] = useState(false);
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState("assessment");
 
   const queryClient = useQueryClient();
 
@@ -1084,6 +1087,8 @@ export default function CreditMakerProposal() {
       postDisbursementConditions: form.postDisbursementConditions,
 
       makerRecommendation: form.makerRecommendation,
+      recommendationNote: form.recommendationNote,
+      recommendationText: form.recommendationNote,
       makerRemarks: form.makerRemarks,
       remarks:
         actionType === "QUERY"
@@ -1483,659 +1488,201 @@ export default function CreditMakerProposal() {
           </div>
         )}
 
-        {finalSelectedId && !isLoadingSelected && (
-          <>
-            <WorkflowCard workflowSteps={workflowSteps} />
+       {finalSelectedId && !isLoadingSelected && (
+  <>
+    {/* TOP TABS */}
+    <div className="sticky top-0 z-30 border-b border-slate-200 bg-[#f4f7fb]/95 py-3 backdrop-blur">
+      <div className="flex w-full overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm sm:w-fit">
+        <button
+          type="button"
+          onClick={() =>
+            setActiveWorkspaceTab("assessment")
+          }
+          className={`whitespace-nowrap rounded-lg px-5 py-2.5 text-xs font-black transition ${
+            activeWorkspaceTab === "assessment"
+              ? "bg-[#0f2942] text-white shadow-sm"
+              : "text-slate-500 hover:bg-slate-50 hover:text-[#0f2942]"
+          }`}
+        >
+          Credit Assessment
+        </button>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-              {scoreCards.map((card) => (
-                <MetricCard key={card.label} {...card} />
-              ))}
+        <button
+          type="button"
+          onClick={() =>
+            setActiveWorkspaceTab("recommendation")
+          }
+          className={`whitespace-nowrap rounded-lg px-5 py-2.5 text-xs font-black transition ${
+            activeWorkspaceTab === "recommendation"
+              ? "bg-[#0f2942] text-white shadow-sm"
+              : "text-slate-500 hover:bg-slate-50 hover:text-[#0f2942]"
+          }`}
+        >
+          Recommendation Note
+        </button>
+      </div>
+    </div>
+
+    {/* CREDIT ASSESSMENT TAB */}
+    {activeWorkspaceTab === "assessment" && (
+      <>
+        <WorkflowCard workflowSteps={workflowSteps} />
+
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {scoreCards.map((card) => (
+            <MetricCard
+              key={card.label}
+              {...card}
+            />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_420px]">
+          <div className="space-y-6">
+            {/* KEEP ALL YOUR EXISTING LEFT-SIDE ASSESSMENT PANELS HERE */}
+
+            {/* Example:
+            <Panel title="Lead Sourcing" ...>
+              ...
+            </Panel>
+
+            <Panel title="Primary Applicant" ...>
+              ...
+            </Panel>
+
+            <Panel title="Loan Requirement" ...>
+              ...
+            </Panel>
+
+            <Panel title="Collateral Property" ...>
+              ...
+            </Panel>
+
+            <Panel title="Indicative Eligibility & Bureau" ...>
+              ...
+            </Panel>
+
+            Credit Memo block
+            */}
+          </div>
+
+          <div className="space-y-6">
+            <div className="sticky top-24 space-y-6">
+              {/* KEEP YOUR EXISTING RIGHT-SIDE PANELS HERE */}
+
+              {/* Example:
+              Recommendation panel
+              Conditions panel
+              Maker Control
+              Save / Query / Submit buttons
+              */}
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+
+    {/* RECOMMENDATION TAB */}
+    {activeWorkspaceTab === "recommendation" && (
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-lg font-black text-[#0f2942]">
+                Credit Maker Recommendation
+              </h2>
+
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-[9px] font-black uppercase tracking-wide text-blue-700">
+                Credit Maker
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_420px]">
-              <div className="space-y-6">
-                <Panel
-                  title="Lead Sourcing"
-                  subtitle="Loaded from application data."
-                  icon={FaClipboardCheck}
-                >
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <Field
-                      label="Source Type"
-                      value={form.sourceType}
-                      onChange={(value) => updateForm("sourceType", value)}
-                    />
+            <p className="mt-1 text-xs font-semibold text-slate-400">
+              Record the final recommendation for the selected application.
+            </p>
+          </div>
 
-                    <Field
-                      label="Hub"
-                      value={form.hub}
-                      onChange={(value) => updateForm("hub", value)}
-                    />
+          <button
+            type="button"
+            disabled={
+              submitting ||
+              !finalSelectedId
+            }
+            onClick={handleSaveDraft}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0f2942] px-5 text-xs font-black text-white transition hover:bg-[#183d62] disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            <FaSave size={12} />
 
-                    <Field
-                      label="Spoke"
-                      value={form.spoke}
-                      onChange={(value) => updateForm("spoke", value)}
-                    />
-                  </div>
-                </Panel>
+            {saveDraftMutation.isPending
+              ? "Saving..."
+              : "Save Recommendation"}
+          </button>
+        </div>
 
-                <Panel
-                  title="Primary Applicant"
-                  subtitle="Loaded from application, applicant, borrower and customer profile."
-                  icon={FaUserTie}
-                >
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <Field
-                      label="Customer / Entity Name"
-                      value={form.customerName}
-                      onChange={(value) => updateForm("customerName", value)}
-                    />
+        <div className="p-6">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-black text-slate-800">
+                  {form.customerName ||
+                    "Selected Customer"}
+                </h3>
 
-                    <Field
-                      label="Mobile Number"
-                      value={form.mobile}
-                      onChange={(value) => updateForm("mobile", value)}
-                    />
-
-                    <Field
-                      label="Email ID"
-                      value={form.email}
-                      onChange={(value) => updateForm("email", value)}
-                    />
-
-                    <Field
-                      label="PAN Number"
-                      value={form.pan}
-                      onChange={(value) =>
-                        updateForm("pan", value.toUpperCase())
-                      }
-                    />
-
-                    <Field
-                      label="Aadhaar / OVD Masked"
-                      value={form.aadhaar}
-                      onChange={(value) => updateForm("aadhaar", value)}
-                    />
-
-                    <Field
-                      label="Occupation / Constitution"
-                      value={form.occupationType}
-                      onChange={(value) =>
-                        updateForm("occupationType", value)
-                      }
-                    />
-
-                    <Field
-                      label="Employer / Business Name"
-                      value={form.businessName}
-                      onChange={(value) => updateForm("businessName", value)}
-                    />
-
-                    <Field
-                      label="Employment / Business Vintage Years"
-                      value={form.businessVintage}
-                      onChange={(value) =>
-                        updateForm("businessVintage", value)
-                      }
-                    />
-
-                    <Field
-                      label="Verified Monthly Income"
-                      type="number"
-                      value={form.verifiedIncome || form.monthlyIncome}
-                      onChange={(value) => updateForm("verifiedIncome", value)}
-                    />
-
-                    <Field
-                      label="Existing Monthly Obligations"
-                      type="number"
-                      value={form.existingObligations || form.monthlyObligations}
-                      onChange={(value) =>
-                        updateForm("existingObligations", value)
-                      }
-                    />
-                  </div>
-                </Panel>
-
-                {/* <Panel
-                  title="Address Details"
-                  subtitle="Same address fallback logic as Application Data page with additional profile/applicant fallback."
-                  icon={FaHome}
-                >
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <TextArea
-                      label="Current / Residence Address"
-                      rows={3}
-                      value={form.currentAddress}
-                      onChange={(value) =>
-                        updateForm("currentAddress", value)
-                      }
-                    />
-
-                    <TextArea
-                      label="Permanent Address"
-                      rows={3}
-                      value={form.permanentAddress}
-                      onChange={(value) =>
-                        updateForm("permanentAddress", value)
-                      }
-                    />
-                  </div>
-
-                  <TextArea
-                    label="Full Property Address"
-                    rows={3}
-                    value={form.fullPropertyAddress}
-                    onChange={(value) =>
-                      updateForm("fullPropertyAddress", value)
-                    }
-                  />
-                </Panel> */}
-
-                <Panel
-                  title="Loan Requirement"
-                  subtitle="Requested loan details loaded from application data."
-                  icon={FaClipboardCheck}
-                >
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <Field
-                      label="Requested Loan Amount"
-                      type="number"
-                      value={form.requestedAmount}
-                      onChange={(value) =>
-                        updateForm("requestedAmount", value)
-                      }
-                    />
-
-                    <Field
-                      label="Loan Purpose"
-                      value={form.loanPurpose}
-                      onChange={(value) => updateForm("loanPurpose", value)}
-                    />
-
-                    <Field
-                      label="Requested Tenure Months"
-                      type="number"
-                      value={form.requestedTenure}
-                      onChange={(value) =>
-                        updateForm("requestedTenure", value)
-                      }
-                    />
-                  </div>
-                </Panel>
-
-                <Panel
-                  title="Collateral Property"
-                  subtitle="Property details and valuation amount used for LTV."
-                  icon={FaHome}
-                >
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <Field
-                      label="Property Category"
-                      value={form.propertyCategory}
-                      onChange={(value) =>
-                        updateForm("propertyCategory", value)
-                      }
-                    />
-
-                    <Field
-                      label="Property Type"
-                      value={form.propertyType}
-                      onChange={(value) => updateForm("propertyType", value)}
-                    />
-
-                    <Field
-                      label="Approximate Property Value"
-                      type="number"
-                      value={form.assessedPropertyValue}
-                      onChange={(value) =>
-                        updateForm("assessedPropertyValue", value)
-                      }
-                    />
-
-                    <Field
-                      label="City"
-                      value={form.propertyCity}
-                      onChange={(value) =>
-                        updateAddressField("propertyCity", value)
-                      }
-                    />
-
-                    <Field
-                      label="State"
-                      value={form.propertyState}
-                      onChange={(value) =>
-                        updateAddressField("propertyState", value)
-                      }
-                    />
-
-                    <Field
-                      label="PIN Code"
-                      value={form.propertyPincode}
-                      onChange={(value) =>
-                        updateAddressField("propertyPincode", value)
-                      }
-                    />
-                  </div>
-
-                  <TextArea
-                    label="Property Address"
-                    rows={3}
-                    value={form.propertyAddress}
-                    onChange={(value) =>
-                      updateAddressField("propertyAddress", value)
-                    }
-                  />
-                </Panel>
-
-                <Panel
-                  title="Indicative Eligibility & Bureau"
-                  subtitle="Credit Maker can edit underwriting numbers before submitting to checker."
-                  icon={FaChartLine}
-                >
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <Field
-                      label="FOIR %"
-                      type="number"
-                      value={form.foir}
-                      onChange={(value) => updateForm("foir", value)}
-                    />
-
-                    <Field
-                      label="Indicative LTV %"
-                      type="number"
-                      value={form.indicativeLtv}
-                      onChange={(value) =>
-                        updateForm("indicativeLtv", value)
-                      }
-                    />
-
-                    <Field
-                      label="Rule Version"
-                      value={form.ruleVersion}
-                      onChange={(value) => updateForm("ruleVersion", value)}
-                    />
-
-                    <Field
-                      label="Bureau Score"
-                      type="number"
-                      value={form.bureauScore}
-                      onChange={(value) => updateForm("bureauScore", value)}
-                    />
-
-                    <Field
-                      label="Current DPD"
-                      type="number"
-                      value={form.currentDpd}
-                      onChange={(value) => updateForm("currentDpd", value)}
-                    />
-
-                    <Field
-                      label="30+ DPD in 12M"
-                      type="number"
-                      value={form.dpd30In12m}
-                      onChange={(value) => updateForm("dpd30In12m", value)}
-                    />
-
-                    <Field
-                      label="Recent Enquiries"
-                      type="number"
-                      value={form.recentEnquiries}
-                      onChange={(value) =>
-                        updateForm("recentEnquiries", value)
-                      }
-                    />
-
-                    <SelectField
-                      label="Written-off / Settled"
-                      value={form.writtenOffSettled}
-                      options={[
-                        "",
-                        "None",
-                        "Settled",
-                        "Written-off",
-                        "Suit Filed",
-                      ]}
-                      onChange={(value) =>
-                        updateForm("writtenOffSettled", value)
-                      }
-                    />
-
-                    <SelectField
-                      label="Commercial Bureau"
-                      value={form.commercialBureau}
-                      options={[
-                        "",
-                        "Satisfactory",
-                        "Average",
-                        "Negative",
-                        "Not Available",
-                      ]}
-                      onChange={(value) =>
-                        updateForm("commercialBureau", value)
-                      }
-                    />
-                  </div>
-                </Panel>
-
-                {!showCreditMemo ? (
-                  <div className="rounded-2xl border border-dashed border-blue-200 bg-white p-6 text-center shadow-sm">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                      <FaFileSignature />
-                    </div>
-
-                    <h3 className="mt-3 text-sm font-black uppercase tracking-wide text-[#0f2942]">
-                      Credit Memo Hidden
-                    </h3>
-
-                    <p className="mx-auto mt-2 max-w-xl text-xs font-semibold leading-relaxed text-slate-500">
-                      Memo fields are not auto-filled. Click Add Credit Memo
-                      only when Credit Maker wants to write the detailed
-                      assessment.
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowCreditMemo(true)}
-                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase tracking-wide text-white shadow-sm transition-all hover:bg-blue-700"
-                    >
-                      <FaPlus size={12} />
-                      Add Credit Memo
-                    </button>
-                  </div>
-                ) : (
-                  <Panel
-                    title="Maker Credit Memo"
-                    subtitle="Detailed memo opened manually. No default memo text is inserted."
-                    icon={FaFileSignature}
-                  >
-                    <div className="mb-4 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={resetCreditMemo}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-600 transition-all hover:bg-slate-100"
-                      >
-                        <FaTimes size={11} />
-                        Hide Memo
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                      <SelectField
-                        label="Income Assessment Method"
-                        value={form.incomeMethod}
-                        options={[
-                          "",
-                          "Banking + ITR",
-                          "Banking",
-                          "ITR",
-                          "GST",
-                          "Manual Assessment",
-                        ]}
-                        onChange={(value) =>
-                          updateForm("incomeMethod", value)
-                        }
-                      />
-
-                      <SelectField
-                        label="Maker Recommendation"
-                        value={form.makerRecommendation}
-                        options={[
-                          "",
-                          "Approve Subject to Legal & Valuation",
-                          "Recommend with Conditions",
-                          "Raise Query",
-                          "Not Recommended",
-                        ]}
-                        onChange={(value) =>
-                          updateForm("makerRecommendation", value)
-                        }
-                      />
-
-                      <SelectField
-                        label="Policy Result"
-                        value={form.policyResult}
-                        options={[
-                          "",
-                          "Pass",
-                          "Conditional Pass",
-                          "Deviation",
-                          "Fail",
-                        ]}
-                        onChange={(value) =>
-                          updateForm("policyResult", value)
-                        }
-                      />
-
-                      <SelectField
-                        label="DPD Profile"
-                        value={form.dpdProfile}
-                        options={[
-                          "",
-                          "Clean",
-                          "Minor Delay",
-                          "Moderate Risk",
-                          "High Risk",
-                        ]}
-                        onChange={(value) =>
-                          updateForm("dpdProfile", value)
-                        }
-                      />
-
-                      <SelectField
-                        label="Internal Risk Grade"
-                        value={form.internalRiskGrade}
-                        options={[
-                          "",
-                          "A1",
-                          "A2",
-                          "A3",
-                          "B1",
-                          "B2",
-                          "C1",
-                          "C2",
-                          "High Risk",
-                        ]}
-                        onChange={(value) =>
-                          updateForm("internalRiskGrade", value)
-                        }
-                      />
-
-                      <SelectField
-                        label="Fraud Risk"
-                        value={form.fraudRisk}
-                        options={["", "Low", "Medium", "High"]}
-                        onChange={(value) => updateForm("fraudRisk", value)}
-                      />
-                    </div>
-
-                    <TextArea
-                      label="Borrower & Business Assessment"
-                      value={form.borrowerAssessment}
-                      onChange={(value) =>
-                        updateForm("borrowerAssessment", value)
-                      }
-                    />
-
-                    <TextArea
-                      label="Banking / Cash Flow Assessment"
-                      value={form.bankingAssessment}
-                      onChange={(value) =>
-                        updateForm("bankingAssessment", value)
-                      }
-                    />
-
-                    <TextArea
-                      label="Property / Collateral Assessment"
-                      value={form.propertyAssessment}
-                      onChange={(value) =>
-                        updateForm("propertyAssessment", value)
-                      }
-                    />
-
-                    <TextArea
-                      label="Risk, Mitigants & Conditions"
-                      value={form.riskMitigants}
-                      onChange={(value) =>
-                        updateForm("riskMitigants", value)
-                      }
-                    />
-
-                    <TextArea
-                      label="Deviation Justification / Query Remarks"
-                      value={form.deviationJustification}
-                      onChange={(value) =>
-                        updateForm("deviationJustification", value)
-                      }
-                    />
-                  </Panel>
-                )}
+                <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                  Application:{" "}
+                  {form.applicationNumber || "-"}
+                </p>
               </div>
 
-              <div className="space-y-6">
-                <div className="sticky top-6 space-y-6">
-                  <Panel
-                    title="Recommendation"
-                    subtitle="Required before submit to checker."
-                    icon={FaClipboardCheck}
-                  >
-                    <div className="space-y-4">
-                      <Field
-                        label="Requested Amount"
-                        type="number"
-                        value={form.requestedAmount}
-                        onChange={(value) =>
-                          updateForm("requestedAmount", value)
-                        }
-                      />
-
-                      <Field
-                        label="Recommended Amount *"
-                        type="number"
-                        value={form.recommendedAmount}
-                        onChange={(value) =>
-                          updateForm("recommendedAmount", value)
-                        }
-                      />
-
-                      <Field
-                        label="Recommended Tenure Months *"
-                        type="number"
-                        value={form.recommendedTenure}
-                        onChange={(value) =>
-                          updateForm("recommendedTenure", value)
-                        }
-                      />
-
-                      <Field
-                        label="Recommended ROI % *"
-                        type="number"
-                        value={form.recommendedRoi}
-                        onChange={(value) =>
-                          updateForm("recommendedRoi", value)
-                        }
-                      />
-
-                      <SelectField
-                        label="Maker Risk Grade *"
-                        value={form.makerRiskGrade}
-                        options={[
-                          "",
-                          "A1",
-                          "A2",
-                          "A3",
-                          "B1",
-                          "B2",
-                          "C1",
-                          "C2",
-                          "High Risk",
-                        ]}
-                        onChange={(value) =>
-                          updateForm("makerRiskGrade", value)
-                        }
-                      />
-
-                      <TextArea
-                        label="Final Maker Remarks *"
-                        rows={5}
-                        value={form.makerRemarks}
-                        onChange={(value) =>
-                          updateForm("makerRemarks", value)
-                        }
-                      />
-                    </div>
-                  </Panel>
-
-                  <Panel
-                    title="Conditions"
-                    subtitle="Capture disbursement and monitoring conditions."
-                    icon={FaShieldAlt}
-                  >
-                    <TextArea
-                      label="Pre-disbursement Conditions"
-                      rows={4}
-                      value={form.preDisbursementConditions}
-                      onChange={(value) =>
-                        updateForm("preDisbursementConditions", value)
-                      }
-                    />
-
-                    <TextArea
-                      label="Post-disbursement Conditions"
-                      rows={4}
-                      value={form.postDisbursementConditions}
-                      onChange={(value) =>
-                        updateForm("postDisbursementConditions", value)
-                      }
-                    />
-                  </Panel>
-
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-relaxed text-amber-800">
-                    <div className="mb-2 flex items-center gap-2 text-sm font-black">
-                      <FaExclamationTriangle />
-                      Maker Control
-                    </div>
-                    Credit Maker can prepare assessment, raise query and submit
-                    to checker. Final approval must be done by Credit Checker.
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3">
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={handleSaveDraft}
-                      className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-50"
-                    >
-                      Save Draft
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={handleRaiseQuery}
-                      className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-amber-700 shadow-sm transition-all hover:bg-amber-100 disabled:opacity-50"
-                    >
-                      Raise Query
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={handleSubmitToChecker}
-                      className="rounded-xl bg-[#0f2942] px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-md transition-all hover:bg-[#183d62] disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                      {submitToValuationMutation.isPending
-                        ? "Submitting..."
-                        : "Submit to Credit Checker"}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <span className="w-fit rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-600">
+                {form.makerRecommendation ||
+                  "Recommendation Pending"}
+              </span>
             </div>
-          </>
-        )}
+
+            <textarea
+              rows={18}
+              value={form.recommendationNote}
+              onChange={(event) =>
+                updateForm(
+                  "recommendationNote",
+                  event.target.value,
+                )
+              }
+              placeholder={`Enter Credit Maker recommendation...
+
+Example:
+
+Recommended for approval subject to satisfactory legal and valuation reports.
+
+Recommended Amount:
+Recommended Tenure:
+Recommended ROI:
+Key Conditions:
+Risk Mitigants:
+
+Thanks and Regards,
+
+Credit Maker
+Fintree Finance Pvt. Ltd.`}
+              className="min-h-[430px] w-full resize-y rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm font-medium leading-7 text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            />
+
+            <div className="mt-3 flex flex-col gap-2 text-[10px] font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                {form.recommendationNote.length} characters
+              </span>
+
+              <span>
+                Saved with the Credit Maker draft
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+    )}
+  </>
+)}
       </div>
     </div>
   );
