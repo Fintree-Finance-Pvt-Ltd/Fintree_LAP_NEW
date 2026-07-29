@@ -65,6 +65,9 @@ export class CreditAssessment {
   @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
   cmRecommendedAmount?: string;
 
+  @Column({ name: 'recommendedNotes', type: 'longtext', nullable: true, })
+  recommendedNotes: string | null;
+
   @Column({ type: 'int', nullable: true })
   cmRiskScore?: number;
 

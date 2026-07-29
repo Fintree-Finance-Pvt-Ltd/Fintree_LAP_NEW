@@ -110,28 +110,30 @@ private normalizeDecision(value: any): CreditDecision | undefined {
 
 private async getOrCreateCreditAssessment(
   applicationId: number,
-  manager?: EntityManager,
+  manager: EntityManager,
 ) {
-  const repo = manager
-    ? manager.getRepository(CreditAssessment)
-    : this.dataSource.getRepository(CreditAssessment);
+  const existingAssessment =
+    await manager.findOne(
+      CreditAssessment,
+      {
+        where: {
+          applicationId,
+        },
+      },
+    );
 
-  let assessment = await repo.findOne({
-    where: { applicationId },
-  });
-
-  if (!assessment) {
-    assessment = repo.create({
-      applicationId,
-      assessmentStatus: CreditAssessmentStatus.CM_DRAFT,
-    });
-
-    assessment = await repo.save(assessment);
+  if (existingAssessment) {
+    return existingAssessment;
   }
 
-  return assessment;
+  return manager.create(
+    CreditAssessment,
+    {
+      applicationId,
+      recommendedNotes: null,
+    },
+  );
 }
-
 private async saveCmAssessment(
   application: Application,
   dto: any,
@@ -236,10 +238,25 @@ private async saveCreditMakerAssessment(
   manager: EntityManager,
   assessmentStatus: CreditAssessmentStatus,
 ) {
+
+    console.log(
+  'CREDIT_MAKER_SAVE_START',
+  {
+    applicationId: application.id,
+    recommendedNotes:
+      dto?.recommendedNotes,
+  },
+);
   const assessment = await this.getOrCreateCreditAssessment(
     Number(application.id),
     manager,
   );
+
+
+  console.log('CREDIT_ASSESSMENT_LOADED', {
+    assessmentId: assessment?.id,
+    applicationId: assessment?.applicationId,
+  });
 
   const decision = this.normalizeDecision(
     dto?.decision || dto?.makerDecision,
@@ -282,6 +299,25 @@ private async saveCreditMakerAssessment(
     dto?.makerRecommendation ||
     assessment.makerRemarks;
 
+  //     if (dto?.recommendedNotes !== undefined) {
+  //   assessment.recommendedNotes =
+  //     String(dto.recommendedNotes || "").trim() || null;
+  // }
+
+  if (
+  Object.prototype.hasOwnProperty.call(
+    dto,
+    'recommendedNotes',
+  )
+) {
+  const note = String(
+    dto.recommendedNotes ?? '',
+  ).trim();
+
+  assessment.recommendedNotes =
+    note || null;
+}
+
   assessment.makerPayload = this.toJson(dto);
   assessment.makerSubmittedBy = actor?.id ?? undefined;
   assessment.makerSubmittedAt = new Date();
@@ -300,7 +336,14 @@ private async saveCreditCheckerAssessment(
     Number(application.id),
     manager,
   );
-
+console.log(
+  'CREDIT_ASSESSMENT_LOADED',
+  {
+    id: assessment?.id,
+    applicationId:
+      assessment?.applicationId,
+  },
+);
   const decision = this.normalizeDecision(
     dto?.decision || dto?.checkerDecision,
   );
@@ -341,7 +384,27 @@ private async saveCreditCheckerAssessment(
   assessment.checkerSubmittedBy = actor?.id ?? undefined;
   assessment.checkerSubmittedAt = new Date();
 
-  return manager.save(CreditAssessment, assessment);
+  // return manager.save(CreditAssessment, assessment);
+  try {
+  return await manager.save(
+    CreditAssessment,
+    assessment,
+  );
+} catch (error) {
+  console.error(
+    'CREDIT_ASSESSMENT_SAVE_FAILED',
+    {
+      applicationId: application.id,
+      recommendedNotes:
+        assessment.recommendedNotes,
+      dtoRecommendedNotes:
+        dto?.recommendedNotes,
+      error,
+    },
+  );
+
+  throw error;
+}
 }
 
 private ensureCm(actor: Actor) {
