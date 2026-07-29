@@ -3,6 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { CustomerProfile } from '../customer-profiles/entities/customer-profile.entity';
 import { Document } from '../documents/entities/document.entity';
+import { DocumentsModule } from '../documents/documents.module';
+import { PermissionsModule } from '../permissions/permissions.module';
+import { RolesModule } from '../roles/roles.module';
 import { Visit } from '../visits/entities/visit.entity';
 import { WorkflowHistory } from '../workflow/entities/workflow-history.entity';
 import { WorkflowLog } from '../workflow/entities/workflow-log.entity';
@@ -11,16 +14,38 @@ import { WorkflowModule } from '../workflow/workflow.module';
 import { ApplicationsController } from './applications.controller';
 import { ApplicationsService } from './applications.service';
 import { Application } from './entities/application.entity';
-// import { LapPaymentWebhookController } from './lap-payment-webhook.controller';
-import { DocumentsModule } from '../documents/documents.module';
 import { LapPaymentsService } from './lap-payments.service';
 @Module({
-  imports: [WorkflowModule,DocumentsModule, TypeOrmModule.forFeature([Application, Visit, Document, WorkflowHistory, Workflow, WorkflowLog, AuditLog, CustomerProfile,
+  imports: [
+    WorkflowModule,
+    DocumentsModule,
+    RolesModule,
+    PermissionsModule,
+
+    TypeOrmModule.forFeature([
+      Application,
+      Visit,
+      Document,
+      WorkflowHistory,
+      Workflow,
+      WorkflowLog,
+      AuditLog,
+      CustomerProfile,
+    ]),
+  ],
+
+  controllers: [
+    ApplicationsController,
+  ],
+
+  providers: [
+    ApplicationsService,
     LapPaymentsService,
-    // LapPaymentWebhookController
-  ])],
-  controllers: [ApplicationsController],
-  providers: [ApplicationsService, LapPaymentsService],
-  exports: [ApplicationsService, LapPaymentsService],
+  ],
+
+  exports: [
+    ApplicationsService,
+    LapPaymentsService,
+  ],
 })
 export class ApplicationsModule {}

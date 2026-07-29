@@ -42,6 +42,19 @@ export class UsersController {
     };
   }
 
+  // Role Access
+  @Get("role-access")
+async getUsersWithRolePermissions() {
+  const users =
+    await this.usersService
+      .getUsersWithRolePermissions();
+
+  return {
+    success: true,
+    users,
+  };
+}
+
   /*
    * POST /users
    * Existing create-user API remains unchanged.

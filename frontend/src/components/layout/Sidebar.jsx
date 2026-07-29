@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useMemo } from "react";
 import {
   FaBriefcase,
@@ -65,47 +65,54 @@ const rolesConfig = {
 
 
   ADMIN: [
-  {
-    category: "PRIMARY",
-    items: [
-      {
-        to: "/adminDashboard",
-        label: "My Work",
-        Icon: FaBriefcase,
-      },
-    ],
-  },
-  {
-    category: "MODULES",
-    items: [
-      {
-        to: "/roles-access",
-        label: "Users & Roles",
-        Icon: FaUsers,
-      },
-      {
-        to: "/admin/partners",
-        label: "Partners",
-        Icon: FaHandshake,
-      },
-      {
-        to: "/admin/hub",
-        label: "Hub",
-        Icon: FaBuilding,
-      },
-      {
-        to: "/admin/spokes",
-        label: "Spokes",
-        Icon: FaSitemap,
-      },
-      {
-        to: "/payment-management",
-        label: "Payment Management",
-        Icon: FaCreditCard,
-      },
-    ],
-  },
-],
+    {
+      category: "PRIMARY",
+      items: [
+        {
+          to: "/adminDashboard",
+          label: "My Work",
+          Icon: FaBriefcase,
+        },
+      ],
+    },
+    {
+      category: "MODULES",
+      items: [
+        {
+          to: "/roles-access?tab=users",
+          label: "Users",
+          Icon: FaUsers,
+          tab: "users",
+        },
+        {
+          to: "/roles-access?tab=permissions",
+          label: "Permissions",
+          Icon: FaShieldAlt,
+          tab: "permissions",
+        },
+        {
+          to: "/admin/partners",
+          label: "Partners",
+          Icon: FaHandshake,
+        },
+        {
+          to: "/admin/hub",
+          label: "Hub",
+          Icon: FaBuilding,
+        },
+        {
+          to: "/admin/spokes",
+          label: "Spokes",
+          Icon: FaSitemap,
+        },
+        {
+          to: "/payment-management",
+          label: "Payment Management",
+          Icon: FaCreditCard,
+        },
+      ],
+    },
+  ],
 
   BM: [
     {
@@ -343,7 +350,7 @@ const rolesConfig = {
     {
       category: "MODULES",
       items: [
-         {
+        {
           to: "/operations-review",
           label: "review",
           Icon: FaFolderOpen,
@@ -358,7 +365,7 @@ const rolesConfig = {
           label: "Legal Cleared",
           Icon: FaFileAlt,
         },
-       
+
       ],
     },
   ],
@@ -388,7 +395,7 @@ const rolesConfig = {
           label: "Ops Head",
           Icon: FaShieldAlt,
         },
-        
+
       ],
     },
   ],
@@ -406,7 +413,7 @@ const rolesConfig = {
     {
       category: "MODULES",
       items: [
-         {
+        {
           to: "/operations-review",
           label: "review",
           Icon: FaFolderOpen,
@@ -488,8 +495,13 @@ function normalizeRoles(user) {
 
 export default function Sidebar() {
   const { user } = useAuth();
+  const location = useLocation();
   const roles = normalizeRoles(user);
   const currentPath = window.location.pathname;
+  const currentRoleAccessTab =
+    new URLSearchParams(
+      location.search,
+    ).get("tab") || "users";
 
   const workflowQuery = useQuery({
     queryKey: ["rm-sidebar-workflow"],
@@ -563,7 +575,7 @@ export default function Sidebar() {
               {group.displayCategory || group.category}
             </div>
 
-            {group.items.map(({ to, label, Icon }) => (
+            {/* {group.items.map(({ to, label, Icon }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -577,7 +589,43 @@ export default function Sidebar() {
                 <Icon className="text-base shrink-0 opacity-80" />
                 <span className="truncate">{label}</span>
               </NavLink>
-            ))}
+            ))} */}
+
+            {group.items.map(
+              ({
+                to,
+                label,
+                Icon,
+                tab,
+              }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) => {
+                    const roleAccessActive =
+                      tab &&
+                      location.pathname ===
+                      "/roles-access" &&
+                      currentRoleAccessTab === tab;
+
+                    const itemIsActive = tab
+                      ? roleAccessActive
+                      : isActive;
+
+                    return `flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${itemIsActive
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/10 font-semibold border-l-4 border-cyan-400"
+                        : "hover:bg-white/5 hover:text-slate-200"
+                      }`;
+                  }}
+                >
+                  <Icon className="text-base shrink-0 opacity-80" />
+
+                  <span className="truncate">
+                    {label}
+                  </span>
+                </NavLink>
+              ),
+            )}
           </div>
         ))}
       </nav>

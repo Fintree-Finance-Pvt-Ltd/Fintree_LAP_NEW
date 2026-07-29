@@ -33,7 +33,7 @@ async function bootstrap() {
   const uploadDir =
     config.get<string>("UPLOAD_DIR") ?? "uploads";
 
-  app.setGlobalPrefix(apiPrefix);
+  // app.setGlobalPrefix(apiPrefix);
 
   // app.use(helmet());
   app.use(
@@ -105,7 +105,7 @@ async function bootstrap() {
     swaggerDocument,
   );
 
-  await app.listen(port);
+  await app.listen(port, "0.0.0.0");
 
   logger.log(
     `Application running at http://localhost:${port}/${apiPrefix}`,

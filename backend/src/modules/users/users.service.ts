@@ -195,6 +195,116 @@ export class UsersService {
   }
 
   /*
+ * Fetch users with their assigned role
+ * and the permissions available for that role.
+ *
+ * This executes as a single joined database query.
+ */
+async getUsersWithRolePermissions() {
+  const users =
+    await this.userRepository
+      .createQueryBuilder("user")
+      .leftJoinAndSelect(
+        "user.roles",
+        "role",
+      )
+      .leftJoinAndSelect(
+        "role.permissions",
+        "permission",
+      )
+      .select([
+        "user.id",
+        "user.name",
+        "user.email",
+
+        "role.id",
+        "role.name",
+
+        "permission.id",
+        "permission.code",
+        "permission.name",
+      ])
+      .orderBy(
+        "user.id",
+        "DESC",
+      )
+      .addOrderBy(
+        "role.name",
+        "ASC",
+      )
+      .addOrderBy(
+        "permission.name",
+        "ASC",
+      )
+      .getMany();
+
+  return users.map((user) => {
+    /*
+     * Your current create-user flow assigns
+     * exactly one role to each user.
+     */
+    const assignedRole =
+      user.roles?.[0] ?? null;
+
+    const permissionMap =
+      new Map<
+        number,
+        {
+          id: number;
+          code: string;
+          name: string;
+        }
+      >();
+
+    /*
+     * Use all role permissions defensively.
+     * This prevents duplicate permissions and
+     * also supports multiple roles in the future.
+     */
+    for (const role of user.roles ?? []) {
+      for (
+        const permission of
+        role.permissions ?? []
+      ) {
+        permissionMap.set(
+          Number(permission.id),
+          {
+            id: Number(permission.id),
+            code: permission.code,
+            name: permission.name,
+          },
+        );
+      }
+    }
+
+    return {
+      userId: Number(user.id),
+
+      name: user.name,
+
+      email: user.email,
+
+      role: assignedRole
+        ? {
+            id: Number(
+              assignedRole.id,
+            ),
+            name: assignedRole.name,
+          }
+        : null,
+
+      permissions: Array.from(
+        permissionMap.values(),
+      ).sort((first, second) =>
+        first.name.localeCompare(
+          second.name,
+        ),
+      ),
+    };
+  });
+}
+
+  /*
    * Common response formatter.
    *
    * This prevents passwordHash and other internal
