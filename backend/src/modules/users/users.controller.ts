@@ -1,7 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  ParseIntPipe,
+  Patch,
   Post,
 } from "@nestjs/common";
 
@@ -81,4 +85,69 @@ async getUsersWithRolePermissions() {
       user,
     };
   }
+
+   /*
+   * PATCH /users/:userId
+   * Update user details and assigned role.
+   *
+   * Password is optional. When omitted or empty,
+   * the existing password remains unchanged.
+   */
+  @Patch(":userId")
+  async updateUser(
+    @Param(
+      "userId",
+      ParseIntPipe,
+    )
+    userId: number,
+
+    @Body()
+    body: {
+      name: string;
+      email: string;
+      roleId: number;
+      location: string;
+      password?: string;
+    },
+  ) {
+    const user =
+      await this.usersService.updateUser(
+        userId,
+        body,
+      );
+
+    return {
+      success: true,
+      message:
+        "User updated successfully.",
+      user,
+    };
+  }
+
+  /*
+   * DELETE /users/:userId
+   *
+   * This performs a soft delete by setting
+   * isActive to false.
+   */
+    @Delete(":userId")
+async deleteUser(
+  @Param(
+    "userId",
+    ParseIntPipe,
+  )
+  userId: number,
+) {
+  const user =
+    await this.usersService.deleteUser(
+      userId,
+    );
+
+  return {
+    success: true,
+    message:
+      "User permanently deleted successfully.",
+    user,
+  };
+}
 }

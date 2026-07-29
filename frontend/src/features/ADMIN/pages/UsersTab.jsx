@@ -6,13 +6,16 @@ import {
 } from "react";
 import {
   FaCheck,
+  FaEdit,
   FaPlus,
   FaSearch,
   FaStar,
   FaTimes,
+  FaTrashAlt,
 } from "react-icons/fa";
 
 import { usersApi } from "../userApi";
+import { spokesApi } from "../../Spokes/spokeapi.js";
 
 const informationCards = [
   {
@@ -108,6 +111,10 @@ function AddUserModal({
   rolesLoading = false,
   rolesError = "",
   onRetryRoles,
+  spokes = [],
+  spokesLoading = false,
+  spokesError = "",
+  onRetrySpokes,
 }) {
   const [form, setForm] =
     useState(emptyForm);
@@ -282,29 +289,45 @@ function AddUserModal({
                 name="location"
                 value={form.location}
                 onChange={handleChange}
-                disabled={submitting}
+                disabled={
+                  spokesLoading ||
+                  submitting
+                }
                 className={inputClasses}
               >
                 <option value="">
-                  Select location
+                  {spokesLoading
+                    ? "Loading spokes..."
+                    : spokes.length === 0
+                      ? "No spokes available"
+                      : "Select spoke"}
                 </option>
 
-                <option value="Delhi Hub">
-                  Delhi Hub
-                </option>
-
-                <option value="Noida Spoke">
-                  Noida Spoke
-                </option>
-
-                <option value="Mumbai Hub">
-                  Mumbai Hub
-                </option>
-
-                <option value="Pune Spoke">
-                  Pune Spoke
-                </option>
+                {spokes.map((spoke) => (
+                  <option
+                    key={spoke.id}
+                    value={spoke.name}
+                  >
+                    {spoke.name}
+                  </option>
+                ))}
               </select>
+
+              {spokesError && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium text-red-600">
+                    {spokesError}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={onRetrySpokes}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-500"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:col-span-2">
@@ -344,7 +367,9 @@ function AddUserModal({
               disabled={
                 submitting ||
                 rolesLoading ||
-                roles.length === 0
+                roles.length === 0 ||
+                spokesLoading ||
+                spokes.length === 0
               }
               className="flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -362,6 +387,404 @@ function AddUserModal({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+
+function EditUserModal({
+  open,
+  user,
+  onClose,
+  onSubmit,
+  updating = false,
+  updateError = "",
+  roles = [],
+  rolesLoading = false,
+  rolesError = "",
+  onRetryRoles,
+  spokes = [],
+  spokesLoading = false,
+  spokesError = "",
+  onRetrySpokes,
+}) {
+  const [form, setForm] =
+    useState(emptyForm);
+
+  const [error, setError] =
+    useState("");
+
+  useEffect(() => {
+    if (!open || !user) {
+      return;
+    }
+
+    setForm({
+      name:
+        user.name === "-"
+          ? ""
+          : user.name || "",
+      email:
+        user.email === "-"
+          ? ""
+          : user.email || "",
+      roleId:
+        user.roleId
+          ? String(user.roleId)
+          : "",
+      location:
+        user.location === "-" ||
+        user.location === "Not Assigned"
+          ? ""
+          : user.location || "",
+    });
+
+    setError("");
+  }, [open, user]);
+
+  if (!open || !user) {
+    return null;
+  }
+
+  const handleChange = (event) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    setError("");
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const requiredValues = [
+      form.name,
+      form.email,
+      form.roleId,
+      form.location,
+    ];
+
+    const hasEmptyField =
+      requiredValues.some(
+        (value) =>
+          !String(value ?? "").trim(),
+      );
+
+    if (hasEmptyField) {
+      setError(
+        "Please complete all required fields.",
+      );
+      return;
+    }
+
+    try {
+      await onSubmit(form);
+    } catch (submissionError) {
+      console.error(
+        "User update failed:",
+        submissionError,
+      );
+    }
+  };
+
+  const inputClasses =
+    "h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-60";
+
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">
+              Edit User
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Update the LAP system user
+              and assigned access.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={updating}
+            className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="p-6"
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Full name
+
+              <input
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Enter full name"
+                disabled={updating}
+                className={inputClasses}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Email address
+
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="name@fintree.in"
+                disabled={updating}
+                className={inputClasses}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Role
+
+              <select
+                name="roleId"
+                value={form.roleId}
+                onChange={handleChange}
+                disabled={
+                  rolesLoading ||
+                  updating
+                }
+                className={inputClasses}
+              >
+                <option value="">
+                  {rolesLoading
+                    ? "Loading roles..."
+                    : roles.length === 0
+                      ? "No roles available"
+                      : "Select role"}
+                </option>
+
+                {roles.map((role) => (
+                  <option
+                    key={role.id}
+                    value={String(role.id)}
+                  >
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+
+              {rolesError && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium text-red-600">
+                    {rolesError}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={onRetryRoles}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-500"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+            </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Location
+
+              <select
+                name="location"
+                value={form.location}
+                onChange={handleChange}
+                disabled={
+                  spokesLoading ||
+                  updating
+                }
+                className={inputClasses}
+              >
+                <option value="">
+                  {spokesLoading
+                    ? "Loading spokes..."
+                    : spokes.length === 0
+                      ? "No spokes available"
+                      : "Select spoke"}
+                </option>
+
+                {spokes.map((spoke) => (
+                  <option
+                    key={spoke.id}
+                    value={spoke.name}
+                  >
+                    {spoke.name}
+                  </option>
+                ))}
+              </select>
+
+              {spokesError && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium text-red-600">
+                    {spokesError}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={onRetrySpokes}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-500"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+            </label>
+          </div>
+
+          {(error || updateError) && (
+            <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              {error || updateError}
+            </p>
+          )}
+
+          <div className="mt-6 flex flex-col-reverse justify-end gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={updating}
+              className="h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={
+                updating ||
+                rolesLoading ||
+                roles.length === 0 ||
+                spokesLoading ||
+                spokes.length === 0
+              }
+              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {updating ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <FaCheck />
+                  Update User
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DeleteUserModal({
+  open,
+  user,
+  onClose,
+  onConfirm,
+  deleting = false,
+  deleteError = "",
+}) {
+  if (!open || !user) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[110] grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">
+              Delete User
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Confirm removal of system access.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={deleting}
+            className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+            <p className="text-sm font-semibold text-slate-800">
+              Are you sure you want to delete{" "}
+              <span className="font-extrabold">
+                {user.name || "this user"}
+              </span>
+              ?
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              This will remove the user&apos;s
+              active system access.
+            </p>
+          </div>
+
+          {deleteError && (
+            <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              {deleteError}
+            </p>
+          )}
+
+          <div className="mt-6 flex flex-col-reverse justify-end gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={deleting}
+              className="h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={deleting}
+              className="flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {deleting ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <FaTrashAlt />
+                  Delete User
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -492,6 +915,12 @@ function normalizeUser(user) {
       roleName ||
       "Not Assigned",
 
+    roleId:
+      Number(
+        user?.role?.id ??
+          user?.roles?.[0]?.id,
+      ) || null,
+
     permissions,
 
     permissionsText:
@@ -515,6 +944,13 @@ function normalizeUser(user) {
 
     mfa:
       user?.mfa || "Enabled",
+
+    isActive:
+      user?.isActive ??
+      user?.active ??
+      String(
+        user?.status || "",
+      ).toUpperCase() === "ACTIVE",
 
     status:
       user?.status || "Active",
@@ -560,6 +996,54 @@ export default function UsersTab() {
   const [
     rolesError,
     setRolesError,
+  ] = useState("");
+
+  const [spokes, setSpokes] =
+    useState([]);
+
+  const [
+    spokesLoading,
+    setSpokesLoading,
+  ] = useState(true);
+
+  const [
+    spokesError,
+    setSpokesError,
+  ] = useState("");
+
+  const [
+    selectedUser,
+    setSelectedUser,
+  ] = useState(null);
+
+  const [
+    showEditUser,
+    setShowEditUser,
+  ] = useState(false);
+
+  const [
+    showDeleteUser,
+    setShowDeleteUser,
+  ] = useState(false);
+
+  const [
+    updating,
+    setUpdating,
+  ] = useState(false);
+
+  const [
+    updateError,
+    setUpdateError,
+  ] = useState("");
+
+  const [
+    deleting,
+    setDeleting,
+  ] = useState(false);
+
+  const [
+    deleteError,
+    setDeleteError,
   ] = useState("");
 
   const loadUsers = useCallback(
@@ -694,6 +1178,69 @@ export default function UsersTab() {
     [],
   );
 
+  const loadSpokes = useCallback(
+    async () => {
+      try {
+        setSpokesLoading(true);
+        setSpokesError("");
+
+        const response =
+          await spokesApi.getSpokes();
+
+        const responseData =
+          response?.data?.data?.spokes ??
+          response?.data?.spokes ??
+          response?.data?.data ??
+          response?.data ??
+          response?.spokes ??
+          response ??
+          [];
+
+        if (!Array.isArray(responseData)) {
+          throw new Error(
+            "Invalid spokes response received from server.",
+          );
+        }
+
+        const normalizedSpokes =
+          responseData
+            .map((spoke) => ({
+              id: Number(spoke?.id),
+              name: String(
+                spoke?.name || "",
+              ).trim(),
+            }))
+            .filter(
+              (spoke) =>
+                Number.isInteger(
+                  spoke.id,
+                ) &&
+                spoke.id > 0 &&
+                spoke.name,
+            );
+
+        setSpokes(normalizedSpokes);
+      } catch (error) {
+        console.error(
+          "Unable to load spokes:",
+          error,
+        );
+
+        setSpokes([]);
+
+        setSpokesError(
+          getErrorMessage(
+            error,
+            "Unable to load spokes.",
+          ),
+        );
+      } finally {
+        setSpokesLoading(false);
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     const controller =
       new AbortController();
@@ -715,6 +1262,10 @@ export default function UsersTab() {
       controller.abort();
     };
   }, [loadRoles]);
+
+  useEffect(() => {
+    loadSpokes();
+  }, [loadSpokes]);
 
   const filteredUsers = useMemo(() => {
     const query = search
@@ -808,6 +1359,147 @@ export default function UsersTab() {
     }
   };
 
+
+  const handleOpenEditUser = (
+    user,
+  ) => {
+    setSelectedUser(user);
+    setUpdateError("");
+    setShowDeleteUser(false);
+    setShowEditUser(true);
+  };
+
+  const handleCloseEditUser = () => {
+    if (updating) {
+      return;
+    }
+
+    setShowEditUser(false);
+    setSelectedUser(null);
+    setUpdateError("");
+  };
+
+  const handleUpdateUser = async (
+    formData,
+  ) => {
+    try {
+      setUpdating(true);
+      setUpdateError("");
+
+      if (!selectedUser?.id) {
+        throw new Error(
+          "Selected user was not found.",
+        );
+      }
+
+      const roleId = Number(
+        formData.roleId,
+      );
+
+      if (
+        !Number.isInteger(roleId) ||
+        roleId <= 0
+      ) {
+        throw new Error(
+          "Please select a valid role.",
+        );
+      }
+
+      await usersApi.updateUser(
+        selectedUser.id,
+        {
+          name:
+            formData.name.trim(),
+          email:
+            formData.email
+              .trim()
+              .toLowerCase(),
+          roleId,
+          location:
+            formData.location.trim(),
+        },
+      );
+
+      setShowEditUser(false);
+      setSelectedUser(null);
+
+      await loadUsers();
+    } catch (error) {
+      console.error(
+        "Unable to update user:",
+        error?.response?.data ||
+          error,
+      );
+
+      setUpdateError(
+        getErrorMessage(
+          error,
+          "Unable to update user.",
+        ),
+      );
+
+      throw error;
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleOpenDeleteUser = (
+    user,
+  ) => {
+    setSelectedUser(user);
+    setDeleteError("");
+    setShowEditUser(false);
+    setShowDeleteUser(true);
+  };
+
+  const handleCloseDeleteUser = () => {
+    if (deleting) {
+      return;
+    }
+
+    setShowDeleteUser(false);
+    setSelectedUser(null);
+    setDeleteError("");
+  };
+
+  const handleDeleteUser = async () => {
+    try {
+      setDeleting(true);
+      setDeleteError("");
+
+      if (!selectedUser?.id) {
+        throw new Error(
+          "Selected user was not found.",
+        );
+      }
+
+      await usersApi.deleteUser(
+        selectedUser.id,
+      );
+
+      setShowDeleteUser(false);
+      setSelectedUser(null);
+
+      await loadUsers();
+    } catch (error) {
+      console.error(
+        "Unable to delete user:",
+        error?.response?.data ||
+          error,
+      );
+
+      setDeleteError(
+        getErrorMessage(
+          error,
+          "Unable to delete user.",
+        ),
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <>
       <div className="min-h-full">
@@ -881,7 +1573,7 @@ export default function UsersTab() {
           </div>
 
           <div className="mt-5 overflow-x-auto rounded-[22px] border border-slate-200">
-            <table className="w-full min-w-[1020px] border-separate border-spacing-0 text-left">
+            <table className="w-full min-w-[1120px] border-separate border-spacing-0 text-left">
               <thead>
                 <tr className="bg-gradient-to-r from-indigo-50 to-[#f4f5ff]">
                   {[
@@ -891,6 +1583,7 @@ export default function UsersTab() {
                     "DATA SCOPE",
                     "MFA",
                     "STATUS",
+                    "ACTIONS",
                   ].map((heading) => (
                     <th
                       key={heading}
@@ -906,7 +1599,7 @@ export default function UsersTab() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-6 py-16 text-center"
                     >
                       <div className="inline-flex items-center gap-3 text-sm font-medium text-slate-500">
@@ -918,7 +1611,7 @@ export default function UsersTab() {
                 ) : apiError ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-6 py-14 text-center"
                     >
                       <p className="text-sm font-semibold text-red-600">
@@ -1002,6 +1695,38 @@ export default function UsersTab() {
                                 "Inactive"}
                             </StatusBadge>
                           </td>
+
+                          <td className={cellClass}>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleOpenEditUser(
+                                    user,
+                                  )
+                                }
+                                className="grid h-9 w-9 place-items-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 transition hover:bg-indigo-100"
+                                title="Edit user"
+                                aria-label={`Edit ${user.name}`}
+                              >
+                                <FaEdit />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleOpenDeleteUser(
+                                    user,
+                                  )
+                                }
+                                className="grid h-9 w-9 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100"
+                                title="Delete user"
+                                aria-label={`Delete ${user.name}`}
+                              >
+                                <FaTrashAlt />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     },
@@ -1009,7 +1734,7 @@ export default function UsersTab() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-6 py-16 text-center"
                     >
                       <p className="text-sm font-medium text-slate-500">
@@ -1066,6 +1791,42 @@ export default function UsersTab() {
         onRetryRoles={() =>
           loadRoles()
         }
+        spokes={spokes}
+        spokesLoading={spokesLoading}
+        spokesError={spokesError}
+        onRetrySpokes={() =>
+          loadSpokes()
+        }
+      />
+
+      <EditUserModal
+        open={showEditUser}
+        user={selectedUser}
+        onClose={handleCloseEditUser}
+        onSubmit={handleUpdateUser}
+        updating={updating}
+        updateError={updateError}
+        roles={roles}
+        rolesLoading={rolesLoading}
+        rolesError={rolesError}
+        onRetryRoles={() =>
+          loadRoles()
+        }
+        spokes={spokes}
+        spokesLoading={spokesLoading}
+        spokesError={spokesError}
+        onRetrySpokes={() =>
+          loadSpokes()
+        }
+      />
+
+      <DeleteUserModal
+        open={showDeleteUser}
+        user={selectedUser}
+        onClose={handleCloseDeleteUser}
+        onConfirm={handleDeleteUser}
+        deleting={deleting}
+        deleteError={deleteError}
       />
     </>
   );

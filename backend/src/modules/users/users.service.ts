@@ -5,8 +5,14 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import {
+  InjectRepository,
+} from "@nestjs/typeorm";
+
+import {
+  Repository,
+} from "typeorm";
+
 import * as bcrypt from "bcrypt";
 
 import { User } from "./entities/user.entity";
@@ -18,6 +24,14 @@ interface CreateUserPayload {
   password: string;
   role: string;
   location: string;
+}
+
+interface UpdateUserPayload {
+  name: string;
+  email: string;
+  roleId: number;
+  location: string;
+  password?: string;
 }
 
 @Injectable()
@@ -33,10 +47,9 @@ export class UsersService {
   ) {}
 
   /*
-   * Fetch all users with their assigned roles.
+   * Fetch all active users with their assigned roles.
    *
-   * Only the required user and role fields are selected.
-   * Password hash is not selected or returned.
+   * Password hash is never selected or returned.
    */
   async findAll() {
     const users =
@@ -55,7 +68,16 @@ export class UsersService {
           "role.id",
           "role.name",
         ])
-        .orderBy("user.id", "DESC")
+        .where(
+          "user.isActive = :isActive",
+          {
+            isActive: true,
+          },
+        )
+        .orderBy(
+          "user.id",
+          "DESC",
+        )
         .getMany();
 
     return users.map((user) =>
@@ -65,6 +87,8 @@ export class UsersService {
 
   /*
    * Existing access-list method.
+   *
+   * Inactive/deleted users are excluded.
    */
   async getAccessList() {
     const users =
@@ -75,13 +99,17 @@ export class UsersService {
           email: true,
         },
 
+        where: {
+          isActive: true,
+        },
+
         order: {
           name: "ASC",
         },
       });
 
     return users.map((user) => ({
-      id: user.id,
+      id: Number(user.id),
       name: user.name,
       email: user.email,
     }));
@@ -169,9 +197,6 @@ export class UsersService {
         newUser,
       );
 
-    /*
-     * Reload the created user with its role relation.
-     */
     const createdUser =
       await this.userRepository.findOne({
         where: {
@@ -195,120 +220,419 @@ export class UsersService {
   }
 
   /*
- * Fetch users with their assigned role
- * and the permissions available for that role.
- *
- * This executes as a single joined database query.
- */
-async getUsersWithRolePermissions() {
-  const users =
-    await this.userRepository
-      .createQueryBuilder("user")
-      .leftJoinAndSelect(
-        "user.roles",
-        "role",
-      )
-      .leftJoinAndSelect(
-        "role.permissions",
-        "permission",
-      )
-      .select([
-        "user.id",
-        "user.name",
-        "user.email",
+   * Update user information and assigned role.
+   *
+   * The operation runs in one transaction because
+   * both users and user_roles may be updated.
+   */
+  async updateUser(
+    userId: number,
+    payload: UpdateUserPayload,
+  ) {
+    const name =
+      payload.name?.trim();
 
-        "role.id",
-        "role.name",
+    const email =
+      payload.email
+        ?.trim()
+        .toLowerCase();
 
-        "permission.id",
-        "permission.code",
-        "permission.name",
-      ])
-      .orderBy(
-        "user.id",
-        "DESC",
-      )
-      .addOrderBy(
-        "role.name",
-        "ASC",
-      )
-      .addOrderBy(
-        "permission.name",
-        "ASC",
-      )
-      .getMany();
+    const location =
+      payload.location?.trim();
 
-  return users.map((user) => {
-    /*
-     * Your current create-user flow assigns
-     * exactly one role to each user.
-     */
-    const assignedRole =
-      user.roles?.[0] ?? null;
+    const roleId =
+      Number(payload.roleId);
 
-    const permissionMap =
-      new Map<
-        number,
-        {
-          id: number;
-          code: string;
-          name: string;
-        }
-      >();
+    const password =
+      payload.password?.trim();
 
-    /*
-     * Use all role permissions defensively.
-     * This prevents duplicate permissions and
-     * also supports multiple roles in the future.
-     */
-    for (const role of user.roles ?? []) {
-      for (
-        const permission of
-        role.permissions ?? []
-      ) {
-        permissionMap.set(
-          Number(permission.id),
-          {
-            id: Number(permission.id),
-            code: permission.code,
-            name: permission.name,
-          },
-        );
-      }
+    if (
+      !name ||
+      !email ||
+      !location ||
+      !Number.isInteger(roleId) ||
+      roleId <= 0
+    ) {
+      throw new BadRequestException(
+        "Name, email, role and location are required.",
+      );
     }
 
-    return {
-      userId: Number(user.id),
+    return this.userRepository
+      .manager
+      .transaction(
+        async (manager) => {
+          const userRepository =
+            manager.getRepository(User);
 
-      name: user.name,
+          const roleRepository =
+            manager.getRepository(Role);
 
-      email: user.email,
+          /*
+           * Load the user with the existing role
+           * relation so TypeORM can update user_roles.
+           */
+          const user =
+            await userRepository.findOne({
+              where: {
+                id: userId,
+              },
 
-      role: assignedRole
-        ? {
-            id: Number(
-              assignedRole.id,
-            ),
-            name: assignedRole.name,
+              relations: {
+                roles: true,
+              },
+            });
+
+          if (!user) {
+            throw new NotFoundException(
+              "User not found.",
+            );
           }
-        : null,
 
-      permissions: Array.from(
-        permissionMap.values(),
-      ).sort((first, second) =>
-        first.name.localeCompare(
-          second.name,
-        ),
-      ),
-    };
-  });
+          if (!user.isActive) {
+            throw new BadRequestException(
+              "Inactive users cannot be updated.",
+            );
+          }
+
+          /*
+           * Check whether another user already uses
+           * the submitted email address.
+           */
+          const duplicateEmailUser =
+            await userRepository
+              .createQueryBuilder(
+                "existingUser",
+              )
+              .select([
+                "existingUser.id",
+              ])
+              .where(
+                "LOWER(existingUser.email) = LOWER(:email)",
+                {
+                  email,
+                },
+              )
+              .andWhere(
+                "existingUser.id != :userId",
+                {
+                  userId,
+                },
+              )
+              .getOne();
+
+          if (duplicateEmailUser) {
+            throw new ConflictException(
+              "A user with this email already exists.",
+            );
+          }
+
+          const selectedRole =
+            await roleRepository.findOne({
+              where: {
+                id: roleId,
+              },
+            });
+
+          if (!selectedRole) {
+            throw new NotFoundException(
+              "Selected role was not found.",
+            );
+          }
+
+          user.name = name;
+          user.email = email;
+          user.location = location;
+
+          /*
+           * Replace the current assigned role.
+           *
+           * Existing create-user logic assigns one
+           * role, so update follows the same logic.
+           */
+          user.roles = [
+            selectedRole,
+          ];
+
+          /*
+           * Only update the password when the admin
+           * entered a new password.
+           */
+          if (password) {
+            user.passwordHash =
+              await bcrypt.hash(
+                password,
+                12,
+              );
+          }
+
+          await userRepository.save(
+            user,
+          );
+
+          /*
+           * Reload user with role relation to return
+           * a clean response.
+           */
+          const updatedUser =
+            await userRepository.findOne({
+              where: {
+                id: userId,
+              },
+
+              relations: {
+                roles: true,
+              },
+            });
+
+          if (!updatedUser) {
+            throw new NotFoundException(
+              "Updated user could not be loaded.",
+            );
+          }
+
+          return this.formatUser(
+            updatedUser,
+          );
+        },
+      );
+  }
+
+  /*
+   * Soft delete user.
+   *
+   * The database record is preserved for audit
+   * and reference purposes.
+   */
+  async deleteUser(
+  userId: number,
+) {
+  return this.userRepository.manager.transaction(
+    async (manager) => {
+      const userRepository =
+        manager.getRepository(User);
+
+      const user =
+        await userRepository.findOne({
+          where: {
+            id: userId,
+          },
+          relations: {
+            roles: true,
+          },
+        });
+
+      if (!user) {
+        throw new NotFoundException(
+          `User with ID ${userId} was not found.`,
+        );
+      }
+
+      /*
+       * Remove mappings from user_roles through
+       * the TypeORM relation first.
+       *
+       * This avoids foreign-key errors without
+       * directly depending on join-table columns.
+       */
+      if (user.roles?.length) {
+        await manager
+          .createQueryBuilder()
+          .relation(User, "roles")
+          .of(userId)
+          .remove(
+            user.roles.map(
+              (role) => role.id,
+            ),
+          );
+      }
+
+      /*
+       * Physically delete the user row.
+       */
+      const deleteResult =
+        await userRepository.delete(
+          userId,
+        );
+
+      if (
+        !deleteResult.affected ||
+        deleteResult.affected < 1
+      ) {
+        throw new BadRequestException(
+          "Unable to delete user from the database.",
+        );
+      }
+
+      /*
+       * Confirm that the row no longer exists.
+       */
+      const deletedUser =
+        await userRepository.findOne({
+          where: {
+            id: userId,
+          },
+        });
+
+      if (deletedUser) {
+        throw new BadRequestException(
+          "User still exists after delete operation.",
+        );
+      }
+
+      return {
+        id: Number(user.id),
+        name: user.name,
+        email: user.email,
+        deleted: true,
+      };
+    },
+  );
 }
+  /*
+   * Fetch active users with their assigned role
+   * and permissions.
+   *
+   * This executes as one joined database query.
+   */
+  async getUsersWithRolePermissions() {
+    const users =
+      await this.userRepository
+        .createQueryBuilder("user")
+        .leftJoinAndSelect(
+          "user.roles",
+          "role",
+        )
+        .leftJoinAndSelect(
+          "role.permissions",
+          "permission",
+        )
+        .select([
+          "user.id",
+          "user.name",
+          "user.email",
+          "user.location",
+          "user.isActive",
+
+          "role.id",
+          "role.name",
+
+          "permission.id",
+          "permission.code",
+          "permission.name",
+        ])
+        .where(
+          "user.isActive = :isActive",
+          {
+            isActive: true,
+          },
+        )
+        .orderBy(
+          "user.id",
+          "DESC",
+        )
+        .addOrderBy(
+          "role.name",
+          "ASC",
+        )
+        .addOrderBy(
+          "permission.name",
+          "ASC",
+        )
+        .getMany();
+
+    return users.map((user) => {
+      const assignedRole =
+        user.roles?.[0] ?? null;
+
+      const permissionMap =
+        new Map<
+          number,
+          {
+            id: number;
+            code: string;
+            name: string;
+          }
+        >();
+
+      /*
+       * Supports one role now and remains safe
+       * if multiple roles are assigned later.
+       */
+      for (
+        const role of
+        user.roles ?? []
+      ) {
+        for (
+          const permission of
+          role.permissions ?? []
+        ) {
+          permissionMap.set(
+            Number(permission.id),
+            {
+              id: Number(
+                permission.id,
+              ),
+              code:
+                permission.code,
+              name:
+                permission.name,
+            },
+          );
+        }
+      }
+
+      return {
+        userId: Number(user.id),
+
+        name: user.name,
+
+        email: user.email,
+
+        /*
+         * Required to prefill the Edit User modal.
+         */
+        location:
+          user.location || "",
+
+        isActive:
+          Boolean(user.isActive),
+
+        status:
+          user.isActive
+            ? "Active"
+            : "Inactive",
+
+        role: assignedRole
+          ? {
+              id: Number(
+                assignedRole.id,
+              ),
+              name:
+                assignedRole.name,
+            }
+          : null,
+
+        permissions: Array.from(
+          permissionMap.values(),
+        ).sort(
+          (
+            first,
+            second,
+          ) =>
+            first.name.localeCompare(
+              second.name,
+            ),
+        ),
+      };
+    });
+  }
 
   /*
    * Common response formatter.
    *
-   * This prevents passwordHash and other internal
-   * fields from being returned by the APIs.
+   * Password hash and internal fields are never
+   * returned.
    */
   private formatUser(
     user: User,
@@ -323,7 +647,8 @@ async getUsersWithRolePermissions() {
       role:
         user.roles
           ?.map(
-            (role) => role.name,
+            (role) =>
+              role.name,
           )
           .join(", ") ||
         "Not Assigned",
@@ -331,7 +656,9 @@ async getUsersWithRolePermissions() {
       roles:
         user.roles?.map(
           (role) => ({
-            id: Number(role.id),
+            id: Number(
+              role.id,
+            ),
             name: role.name,
           }),
         ) ?? [],
@@ -339,6 +666,9 @@ async getUsersWithRolePermissions() {
       location:
         user.location ||
         "Not Assigned",
+
+      isActive:
+        Boolean(user.isActive),
 
       status:
         user.isActive

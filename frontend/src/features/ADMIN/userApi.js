@@ -13,7 +13,7 @@ export const usersApi = {
       config,
     ),
 
-   // get users role access 
+  // get users role access 
   getUsersRoleAccess: (
     config = {},
   ) =>
@@ -28,6 +28,20 @@ export const usersApi = {
 
   createUser: (payload) =>
     apiClient.post("/users", payload),
+
+  updateUser: (
+    userId,
+    payload,
+  ) =>
+    apiClient.patch(
+      `/users/${userId}`,
+      payload,
+    ),
+
+  deleteUser: (userId) =>
+  apiClient.delete(
+    `/users/${userId}`,
+  ),
 
   // Permissions
   getPermissions: (config = {}) =>
