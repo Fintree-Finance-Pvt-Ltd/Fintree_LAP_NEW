@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 
 import { rmApi } from "../rmApi.js";
 import { formatCurrency, getNextWorkflowStep, statusClass } from "../rmUtils.js";
+import { bmApi } from "../../bm/bmApi.js";
 
 const workflowStepsConfig = [
   { key: "leadCreated", label: "Lead Created" },
@@ -144,17 +145,63 @@ export default function MyLeads() {
   const role = getLoginRole();
   const isBM = role === "BM";
 
+  // const query = useQuery({
+  //   queryKey: ["rm-applications", searchTerm],
+  //   queryFn: () =>
+  //     searchTerm.trim()
+  //       ? rmApi.searchApplications(searchTerm.trim())
+  //       : rmApi.applications({ page: 1, limit: 100 }),
+  // });
+
   const query = useQuery({
-    queryKey: ["rm-applications", searchTerm],
-    queryFn: () =>
-      searchTerm.trim()
-        ? rmApi.searchApplications(searchTerm.trim())
-        : rmApi.applications({ page: 1, limit: 100 }),
-  });
+  queryKey: [
+    isBM ? "bm-location-applications" : "rm-applications",
+    searchTerm,
+  ],
+
+  queryFn: async () => {
+    if (isBM) {
+      return bmApi.getQueue();
+    }
+
+    if (searchTerm.trim()) {
+      return rmApi.searchApplications(
+        searchTerm.trim(),
+      );
+    }
+
+    return rmApi.applications({
+      page: 1,
+      limit: 100,
+    });
+  },
+
+  retry: false,
+});
+
+  // const allApplicationRows = useMemo(() => {
+  //   return query.data?.data ?? [];
+  // }, [query.data]);
 
   const allApplicationRows = useMemo(() => {
-    return query.data?.data ?? [];
-  }, [query.data]);
+  const responseData =
+    query.data?.data ?? query.data ?? {};
+
+  const payload = isBM
+    ? responseData?.applications ??
+      responseData?.data?.applications ??
+      responseData?.data ??
+      []
+    : responseData?.data ??
+      responseData?.applications ??
+      responseData ??
+      [];
+
+  return Array.isArray(payload)
+    ? payload
+    : [];
+}, [query.data, isBM]);
+
 
   const rmRows = useMemo(() => {
     const beforeSubmittedToBmRows = allApplicationRows.filter((item) => {

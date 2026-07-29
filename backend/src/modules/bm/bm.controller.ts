@@ -7,10 +7,12 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Req,
 } from "@nestjs/common";
 
 import { BmReviewsService } from "./bm.service";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
+import { Actor } from "../applications/applications.service";
 
 @Controller("bm-reviews")
 export class BmController {
@@ -20,9 +22,14 @@ export class BmController {
 
   // GET /api/bm-reviews/queue
   @Get("queue")
-  async getSubmittedToBmCases() {
+  async getSubmittedToBmCases(
+    @Req() request: Request & {
+    user?: {
+      id?: number | string;
+    };
+  },) {
     const applications =
-      await this.bmReviewsService.getSubmittedToBmCases();
+      await this.bmReviewsService.getSubmittedToBmCases(request.user,);
 
     return {
       success: true,

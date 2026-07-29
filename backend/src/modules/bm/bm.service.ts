@@ -1,12 +1,14 @@
 
 
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { DataSource } from "typeorm";
+import { Actor } from "../applications/applications.service";
 
 @Injectable()
 export class BmReviewsService {
@@ -24,83 +26,208 @@ export class BmReviewsService {
    * stage  = BM
    * status = BM_PENDING
    */
-  async getSubmittedToBmCases() {
-    try {
-      const rows =
-        await this.dataSource.query(`
-          SELECT
-            a.id,
-            a.application_number AS applicationNumber,
-            a.customer_name AS customerName,
-            a.mobile AS mobileNumber,
-            a.pan AS panNumber,
-            a.requested_amount AS requestedAmount,
-            a.stage,
-            a.status,
-            a.version,
-            a.assigned_to AS assignedTo,
-            a.created_at AS createdAt,
-            a.updated_at AS updatedAt
-          FROM applications a
-          WHERE
-            a.stage = 'BM'
-            AND a.status = 'BM_PENDING'
-          ORDER BY a.updated_at DESC
-        `);
+  // async getSubmittedToBmCases() {
+  //   try {
+  //     const rows =
+  //       await this.dataSource.query(`
+  //         SELECT
+  //           a.id,
+  //           a.application_number AS applicationNumber,
+  //           a.customer_name AS customerName,
+  //           a.mobile AS mobileNumber,
+  //           a.pan AS panNumber,
+  //           a.requested_amount AS requestedAmount,
+  //           a.stage,
+  //           a.status,
+  //           a.version,
+  //           a.assigned_to AS assignedTo,
+  //           a.created_at AS createdAt,
+  //           a.updated_at AS updatedAt
+  //         FROM applications a
+  //         WHERE
+  //           a.stage = 'BM'
+  //           AND a.status = 'BM_PENDING'
+  //         ORDER BY a.updated_at DESC
+  //       `);
 
-      return rows.map(
-        (row: Record<string, any>) => ({
-          id: Number(row.id),
+  //     return rows.map(
+  //       (row: Record<string, any>) => ({
+  //         id: Number(row.id),
 
-          applicationNumber:
-            row.applicationNumber,
+  //         applicationNumber:
+  //           row.applicationNumber,
 
-          customerName:
-            row.customerName,
+  //         customerName:
+  //           row.customerName,
 
-          mobileNumber:
-            row.mobileNumber,
+  //         mobileNumber:
+  //           row.mobileNumber,
 
-          panNumber:
-            row.panNumber,
+  //         panNumber:
+  //           row.panNumber,
 
-          requestedAmount: Number(
-            row.requestedAmount ?? 0,
-          ),
+  //         requestedAmount: Number(
+  //           row.requestedAmount ?? 0,
+  //         ),
 
-          stage: row.stage,
+  //         stage: row.stage,
 
-          status: row.status,
+  //         status: row.status,
 
-          version: Number(
-            row.version ?? 0,
-          ),
+  //         version: Number(
+  //           row.version ?? 0,
+  //         ),
 
-          assignedTo:
-            row.assignedTo !== null
-              ? Number(row.assignedTo)
-              : null,
+  //         assignedTo:
+  //           row.assignedTo !== null
+  //             ? Number(row.assignedTo)
+  //             : null,
 
-          createdAt:
-            row.createdAt,
+  //         createdAt:
+  //           row.createdAt,
 
-          updatedAt:
-            row.updatedAt,
-        }),
-      );
-    } catch (error) {
-      this.logger.error(
-        "Unable to fetch BM review queue",
-        error instanceof Error
-          ? error.stack
-          : String(error),
-      );
+  //         updatedAt:
+  //           row.updatedAt,
+  //       }),
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(
+  //       "Unable to fetch BM review queue",
+  //       error instanceof Error
+  //         ? error.stack
+  //         : String(error),
+  //     );
 
-      throw new InternalServerErrorException(
-        "Unable to fetch BM review queue.",
+  //     throw new InternalServerErrorException(
+  //       "Unable to fetch BM review queue.",
+  //     );
+  //   }
+  // }
+
+
+  
+  async getSubmittedToBmCases(actor: any) {
+  try {
+    const bmUserId = Number(actor?.id);
+
+    if (!bmUserId) {
+      throw new BadRequestException(
+        'Logged-in Branch Manager user ID is missing.',
       );
     }
+
+    const bmRows = await this.dataSource.query(
+      `
+        SELECT
+          id,
+          name,
+          email,
+          location
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [bmUserId],
+    );
+
+    if (!bmRows.length) {
+      throw new NotFoundException(
+        'Logged-in Branch Manager was not found.',
+      );
+    }
+
+    const bmLocation = String(
+      bmRows[0]?.location ?? '',
+    ).trim();
+
+    if (!bmLocation) {
+      throw new BadRequestException(
+        'No location is assigned to this Branch Manager.',
+      );
+    }
+
+    const rows = await this.dataSource.query(
+      `
+        SELECT
+          a.id,
+          a.application_number AS applicationNumber,
+          a.customer_name AS customerName,
+          a.mobile AS mobileNumber,
+          a.pan AS panNumber,
+          a.requested_amount AS requestedAmount,
+          a.stage,
+          a.status,
+          a.version,
+          a.assigned_to AS assignedTo,
+          a.created_by AS createdBy,
+          a.created_at AS createdAt,
+          a.updated_at AS updatedAt,
+          rm.name AS rmName,
+          rm.email AS rmEmail,
+          rm.location AS rmLocation
+        FROM applications a
+        INNER JOIN users rm
+          ON rm.id = a.created_by
+        WHERE a.stage = 'BM'
+          AND a.status = 'BM_PENDING'
+          AND LOWER(TRIM(rm.location)) =
+              LOWER(TRIM(?))
+        ORDER BY a.updated_at DESC
+      `,
+      [bmLocation],
+    );
+
+    return rows.map((row: Record<string, any>) => ({
+      id: Number(row.id),
+      applicationNumber: row.applicationNumber,
+      customerName: row.customerName,
+      mobileNumber: row.mobileNumber,
+      panNumber: row.panNumber,
+      requestedAmount: Number(
+        row.requestedAmount ?? 0,
+      ),
+      stage: row.stage,
+      status: row.status,
+      version: Number(row.version ?? 0),
+
+      assignedTo:
+        row.assignedTo !== null &&
+        row.assignedTo !== undefined
+          ? Number(row.assignedTo)
+          : null,
+
+      createdBy:
+        row.createdBy !== null &&
+        row.createdBy !== undefined
+          ? Number(row.createdBy)
+          : null,
+
+      rmName: row.rmName ?? null,
+      rmEmail: row.rmEmail ?? null,
+      rmLocation: row.rmLocation ?? null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+  } catch (error) {
+    this.logger.error(
+      'Unable to fetch location-based BM review queue',
+      error instanceof Error
+        ? error.stack
+        : String(error),
+    );
+
+    if (
+      error instanceof BadRequestException ||
+      error instanceof NotFoundException
+    ) {
+      throw error;
+    }
+
+    throw new InternalServerErrorException(
+      'Unable to fetch BM review queue.',
+    );
   }
+}
 
   async getChargesApprovedToBm() {
     try {
