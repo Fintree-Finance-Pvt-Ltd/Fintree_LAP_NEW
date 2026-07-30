@@ -1,10 +1,17 @@
 import { apiClient } from "../../services/apiClient.js";
 
 export const partnerApi = {
-  getPartners: (params = {}) =>
-    apiClient.get("/partners", {
-      params,
-    }),
+  getPartners: (
+    params = {},
+    config = {},
+  ) =>
+    apiClient.get(
+      "/partners",
+      {
+        ...config,
+        params,
+      },
+    ),
 
   getPartner: (partnerId) =>
     apiClient.get(`/partners/${partnerId}`),

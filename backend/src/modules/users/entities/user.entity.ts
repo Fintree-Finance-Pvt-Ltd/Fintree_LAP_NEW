@@ -5,6 +5,7 @@ import { Role } from '../../roles/entities/role.entity';
 export class User {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true }) id: number;
   @Column({ length: 120 }) name: string;
+  @Column({ name: 'partnerId', type: 'bigint', unsigned: true, nullable: true})partnerId: number | null;
   @Column({ length: 180, unique: true }) email: string;
   @Column({ name: 'password_hash', length: 255 }) passwordHash: string;
   @Column({length: 50 }) location: string;

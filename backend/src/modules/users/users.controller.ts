@@ -14,7 +14,8 @@ import { UsersService } from "./users.service";
 @Controller("users")
 export class UsersController {
   constructor(
-    private readonly usersService: UsersService,
+    private readonly usersService:
+      UsersService,
   ) {}
 
   /*
@@ -31,6 +32,7 @@ export class UsersController {
       users,
     };
   }
+
   /*
    * GET /users/access-list
    * Existing API remains unchanged.
@@ -38,7 +40,8 @@ export class UsersController {
   @Get("access-list")
   async getAccessList() {
     const users =
-      await this.usersService.getAccessList();
+      await this.usersService
+        .getAccessList();
 
     return {
       success: true,
@@ -46,22 +49,24 @@ export class UsersController {
     };
   }
 
-  // Role Access
+  /*
+   * GET /users/role-access
+   * Fetch users with role permissions.
+   */
   @Get("role-access")
-async getUsersWithRolePermissions() {
-  const users =
-    await this.usersService
-      .getUsersWithRolePermissions();
+  async getUsersWithRolePermissions() {
+    const users =
+      await this.usersService
+        .getUsersWithRolePermissions();
 
-  return {
-    success: true,
-    users,
-  };
-}
+    return {
+      success: true,
+      users,
+    };
+  }
 
   /*
    * POST /users
-   * Existing create-user API remains unchanged.
    */
   @Post()
   async createUser(
@@ -72,6 +77,7 @@ async getUsersWithRolePermissions() {
       password: string;
       role: string;
       location: string;
+      partnerId: number;
     },
   ) {
     const user =
@@ -81,17 +87,15 @@ async getUsersWithRolePermissions() {
 
     return {
       success: true,
-      message: "User created successfully.",
+      message:
+        "User created successfully.",
       user,
     };
   }
 
-   /*
+  /*
    * PATCH /users/:userId
    * Update user details and assigned role.
-   *
-   * Password is optional. When omitted or empty,
-   * the existing password remains unchanged.
    */
   @Patch(":userId")
   async updateUser(
@@ -126,28 +130,26 @@ async getUsersWithRolePermissions() {
 
   /*
    * DELETE /users/:userId
-   *
-   * This performs a soft delete by setting
-   * isActive to false.
+   * Permanently delete the user.
    */
-    @Delete(":userId")
-async deleteUser(
-  @Param(
-    "userId",
-    ParseIntPipe,
-  )
-  userId: number,
-) {
-  const user =
-    await this.usersService.deleteUser(
-      userId,
-    );
+  @Delete(":userId")
+  async deleteUser(
+    @Param(
+      "userId",
+      ParseIntPipe,
+    )
+    userId: number,
+  ) {
+    const user =
+      await this.usersService.deleteUser(
+        userId,
+      );
 
-  return {
-    success: true,
-    message:
-      "User permanently deleted successfully.",
-    user,
-  };
-}
+    return {
+      success: true,
+      message:
+        "User permanently deleted successfully.",
+      user,
+    };
+  }
 }

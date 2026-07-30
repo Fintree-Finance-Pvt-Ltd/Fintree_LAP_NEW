@@ -16,6 +16,7 @@ import {
 
 import { usersApi } from "../userApi";
 import { spokesApi } from "../../Spokes/spokeapi.js";
+import { partnerApi } from "../../Partners/partnerapi.js";
 
 const informationCards = [
   {
@@ -46,6 +47,15 @@ const informationCards = [
     ],
   },
 ];
+
+const emptyAddUserForm = {
+  name: "",
+  email: "",
+  password: "",
+  roleId: "",
+  location: "",
+  partnerId: "",
+};
 
 const emptyForm = {
   name: "",
@@ -114,9 +124,13 @@ function AddUserModal({
   spokesLoading = false,
   spokesError = "",
   onRetrySpokes,
+  partners = [],
+  partnersLoading = false,
+  partnersError = "",
+  onRetryPartners,
 }) {
   const [form, setForm] =
-    useState(emptyForm);
+    useState(emptyAddUserForm);
 
   const [error, setError] =
     useState("");
@@ -155,10 +169,17 @@ function AddUserModal({
       return;
     }
 
+    if (String(form.password).length < 8) {
+      setError(
+        "Password must contain at least 8 characters.",
+      );
+      return;
+    }
+
     try {
       await onSubmit(form);
 
-      setForm(emptyForm);
+      setForm(emptyAddUserForm);
       setError("");
     } catch (submissionError) {
       console.error(
@@ -169,7 +190,7 @@ function AddUserModal({
   };
 
   const handleClose = () => {
-    setForm(emptyForm);
+    setForm(emptyAddUserForm);
     setError("");
     onClose();
   };
@@ -228,6 +249,22 @@ function AddUserModal({
                 value={form.email}
                 onChange={handleChange}
                 placeholder="name@fintree.in"
+                disabled={submitting}
+                className={inputClasses}
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Password
+
+              <input
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Minimum 8 characters"
+                autoComplete="new-password"
+                minLength={8}
                 disabled={submitting}
                 className={inputClasses}
               />
@@ -328,6 +365,57 @@ function AddUserModal({
                 </div>
               )}
             </label>
+
+            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              Partner
+
+              <select
+                name="partnerId"
+                value={form.partnerId}
+                onChange={handleChange}
+                disabled={
+                  partnersLoading ||
+                  submitting
+                }
+                className={inputClasses}
+              >
+                <option value="">
+                  {partnersLoading
+                    ? "Loading partners..."
+                    : partners.length === 0
+                      ? "No active partners available"
+                      : "Select partner"}
+                </option>
+
+                {partners.map((partner) => (
+                  <option
+                    key={partner.id}
+                    value={String(partner.id)}
+                  >
+                    {partner.name}
+                    {partner.code
+                      ? ` — ${partner.code}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+
+              {partnersError && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium text-red-600">
+                    {partnersError}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={onRetryPartners}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-500"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+            </label>
           </div>
 
           {(error || submitError) && (
@@ -353,7 +441,9 @@ function AddUserModal({
                 rolesLoading ||
                 roles.length === 0 ||
                 spokesLoading ||
-                spokes.length === 0
+                spokes.length === 0 ||
+                partnersLoading ||
+                partners.length === 0
               }
               className="flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -995,6 +1085,19 @@ export default function UsersTab() {
     setSpokesError,
   ] = useState("");
 
+  const [partners, setPartners] =
+    useState([]);
+
+  const [
+    partnersLoading,
+    setPartnersLoading,
+  ] = useState(true);
+
+  const [
+    partnersError,
+    setPartnersError,
+  ] = useState("");
+
   const [
     selectedUser,
     setSelectedUser,
@@ -1225,6 +1328,86 @@ export default function UsersTab() {
     [],
   );
 
+  const loadPartners = useCallback(
+    async () => {
+      try {
+        setPartnersLoading(true);
+        setPartnersError("");
+
+        const response =
+          await partnerApi.getPartners();
+
+        const responseData =
+          response?.data?.data?.partners ??
+          response?.data?.partners ??
+          response?.data?.data ??
+          response?.data ??
+          response?.partners ??
+          response ??
+          [];
+
+        if (!Array.isArray(responseData)) {
+          throw new Error(
+            "Invalid partners response received from server.",
+          );
+        }
+
+        const normalizedPartners =
+          responseData
+            .map((partner) => ({
+              id: Number(partner?.id),
+              name: String(
+                partner?.name || "",
+              ).trim(),
+              code: String(
+                partner?.code || "",
+              ).trim(),
+              status: String(
+                partner?.status || "",
+              )
+                .trim()
+                .toUpperCase(),
+            }))
+            .filter(
+              (partner) =>
+                Number.isInteger(
+                  partner.id,
+                ) &&
+                partner.id > 0 &&
+                partner.name &&
+                partner.status ===
+                  "ACTIVE",
+            )
+            .sort((first, second) =>
+              first.name.localeCompare(
+                second.name,
+              ),
+            );
+
+        setPartners(
+          normalizedPartners,
+        );
+      } catch (error) {
+        console.error(
+          "Unable to load partners:",
+          error,
+        );
+
+        setPartners([]);
+
+        setPartnersError(
+          getErrorMessage(
+            error,
+            "Unable to load partners.",
+          ),
+        );
+      } finally {
+        setPartnersLoading(false);
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     const controller =
       new AbortController();
@@ -1250,6 +1433,10 @@ export default function UsersTab() {
   useEffect(() => {
     loadSpokes();
   }, [loadSpokes]);
+
+  useEffect(() => {
+    loadPartners();
+  }, [loadPartners]);
 
   const filteredUsers = useMemo(() => {
     const query = search
@@ -1287,12 +1474,35 @@ export default function UsersTab() {
         formData.roleId,
       );
 
+      const partnerId = Number(
+        formData.partnerId,
+      );
+
+      const password = String(
+        formData.password || "",
+      );
+
       if (
         !Number.isInteger(roleId) ||
         roleId <= 0
       ) {
         throw new Error(
           "Please select a valid role.",
+        );
+      }
+
+      if (
+        !Number.isInteger(partnerId) ||
+        partnerId <= 0
+      ) {
+        throw new Error(
+          "Please select a valid partner.",
+        );
+      }
+
+      if (password.length < 8) {
+        throw new Error(
+          "Password must contain at least 8 characters.",
         );
       }
 
@@ -1309,15 +1519,29 @@ export default function UsersTab() {
         );
       }
 
+      const selectedPartner =
+        partners.find(
+          (partner) =>
+            Number(partner.id) ===
+            partnerId,
+        );
+
+      if (!selectedPartner) {
+        throw new Error(
+          "Selected partner was not found. Please reload the partners.",
+        );
+      }
+
       await usersApi.createUser({
         name: formData.name.trim(),
         email: formData.email
           .trim()
           .toLowerCase(),
-        password: formData.password,
+        password,
         role: selectedRole.name,
         location:
           formData.location.trim(),
+        partnerId,
       });
 
       setShowAddUser(false);
@@ -1780,6 +2004,14 @@ export default function UsersTab() {
         spokesError={spokesError}
         onRetrySpokes={() =>
           loadSpokes()
+        }
+        partners={partners}
+        partnersLoading={
+          partnersLoading
+        }
+        partnersError={partnersError}
+        onRetryPartners={() =>
+          loadPartners()
         }
       />
 

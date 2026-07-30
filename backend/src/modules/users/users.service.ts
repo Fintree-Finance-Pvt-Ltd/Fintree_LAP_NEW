@@ -17,6 +17,7 @@ import * as bcrypt from "bcrypt";
 
 import { User } from "./entities/user.entity";
 import { Role } from "../roles/entities/role.entity";
+import { Partner, PartnerStatus } from '../partners/entities/partner.entity';
 
 interface CreateUserPayload {
   name: string;
@@ -24,6 +25,7 @@ interface CreateUserPayload {
   password: string;
   role: string;
   location: string;
+  partnerId: number;
 }
 
 interface UpdateUserPayload {
@@ -44,7 +46,11 @@ export class UsersService {
     @InjectRepository(Role)
     private readonly roleRepository:
       Repository<Role>,
-  ) {}
+
+    @InjectRepository(Partner)
+    private readonly partnerRepository:
+      Repository<Partner>,
+  ) { }
 
   /*
    * Fetch all active users with their assigned roles.
@@ -138,28 +144,43 @@ export class UsersService {
     const location =
       payload.location?.trim();
 
+    const partnerId =
+      Number(payload.partnerId);
+
     if (
       !name ||
       !email ||
       !password ||
       !roleName ||
-      !location
+      !location ||
+      !Number.isInteger(partnerId) ||
+      partnerId <= 0
     ) {
       throw new BadRequestException(
-        "Name, email, password, role and location are required.",
+        'Name, email, password, role, location and partner are required.',
+      );
+    }
+
+    if (password.length < 8) {
+      throw new BadRequestException(
+        'Password must contain at least 8 characters.',
       );
     }
 
     const existingUser =
-      await this.userRepository.findOne({
-        where: {
-          email,
-        },
-      });
+      await this.userRepository
+        .createQueryBuilder('user')
+        .where(
+          'LOWER(TRIM(user.email)) = LOWER(:email)',
+          {
+            email,
+          },
+        )
+        .getOne();
 
     if (existingUser) {
       throw new ConflictException(
-        "A user with this email already exists.",
+        'A user with this email already exists.',
       );
     }
 
@@ -176,6 +197,28 @@ export class UsersService {
       );
     }
 
+    /*
+     * Validate that the selected Partner exists
+     * and is active before storing its ID.
+     */
+    const selectedPartner =
+      await this.partnerRepository.findOne({
+        where: {
+          id: partnerId,
+          status: PartnerStatus.ACTIVE,
+        },
+      });
+
+    if (!selectedPartner) {
+      throw new NotFoundException(
+        'Selected active partner was not found.',
+      );
+    }
+
+    /*
+     * The frontend sends the plain password.
+     * Only the bcrypt hash is stored.
+     */
     const passwordHash =
       await bcrypt.hash(
         password,
@@ -188,8 +231,12 @@ export class UsersService {
         email,
         passwordHash,
         location,
+        partnerId:
+          Number(selectedPartner.id),
         isActive: true,
-        roles: [selectedRole],
+        roles: [
+          selectedRole,
+        ],
       });
 
     const savedUser =
@@ -202,7 +249,6 @@ export class UsersService {
         where: {
           id: savedUser.id,
         },
-
         relations: {
           roles: true,
         },
@@ -210,13 +256,25 @@ export class UsersService {
 
     if (!createdUser) {
       throw new NotFoundException(
-        "Created user could not be loaded.",
+        'Created user could not be loaded.',
       );
     }
 
-    return this.formatUser(
-      createdUser,
-    );
+    return {
+      ...this.formatUser(
+        createdUser,
+      ),
+
+      partner: {
+        id: Number(
+          selectedPartner.id,
+        ),
+        name:
+          selectedPartner.name,
+        code:
+          selectedPartner.code,
+      },
+    };
   }
 
   /*
@@ -405,90 +463,90 @@ export class UsersService {
    * and reference purposes.
    */
   async deleteUser(
-  userId: number,
-) {
-  return this.userRepository.manager.transaction(
-    async (manager) => {
-      const userRepository =
-        manager.getRepository(User);
+    userId: number,
+  ) {
+    return this.userRepository.manager.transaction(
+      async (manager) => {
+        const userRepository =
+          manager.getRepository(User);
 
-      const user =
-        await userRepository.findOne({
-          where: {
-            id: userId,
-          },
-          relations: {
-            roles: true,
-          },
-        });
+        const user =
+          await userRepository.findOne({
+            where: {
+              id: userId,
+            },
+            relations: {
+              roles: true,
+            },
+          });
 
-      if (!user) {
-        throw new NotFoundException(
-          `User with ID ${userId} was not found.`,
-        );
-      }
-
-      /*
-       * Remove mappings from user_roles through
-       * the TypeORM relation first.
-       *
-       * This avoids foreign-key errors without
-       * directly depending on join-table columns.
-       */
-      if (user.roles?.length) {
-        await manager
-          .createQueryBuilder()
-          .relation(User, "roles")
-          .of(userId)
-          .remove(
-            user.roles.map(
-              (role) => role.id,
-            ),
+        if (!user) {
+          throw new NotFoundException(
+            `User with ID ${userId} was not found.`,
           );
-      }
+        }
 
-      /*
-       * Physically delete the user row.
-       */
-      const deleteResult =
-        await userRepository.delete(
-          userId,
-        );
+        /*
+         * Remove mappings from user_roles through
+         * the TypeORM relation first.
+         *
+         * This avoids foreign-key errors without
+         * directly depending on join-table columns.
+         */
+        if (user.roles?.length) {
+          await manager
+            .createQueryBuilder()
+            .relation(User, "roles")
+            .of(userId)
+            .remove(
+              user.roles.map(
+                (role) => role.id,
+              ),
+            );
+        }
 
-      if (
-        !deleteResult.affected ||
-        deleteResult.affected < 1
-      ) {
-        throw new BadRequestException(
-          "Unable to delete user from the database.",
-        );
-      }
+        /*
+         * Physically delete the user row.
+         */
+        const deleteResult =
+          await userRepository.delete(
+            userId,
+          );
 
-      /*
-       * Confirm that the row no longer exists.
-       */
-      const deletedUser =
-        await userRepository.findOne({
-          where: {
-            id: userId,
-          },
-        });
+        if (
+          !deleteResult.affected ||
+          deleteResult.affected < 1
+        ) {
+          throw new BadRequestException(
+            "Unable to delete user from the database.",
+          );
+        }
 
-      if (deletedUser) {
-        throw new BadRequestException(
-          "User still exists after delete operation.",
-        );
-      }
+        /*
+         * Confirm that the row no longer exists.
+         */
+        const deletedUser =
+          await userRepository.findOne({
+            where: {
+              id: userId,
+            },
+          });
 
-      return {
-        id: Number(user.id),
-        name: user.name,
-        email: user.email,
-        deleted: true,
-      };
-    },
-  );
-}
+        if (deletedUser) {
+          throw new BadRequestException(
+            "User still exists after delete operation.",
+          );
+        }
+
+        return {
+          id: Number(user.id),
+          name: user.name,
+          email: user.email,
+          deleted: true,
+        };
+      },
+    );
+  }
   /*
    * Fetch active users with their assigned role
    * and permissions.
@@ -605,12 +663,12 @@ export class UsersService {
 
         role: assignedRole
           ? {
-              id: Number(
-                assignedRole.id,
-              ),
-              name:
-                assignedRole.name,
-            }
+            id: Number(
+              assignedRole.id,
+            ),
+            name:
+              assignedRole.name,
+          }
           : null,
 
         permissions: Array.from(
@@ -666,6 +724,12 @@ export class UsersService {
       location:
         user.location ||
         "Not Assigned",
+
+      partnerId:
+        user.partnerId !== null &&
+          user.partnerId !== undefined
+          ? Number(user.partnerId)
+          : null,
 
       isActive:
         Boolean(user.isActive),
