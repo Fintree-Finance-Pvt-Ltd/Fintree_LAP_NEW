@@ -52,7 +52,6 @@ const emptyForm = {
   email: "",
   roleId: "",
   location: "",
-  password: "",
 };
 
 function getErrorMessage(
@@ -328,21 +327,6 @@ function AddUserModal({
                   </button>
                 </div>
               )}
-            </label>
-
-            <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:col-span-2">
-              Password
-
-              <input
-                name="password"
-                type="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Enter password"
-                autoComplete="new-password"
-                disabled={submitting}
-                className={inputClasses}
-              />
             </label>
           </div>
 
