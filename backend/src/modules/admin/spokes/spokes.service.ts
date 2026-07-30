@@ -13,16 +13,60 @@ import {
 
 import { Hub } from '../../auth/entities/hub.entity';
 import { Spoke } from '../../auth/entities/spoke.entity';
+import { User } from '../../users/entities/user.entity';
+
 import type {
   CreateSpokeDto,
   UpdateSpokeDto,
 } from './spokes.controller';
+
+const ADMINISTRATION_ROLE_ALIASES = {
+  BM: [
+    'BM',
+    'BRANCH MANAGER',
+  ],
+
+  CM: [
+    'CM',
+    'CREDIT MANAGER',
+  ],
+
+  RM: [
+    'RM',
+    'RELATIONSHIP MANAGER',
+  ],
+} as const;
 
 export type SpokeResponse = {
   id: number;
   name: string;
   hubId: number;
   hubName: string;
+};
+
+type AdministrationUserResponse = {
+  id: number;
+  name: string;
+  email: string;
+  location: string;
+};
+
+export type SpokeAdministrationResponse = {
+  id: number;
+  name: string;
+
+  hubId: number;
+  hubName: string;
+
+  bmCount: number;
+  cmCount: number;
+  rmCount: number;
+
+  coverageRadiusKm: number | null;
+
+  bmUsers: AdministrationUserResponse[];
+  cmUsers: AdministrationUserResponse[];
+  rmUsers: AdministrationUserResponse[];
 };
 
 @Injectable()
@@ -35,10 +79,16 @@ export class SpokesService {
     @InjectRepository(Hub)
     private readonly hubRepository:
       Repository<Hub>,
+
+    @InjectRepository(User)
+    private readonly userRepository:
+      Repository<User>,
   ) {}
 
   /*
    * Return all Spokes with Hub relation.
+   *
+   * Existing functionality remains unchanged.
    *
    * Search supports:
    * - Spoke name
@@ -86,6 +136,8 @@ export class SpokesService {
 
   /*
    * Return one Spoke with Hub relation.
+   *
+   * Existing functionality remains unchanged.
    */
   async findOne(
     id: number,
@@ -97,29 +149,206 @@ export class SpokesService {
   }
 
   /*
-   * Create a Spoke and assign the Hub entity
-   * to the ManyToOne relation.
+   * GET /api/spokes/administration
+   *
+   * User-to-Spoke mapping:
+   *
+   * users.location
+   *       ↓
+   * spokes.name
+   *       ↓
+   * spokes.hub
+   *
+   * No User table modification is required.
+   *
+   * All role counting is performed here.
+   * React only displays the returned values.
+   */
+  async getAdministrationData() {
+    const [
+      spokes,
+      activeUsers,
+    ] = await Promise.all([
+      this.spokeRepository.find({
+        relations: ['hub'],
+        order: {
+          name: 'ASC',
+        },
+      }),
+
+      this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect(
+          'user.roles',
+          'role',
+        )
+        .select([
+          'user.id',
+          'user.name',
+          'user.email',
+          'user.location',
+          'user.isActive',
+
+          'role.id',
+          'role.code',
+          'role.name',
+        ])
+        .where(
+          'user.isActive = :isActive',
+          {
+            isActive: true,
+          },
+        )
+        .orderBy(
+          'user.name',
+          'ASC',
+        )
+        .getMany(),
+    ]);
+
+    /*
+     * Group users once by normalized location.
+     *
+     * This avoids repeatedly searching all users
+     * for every Spoke.
+     */
+    const usersByLocation =
+      this.groupUsersByLocation(
+        activeUsers,
+      );
+
+    const data:
+      SpokeAdministrationResponse[] =
+        spokes.map((spoke) => {
+          const normalizedSpokeName =
+            this.normalizeLocation(
+              spoke.name,
+            );
+
+          /*
+           * users.location must match
+           * the current Spoke name.
+           */
+          const spokeUsers =
+            usersByLocation.get(
+              normalizedSpokeName,
+            ) ?? [];
+
+          const bmUsers =
+            spokeUsers.filter((user) =>
+              this.userHasAnyRole(
+                user,
+                ADMINISTRATION_ROLE_ALIASES
+                  .BM,
+              ),
+            );
+
+          const cmUsers =
+            spokeUsers.filter((user) =>
+              this.userHasAnyRole(
+                user,
+                ADMINISTRATION_ROLE_ALIASES
+                  .CM,
+              ),
+            );
+
+          const rmUsers =
+            spokeUsers.filter((user) =>
+              this.userHasAnyRole(
+                user,
+                ADMINISTRATION_ROLE_ALIASES
+                  .RM,
+              ),
+            );
+
+          return {
+            id:
+              Number(spoke.id),
+
+            name:
+              spoke.name,
+
+            hubId:
+              Number(spoke.hub.id),
+
+            hubName:
+              spoke.hub.name,
+
+            /*
+             * UI-ready counts.
+             *
+             * React should display these directly.
+             */
+            bmCount:
+              bmUsers.length,
+
+            cmCount:
+              cmUsers.length,
+
+            rmCount:
+              rmUsers.length,
+
+            /*
+             * Coverage radius is not present
+             * in the current Spoke entity/table.
+             */
+            coverageRadiusKm:
+              null,
+
+            /*
+             * Already filtered user details.
+             *
+             * These can be used later for
+             * tooltips, modals or detailed views.
+             */
+            bmUsers:
+              this.toAdministrationUsers(
+                bmUsers,
+              ),
+
+            cmUsers:
+              this.toAdministrationUsers(
+                cmUsers,
+              ),
+
+            rmUsers:
+              this.toAdministrationUsers(
+                rmUsers,
+              ),
+          };
+        });
+
+    return {
+      success: true,
+      message:
+        'Spoke administration data fetched successfully.',
+      data,
+    };
+  }
+
+  /*
+   * Create a Spoke and assign the Hub entity.
+   *
+   * Existing functionality remains unchanged.
    */
   async create(
     createSpokeDto: CreateSpokeDto,
   ): Promise<SpokeResponse> {
-    const name = this.normalizeName(
-      createSpokeDto.name,
-    );
+    const name =
+      this.normalizeName(
+        createSpokeDto.name,
+      );
 
-    const hub = await this.findHubById(
-      createSpokeDto.hubId,
-    );
+    const hub =
+      await this.findHubById(
+        createSpokeDto.hubId,
+      );
 
     await this.ensureUniqueName(
       name,
       Number(hub.id),
     );
 
-    /*
-     * Assign the Hub entity itself.
-     * Do not save hubId directly.
-     */
     const spoke =
       this.spokeRepository.create({
         name,
@@ -131,26 +360,27 @@ export class SpokesService {
         spoke,
       );
 
-    /*
-     * TypeORM keeps the assigned relation in
-     * memory after save, but explicitly assigning
-     * it ensures response mapping is safe.
-     */
     savedSpoke.hub = hub;
 
-    return this.toResponse(savedSpoke);
+    return this.toResponse(
+      savedSpoke,
+    );
   }
 
   /*
    * Update Spoke name, Hub, or both.
+   *
+   * Existing functionality remains unchanged.
    */
   async update(
     id: number,
     updateSpokeDto: UpdateSpokeDto,
   ): Promise<SpokeResponse> {
     if (
-      updateSpokeDto.name === undefined &&
-      updateSpokeDto.hubId === undefined
+      updateSpokeDto.name ===
+        undefined &&
+      updateSpokeDto.hubId ===
+        undefined
     ) {
       throw new BadRequestException(
         'Provide hubId or name to update the spoke.',
@@ -160,20 +390,22 @@ export class SpokesService {
     const spoke =
       await this.findSpokeById(id);
 
-    let targetHub = spoke.hub;
+    let targetHub =
+      spoke.hub;
 
-    /*
-     * Find and assign the new Hub entity when
-     * hubId is provided.
-     */
-    if (updateSpokeDto.hubId !== undefined) {
-      targetHub = await this.findHubById(
-        updateSpokeDto.hubId,
-      );
+    if (
+      updateSpokeDto.hubId !==
+      undefined
+    ) {
+      targetHub =
+        await this.findHubById(
+          updateSpokeDto.hubId,
+        );
     }
 
     const targetName =
-      updateSpokeDto.name !== undefined
+      updateSpokeDto.name !==
+      undefined
         ? this.normalizeName(
             updateSpokeDto.name,
           )
@@ -185,21 +417,175 @@ export class SpokesService {
       Number(spoke.id),
     );
 
-    spoke.name = targetName;
-    spoke.hub = targetHub;
+    spoke.name =
+      targetName;
+
+    spoke.hub =
+      targetHub;
 
     const savedSpoke =
       await this.spokeRepository.save(
         spoke,
       );
 
-    savedSpoke.hub = targetHub;
+    savedSpoke.hub =
+      targetHub;
 
-    return this.toResponse(savedSpoke);
+    return this.toResponse(
+      savedSpoke,
+    );
+  }
+
+  /*
+   * Normalize users.location and spokes.name
+   * before comparing them.
+   *
+   * Examples:
+   *
+   * " Andheri  Spoke " → "andheri spoke"
+   * "ANDHERI SPOKE"    → "andheri spoke"
+   */
+  private normalizeLocation(
+    value: unknown,
+  ): string {
+    return String(value ?? '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+  }
+
+  /*
+   * Normalize role code or role name.
+   *
+   * Examples:
+   *
+   * "BRANCH_MANAGER" → "BRANCH MANAGER"
+   * "branch-manager" → "BRANCH MANAGER"
+   */
+  private normalizeRoleValue(
+    value: unknown,
+  ): string {
+    return String(value ?? '')
+      .trim()
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
+  }
+
+  /*
+   * Group active users using users.location.
+   */
+  private groupUsersByLocation(
+    users: User[],
+  ): Map<string, User[]> {
+    const usersByLocation =
+      new Map<string, User[]>();
+
+    for (const user of users) {
+      const normalizedLocation =
+        this.normalizeLocation(
+          user.location,
+        );
+
+      if (!normalizedLocation) {
+        continue;
+      }
+
+      const existingUsers =
+        usersByLocation.get(
+          normalizedLocation,
+        ) ?? [];
+
+      existingUsers.push(user);
+
+      usersByLocation.set(
+        normalizedLocation,
+        existingUsers,
+      );
+    }
+
+    return usersByLocation;
+  }
+
+  /*
+   * Check the user's roles against both:
+   *
+   * - role.code
+   * - role.name
+   *
+   * This supports databases where role codes
+   * and display names are different.
+   */
+  private userHasAnyRole(
+    user: User,
+    expectedRoles:
+      readonly string[],
+  ): boolean {
+    const normalizedExpectedRoles =
+      new Set(
+        expectedRoles.map((role) =>
+          this.normalizeRoleValue(
+            role,
+          ),
+        ),
+      );
+
+    return (user.roles ?? []).some(
+      (role) => {
+        const normalizedCode =
+          this.normalizeRoleValue(
+            role.code,
+          );
+
+        const normalizedName =
+          this.normalizeRoleValue(
+            role.name,
+          );
+
+        return (
+          normalizedExpectedRoles.has(
+            normalizedCode,
+          ) ||
+          normalizedExpectedRoles.has(
+            normalizedName,
+          )
+        );
+      },
+    );
+  }
+
+  /*
+   * Return clean user information without
+   * password hashes or unnecessary fields.
+   */
+  private toAdministrationUsers(
+    users: User[],
+  ): AdministrationUserResponse[] {
+    return users
+      .map((user) => ({
+        id:
+          Number(user.id),
+
+        name:
+          user.name,
+
+        email:
+          user.email,
+
+        location:
+          user.location,
+      }))
+      .sort((first, second) =>
+        first.name.localeCompare(
+          second.name,
+        ),
+      );
   }
 
   /*
    * Find Spoke with Hub relation.
+   *
+   * Existing functionality remains unchanged.
    */
   private async findSpokeById(
     id: number,
@@ -229,6 +615,8 @@ export class SpokesService {
 
   /*
    * Find Hub before assigning it to Spoke.
+   *
+   * Existing functionality remains unchanged.
    */
   private async findHubById(
     hubId: number,
@@ -252,6 +640,8 @@ export class SpokesService {
   /*
    * Prevent duplicate Spoke names under
    * the same Hub.
+   *
+   * Existing functionality remains unchanged.
    */
   private async ensureUniqueName(
     name: string,
@@ -261,7 +651,10 @@ export class SpokesService {
     const query =
       this.spokeRepository
         .createQueryBuilder('spoke')
-        .innerJoin('spoke.hub', 'hub')
+        .innerJoin(
+          'spoke.hub',
+          'hub',
+        )
         .where(
           'LOWER(TRIM(spoke.name)) = LOWER(:name)',
           {
@@ -275,7 +668,10 @@ export class SpokesService {
           },
         );
 
-    if (excludeSpokeId !== undefined) {
+    if (
+      excludeSpokeId !==
+      undefined
+    ) {
       query.andWhere(
         'spoke.id != :excludeSpokeId',
         {
@@ -295,15 +691,17 @@ export class SpokesService {
   }
 
   /*
-   * Normalize and validate Spoke name
-   * before saving.
+   * Normalize and validate Spoke name.
+   *
+   * Existing functionality remains unchanged.
    */
   private normalizeName(
     value: string,
   ): string {
-    const name = String(value ?? '')
-      .trim()
-      .replace(/\s+/g, ' ');
+    const name =
+      String(value ?? '')
+        .trim()
+        .replace(/\s+/g, ' ');
 
     if (!name) {
       throw new BadRequestException(
@@ -321,16 +719,25 @@ export class SpokesService {
   }
 
   /*
-   * Convert entity response into clean API shape.
+   * Convert entity into existing API shape.
+   *
+   * Existing functionality remains unchanged.
    */
   private toResponse(
     spoke: Spoke,
   ): SpokeResponse {
     return {
-      id: Number(spoke.id),
-      name: spoke.name,
-      hubId: Number(spoke.hub.id),
-      hubName: spoke.hub.name,
+      id:
+        Number(spoke.id),
+
+      name:
+        spoke.name,
+
+      hubId:
+        Number(spoke.hub.id),
+
+      hubName:
+        spoke.hub.name,
     };
   }
 }

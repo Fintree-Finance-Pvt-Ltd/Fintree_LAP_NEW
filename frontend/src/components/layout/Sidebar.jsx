@@ -79,6 +79,11 @@ const rolesConfig = {
       category: "MODULES",
       items: [
         {
+          to: "/admin/administration",
+          label: "Administration",
+          Icon: FaSlidersH,
+        },
+        {
           to: "/roles-access?tab=users",
           label: "Users",
           Icon: FaUsers,
@@ -613,8 +618,8 @@ export default function Sidebar() {
                       : isActive;
 
                     return `flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${itemIsActive
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/10 font-semibold border-l-4 border-cyan-400"
-                        : "hover:bg-white/5 hover:text-slate-200"
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/10 font-semibold border-l-4 border-cyan-400"
+                      : "hover:bg-white/5 hover:text-slate-200"
                       }`;
                   }}
                 >

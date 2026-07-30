@@ -15,13 +15,19 @@ import { HubService } from './hub.service';
 export class HubController {
   constructor(
     private readonly hubService: HubService,
-  ) {}
+  ) { }
 
   @Get()
   findAll(
     @Query('search') search = '',
   ) {
     return this.hubService.findAll(search);
+  }
+
+  @Get('administration')
+  getAdministrationData() {
+    return this.hubService
+      .getAdministrationData();
   }
 
   @Get(':id')
@@ -31,7 +37,7 @@ export class HubController {
     return this.hubService.findOne(id);
   }
 
-   
+
   @Post()
   create(
     @Body() body: unknown,
@@ -39,7 +45,7 @@ export class HubController {
     return this.hubService.create(body);
   }
 
-  
+
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,

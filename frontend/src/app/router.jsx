@@ -27,6 +27,7 @@ import AdminDashboard from '../features/ADMIN/pages/AdminDashboard.jsx';
 import RolesAccess from '../features/ADMIN/pages/rolesAccess.jsx';
 import Hub from "../features/Hub/pages/Hub.jsx"; //Hub
 import Spokes from "../features/Spokes/pages/Spokes.jsx"; //Spokes
+import Administration from "../features/ADMIN/pages/Administration.jsx"; //Administration
 
 import PartnersManagement from "../features/Partners/pages/PartnersManagement.jsx"; //Partners
 
@@ -86,6 +87,7 @@ const protectedChildren = [
   { path: "/admin/partners", element: <PartnersManagement /> },
   { path: "/admin/hub", element: <Hub /> },
   { path: "/admin/spokes", element: <Spokes /> },
+  { path: "/admin/administration", element: <Administration /> },
 
   // BM routes (wired to Sidebar.jsx)
   { path: '/bmDashboard', element: <BmDashboard /> },
