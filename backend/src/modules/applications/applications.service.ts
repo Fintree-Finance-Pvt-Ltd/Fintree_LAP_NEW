@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Like, Repository } from 'typeorm';
+import { DataSource, Like, Repository, SelectQueryBuilder } from 'typeorm';
 import { PERMISSIONS } from '../../common/constants/permissions.constant';
 import { ApplicationStage } from '../../common/enums/application-stage.enum';
 import { ApplicationStatus } from '../../common/enums/application-status.enum';
@@ -22,6 +22,56 @@ import { Application } from './entities/application.entity';
 import { WorkflowTransitionService } from '../workflow/workflow-transition.service';
 
 export type Actor = { id: number; roles: string[]; permissions: string[] };
+
+
+type MisReportQuery = {
+  page?: string | number;
+  limit?: string | number;
+  hubId?: string | number;
+  spokeId?: string | number;
+  fromDate?: string;
+  toDate?: string;
+  stage?: string;
+  search?: string;
+};
+
+type MisCaseRaw = {
+  id: string | number;
+  leadId: string | null;
+  applicant: string | null;
+  mobile: string | null;
+  pan: string | null;
+  amount: string | number | null;
+  stage: string | null;
+  status: string | null;
+  createdAt: Date | string | null;
+  profile: string | null;
+  property: string | null;
+  city: string | null;
+  rmId: string | number | null;
+  rmName: string | null;
+  partnerId: string | number | null;
+  partnerName: string | null;
+  spokeId: string | number | null;
+  spoke: string | null;
+  hubId: string | number | null;
+  hub: string | null;
+  source: string | null;
+};
+
+type MisStageRaw = {
+  stage: string | null;
+  count: string | number;
+};
+
+type MisMetricsRaw = {
+  leads: string | number;
+  logins: string | number;
+  sanctionCount: string | number;
+  sanctionAmount: string | number;
+  disbursementCount: string | number;
+  disbursementAmount: string | number;
+};
 
 @Injectable()
 export class ApplicationsService {
@@ -97,6 +147,271 @@ export class ApplicationsService {
     },
   };
 }
+  /**
+   * Case-level MIS sourced from applications and customer_profiles.
+   * Hub, Spoke and Partner are resolved through the user who created the case.
+   */
+  async getMisReport(query: MisReportQuery = {}) {
+    const page = this.positiveInt(query.page, 1);
+    const limit = this.positiveInt(query.limit, 50, 100);
+    const offset = (page - 1) * limit;
+    const baseQuery = this.buildMisQuery(query);
+
+    const caseQuery = baseQuery
+      .clone()
+      .select([
+        'application.id AS id',
+        'application.application_number AS leadId',
+        'application.customer_name AS applicant',
+        'application.mobile AS mobile',
+        'application.pan AS pan',
+        'application.requested_amount AS amount',
+        'application.stage AS stage',
+        'application.status AS status',
+        'application.created_at AS createdAt',
+        "COALESCE(profile.occupation_type, profile.customer_type, 'Not Available') AS profile",
+        "COALESCE(profile.property_type, 'Not Available') AS property",
+        "COALESCE(profile.property_city, profile.current_city, 'Not Available') AS city",
+        'creator.id AS rmId',
+        'creator.name AS rmName',
+        'partner.id AS partnerId',
+        'partner.name AS partnerName',
+        'spoke.id AS spokeId',
+        'spoke.name AS spoke',
+        'hub.id AS hubId',
+        'hub.name AS hub',
+        "CASE WHEN partner.id IS NULL THEN 'Direct' ELSE CONCAT('Partner - ', partner.name) END AS source",
+      ])
+      .orderBy('application.id', 'DESC')
+      .offset(offset)
+      .limit(limit)
+      .getRawMany<MisCaseRaw>();
+
+    const stageQuery = baseQuery
+      .clone()
+      .select('application.stage', 'stage')
+      .addSelect('COUNT(DISTINCT application.id)', 'count')
+      .groupBy('application.stage')
+      .orderBy('COUNT(DISTINCT application.id)', 'DESC')
+      .getRawMany<MisStageRaw>();
+
+    const sanctionCondition =
+      "(UPPER(application.stage) LIKE '%SANCTION%' OR UPPER(application.status) LIKE '%SANCTION%')";
+    const disbursementCondition =
+      "(UPPER(application.stage) LIKE '%DISBURS%' OR UPPER(application.status) LIKE '%DISBURS%')";
+
+    const metricsQuery = baseQuery
+      .clone()
+      .select('COUNT(DISTINCT application.id)', 'leads')
+      .addSelect(
+        "COUNT(DISTINCT CASE WHEN UPPER(application.status) <> 'DRAFT' THEN application.id END)",
+        'logins',
+      )
+      .addSelect(
+        `COUNT(DISTINCT CASE WHEN ${sanctionCondition} THEN application.id END)`,
+        'sanctionCount',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN ${sanctionCondition} THEN application.requested_amount ELSE 0 END), 0)`,
+        'sanctionAmount',
+      )
+      .addSelect(
+        `COUNT(DISTINCT CASE WHEN ${disbursementCondition} THEN application.id END)`,
+        'disbursementCount',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN ${disbursementCondition} THEN application.requested_amount ELSE 0 END), 0)`,
+        'disbursementAmount',
+      )
+      .getRawOne<MisMetricsRaw>();
+
+    const [rawCases, rawStages, rawMetrics] = await Promise.all([
+      caseQuery,
+      stageQuery,
+      metricsQuery,
+    ]);
+
+    const metrics = rawMetrics ?? {
+      leads: 0,
+      logins: 0,
+      sanctionCount: 0,
+      sanctionAmount: 0,
+      disbursementCount: 0,
+      disbursementAmount: 0,
+    };
+    const total = Number(metrics.leads ?? 0);
+
+    return {
+      success: true,
+      message: 'MIS report fetched successfully.',
+      data: {
+        metrics: {
+          leadsMtd: total,
+          loginsMtd: Number(metrics.logins ?? 0),
+          sanctionsMtd: {
+            count: Number(metrics.sanctionCount ?? 0),
+            amount: Number(metrics.sanctionAmount ?? 0),
+          },
+          disbursementsMtd: {
+            count: Number(metrics.disbursementCount ?? 0),
+            amount: Number(metrics.disbursementAmount ?? 0),
+          },
+        },
+        stagePipeline: rawStages.map((item) => ({
+          stage: item.stage || 'Not Available',
+          count: Number(item.count ?? 0),
+        })),
+        cases: rawCases.map((application) => {
+          const amount = Number(application.amount ?? 0);
+
+          return {
+            id: Number(application.id),
+            leadId: application.leadId,
+            source: application.source || 'Direct',
+            applicant: application.applicant || 'Not Available',
+            profile: application.profile || 'Not Available',
+            mobile: application.mobile || 'Not Available',
+            pan: application.pan || 'Not Available',
+            amount,
+            amountDisplay: this.formatInr(amount),
+            property: application.property || 'Not Available',
+            city: application.city || 'Not Available',
+            stage: application.stage || 'Not Available',
+            status: application.status || 'Not Available',
+            hubId: this.nullableNumber(application.hubId),
+            hub: application.hub || 'Not Assigned',
+            spokeId: this.nullableNumber(application.spokeId),
+            spoke: application.spoke || 'Not Assigned',
+            rmId: this.nullableNumber(application.rmId),
+            rmName: application.rmName || 'Not Assigned',
+            partnerId: this.nullableNumber(application.partnerId),
+            partnerName: application.partnerName || null,
+            createdAt: application.createdAt,
+          };
+        }),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: total ? Math.ceil(total / limit) : 0,
+        },
+      },
+    };
+  }
+
+  private buildMisQuery(
+    query: MisReportQuery,
+  ): SelectQueryBuilder<Application> {
+    const qb = this.applications
+      .createQueryBuilder('application')
+      .leftJoin(
+        'customer_profiles',
+        'profile',
+        'profile.application_id = application.id',
+      )
+      .leftJoin(
+        'users',
+        'creator',
+        'creator.id = application.created_by',
+      )
+      .leftJoin(
+        'partners',
+        'partner',
+        'partner.id = creator.partnerId',
+      )
+      .leftJoin(
+        'spokes',
+        'spoke',
+        'LOWER(TRIM(spoke.name)) = LOWER(TRIM(creator.location))',
+      )
+      .leftJoin(
+        'hubs',
+        'direct_hub',
+        'LOWER(TRIM(direct_hub.name)) = LOWER(TRIM(creator.location))',
+      )
+      .leftJoin(
+        'hubs',
+        'hub',
+        'hub.id = COALESCE(spoke.hub_id, direct_hub.id)',
+      );
+
+    const fromDate = this.text(query.fromDate);
+    const toDate = this.text(query.toDate);
+    const search = this.text(query.search);
+    const stage = this.text(query.stage).toUpperCase();
+    const hubId = Number(query.hubId);
+    const spokeId = Number(query.spokeId);
+
+    if (fromDate) {
+      qb.andWhere('DATE(application.created_at) >= :fromDate', { fromDate });
+    }
+
+    if (toDate) {
+      qb.andWhere('DATE(application.created_at) <= :toDate', { toDate });
+    }
+
+    if (Number.isInteger(hubId) && hubId > 0) {
+      qb.andWhere('hub.id = :hubId', { hubId });
+    }
+
+    if (Number.isInteger(spokeId) && spokeId > 0) {
+      qb.andWhere('spoke.id = :spokeId', { spokeId });
+    }
+
+    if (stage && stage !== 'ALL STAGES') {
+      qb.andWhere('UPPER(application.stage) = :stage', { stage });
+    }
+
+    if (search) {
+      qb.andWhere(
+        `(
+          application.application_number LIKE :search OR
+          application.customer_name LIKE :search OR
+          application.mobile LIKE :search OR
+          application.pan LIKE :search OR
+          profile.property_type LIKE :search OR
+          profile.property_city LIKE :search OR
+          application.stage LIKE :search OR
+          application.status LIKE :search OR
+          creator.name LIKE :search OR
+          partner.name LIKE :search OR
+          spoke.name LIKE :search OR
+          hub.name LIKE :search
+        )`,
+        { search: `%${search}%` },
+      );
+    }
+
+    return qb;
+  }
+
+  private positiveInt(
+    value: unknown,
+    fallback: number,
+    maximum = Number.MAX_SAFE_INTEGER,
+  ): number {
+    const parsed = Number.parseInt(String(value ?? ''), 10);
+    return Number.isFinite(parsed) && parsed > 0
+      ? Math.min(parsed, maximum)
+      : fallback;
+  }
+
+  private nullableNumber(value: unknown): number | null {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  private text(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  private formatInr(value: number): string {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(value);
+  }
 
   async search(term: string) {
     const where = term

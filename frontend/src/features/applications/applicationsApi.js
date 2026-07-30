@@ -2,6 +2,7 @@ import { apiClient } from '../../services/apiClient.js';
 
 export const applicationsApi = {
   list: () => apiClient.get('/applications'),
+  misReport: (params = {}, config = {},) => apiClient.get("/applications/mis-report",{...config, params },),
   create: (payload) => apiClient.post('/applications', payload),
   get: (id) => apiClient.get(`/applications/${id}`),
   update: (id, payload) => apiClient.patch(`/applications/${id}`, payload),

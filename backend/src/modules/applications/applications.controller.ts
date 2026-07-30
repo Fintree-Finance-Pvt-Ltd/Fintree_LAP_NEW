@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Headers,ParseIntPipe, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Headers, ParseIntPipe, Patch, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PERMISSIONS } from '../../common/constants/permissions.constant';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -11,38 +11,42 @@ import { Public } from 'src/common/decorators/public.decorator';
 @Controller('applications')
 export class ApplicationsController {
   constructor(private readonly service: ApplicationsService,
-  private readonly lapPaymentsService: LapPaymentsService,) { }
+    private readonly lapPaymentsService: LapPaymentsService,) { }
 
-  @Get() 
+  @Get()
   findAll(@Query() query: any) { return this.service.findAll(query); }
 
-  @Get('search') 
+  @Get('search')
   search(@Query('q') q = '') { return this.service.search(q); }
 
-  @Get('paginated') 
+  @Get('paginated')
   paginated(@Query() query: any) { return this.service.findAll(query); }
 
-  @Post() 
+  @Post()
   create(@Body() dto: any, @CurrentUser() user: Actor) { return this.service.create(dto, user); }
 
   // 1. ENDPOINT: POST /applications/draft
   // Used to initialize a brand new lead in the database table with partial data
-  @Post('draft') 
-  draft(@Body() dto: any, @CurrentUser() user: Actor) { 
-    return this.service.draft(dto, user); 
+  @Post('draft')
+  draft(@Body() dto: any, @CurrentUser() user: Actor) {
+    return this.service.draft(dto, user);
   }
 
-  @Post('submit') 
+  @Post('submit')
   submit(@Body() dto: any, @CurrentUser() user: Actor) { return this.service.submit(dto, user); }
 
   // 2. ENDPOINT: POST /applications/submit-draft
   // Used to trigger final validation processing for workflow transitions
-  @Post('submit-draft') 
+  @Post('submit-draft')
   submitDraft(@Body() dto: any, @CurrentUser() user: Actor) {
     return this.service.submitDraft(dto.applicationId, dto, user);
   }
 
-  @Get(':applicationId') 
+  @Get('mis-report')
+  getMisReport( @Query() query: any, ) { return this.service.getMisReport(query);
+  }
+
+  @Get(':applicationId')
   findOne(@Param('applicationId', ParseIntPipe) id: number) { return this.service.findOne(id); }
 
 
@@ -97,54 +101,54 @@ export class ApplicationsController {
   @Post(':applicationId/workflow')
   recordWorkflowStep(@Param('applicationId', ParseIntPipe) id: number, @Body() dto: any, @CurrentUser() user: Actor) { return this.service.recordWorkflowStep(id, dto, user); }
 
-@Post(':id/submit-to-bm')
-submitToBm(
-  @Param('id', ParseIntPipe) id: number,
-  @CurrentUser() user: Actor,
-) {
-  return this.service.submitToBm(id, user);
-}
+  @Post(':id/submit-to-bm')
+  submitToBm(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: Actor,
+  ) {
+    return this.service.submitToBm(id, user);
+  }
 
-@Post(':id/submit-to-cm')
-submitToCm(
-  @Param('id', ParseIntPipe) id: number,
-  @CurrentUser() user: Actor,
-) {
-  return this.service.submitToCm(id, user);
-}
+  @Post(':id/submit-to-cm')
+  submitToCm(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: Actor,
+  ) {
+    return this.service.submitToCm(id, user);
+  }
 
-@Post(':id/submit-to-credit')
-submitToCredit(
-  @Param('id', ParseIntPipe) id: number,
-  @Body() body: any,
-  @CurrentUser() user: Actor,
-) {
-  return this.service.submitToCredit(id, body, user);
-}
+  @Post(':id/submit-to-credit')
+  submitToCredit(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+    @CurrentUser() user: Actor,
+  ) {
+    return this.service.submitToCredit(id, body, user);
+  }
 
-@Post(':id/easebuzz/create-link')
-createEasebuzzPaymentLink(
-  @Param('id', ParseIntPipe) id: number,
-  @Body() body: any,
-  @CurrentUser() user: Actor,
-) {
-  return this.lapPaymentsService.createPaymentLink(
-    id,
-    body,
-    user,
-  );
-}
-@Public()
-@Post('easebuzz/webhook')
-async handleEasebuzzWebhook(
-  @Body() body: any,
-  @Headers() headers: any,
-) {
-  return this.lapPaymentsService.handleEasebuzzWebhook(
-    body,
-    headers,
-  );
-}
+  @Post(':id/easebuzz/create-link')
+  createEasebuzzPaymentLink(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+    @CurrentUser() user: Actor,
+  ) {
+    return this.lapPaymentsService.createPaymentLink(
+      id,
+      body,
+      user,
+    );
+  }
+  @Public()
+  @Post('easebuzz/webhook')
+  async handleEasebuzzWebhook(
+    @Body() body: any,
+    @Headers() headers: any,
+  ) {
+    return this.lapPaymentsService.handleEasebuzzWebhook(
+      body,
+      headers,
+    );
+  }
 
 
 

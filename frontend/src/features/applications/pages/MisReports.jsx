@@ -1,61 +1,25 @@
-import { useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   FaArrowRight,
   FaBuilding,
-  FaCalendarAlt,
   FaChartBar,
   FaCheckCircle,
   FaDownload,
   FaEye,
-  FaFileAlt,
   FaFilter,
   FaMapMarkerAlt,
   FaRedoAlt,
   FaSearch,
   FaTimes,
-  FaUserTie,
 } from "react-icons/fa";
 
-const hubs = [
-  "All Hubs",
-  "Delhi Hub",
-  "Mumbai Hub",
-  "Bengaluru Hub",
-  "Pune Hub",
-];
-
-const spokesByHub = {
-  "All Hubs": [
-    "All Spokes",
-    "Noida Spoke",
-    "Gurugram Spoke",
-    "Ghaziabad Spoke",
-    "Faridabad Spoke",
-    "Thane Spoke",
-  ],
-  "Delhi Hub": [
-    "All Spokes",
-    "Noida Spoke",
-    "Gurugram Spoke",
-    "Ghaziabad Spoke",
-    "Faridabad Spoke",
-  ],
-  "Mumbai Hub": [
-    "All Spokes",
-    "Thane Spoke",
-    "Navi Mumbai Spoke",
-  ],
-  "Bengaluru Hub": [
-    "All Spokes",
-    "Whitefield Spoke",
-    "Electronic City Spoke",
-  ],
-  "Pune Hub": [
-    "All Spokes",
-    "Hinjewadi Spoke",
-    "Pimpri Spoke",
-  ],
-};
+import { administrationApi } from "../../ADMIN/administrationApi.js";
+import { applicationsApi } from "../applicationsApi.js";
 
 const reportCatalogue = [
   "Hub-wise Login Report",
@@ -76,183 +40,46 @@ const reportCatalogue = [
   "CIC / CKYC / CERSAI Exceptions",
 ];
 
-const stagePipeline = [
-  { stage: "Lead", count: 186 },
-  { stage: "Field Verification", count: 132 },
-  { stage: "BM Review", count: 94 },
-  { stage: "CM Screening", count: 82 },
-  { stage: "Credit", count: 54 },
-  { stage: "Legal & Valuation", count: 31 },
-  { stage: "Sanction", count: 22 },
-  { stage: "Documentation", count: 16 },
-  { stage: "Disbursement", count: 11 },
-];
 
-const caseData = [
-  {
-    leadId: "FTLIP-2026-0001",
-    source: "Direct",
-    applicant: "Aarav Sharma",
-    profile: "Self-employed",
-    mobile: "9876543210",
-    pan: "ABCDE1234F",
-    amount: 6500000,
-    amountDisplay: "₹65,00,000",
-    property: "Commercial Shop",
-    city: "Noida",
-    stage: "Lead",
-    status: "New",
-    hub: "Delhi Hub",
-    spoke: "Noida Spoke",
+const EMPTY_METRICS = {
+  leadsMtd: 0,
+  loginsMtd: 0,
+  sanctionsMtd: {
+    count: 0,
+    amount: 0,
   },
-  {
-    leadId: "FTLIP-2026-0002",
-    source: "DSA - NorthStar",
-    applicant: "Meera Iyer",
-    profile: "Salaried",
-    mobile: "9811122233",
-    pan: "BDEPI7612K",
-    amount: 8000000,
-    amountDisplay: "₹80,00,000",
-    property: "Residential Flat",
-    city: "Gurugram",
-    stage: "BM Review",
-    status: "Submitted to BM",
-    hub: "Delhi Hub",
-    spoke: "Gurugram Spoke",
+  disbursementsMtd: {
+    count: 0,
+    amount: 0,
   },
-  {
-    leadId: "FTLIP-2026-0003",
-    source: "Partner - CapitalBridge",
-    applicant: "Rajesh Traders",
-    profile: "Partnership Firm",
-    mobile: "9899001122",
-    pan: "AAJFR9182Q",
-    amount: 12000000,
-    amountDisplay: "₹1,20,00,000",
-    property: "Industrial Property",
-    city: "New Delhi",
-    stage: "Credit",
-    status: "Credit Underwriting",
-    hub: "Delhi Hub",
-    spoke: "Noida Spoke",
-  },
-  {
-    leadId: "FTLIP-2026-0004",
-    source: "Direct",
-    applicant: "Neha Kapoor",
-    profile: "Self-employed Professional",
-    mobile: "9820019283",
-    pan: "CPAPK8201L",
-    amount: 9000000,
-    amountDisplay: "₹90,00,000",
-    property: "Residential House",
-    city: "Ghaziabad",
-    stage: "Legal & Valuation",
-    status: "Legal & Valuation",
-    hub: "Delhi Hub",
-    spoke: "Ghaziabad Spoke",
-  },
-  {
-    leadId: "FTLIP-2026-0005",
-    source: "DSA - FinServe",
-    applicant: "Siddharth Jain",
-    profile: "Business Owner",
-    mobile: "9971002299",
-    pan: "DACPJ6602M",
-    amount: 15000000,
-    amountDisplay: "₹1,50,00,000",
-    property: "Commercial Building",
-    city: "Jaipur",
-    stage: "Documentation",
-    status: "Documentation Pending",
-    hub: "Delhi Hub",
-    spoke: "Gurugram Spoke",
-  },
-  {
-    leadId: "FTLIP-2026-0006",
-    source: "Direct",
-    applicant: "Prakash Verma",
-    profile: "Salaried",
-    mobile: "9818884455",
-    pan: "FVEPV4421A",
-    amount: 7200000,
-    amountDisplay: "₹72,00,000",
-    property: "Residential Flat",
-    city: "Faridabad",
-    stage: "Disbursement",
-    status: "Ready for Disbursement",
-    hub: "Delhi Hub",
-    spoke: "Faridabad Spoke",
-  },
-  {
-    leadId: "FTLIP-2026-0007",
-    source: "Partner - UrbanLoans",
-    applicant: "Ananya Desai",
-    profile: "Salaried",
-    mobile: "9988776655",
-    pan: "BQLPD4498H",
-    amount: 5600000,
-    amountDisplay: "₹56,00,000",
-    property: "Residential Apartment",
-    city: "Thane",
-    stage: "Sanction",
-    status: "Sanctioned",
-    hub: "Mumbai Hub",
-    spoke: "Thane Spoke",
-  },
-  {
-    leadId: "FTLIP-2026-0008",
-    source: "Direct",
-    applicant: "Rohan Enterprises",
-    profile: "Proprietorship",
-    mobile: "9870012299",
-    pan: "AFGPR4421J",
-    amount: 10400000,
-    amountDisplay: "₹1,04,00,000",
-    property: "Warehouse",
-    city: "Navi Mumbai",
-    stage: "CM Screening",
-    status: "Screening Pending",
-    hub: "Mumbai Hub",
-    spoke: "Navi Mumbai Spoke",
-  },
-];
+};
 
-const metricStyles = [
-  {
-    label: "LEADS MTD",
-    value: "186",
-    border: "border-indigo-200",
-    valueColor: "text-indigo-600",
-    topBar: "bg-indigo-500",
-    circle: "bg-indigo-500/10",
-  },
-  {
-    label: "LOGINS MTD",
-    value: "92",
-    border: "border-teal-200",
-    valueColor: "text-teal-600",
-    topBar: "bg-teal-500",
-    circle: "bg-teal-500/10",
-  },
-  {
-    label: "SANCTIONS MTD",
-    value: "₹12.6 Cr",
-    border: "border-pink-200",
-    valueColor: "text-pink-600",
-    topBar: "bg-pink-500",
-    circle: "bg-pink-500/10",
-  },
-  {
-    label: "DISBURSEMENT MTD",
-    value: "₹8.4 Cr",
-    border: "border-orange-200",
-    valueColor: "text-orange-500",
-    topBar: "bg-orange-500",
-    circle: "bg-orange-500/10",
-  },
-];
+function unwrapApiData(response) {
+  return response?.data?.data ?? response?.data ?? response;
+}
+
+function getApiArray(response) {
+  const data = unwrapApiData(response);
+  return Array.isArray(data) ? data : [];
+}
+
+function formatCompactInr(value) {
+  const amount = Number(value) || 0;
+
+  if (amount >= 10000000) {
+    return `₹${(amount / 10000000).toFixed(1).replace(/\.0$/, "")} Cr`;
+  }
+
+  if (amount >= 100000) {
+    return `₹${(amount / 100000).toFixed(1).replace(/\.0$/, "")} L`;
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
 
 const statusClasses = {
   New: "border-blue-200 bg-blue-50 text-blue-700",
@@ -322,79 +149,264 @@ function convertRowsToCsv(rows) {
 }
 
 export default function MISReports() {
-  const today = new Date();
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const today = useMemo(() => new Date(), []);
+  const monthStart = useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
+    [today],
+  );
 
-  const [selectedHub, setSelectedHub] = useState("All Hubs");
-  const [selectedSpoke, setSelectedSpoke] = useState("All Spokes");
-  const [fromDate, setFromDate] = useState(formatDateForInput(monthStart));
-  const [toDate, setToDate] = useState(formatDateForInput(today));
+  const defaultFromDate = useMemo(
+    () => formatDateForInput(monthStart),
+    [monthStart],
+  );
+  const defaultToDate = useMemo(
+    () => formatDateForInput(today),
+    [today],
+  );
+
+  const [hubs, setHubs] = useState([]);
+  const [spokes, setSpokes] = useState([]);
+  const [cases, setCases] = useState([]);
+  const [stagePipeline, setStagePipeline] = useState([]);
+  const [metrics, setMetrics] = useState(EMPTY_METRICS);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 100,
+    total: 0,
+    totalPages: 0,
+  });
+
+  const [selectedHub, setSelectedHub] = useState("");
+  const [selectedSpoke, setSelectedSpoke] = useState("");
+  const [fromDate, setFromDate] = useState(defaultFromDate);
+  const [toDate, setToDate] = useState(defaultToDate);
   const [searchText, setSearchText] = useState("");
   const [selectedStage, setSelectedStage] = useState("All Stages");
   const [activeReport, setActiveReport] = useState("");
   const [appliedFilters, setAppliedFilters] = useState({
-    hub: "All Hubs",
-    spoke: "All Spokes",
+    hubId: "",
+    spokeId: "",
+    fromDate: defaultFromDate,
+    toDate: defaultToDate,
   });
 
-  const availableSpokes =
-    spokesByHub[selectedHub] || spokesByHub["All Hubs"];
+  const [mastersLoading, setMastersLoading] = useState(true);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filteredCases = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase();
+  const availableSpokes = useMemo(() => {
+    if (!selectedHub) {
+      return spokes;
+    }
 
-    return caseData.filter((item) => {
-      const hubMatch =
-        appliedFilters.hub === "All Hubs" ||
-        item.hub === appliedFilters.hub;
+    return spokes.filter(
+      (spoke) => String(spoke.hubId) === String(selectedHub),
+    );
+  }, [selectedHub, spokes]);
 
-      const spokeMatch =
-        appliedFilters.spoke === "All Spokes" ||
-        item.spoke === appliedFilters.spoke;
+  const metricStyles = useMemo(
+    () => [
+      {
+        label: "LEADS MTD",
+        value: String(metrics.leadsMtd ?? 0),
+        border: "border-indigo-200",
+        valueColor: "text-indigo-600",
+        topBar: "bg-indigo-500",
+        circle: "bg-indigo-500/10",
+      },
+      {
+        label: "LOGINS MTD",
+        value: String(metrics.loginsMtd ?? 0),
+        border: "border-teal-200",
+        valueColor: "text-teal-600",
+        topBar: "bg-teal-500",
+        circle: "bg-teal-500/10",
+      },
+      {
+        label: "SANCTIONS MTD",
+        value: formatCompactInr(metrics.sanctionsMtd?.amount),
+        border: "border-pink-200",
+        valueColor: "text-pink-600",
+        topBar: "bg-pink-500",
+        circle: "bg-pink-500/10",
+      },
+      {
+        label: "DISBURSEMENT MTD",
+        value: formatCompactInr(metrics.disbursementsMtd?.amount),
+        border: "border-orange-200",
+        valueColor: "text-orange-500",
+        topBar: "bg-orange-500",
+        circle: "bg-orange-500/10",
+      },
+    ],
+    [metrics],
+  );
 
-      const stageMatch =
-        selectedStage === "All Stages" ||
-        item.stage === selectedStage;
+  const loadMasters = useCallback(async () => {
+    try {
+      setMastersLoading(true);
 
-      const searchMatch =
-        !normalizedSearch ||
-        [
-          item.leadId,
-          item.applicant,
-          item.mobile,
-          item.pan,
-          item.property,
-          item.city,
-          item.stage,
-          item.status,
-        ].some((value) =>
-          String(value).toLowerCase().includes(normalizedSearch),
+      const [hubResponse, spokeResponse] = await Promise.all([
+        administrationApi.getHubAdministration(),
+        administrationApi.getSpokeAdministration(),
+      ]);
+
+      const hubRows = getApiArray(hubResponse)
+        .map((hub) => ({
+          id: Number(hub?.id),
+          name: String(hub?.name || "").trim(),
+        }))
+        .filter((hub) => Number.isInteger(hub.id) && hub.id > 0 && hub.name);
+
+      const spokeRows = getApiArray(spokeResponse)
+        .map((spoke) => ({
+          id: Number(spoke?.id),
+          name: String(spoke?.name || "").trim(),
+          hubId: Number(spoke?.hubId),
+          hubName: String(spoke?.hubName || "").trim(),
+        }))
+        .filter(
+          (spoke) =>
+            Number.isInteger(spoke.id) &&
+            spoke.id > 0 &&
+            Number.isInteger(spoke.hubId) &&
+            spoke.hubId > 0 &&
+            spoke.name,
         );
 
-      return hubMatch && spokeMatch && stageMatch && searchMatch;
-    });
-  }, [appliedFilters, searchText, selectedStage]);
+      setHubs(hubRows);
+      setSpokes(spokeRows);
+    } catch (requestError) {
+      console.error("Unable to load Hub and Spoke filters:", requestError);
+      setHubs([]);
+      setSpokes([]);
+      setError(
+        requestError?.message ||
+          "Unable to load Hub and Spoke filter data.",
+      );
+    } finally {
+      setMastersLoading(false);
+    }
+  }, []);
+
+  const loadMisReport = useCallback(async (params) => {
+    try {
+      setReportLoading(true);
+      setError("");
+
+      const response = await applicationsApi.misReport(params);
+      const report = unwrapApiData(response) || {};
+
+      setMetrics({
+        ...EMPTY_METRICS,
+        ...(report.metrics || {}),
+        sanctionsMtd: {
+          ...EMPTY_METRICS.sanctionsMtd,
+          ...(report.metrics?.sanctionsMtd || {}),
+        },
+        disbursementsMtd: {
+          ...EMPTY_METRICS.disbursementsMtd,
+          ...(report.metrics?.disbursementsMtd || {}),
+        },
+      });
+
+      setStagePipeline(
+        Array.isArray(report.stagePipeline) ? report.stagePipeline : [],
+      );
+
+      setCases(
+        Array.isArray(report.cases)
+          ? report.cases.map((item) => ({
+              ...item,
+              amount: Number(item?.amount) || 0,
+              amountDisplay:
+                item?.amountDisplay ||
+                formatCompactInr(Number(item?.amount) || 0),
+            }))
+          : [],
+      );
+
+      setPagination({
+        page: Number(report.pagination?.page) || 1,
+        limit: Number(report.pagination?.limit) || 100,
+        total: Number(report.pagination?.total) || 0,
+        totalPages: Number(report.pagination?.totalPages) || 0,
+      });
+    } catch (requestError) {
+      console.error("Unable to load MIS report:", requestError);
+      setCases([]);
+      setStagePipeline([]);
+      setMetrics(EMPTY_METRICS);
+      setPagination({
+        page: 1,
+        limit: 100,
+        total: 0,
+        totalPages: 0,
+      });
+      setError(requestError?.message || "Unable to load MIS report.");
+    } finally {
+      setReportLoading(false);
+    }
+  }, []);
+
+  const requestParams = useMemo(
+    () => ({
+      page: 1,
+      limit: 100,
+      fromDate: appliedFilters.fromDate || undefined,
+      toDate: appliedFilters.toDate || undefined,
+      hubId: appliedFilters.hubId || undefined,
+      spokeId: appliedFilters.spokeId || undefined,
+      stage:
+        selectedStage === "All Stages" ? undefined : selectedStage,
+      search: searchText.trim() || undefined,
+    }),
+    [appliedFilters, searchText, selectedStage],
+  );
+
+  useEffect(() => {
+    loadMasters();
+  }, [loadMasters]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => loadMisReport(requestParams),
+      searchText.trim() ? 350 : 0,
+    );
+
+    return () => window.clearTimeout(timer);
+  }, [loadMisReport, requestParams, searchText]);
 
   const resetFilters = () => {
-    setSelectedHub("All Hubs");
-    setSelectedSpoke("All Spokes");
-    setFromDate(formatDateForInput(monthStart));
-    setToDate(formatDateForInput(today));
+    setSelectedHub("");
+    setSelectedSpoke("");
+    setFromDate(defaultFromDate);
+    setToDate(defaultToDate);
     setSearchText("");
     setSelectedStage("All Stages");
     setActiveReport("");
     setAppliedFilters({
-      hub: "All Hubs",
-      spoke: "All Spokes",
+      hubId: "",
+      spokeId: "",
+      fromDate: defaultFromDate,
+      toDate: defaultToDate,
     });
   };
 
   const applyFilters = () => {
     setAppliedFilters({
-      hub: selectedHub,
-      spoke: selectedSpoke,
+      hubId: selectedHub,
+      spokeId: selectedSpoke,
+      fromDate,
+      toDate,
     });
   };
+
+  const handleStageChange = (stage) => {
+    setSelectedStage(stage);
+  };
+
+  const filteredCases = cases;
 
   const exportCsv = () => {
     const csvContent = convertRowsToCsv(filteredCases);
@@ -406,7 +418,7 @@ export default function MISReports() {
     const downloadLink = document.createElement("a");
 
     downloadLink.href = objectUrl;
-    downloadLink.download = `lap-mis-${fromDate}-to-${toDate}.csv`;
+    downloadLink.download = `lap-mis-${appliedFilters.fromDate}-to-${appliedFilters.toDate}.csv`;
 
     document.body.appendChild(downloadLink);
     downloadLink.click();
@@ -452,7 +464,8 @@ export default function MISReports() {
             <button
               type="button"
               onClick={exportCsv}
-              className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-white/15 px-5 text-sm font-black text-white shadow-lg backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25 lg:flex-none"
+              disabled={filteredCases.length === 0}
+              className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-white/15 px-5 text-sm font-black text-white shadow-lg backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
             >
               <FaDownload size={14} />
               Export CSV
@@ -470,13 +483,17 @@ export default function MISReports() {
                 value={selectedHub}
                 onChange={(event) => {
                   setSelectedHub(event.target.value);
-                  setSelectedSpoke("All Spokes");
+                  setSelectedSpoke("");
                 }}
                 className="min-w-0 flex-1 cursor-pointer appearance-none bg-transparent pr-7 text-sm font-semibold text-[#334a70] outline-none"
               >
+                <option value="">
+                  {mastersLoading ? "Loading hubs..." : "All Hubs"}
+                </option>
+
                 {hubs.map((hub) => (
-                  <option key={hub} value={hub}>
-                    {hub}
+                  <option key={hub.id} value={String(hub.id)}>
+                    {hub.name}
                   </option>
                 ))}
               </select>
@@ -497,9 +514,13 @@ export default function MISReports() {
                 onChange={(event) => setSelectedSpoke(event.target.value)}
                 className="min-w-0 flex-1 cursor-pointer appearance-none bg-transparent pr-7 text-sm font-semibold text-[#334a70] outline-none"
               >
+                <option value="">
+                  {mastersLoading ? "Loading spokes..." : "All Spokes"}
+                </option>
+
                 {availableSpokes.map((spoke) => (
-                  <option key={spoke} value={spoke}>
-                    {spoke}
+                  <option key={spoke.id} value={String(spoke.id)}>
+                    {spoke.name}
                   </option>
                 ))}
               </select>
@@ -540,6 +561,18 @@ export default function MISReports() {
             </button>
           </div>
         </section>
+
+        {(error || reportLoading) && (
+          <section
+            className={`rounded-2xl border px-5 py-4 text-sm font-semibold ${
+              error
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-indigo-200 bg-indigo-50 text-indigo-700"
+            }`}
+          >
+            {error || "Loading MIS report data..."}
+          </section>
+        )}
 
         {/* Metrics */}
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -589,7 +622,7 @@ export default function MISReports() {
                 <button
                   type="button"
                   key={item.stage}
-                  onClick={() => setSelectedStage(item.stage)}
+                  onClick={() => handleStageChange(item.stage)}
                   className={`flex min-h-14 w-full items-center justify-between gap-5 border-b border-slate-100 px-3 text-left transition last:border-b-0 ${
                     selectedStage === item.stage
                       ? "rounded-xl bg-indigo-50 text-indigo-700"
@@ -608,7 +641,7 @@ export default function MISReports() {
             {selectedStage !== "All Stages" && (
               <button
                 type="button"
-                onClick={() => setSelectedStage("All Stages")}
+                onClick={() => handleStageChange("All Stages")}
                 className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-slate-100 px-4 text-xs font-black text-slate-600 transition hover:bg-slate-200"
               >
                 <FaTimes size={11} />
@@ -703,7 +736,7 @@ export default function MISReports() {
 
                 <select
                   value={selectedStage}
-                  onChange={(event) => setSelectedStage(event.target.value)}
+                  onChange={(event) => handleStageChange(event.target.value)}
                   className="min-w-0 flex-1 cursor-pointer appearance-none bg-transparent pr-5 text-xs font-bold text-slate-700 outline-none"
                 >
                   <option value="All Stages">All Stages</option>
@@ -845,7 +878,7 @@ export default function MISReports() {
 
           <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
             <span className="text-xs font-medium text-slate-500">
-              Showing {filteredCases.length} of {caseData.length} records
+              Showing {filteredCases.length} of {pagination.total} records
             </span>
 
             <div className="flex items-center gap-2">
@@ -857,7 +890,8 @@ export default function MISReports() {
               <button
                 type="button"
                 onClick={exportCsv}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#263f74] px-4 text-xs font-black text-white transition hover:bg-[#1a315e]"
+                disabled={filteredCases.length === 0}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#263f74] px-4 text-xs font-black text-white transition hover:bg-[#1a315e] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <FaDownload size={11} />
                 Export Results
