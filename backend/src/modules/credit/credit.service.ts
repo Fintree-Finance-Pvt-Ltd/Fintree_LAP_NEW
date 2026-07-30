@@ -24,12 +24,37 @@ import { ApplicationStage } from '../../common/enums/application-stage.enum';
 import { ApplicationStatus } from '../../common/enums/application-status.enum';
 import { WorkflowTransitionService } from '../workflow/workflow-transition.service';
 
+import { Partner, PartnerStatus } from '../partners/entities/partner.entity';
+
+import { LoanAccount } from '../loan-accounts/entities/loan-account.entity';
+import { LegalAssessment } from '../legal/entities/legal-assessment.entity';
+import { ValuationAssessment } from '../valuation/entities/valuation-assessment.entity';
+
+type ActorLike = {
+  id?: number | string;
+  roles?: string[];
+};
+
+const DEFAULT_PARTNER_CODE = 'RAMSETU';
+
 @Injectable()
 export class CreditService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly workflowTransitions: WorkflowTransitionService,
   ) {}
+
+private firstDefined(
+  ...values: any[]
+) {
+  return values.find(
+    (value) =>
+      value !== undefined &&
+      value !== null &&
+      value !== '',
+  );
+}
+
 
 
 private toDecimalString(value: any): string | undefined {
@@ -238,10 +263,7 @@ private async saveCreditMakerAssessment(
   manager: EntityManager,
   assessmentStatus: CreditAssessmentStatus,
 ) {
-
-    console.log(
-  'CREDIT_MAKER_SAVE_START',
-  {
+  console.log('CREDIT_MAKER_SAVE_START', {
     applicationId: application.id,
     recommendedNotes:
       dto?.recommendedNotes,
@@ -256,73 +278,159 @@ private async saveCreditMakerAssessment(
   console.log('CREDIT_ASSESSMENT_LOADED', {
     assessmentId: assessment?.id,
     applicationId: assessment?.applicationId,
+    existingStatus:
+      assessment?.assessmentStatus,
   });
 
-  const decision = this.normalizeDecision(
-    dto?.decision || dto?.makerDecision,
-  );
+  try {
+    const decision = this.normalizeDecision(
+      dto?.decision ||
+        dto?.makerDecision,
+    );
 
-  assessment.assessmentStatus = assessmentStatus;
+    assessment.assessmentStatus =
+      assessmentStatus;
 
-  if (decision) {
-    assessment.makerDecision = decision;
+    if (decision) {
+      assessment.makerDecision =
+        decision;
+    }
+
+    assessment.makerRecommendedAmount =
+      this.toDecimalString(
+        dto?.recommendedAmount ??
+          dto?.makerRecommendedAmount,
+      ) ??
+      assessment.makerRecommendedAmount;
+
+    assessment.makerRecommendedRoi =
+      this.toDecimalString(
+        dto?.recommendedRoi ??
+          dto?.makerRecommendedRoi ??
+          dto?.roi,
+      ) ??
+      assessment.makerRecommendedRoi;
+
+    assessment.makerRecommendedTenure =
+      this.toInteger(
+        dto?.recommendedTenure ??
+          dto?.makerRecommendedTenure ??
+          dto?.tenure,
+      ) ??
+      assessment.makerRecommendedTenure;
+
+    assessment.makerRiskGrade =
+      dto?.riskGrade ??
+      dto?.makerRiskGrade ??
+      assessment.makerRiskGrade;
+
+    assessment.makerRemarks =
+      dto?.remarks ??
+      dto?.makerRemarks ??
+      dto?.makerRecommendation ??
+      assessment.makerRemarks;
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        dto,
+        'recommendedNotes',
+      )
+    ) {
+      const note = String(
+        dto?.recommendedNotes ?? '',
+      ).trim();
+
+      assessment.recommendedNotes =
+        note || null;
+    }
+
+    assessment.makerPayload =
+      this.toJson(dto);
+
+    assessment.makerSubmittedBy =
+      actor?.id
+        ? Number(actor.id)
+        : undefined;
+
+    assessment.makerSubmittedAt =
+      new Date();
+
+    console.log(
+      'CREDIT_ASSESSMENT_BEFORE_SAVE',
+      {
+        assessmentId:
+          assessment.id,
+
+        applicationId:
+          assessment.applicationId,
+
+        assessmentStatus:
+          assessment.assessmentStatus,
+
+        makerDecision:
+          assessment.makerDecision,
+
+        makerSubmittedBy:
+          assessment.makerSubmittedBy,
+
+        recommendedNotes:
+          assessment.recommendedNotes,
+      },
+    );
+
+    const savedAssessment =
+      await manager.save(
+        CreditAssessment,
+        assessment,
+      );
+
+    console.log(
+      'CREDIT_ASSESSMENT_SAVE_SUCCESS',
+      {
+        assessmentId:
+          savedAssessment.id,
+
+        applicationId:
+          savedAssessment.applicationId,
+
+        assessmentStatus:
+          savedAssessment.assessmentStatus,
+      },
+    );
+
+    return savedAssessment;
+  } catch (error: any) {
+    console.error(
+      'CREDIT_ASSESSMENT_SAVE_FAILED',
+      {
+        message:
+          error?.message,
+
+        code:
+          error?.code ??
+          error?.driverError?.code,
+
+        errno:
+          error?.errno ??
+          error?.driverError?.errno,
+
+        sqlMessage:
+          error?.sqlMessage ??
+          error?.driverError?.sqlMessage,
+
+        query:
+          error?.query,
+
+        parameters:
+          error?.parameters,
+
+        stack:
+          error?.stack,
+      },
+    );
+
+    throw error;
   }
-
-  assessment.makerRecommendedAmount =
-    this.toDecimalString(
-      dto?.recommendedAmount ||
-        dto?.makerRecommendedAmount,
-    ) ?? assessment.makerRecommendedAmount;
-
-  assessment.makerRecommendedRoi =
-    this.toDecimalString(
-      dto?.recommendedRoi ||
-        dto?.makerRecommendedRoi ||
-        dto?.roi,
-    ) ?? assessment.makerRecommendedRoi;
-
-  assessment.makerRecommendedTenure =
-    this.toInteger(
-      dto?.recommendedTenure ||
-        dto?.makerRecommendedTenure ||
-        dto?.tenure,
-    ) ?? assessment.makerRecommendedTenure;
-
-  assessment.makerRiskGrade =
-    dto?.riskGrade ||
-    dto?.makerRiskGrade ||
-    assessment.makerRiskGrade;
-
-  assessment.makerRemarks =
-    dto?.remarks ||
-    dto?.makerRemarks ||
-    dto?.makerRecommendation ||
-    assessment.makerRemarks;
-
-  //     if (dto?.recommendedNotes !== undefined) {
-  //   assessment.recommendedNotes =
-  //     String(dto.recommendedNotes || "").trim() || null;
-  // }
-
-  if (
-  Object.prototype.hasOwnProperty.call(
-    dto,
-    'recommendedNotes',
-  )
-) {
-  const note = String(
-    dto.recommendedNotes ?? '',
-  ).trim();
-
-  assessment.recommendedNotes =
-    note || null;
-}
-
-  assessment.makerPayload = this.toJson(dto);
-  assessment.makerSubmittedBy = actor?.id ?? undefined;
-  assessment.makerSubmittedAt = new Date();
-
-  return manager.save(CreditAssessment, assessment);
 }
 
 private async saveCreditCheckerAssessment(
@@ -801,7 +909,349 @@ async cmRecommendToCreditMaker(
     );
   }
 }
+private async generateLan(
+  manager: EntityManager,
+  partnerId: number,
+) {
+  const partnerRepo =
+    manager.getRepository(Partner);
 
+  const partner =
+    await partnerRepo.findOne({
+      where: {
+        id: Number(partnerId),
+        status:
+          PartnerStatus.ACTIVE,
+      },
+      lock: {
+        mode: 'pessimistic_write',
+      },
+    });
+
+  if (!partner) {
+    throw new NotFoundException(
+      `Active partner ${partnerId} was not found.`,
+    );
+  }
+
+  const lanPrefix = String(
+    partner.lanPrefix || '',
+  )
+    .trim()
+    .toUpperCase();
+
+  if (!lanPrefix) {
+    throw new BadRequestException(
+      'LAN prefix is not configured for the selected partner.',
+    );
+  }
+
+  const nextSequence =
+    Number(
+      partner.currentLanSequence || 0,
+    ) + 1;
+
+  partner.currentLanSequence =
+    nextSequence;
+
+  await partnerRepo.save(
+    partner,
+  );
+
+  const lan =
+    `${lanPrefix}${String(
+      nextSequence,
+    ).padStart(8, '0')}`;
+
+  return {
+    partner,
+    lan,
+  };
+}
+
+
+private async createLoanAccountAfterCreditMakerFinalApproval(
+  application: Application,
+  legalAssessment: LegalAssessment,
+  actor: Actor,
+  manager: EntityManager,
+) {
+  const loanAccountRepo =
+    manager.getRepository(LoanAccount);
+
+  const valuationRepo =
+    manager.getRepository(
+      ValuationAssessment,
+    );
+
+  const creditRepo =
+    manager.getRepository(
+      CreditAssessment,
+    );
+
+  const [
+    existingLoanAccount,
+    valuationAssessment,
+    creditAssessment,
+  ] = await Promise.all([
+    loanAccountRepo.findOne({
+      where: {
+        applicationId:
+          Number(application.id),
+      },
+      lock: {
+        mode: 'pessimistic_write',
+      },
+    }),
+
+    valuationRepo.findOne({
+      where: {
+        applicationId:
+          Number(application.id),
+      },
+    }),
+
+    creditRepo.findOne({
+      where: {
+        applicationId:
+          Number(application.id),
+      },
+    }),
+  ]);
+
+  const approvedAmount =
+    this.firstDefined(
+      creditAssessment
+        ?.checkerApprovedAmount,
+
+      creditAssessment
+        ?.makerRecommendedAmount,
+
+      creditAssessment
+        ?.cmRecommendedAmount,
+
+      application.requestedAmount,
+    );
+
+  const roi =
+    this.firstDefined(
+      creditAssessment
+        ?.checkerApprovedRoi,
+
+      creditAssessment
+        ?.makerRecommendedRoi,
+    );
+
+  const tenureMonths =
+    this.firstDefined(
+      creditAssessment
+        ?.checkerApprovedTenure,
+
+      creditAssessment
+        ?.makerRecommendedTenure,
+    );
+
+  const actorId =
+    this.toInteger(actor?.id);
+
+let partner: Partner;
+let lan: string;
+
+if (existingLoanAccount) {
+  const existingPartner =
+    await manager.findOne(Partner, {
+      where: {
+        id: Number(
+          existingLoanAccount.partnerId,
+        ),
+      },
+    });
+
+  if (!existingPartner) {
+    throw new NotFoundException(
+      'Partner assigned to the existing loan account was not found.',
+    );
+  }
+
+  partner = existingPartner;
+  lan = existingLoanAccount.lan;
+} else {
+const partnerRows =
+  await manager.query(
+    `
+      SELECT
+        u.id AS userId,
+        u.name AS userName,
+        u.partnerId AS partnerId
+      FROM users u
+      WHERE u.id = ?
+      LIMIT 1
+    `,
+    [Number(application.createdBy)],
+  );
+
+const partnerId = Number(
+  partnerRows[0]?.partnerId,
+);
+
+if (!partnerId) {
+  throw new BadRequestException(
+    'No partner is assigned to the RM who created this application.',
+  );
+}
+
+  const generated =
+    await this.generateLan(
+      manager,
+      partnerId,
+    );
+
+  partner = generated.partner;
+  lan = generated.lan;
+} 
+
+
+  const loanAccountPayload = {
+    applicationId:
+      Number(application.id),
+
+    partnerId:
+      Number(partner.id),
+
+    lan,
+
+    applicationNumber:
+      application.applicationNumber,
+
+    customerName:
+      application.customerName,
+
+    mobile:
+      application.mobile,
+
+    pan:
+      application.pan,
+
+    requestedAmount:
+      this.toDecimalString(
+        application.requestedAmount,
+      ),
+
+    approvedAmount:
+      this.toDecimalString(
+        approvedAmount,
+      ),
+
+    sanctionedAmount:
+      this.toDecimalString(
+        approvedAmount,
+      ),
+
+    roi:
+      this.toDecimalString(roi),
+
+    tenureMonths:
+      this.toInteger(
+        tenureMonths,
+      ),
+
+    productType:
+      'LAP',
+
+    loanStatus:
+      'OPS_MAKER_PENDING',
+
+    stage:
+      'OPS_MAKER',
+
+    status:
+      'OPS_MAKER_PENDING',
+
+    propertyAddress:
+      legalAssessment.propertyAddress,
+
+    propertyType:
+      legalAssessment.propertyType,
+
+    marketValue:
+      this.toDecimalString(
+        valuationAssessment
+          ?.marketValue,
+      ),
+
+    valuationRecommendedValue:
+      this.toDecimalString(
+        valuationAssessment
+          ?.recommendedValue,
+      ),
+
+    legalStatus:
+      legalAssessment
+        .finalLegalStatus,
+
+    legalRemarks:
+      legalAssessment.legalRemarks ||
+      legalAssessment.opinionSummary,
+
+    opsInstructions:
+      legalAssessment.opsInstructions,
+
+    creditSnapshot:
+      this.toJson(
+        creditAssessment || {},
+      ),
+
+    valuationSnapshot:
+      this.toJson(
+        valuationAssessment || {},
+      ),
+
+    legalSnapshot:
+      this.toJson(
+        legalAssessment || {},
+      ),
+
+    applicationSnapshot:
+      this.toJson(
+        application || {},
+      ),
+
+    updatedBy:
+      actorId,
+  };
+
+  let loanAccount: LoanAccount;
+
+  if (existingLoanAccount) {
+    Object.assign(
+      existingLoanAccount,
+      loanAccountPayload,
+    );
+
+    loanAccount =
+      existingLoanAccount;
+  } else {
+    loanAccount =
+      loanAccountRepo.create({
+        ...loanAccountPayload,
+        createdBy:
+          actorId,
+      });
+  }
+
+  const savedLoanAccount =
+    await loanAccountRepo.save(
+      loanAccount,
+    );
+
+  console.log(
+    `Loan account saved: applicationId=${application.id}, ` +
+      `loanAccountId=${savedLoanAccount.id}, ` +
+      `lan=${savedLoanAccount.lan}`,
+  );
+
+  return savedLoanAccount;
+}
 private ensureFinalCreditMakerCase(
   application: Application,
 ) {
@@ -1237,6 +1687,131 @@ async getFinalCreditMakerCases() {
       const fromStage = application.stage;
       const fromStatus = application.status;
 
+        /*
+     * Fetch Legal assessment before moving
+     * the application to Credit Checker.
+     */
+    const legalAssessment =
+      await manager.findOne(
+        LegalAssessment,
+        {
+          where: {
+            applicationId:
+              Number(application.id),
+          },
+        },
+      );
+
+      console.log('LEGAL_ASSESSMENT_LOOKUP', {
+  applicationId: application.id,
+  numericApplicationId: Number(application.id),
+});
+
+    if (!legalAssessment) {
+      throw new BadRequestException(
+        'Legal assessment was not found.',
+      );
+    }
+
+    /*
+     * Save final Credit Maker assessment first.
+     */
+    const creditAssessment =
+      await this.saveCreditMakerAssessment(
+        application,
+        dto,
+        actor,
+        manager,
+        CreditAssessmentStatus.MAKER_SUBMITTED,
+      );
+
+      console.log(
+  'CREDIT_ASSESSMENT_RETURNED',
+  {
+    id:
+      creditAssessment?.id,
+
+    applicationId:
+      creditAssessment?.applicationId,
+  },
+);
+
+console.log(
+  'CALLING_LOAN_ACCOUNT_CREATION',
+  {
+    applicationId:
+      application.id,
+  },
+);
+    /*
+     * Generate LAN and insert/update
+     * loan_accounts table here.
+     */
+    // const loanAccount =
+    //   await this
+    //     .createLoanAccountAfterCreditMakerFinalApproval(
+    //       application,
+    //       legalAssessment,
+    //       actor,
+    //       manager,
+    //     );
+
+
+    let loanAccount: LoanAccount;
+
+try {
+  loanAccount =
+    await this.createLoanAccountAfterCreditMakerFinalApproval(
+      application,
+      legalAssessment,
+      actor,
+      manager,
+    );
+
+  console.log(
+    'LOAN_ACCOUNT_CREATION_SUCCESS',
+    {
+      id: loanAccount.id,
+      applicationId:
+        loanAccount.applicationId,
+      partnerId:
+        loanAccount.partnerId,
+      lan:
+        loanAccount.lan,
+    },
+  );
+} catch (error: any) {
+  console.error(
+    'LOAN_ACCOUNT_CREATION_FAILED',
+    {
+      message:
+        error?.message,
+
+      code:
+        error?.code ??
+        error?.driverError?.code,
+
+      errno:
+        error?.errno ??
+        error?.driverError?.errno,
+
+      sqlMessage:
+        error?.sqlMessage ??
+        error?.driverError?.sqlMessage,
+
+      query:
+        error?.query,
+
+      parameters:
+        error?.parameters,
+
+      stack:
+        error?.stack,
+    },
+  );
+
+  throw error;
+}
     const movement =
   await this.workflowTransitions.move({
     applicationId,
@@ -1316,13 +1891,13 @@ async getFinalCreditMakerCases() {
         }),
       );
 
-      const creditAssessment = await this.saveCreditMakerAssessment(
-  saved,
-  dto,
-  actor,
-  manager,
-  CreditAssessmentStatus.MAKER_SUBMITTED,
-);
+//       const creditAssessment = await this.saveCreditMakerAssessment(
+//   saved,
+//   dto,
+//   actor,
+//   manager,
+//   CreditAssessmentStatus.MAKER_SUBMITTED,
+// );
 
       return {
   success: true,
