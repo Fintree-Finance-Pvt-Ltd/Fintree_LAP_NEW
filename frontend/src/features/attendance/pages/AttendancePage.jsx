@@ -1,20 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  FiClock,
-  FiCalendar,
-  FiMapPin,
-  FiUser,
-  FiSearch,
-  FiFilter,
-  FiDownload,
-  FiRefreshCw,
-  FiCheckCircle,
-  FiStopCircle,
-  FiPlayCircle,
   FiActivity,
+  FiCalendar,
+  FiCheckCircle,
+  FiClock,
+  FiDownload,
+  FiMapPin,
+  FiPlayCircle,
+  FiRefreshCw,
+  FiSearch,
+  FiStopCircle
 } from "react-icons/fi";
-import { useAuth } from "../../../hooks/useAuth.js";
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
+import { useAuth } from "../../../hooks/useAuth.js";
 import { attendanceApi } from "../attendanceApi.js";
 
 export default function AttendancePage() {
@@ -330,7 +328,7 @@ export default function AttendancePage() {
               My Attendance Logs
             </button>
 
-            {isAdminOrBM && (
+            {/* {isAdminOrBM && (
               <button
                 type="button"
                 onClick={() => setActiveTab("all")}
@@ -342,7 +340,7 @@ export default function AttendancePage() {
               >
                 All Team Attendance
               </button>
-            )}
+            )} */}
           </div>
 
           {/* Search, Filter & Export */}
