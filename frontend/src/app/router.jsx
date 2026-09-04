@@ -74,11 +74,14 @@ import OpsHead from '../features/Operation/pages/OpsHead.jsx';
 
 import LmsDashboard from "../features/lms/pages/LmsDashboard.jsx";
 import LegalApprovedCases from '../features/credit/pages/LegalApprovedCases.jsx';
+import AttendancePage from '../features/attendance/pages/AttendancePage.jsx';
 
 const protectedChildren = [
   { path: '/dashboard', element: <RoleDashboardRedirect /> },
+  { path: '/attendance', element: <AttendancePage /> },
   { path: '/applications', element: <ApplicationsPage /> },
   { path: '/applications/create', element: <CreateApplicationPage /> },
+
   { path: '/applications/:applicationId', element: <ApplicationDetailsPage /> },
 
   // RM routes (wired to Sidebar.jsx)

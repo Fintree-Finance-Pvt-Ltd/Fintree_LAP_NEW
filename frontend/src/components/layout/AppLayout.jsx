@@ -11,6 +11,7 @@ import { Outlet } from "react-router-dom";
 
 import Sidebar from "./Sidebar.jsx";
 import HeaderContainer from "./HeaderContainer.jsx";
+import StartWorkModal from "../../features/attendance/components/StartWorkModal.jsx";
 
 export default function AppLayout() {
   return (
@@ -30,6 +31,9 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </main>
+
+      {/* Daily Start Work Modal */}
+      <StartWorkModal />
     </div>
   );
-}
+}

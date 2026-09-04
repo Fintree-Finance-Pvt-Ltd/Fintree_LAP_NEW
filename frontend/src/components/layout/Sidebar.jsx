@@ -29,7 +29,8 @@ import {
   FaHandshake,
   FaBuilding,
   FaSitemap,
-  FaTachometerAlt
+  FaTachometerAlt,
+  FaClock
 } from "react-icons/fa";
 import { useAuth } from "../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -466,6 +467,16 @@ const rolesConfig = {
 
   COMMON: [
     {
+      category: "ATTENDANCE",
+      items: [
+        {
+          to: "/attendance",
+          label: "Attendance",
+          Icon: FaClock,
+        },
+      ],
+    },
+    {
       category: "REFERENCE",
       items: [
         {
@@ -482,6 +493,7 @@ const rolesConfig = {
 
 const groupOrder = [
   "PRIMARY",
+  "ATTENDANCE",
   "MODULES",
   "REFERENCE",
   "LEGAL_PAYMENT_MODULES",
@@ -489,6 +501,7 @@ const groupOrder = [
   "OPERATIONS",
   "FINANCE",
 ];
+
 
 function normalizeRoles(user) {
   const roles = user?.roles ?? user?.role;

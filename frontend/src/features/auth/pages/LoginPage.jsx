@@ -45,6 +45,17 @@ const submit = async (event) => {
 
     dispatch(setCredentials(authData));
 
+    // Clear previous dismissal flags so Start Work popup shows on fresh login
+    try {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("lap_attendance_dismissed")) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch {
+      // ignore
+    }
+
     // Store login details for session persistence.
     try {
       window.localStorage.setItem(
@@ -54,6 +65,7 @@ const submit = async (event) => {
     } catch {
       // ignore storage errors (e.g., private mode)
     }
+
 
     const roles = Array.isArray(authData?.user?.roles)
       ? authData.user.roles
