@@ -61,9 +61,9 @@ import LmsCollections from "../features/lms/pages/LmsCollections.jsx";
 // import BMReviewQueue from '../features/BM/pages/ReviewQueue.jsx';
 
 /*Operations pages */
-import OperationsDashboard from '../features/OPERATION/pages/OperationsDashboard.jsx';
-import OpsChecker from "../features/OPERATION/pages/OpsChecker.jsx";
-import OpsMaker from "../features/OPERATION/pages/OpsMaker.jsx";
+import OperationsDashboard from '../features/Operation/pages/OperationsDashboard.jsx';
+import OpsChecker from "../features/Operation/pages/OpsChecker.jsx";
+import OpsMaker from "../features/Operation/pages/OpsMaker.jsx";
 // MIS Reports
 import MISReports from "../features/applications/pages/MISReports.jsx";
 import OPSReview from '../features/Operation/pages/OpsReview.jsx';
