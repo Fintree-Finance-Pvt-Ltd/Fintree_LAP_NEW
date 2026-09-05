@@ -56,15 +56,14 @@ export default function AttendancePage() {
 
   const isAdminOrBM = useMemo(() => {
     if (user?.email && user.email.toLowerCase().includes("admin")) return true;
-    return (
-      userRoles.includes("ADMIN") ||
-      userRoles.includes("BM") ||
-      userRoles.includes("OPS_HEAD") ||
-      userRoles.includes("OPS_CHECKER") ||
-      userRoles.includes("OPS_MAKER") ||
-      userRoles.includes("CM") ||
-      userRoles.includes("SUPER_ADMIN")
-    );
+    return userRoles.includes("ADMIN");
+    // ||
+    // userRoles.includes("BM") ||
+    // userRoles.includes("OPS_HEAD") ||
+    // userRoles.includes("OPS_CHECKER") ||
+    // userRoles.includes("OPS_MAKER") ||
+    // userRoles.includes("CM") ||
+    // userRoles.includes("SUPER_ADMIN")
   }, [userRoles, user?.email]);
 
   useEffect(() => {
@@ -84,12 +83,14 @@ export default function AttendancePage() {
       ]);
 
       if (myRes.status === "fulfilled") {
-        const raw = myRes.value?.data?.data ?? myRes.value?.data ?? myRes.value ?? [];
+        const raw =
+          myRes.value?.data?.data ?? myRes.value?.data ?? myRes.value ?? [];
         setMyRecords(Array.isArray(raw) ? raw : []);
       }
 
       if (allRes.status === "fulfilled") {
-        const raw = allRes.value?.data?.data ?? allRes.value?.data ?? allRes.value ?? [];
+        const raw =
+          allRes.value?.data?.data ?? allRes.value?.data ?? allRes.value ?? [];
         setAllRecords(Array.isArray(raw) ? raw : []);
       }
     } catch (error) {
@@ -108,8 +109,10 @@ export default function AttendancePage() {
   // Filtered Records
   const filteredRecords = useMemo(() => {
     return currentRecords.filter((item) => {
-      const empName = item.user?.name || (item.userId === user?.id ? user?.name : "");
-      const empEmail = item.user?.email || (item.userId === user?.id ? user?.email : "");
+      const empName =
+        item.user?.name || (item.userId === user?.id ? user?.name : "");
+      const empEmail =
+        item.user?.email || (item.userId === user?.id ? user?.email : "");
       const startLoc = item.startLocation || "";
       const endLoc = item.endLocation || "";
 
@@ -144,7 +147,8 @@ export default function AttendancePage() {
     });
 
     const totalHrs = (totalMins / 60).toFixed(1);
-    const avgHrs = totalCount > 0 ? (totalMins / totalCount / 60).toFixed(1) : "0.0";
+    const avgHrs =
+      totalCount > 0 ? (totalMins / totalCount / 60).toFixed(1) : "0.0";
     const totalKm = totalDist.toFixed(1);
 
     return { totalCount, totalHrs, avgHrs, totalKm };
@@ -193,7 +197,7 @@ export default function AttendancePage() {
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `lap_attendance_routes_${new Date().toISOString().slice(0, 10)}.csv`
+      `lap_attendance_routes_${new Date().toISOString().slice(0, 10)}.csv`,
     );
     document.body.appendChild(link);
     link.click();
@@ -203,7 +207,10 @@ export default function AttendancePage() {
   const safeFormatTime = (dateString) => {
     if (!dateString) return "-";
     try {
-      const clean = typeof dateString === "string" ? dateString.replace(" ", "T") : dateString;
+      const clean =
+        typeof dateString === "string"
+          ? dateString.replace(" ", "T")
+          : dateString;
       const parsed = new Date(clean);
       if (isNaN(parsed.getTime())) {
         const dOnly = new Date(dateString);
@@ -242,7 +249,8 @@ export default function AttendancePage() {
                 Attendance & GPS Route Tracker
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
-                Real-time continuous GPS tracking, travel distance, movement route trails, and work duration.
+                Real-time continuous GPS tracking, travel distance, movement
+                route trails, and work duration.
               </p>
             </div>
           </div>
@@ -267,7 +275,9 @@ export default function AttendancePage() {
             disabled={loading}
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 active:scale-95 cursor-pointer"
           >
-            <FiRefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-blue-600" : "text-slate-500"}`} />
+            <FiRefreshCw
+              className={`h-4 w-4 ${loading ? "animate-spin text-blue-600" : "text-slate-500"}`}
+            />
             <span>Refresh</span>
           </button>
 
@@ -316,8 +326,8 @@ export default function AttendancePage() {
                 isWorkStarted && !isWorkEnded
                   ? "bg-emerald-100 text-emerald-800"
                   : isWorkEnded
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-amber-100 text-amber-800"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-amber-100 text-amber-800"
               }`}
             >
               <span
@@ -325,15 +335,15 @@ export default function AttendancePage() {
                   isWorkStarted && !isWorkEnded
                     ? "bg-emerald-600 animate-pulse"
                     : isWorkEnded
-                    ? "bg-blue-600"
-                    : "bg-amber-600"
+                      ? "bg-blue-600"
+                      : "bg-amber-600"
                 }`}
               />
               {isWorkStarted && !isWorkEnded
                 ? "In Progress (Tracking)"
                 : isWorkEnded
-                ? "Completed"
-                : "Not Started"}
+                  ? "Completed"
+                  : "Not Started"}
             </span>
             <p className="mt-1 text-xs text-slate-500">
               {attendanceRecord?.startTime
@@ -354,7 +364,9 @@ export default function AttendancePage() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold text-[#0f2942]">{stats.totalCount}</div>
+            <div className="text-2xl font-bold text-[#0f2942]">
+              {stats.totalCount}
+            </div>
             <p className="text-xs text-slate-500">Attendance sessions</p>
           </div>
         </div>
@@ -370,7 +382,9 @@ export default function AttendancePage() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold text-[#0f2942]">{stats.totalHrs} hrs</div>
+            <div className="text-2xl font-bold text-[#0f2942]">
+              {stats.totalHrs} hrs
+            </div>
             <p className="text-xs text-slate-500">Cumulative duration</p>
           </div>
         </div>
@@ -386,7 +400,9 @@ export default function AttendancePage() {
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold text-cyan-700">{stats.totalKm} km</div>
+            <div className="text-2xl font-bold text-cyan-700">
+              {stats.totalKm} km
+            </div>
             <p className="text-xs text-slate-500">GPS tracked distance</p>
           </div>
         </div>
@@ -398,21 +414,6 @@ export default function AttendancePage() {
         <div className="flex flex-col gap-4 border-b border-slate-200/80 p-5 lg:flex-row lg:items-center lg:justify-between bg-slate-50/50">
           {/* Scope Tabs */}
           <div className="flex items-center gap-2">
-            {/* <button
-              type="button"
-              onClick={() => setActiveTab("all")}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
-                activeTab === "all"
-                  ? "bg-[#0f2942] text-white shadow-sm"
-                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
-              }`}
-            >
-              <div className="flex items-center gap-1.5">
-                <FiUsers className="h-3.5 w-3.5" />
-                <span>All Team Attendance ({allRecords.length})</span>
-              </div>
-            </button> */}
-
             <button
               type="button"
               onClick={() => setActiveTab("my")}
@@ -427,6 +428,23 @@ export default function AttendancePage() {
                 <span>My Attendance Logs ({myRecords.length})</span>
               </div>
             </button>
+
+            {isAdminOrBM && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className={`rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === "all"
+                    ? "bg-[#0f2942] text-white shadow-sm"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <FiUsers className="h-3.5 w-3.5" />
+                  <span>All Team Attendance ({allRecords.length})</span>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Search, Filter & Export */}
@@ -509,14 +527,31 @@ export default function AttendancePage() {
                 </tr>
               ) : (
                 filteredRecords.map((item, index) => {
-                  const empName = item.user?.name || (item.userId === user?.id ? user?.name : `Employee #${item.userId || item.id}`);
-                  const empEmail = item.user?.email || (item.userId === user?.id ? user?.email : "");
+                  const empName =
+                    item.user?.name ||
+                    (item.userId === user?.id
+                      ? user?.name
+                      : `Employee #${item.userId || item.id}`);
+                  const empEmail =
+                    item.user?.email ||
+                    (item.userId === user?.id ? user?.email : "");
                   const empLocation = item.user?.location || "";
                   const isLive = item.status === "IN_PROGRESS";
-                  const startTimeStr = safeFormatTime(item.startTime || item.start_time);
-                  const endTimeStr = safeFormatTime(item.endTime || item.end_time);
-                  const startLoc = item.startLocation || item.start_location || "Office Workspace";
-                  const endLoc = item.endLocation || item.end_location || item.currentLocation || item.current_location;
+                  const startTimeStr = safeFormatTime(
+                    item.startTime || item.start_time,
+                  );
+                  const endTimeStr = safeFormatTime(
+                    item.endTime || item.end_time,
+                  );
+                  const startLoc =
+                    item.startLocation ||
+                    item.start_location ||
+                    "Office Workspace";
+                  const endLoc =
+                    item.endLocation ||
+                    item.end_location ||
+                    item.currentLocation ||
+                    item.current_location;
                   const totalHrs = item.totalHours || item.total_hours;
                   const distKm = item.totalDistanceKm || item.total_distance_km;
 
@@ -539,7 +574,9 @@ export default function AttendancePage() {
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400">{empEmail}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {empEmail}
+                        </div>
                       </td>
 
                       {/* Date */}
@@ -557,7 +594,10 @@ export default function AttendancePage() {
 
                       {/* Start Location */}
                       <td className="px-4 py-4 max-w-[170px] text-slate-600">
-                        <div className="flex items-center gap-1 truncate" title={startLoc}>
+                        <div
+                          className="flex items-center gap-1 truncate"
+                          title={startLoc}
+                        >
                           <FiMapPin className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                           <span className="truncate">{startLoc}</span>
                         </div>
@@ -580,15 +620,23 @@ export default function AttendancePage() {
                       {/* Exit / Live Location */}
                       <td className="px-4 py-4 max-w-[180px] text-slate-600">
                         {isLive ? (
-                          <div className="flex items-center gap-1 text-emerald-700 font-medium truncate" title={endLoc || "Live GPS Tracking"}>
+                          <div
+                            className="flex items-center gap-1 text-emerald-700 font-medium truncate"
+                            title={endLoc || "Live GPS Tracking"}
+                          >
                             <span className="relative flex h-2 w-2 shrink-0">
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                             </span>
-                            <span className="truncate">{endLoc || "Active Movement"}</span>
+                            <span className="truncate">
+                              {endLoc || "Active Movement"}
+                            </span>
                           </div>
                         ) : endLoc ? (
-                          <div className="flex items-center gap-1 truncate" title={endLoc}>
+                          <div
+                            className="flex items-center gap-1 truncate"
+                            title={endLoc}
+                          >
                             <FiMapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
                             <span className="truncate">{endLoc}</span>
                           </div>
@@ -604,7 +652,9 @@ export default function AttendancePage() {
                             {distKm} km
                           </span>
                         ) : (
-                          <span className="text-slate-400 font-normal">0.0 km</span>
+                          <span className="text-slate-400 font-normal">
+                            0.0 km
+                          </span>
                         )}
                       </td>
 
