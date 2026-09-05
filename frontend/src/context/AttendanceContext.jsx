@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useAuth } from "../hooks/useAuth.js";
 import { attendanceApi } from "../features/attendance/attendanceApi.js";
+import { reverseGeocodeCoords } from "../utils/geoUtils.js";
 
 const AttendanceContext = createContext(null);
 
@@ -110,19 +111,24 @@ export function AttendanceProvider({ children }) {
     if (isAuthenticated && isWorkStarted && !isWorkEnded && navigator.geolocation) {
       console.log("📍 Starting continuous geolocation tracking for active work day...");
 
-      const sendLocationPing = (pos) => {
+      const sendLocationPing = async (pos) => {
         const { latitude, longitude, accuracy, speed, heading } = pos.coords;
         setCurrentCoords({ latitude, longitude, accuracy });
 
         const now = Date.now();
-        // Send updates at most once every 45 seconds to conserve battery/bandwidth
-        if (now - lastTrackTimeRef[0] > 45 * 1000) {
+        // Send updates at most once every 30 seconds to conserve battery/bandwidth while keeping live location fresh
+        if (now - lastTrackTimeRef[0] > 30 * 1000) {
           lastTrackTimeRef[0] = now;
+          const lat = parseFloat(latitude.toFixed(7));
+          const lng = parseFloat(longitude.toFixed(7));
+          const locationName = await reverseGeocodeCoords(lat, lng).catch(() => "");
+
           attendanceApi
             .trackLocation({
               attendanceId: attendanceRecord?.id,
-              latitude: parseFloat(latitude.toFixed(7)),
-              longitude: parseFloat(longitude.toFixed(7)),
+              latitude: lat,
+              longitude: lng,
+              locationName: locationName || undefined,
               accuracy: accuracy ? parseFloat(accuracy.toFixed(1)) : undefined,
               speed: speed ?? undefined,
               heading: heading ?? undefined,

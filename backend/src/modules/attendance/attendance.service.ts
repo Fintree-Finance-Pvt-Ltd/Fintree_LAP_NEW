@@ -11,6 +11,7 @@ import { LapAttendanceLocation } from './entities/lap-attendance-location.entity
 @Injectable()
 export class AttendanceService {
   private readonly logger = new Logger(AttendanceService.name);
+  private locationCache = new Map<string, string>();
 
   constructor(
     @InjectRepository(LapAttendance)
@@ -18,6 +19,82 @@ export class AttendanceService {
     @InjectRepository(LapAttendanceLocation)
     private readonly locationRepo: Repository<LapAttendanceLocation>,
   ) {}
+
+  private cleanLocationName(name?: string | null): string {
+    if (!name) return '';
+    const trimmed = String(name).trim();
+    if (trimmed.includes('° N') || trimmed.includes('° E') || /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(trimmed)) {
+      const match = trimmed.match(/\(([^)]+)\)/);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+      return '';
+    }
+    return trimmed;
+  }
+
+  async reverseGeocode(lat?: number | null, lng?: number | null, fallback?: string): Promise<string> {
+    if (lat === null || lat === undefined || lng === null || lng === undefined) {
+      return this.cleanLocationName(fallback) || 'Office Workspace';
+    }
+
+    const numLat = Number(lat);
+    const numLng = Number(lng);
+    if (isNaN(numLat) || isNaN(numLng)) {
+      return this.cleanLocationName(fallback) || 'Office Workspace';
+    }
+
+    const cacheKey = `${numLat.toFixed(3)},${numLng.toFixed(3)}`;
+    if (this.locationCache.has(cacheKey)) {
+      return this.locationCache.get(cacheKey)!;
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(
+        numLat,
+      )}&lon=${encodeURIComponent(numLng)}`;
+
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'FintreeLAP-AttendanceService/1.0',
+          Accept: 'application/json',
+        },
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = (await response.json()) as any;
+        if (data) {
+          const addr = data.address || {};
+          const road = addr.road || addr.pedestrian || addr.suburb || addr.neighbourhood || '';
+          const suburb = addr.suburb || addr.neighbourhood || addr.city_district || '';
+          const city = addr.city || addr.town || addr.village || addr.county || '';
+          const state = addr.state || '';
+
+          const parts = [road, suburb !== road ? suburb : '', city, state].filter(Boolean);
+          let placeName = parts.slice(0, 3).join(', ');
+
+          if (!placeName && data.display_name) {
+            placeName = data.display_name.split(',').slice(0, 3).join(',').trim();
+          }
+
+          if (placeName) {
+            this.locationCache.set(cacheKey, placeName);
+            return placeName;
+          }
+        }
+      }
+    } catch (err: any) {
+      this.logger.debug(`Reverse geocode fetch skipped for (${lat}, ${lng}): ${err?.message}`);
+    }
+
+    const cleaned = this.cleanLocationName(fallback);
+    return cleaned || 'Office Workspace';
+  }
 
   private getTodayDateString(dateObj: Date = new Date()): string {
     const year = dateObj.getFullYear();
@@ -98,12 +175,16 @@ export class AttendanceService {
     const diffMinutes = Math.max(0, Math.round((endMillis - startMillis) / (1000 * 60)));
     const formattedDuration = this.formatDuration(diffMinutes);
 
-    record.endTime = autoEndTime;
-    record.endLocation =
-      record.currentLocation || record.startLocation || 'Office Workspace (Auto Ended at 10 PM)';
-
     const endLat = record.currentLatitude ?? record.startLatitude ?? null;
     const endLng = record.currentLongitude ?? record.startLongitude ?? null;
+
+    let endLoc = this.cleanLocationName(record.currentLocation) || this.cleanLocationName(record.startLocation);
+    if (endLat && endLng && (!endLoc || endLoc === 'Office Workspace')) {
+      endLoc = await this.reverseGeocode(Number(endLat), Number(endLng), endLoc || 'Office Workspace');
+    }
+
+    record.endTime = autoEndTime;
+    record.endLocation = endLoc ? `${endLoc} (Auto Ended)` : 'Office Workspace (Auto Ended at 10 PM)';
 
     if (endLat !== null) record.endLatitude = endLat;
     if (endLng !== null) record.endLongitude = endLng;
@@ -212,17 +293,17 @@ export class AttendanceService {
         id: record.id,
         date: record.date,
         startTime: record.startTime,
-        startLocation: record.startLocation,
+        startLocation: this.cleanLocationName(record.startLocation) || 'Office Workspace',
         startLatitude: record.startLatitude,
         startLongitude: record.startLongitude,
         currentLatitude: record.currentLatitude,
         currentLongitude: record.currentLongitude,
-        currentLocation: record.currentLocation,
+        currentLocation: this.cleanLocationName(record.currentLocation) || 'Office Workspace',
         lastTrackedAt: record.lastTrackedAt,
         endTime: record.endTime,
-        endLocation: record.endLocation,
-        endLatitude: record.endLatitude,
-        endLongitude: record.endLongitude,
+        endLocation: record.endTime ? (this.cleanLocationName(record.endLocation) || 'Office Workspace') : null,
+        endLatitude: record.endTime ? record.endLatitude : null,
+        endLongitude: record.endTime ? record.endLongitude : null,
         totalHours: record.totalHours,
         totalMinutes: record.totalMinutes,
         totalDistanceKm: record.totalDistanceKm,
@@ -247,17 +328,25 @@ export class AttendanceService {
     }
 
     const now = new Date();
-    const location = dto.location || dto.spoke || 'Location detected';
+    const lat = dto.latitude !== undefined && dto.latitude !== null ? Number(dto.latitude) : null;
+    const lng = dto.longitude !== undefined && dto.longitude !== null ? Number(dto.longitude) : null;
+
+    let location = this.cleanLocationName(dto.location || dto.spoke);
+    if (lat && lng && (!location || location === 'Office Workspace' || location === 'Location detected')) {
+      location = await this.reverseGeocode(lat, lng, location || dto.spoke || 'Office Workspace');
+    } else if (!location) {
+      location = dto.spoke || 'Office Workspace';
+    }
 
     const attendance = this.attendanceRepo.create({
       userId,
       date: todayStr,
       startTime: now,
       startLocation: location,
-      startLatitude: dto.latitude !== undefined && dto.latitude !== null ? dto.latitude : null,
-      startLongitude: dto.longitude !== undefined && dto.longitude !== null ? dto.longitude : null,
-      currentLatitude: dto.latitude !== undefined && dto.latitude !== null ? dto.latitude : null,
-      currentLongitude: dto.longitude !== undefined && dto.longitude !== null ? dto.longitude : null,
+      startLatitude: lat,
+      startLongitude: lng,
+      currentLatitude: lat,
+      currentLongitude: lng,
       currentLocation: location,
       lastTrackedAt: now,
       totalDistanceKm: 0,
@@ -268,12 +357,12 @@ export class AttendanceService {
     const saved = await this.attendanceRepo.save(attendance);
 
     // Save initial starting breadcrumb
-    if (dto.latitude && dto.longitude) {
+    if (lat && lng) {
       const initialLoc = this.locationRepo.create({
         attendanceId: saved.id,
         userId,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
+        latitude: lat,
+        longitude: lng,
         locationName: location,
         recordedAt: now,
       });
@@ -308,8 +397,8 @@ export class AttendanceService {
     }
 
     const now = new Date();
-    const lat = dto.latitude;
-    const lng = dto.longitude;
+    const lat = Number(dto.latitude);
+    const lng = Number(dto.longitude);
 
     // Calculate distance from last point
     let distanceIncrement = 0;
@@ -331,11 +420,26 @@ export class AttendanceService {
 
     const currentTotalDist = Number(attendance.totalDistanceKm || 0) + distanceIncrement;
 
+    let locName = this.cleanLocationName(dto.locationName);
+    if (!locName && lat && lng) {
+      locName = await this.reverseGeocode(lat, lng, attendance.currentLocation || 'Active Movement');
+    }
+
     attendance.currentLatitude = lat;
     attendance.currentLongitude = lng;
-    if (dto.locationName) attendance.currentLocation = dto.locationName;
+    if (locName) attendance.currentLocation = locName;
     attendance.lastTrackedAt = now;
     attendance.totalDistanceKm = parseFloat(currentTotalDist.toFixed(3));
+
+    // If start latitude was missing when session started, backfill with first tracked coordinate
+    if (attendance.startLatitude === null || attendance.startLatitude === undefined || attendance.startLongitude === null) {
+      attendance.startLatitude = lat;
+      attendance.startLongitude = lng;
+      if (!attendance.startLocation || attendance.startLocation.startsWith('Spoke') || attendance.startLocation === 'Office Workspace') {
+        attendance.startLocation = locName || attendance.startLocation;
+      }
+    }
+
     await this.attendanceRepo.save(attendance);
 
     const locationPoint = this.locationRepo.create({
@@ -346,7 +450,7 @@ export class AttendanceService {
       accuracy: dto.accuracy ?? null,
       speed: dto.speed ?? null,
       heading: dto.heading ?? null,
-      locationName: dto.locationName ?? null,
+      locationName: locName || attendance.currentLocation || null,
       recordedAt: now,
     });
     await this.locationRepo.save(locationPoint);
@@ -357,6 +461,7 @@ export class AttendanceService {
         attendanceId: attendance.id,
         latitude: lat,
         longitude: lng,
+        locationName: locName || attendance.currentLocation,
         totalDistanceKm: attendance.totalDistanceKm,
         lastTrackedAt: now,
       },
@@ -402,14 +507,34 @@ export class AttendanceService {
     const diffMinutes = Math.max(0, Math.round((endMillis - startMillis) / (1000 * 60)));
     const formattedDuration = this.formatDuration(diffMinutes);
 
-    record.endTime = now;
-    record.endLocation = dto.location || record.currentLocation || record.startLocation || 'Office Workspace';
-
     const endLat = dto.latitude ?? record.currentLatitude ?? record.startLatitude ?? null;
     const endLng = dto.longitude ?? record.currentLongitude ?? record.startLongitude ?? null;
 
-    if (endLat !== null) record.endLatitude = endLat;
-    if (endLng !== null) record.endLongitude = endLng;
+    let endLocation = this.cleanLocationName(dto.location) || this.cleanLocationName(record.currentLocation) || this.cleanLocationName(record.startLocation);
+    if (endLat && endLng && (!endLocation || endLocation === 'Office Workspace')) {
+      endLocation = await this.reverseGeocode(Number(endLat), Number(endLng), endLocation || 'Office Workspace');
+    } else if (!endLocation) {
+      endLocation = 'Office Workspace';
+    }
+
+    record.endTime = now;
+    record.endLocation = endLocation;
+
+    if (endLat !== null) record.endLatitude = Number(endLat);
+    if (endLng !== null) record.endLongitude = Number(endLng);
+
+    // If start latitude was missing when session started, backfill with coordinate
+    if (record.startLatitude === null || record.startLatitude === undefined || record.startLongitude === null) {
+      const fallbackLat = record.currentLatitude ?? (endLat !== null ? Number(endLat) : null);
+      const fallbackLng = record.currentLongitude ?? (endLng !== null ? Number(endLng) : null);
+      if (fallbackLat !== null && fallbackLng !== null) {
+        record.startLatitude = fallbackLat;
+        record.startLongitude = fallbackLng;
+        if (!record.startLocation || record.startLocation.startsWith('Spoke') || record.startLocation === 'Office Workspace') {
+          record.startLocation = endLocation || record.startLocation;
+        }
+      }
+    }
 
     // Add remaining distance if final coords provided and differ from current
     if (dto.latitude && dto.longitude && record.currentLatitude && record.currentLongitude) {
@@ -436,8 +561,8 @@ export class AttendanceService {
       const finalLoc = this.locationRepo.create({
         attendanceId: record.id,
         userId,
-        latitude: endLat,
-        longitude: endLng,
+        latitude: Number(endLat),
+        longitude: Number(endLng),
         locationName: record.endLocation,
         recordedAt: now,
       });
@@ -476,16 +601,16 @@ export class AttendanceService {
           userEmail: attendance.user?.email || '',
           date: attendance.date,
           startTime: attendance.startTime,
-          startLocation: attendance.startLocation,
+          startLocation: this.cleanLocationName(attendance.startLocation) || 'Office Workspace',
           startLatitude: attendance.startLatitude,
           startLongitude: attendance.startLongitude,
           endTime: attendance.endTime,
-          endLocation: attendance.endLocation,
-          endLatitude: attendance.endLatitude,
-          endLongitude: attendance.endLongitude,
+          endLocation: attendance.endTime ? (this.cleanLocationName(attendance.endLocation) || 'Office Workspace') : null,
+          endLatitude: attendance.endTime ? attendance.endLatitude : null,
+          endLongitude: attendance.endTime ? attendance.endLongitude : null,
           currentLatitude: attendance.currentLatitude,
           currentLongitude: attendance.currentLongitude,
-          currentLocation: attendance.currentLocation,
+          currentLocation: this.cleanLocationName(attendance.currentLocation) || 'Office Workspace',
           lastTrackedAt: attendance.lastTrackedAt,
           totalHours: attendance.totalHours,
           totalMinutes: attendance.totalMinutes,
@@ -499,7 +624,7 @@ export class AttendanceService {
           accuracy: p.accuracy,
           speed: p.speed,
           heading: p.heading,
-          locationName: p.locationName,
+          locationName: this.cleanLocationName(p.locationName) || null,
           recordedAt: p.recordedAt,
         })),
       },
@@ -512,7 +637,33 @@ export class AttendanceService {
       order: { date: 'DESC', startTime: 'DESC' },
       take: limit,
     });
-    return { data: list };
+
+    // Clean any legacy raw coords strings in location names & heal missing start coords
+    const cleaned = list.map((item) => {
+      if ((item.startLatitude === null || item.startLatitude === undefined) && (item.currentLatitude || item.endLatitude)) {
+        item.startLatitude = item.currentLatitude ?? item.endLatitude ?? null;
+        item.startLongitude = item.currentLongitude ?? item.endLongitude ?? null;
+      }
+
+      item.startLocation = this.cleanLocationName(item.startLocation) || item.startLocation;
+      item.currentLocation = this.cleanLocationName(item.currentLocation) || item.currentLocation;
+
+      const isEnded = item.status === 'COMPLETED' || item.status === 'AUTO_END_WORK' || item.status === 'auto_end_work' || item.status === 'AUTO_ENDED' || item.status === 'END_WORK_HOUR' || Boolean(item.endTime);
+
+      if (!isEnded) {
+        item.endLocation = null;
+        item.endLatitude = null;
+        item.endLongitude = null;
+      } else {
+        item.endLocation = this.cleanLocationName(item.endLocation) || item.endLocation;
+        if ((!item.startLocation || item.startLocation.startsWith('Spoke')) && item.endLocation && !item.endLocation.startsWith('Spoke')) {
+          item.startLocation = item.endLocation;
+        }
+      }
+      return item;
+    });
+
+    return { data: cleaned };
   }
 
   async getAllAttendance(options?: {
@@ -572,8 +723,32 @@ export class AttendanceService {
 
     const [items, total] = await qb.getManyAndCount();
 
+    const cleanedItems = items.map((item) => {
+      if ((item.startLatitude === null || item.startLatitude === undefined) && (item.currentLatitude || item.endLatitude)) {
+        item.startLatitude = item.currentLatitude ?? item.endLatitude ?? null;
+        item.startLongitude = item.currentLongitude ?? item.endLongitude ?? null;
+      }
+
+      item.startLocation = this.cleanLocationName(item.startLocation) || item.startLocation;
+      item.currentLocation = this.cleanLocationName(item.currentLocation) || item.currentLocation;
+
+      const isEnded = item.status === 'COMPLETED' || item.status === 'AUTO_END_WORK' || item.status === 'auto_end_work' || item.status === 'AUTO_ENDED' || item.status === 'END_WORK_HOUR' || Boolean(item.endTime);
+
+      if (!isEnded) {
+        item.endLocation = null;
+        item.endLatitude = null;
+        item.endLongitude = null;
+      } else {
+        item.endLocation = this.cleanLocationName(item.endLocation) || item.endLocation;
+        if ((!item.startLocation || item.startLocation.startsWith('Spoke')) && item.endLocation && !item.endLocation.startsWith('Spoke')) {
+          item.startLocation = item.endLocation;
+        }
+      }
+      return item;
+    });
+
     return {
-      data: items,
+      data: cleanedItems,
       meta: {
         total,
         page,

@@ -11,6 +11,11 @@ import {
 } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth.js";
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
+import {
+  reverseGeocodeCoords,
+  getCurrentGPSPosition,
+  cleanLocationName,
+} from "../../../utils/geoUtils.js";
 
 export default function EndWorkLogoutModal({ onDirectLogout }) {
   const { user } = useAuth();
@@ -39,55 +44,74 @@ export default function EndWorkLogoutModal({ onDirectLogout }) {
     return () => clearInterval(timer);
   }, [showEndModal]);
 
-  // Capture Geolocation for end work
+  // Capture Geolocation & Real Address for end work
   useEffect(() => {
     if (!showEndModal) return;
 
+    let isMounted = true;
+    const spokeName = typeof user?.spoke === "object" ? user?.spoke?.name : user?.spoke;
+
     // Use currentCoords as immediate initial coordinates
-    const initialLat = currentCoords?.latitude ?? attendanceRecord?.currentLatitude ?? attendanceRecord?.startLatitude ?? null;
-    const initialLng = currentCoords?.longitude ?? attendanceRecord?.currentLongitude ?? attendanceRecord?.startLongitude ?? null;
+    const initialLat =
+      currentCoords?.latitude ??
+      attendanceRecord?.currentLatitude ??
+      attendanceRecord?.startLatitude ??
+      null;
+    const initialLng =
+      currentCoords?.longitude ??
+      attendanceRecord?.currentLongitude ??
+      attendanceRecord?.startLongitude ??
+      null;
 
     if (initialLat && initialLng) {
+      const numLat = parseFloat(Number(initialLat).toFixed(7));
+      const numLng = parseFloat(Number(initialLng).toFixed(7));
       setGeoState({
-        loading: false,
-        latitude: parseFloat(Number(initialLat).toFixed(6)),
-        longitude: parseFloat(Number(initialLng).toFixed(6)),
-        address: `${Number(initialLat).toFixed(4)}° N, ${Number(initialLng).toFixed(4)}° E (${user?.spoke || "Workspace"})`,
+        loading: true,
+        latitude: numLat,
+        longitude: numLng,
+        address: spokeName ? `Spoke: ${spokeName}` : "Detecting address...",
       });
-    }
 
-    if (!navigator.geolocation) {
-      if (!initialLat) {
-        setGeoState({
-          loading: false,
-          latitude: null,
-          longitude: null,
-          address: user?.spoke || "Workspace Spoke",
-        });
-      }
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setGeoState({
-          loading: false,
-          latitude: parseFloat(latitude.toFixed(6)),
-          longitude: parseFloat(longitude.toFixed(6)),
-          address: `${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E (${user?.spoke || "Workspace"})`,
-        });
-      },
-      (err) => {
-        console.warn("End work geolocation fetch note:", err.message);
+      reverseGeocodeCoords(numLat, numLng).then((addr) => {
+        if (!isMounted) return;
         setGeoState((prev) => ({
           ...prev,
           loading: false,
-          address: prev.address || (user?.spoke ? `Spoke: ${user.spoke}` : "Workspace Office"),
+          address: addr || (spokeName ? `Spoke: ${spokeName}` : "Office Workspace"),
         }));
-      },
-      { timeout: 6000, enableHighAccuracy: true }
-    );
+      });
+    }
+
+    getCurrentGPSPosition(7000)
+      .then(async (pos) => {
+        if (!isMounted) return;
+        const lat = parseFloat(pos.latitude.toFixed(7));
+        const lng = parseFloat(pos.longitude.toFixed(7));
+        const resolvedAddress = await reverseGeocodeCoords(lat, lng);
+
+        if (isMounted) {
+          setGeoState({
+            loading: false,
+            latitude: lat,
+            longitude: lng,
+            address: resolvedAddress || (spokeName ? `Spoke: ${spokeName}` : "Office Workspace"),
+          });
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.warn("End work geolocation fetch note:", err?.message);
+        setGeoState((prev) => ({
+          ...prev,
+          loading: false,
+          address: prev.address || (spokeName ? `Spoke: ${spokeName}` : "Office Workspace"),
+        }));
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [showEndModal, user?.spoke, currentCoords, attendanceRecord]);
 
   if (!showEndModal) return null;
@@ -113,15 +137,15 @@ export default function EndWorkLogoutModal({ onDirectLogout }) {
       null;
 
     const locName =
-      geoState.address ||
-      (finalLat && finalLng
-        ? `${Number(finalLat).toFixed(4)}° N, ${Number(finalLng).toFixed(4)}° E (${spoke})`
-        : spoke || "Office Workspace");
+      cleanLocationName(geoState.address) ||
+      cleanLocationName(attendanceRecord?.currentLocation) ||
+      spoke ||
+      "Office Workspace";
 
     return {
       location: locName,
-      latitude: finalLat ? Number(finalLat) : undefined,
-      longitude: finalLng ? Number(finalLng) : undefined,
+      latitude: finalLat !== null && finalLat !== undefined ? Number(finalLat) : undefined,
+      longitude: finalLng !== null && finalLng !== undefined ? Number(finalLng) : undefined,
     };
   };
 

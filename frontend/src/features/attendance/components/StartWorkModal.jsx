@@ -10,6 +10,12 @@ import {
 } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth.js";
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
+import {
+  reverseGeocodeCoords,
+  getCurrentGPSPosition,
+  cleanLocationName,
+  getLastKnownCoords,
+} from "../../../utils/geoUtils.js";
 
 export default function StartWorkModal() {
   const { user } = useAuth();
@@ -19,15 +25,21 @@ export default function StartWorkModal() {
     startWork,
     isSubmitting,
     isWorkStarted,
+    currentCoords,
   } = useAttendance();
 
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [geoState, setGeoState] = useState({
-    loading: true,
-    latitude: null,
-    longitude: null,
-    address: "",
-    error: null,
+  const [acquiringGps, setAcquiringGps] = useState(false);
+  const [geoState, setGeoState] = useState(() => {
+    const cached = getLastKnownCoords();
+    const spokeName = typeof user?.spoke === "object" ? user?.spoke?.name : user?.spoke;
+    return {
+      loading: !cached,
+      latitude: cached?.latitude ?? null,
+      longitude: cached?.longitude ?? null,
+      address: spokeName ? `Spoke: ${spokeName}` : "Office Workspace",
+      error: null,
+    };
   });
 
   // Live Clock
@@ -37,47 +49,66 @@ export default function StartWorkModal() {
     return () => clearInterval(timer);
   }, [showStartModal]);
 
-  // Capture Geolocation
+  // Capture Geolocation & Real Place Name
   useEffect(() => {
     if (!showStartModal) return;
 
-    if (!navigator.geolocation) {
-      setGeoState({
+    let isMounted = true;
+    const spokeName = typeof user?.spoke === "object" ? user?.spoke?.name : user?.spoke;
+
+    // Use currentCoords from context if available immediately
+    if (currentCoords?.latitude && currentCoords?.longitude) {
+      const lat = parseFloat(Number(currentCoords.latitude).toFixed(7));
+      const lng = parseFloat(Number(currentCoords.longitude).toFixed(7));
+      setGeoState((prev) => ({
+        ...prev,
         loading: false,
-        latitude: null,
-        longitude: null,
-        address: user?.spoke || "Workspace Spoke",
-        error: "Geolocation not supported by browser",
+        latitude: lat,
+        longitude: lng,
+      }));
+      reverseGeocodeCoords(lat, lng).then((addr) => {
+        if (isMounted && addr) {
+          setGeoState((prev) => ({ ...prev, address: addr }));
+        }
       });
-      return;
     }
 
-    setGeoState((prev) => ({ ...prev, loading: true }));
+    getCurrentGPSPosition(8000)
+      .then(async (pos) => {
+        if (!isMounted) return;
+        const lat = parseFloat(pos.latitude.toFixed(7));
+        const lng = parseFloat(pos.longitude.toFixed(7));
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setGeoState({
+        let resolvedAddress = await reverseGeocodeCoords(lat, lng);
+        if (!resolvedAddress) {
+          resolvedAddress = spokeName ? `Spoke: ${spokeName}` : "Office Workspace";
+        }
+
+        if (isMounted) {
+          setGeoState({
+            loading: false,
+            latitude: lat,
+            longitude: lng,
+            address: resolvedAddress,
+            error: null,
+          });
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.warn("Geolocation prompt skipped or denied:", err?.message);
+        setGeoState((prev) => ({
+          ...prev,
           loading: false,
-          latitude: parseFloat(latitude.toFixed(6)),
-          longitude: parseFloat(longitude.toFixed(6)),
-          address: `${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E (${user?.spoke || "Workspace"})`,
+          address: prev.address || (spokeName ? `Spoke: ${spokeName}` : "Office Workspace"),
           error: null,
-        });
-      },
-      (err) => {
-        console.warn("Geolocation prompt skipped or denied:", err.message);
-        setGeoState({
-          loading: false,
-          latitude: null,
-          longitude: null,
-          address: user?.spoke ? `Spoke: ${user.spoke}` : "Workspace Office",
-          error: null,
-        });
-      },
-      { timeout: 8000, enableHighAccuracy: true }
-    );
-  }, [showStartModal, user?.spoke]);
+        }));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showStartModal, user?.spoke, currentCoords]);
 
   if (!showStartModal || isWorkStarted) return null;
 
@@ -87,10 +118,35 @@ export default function StartWorkModal() {
         ? user?.spoke?.name
         : user?.spoke || "Workspace";
 
+    let lat = geoState.latitude ?? currentCoords?.latitude ?? null;
+    let lng = geoState.longitude ?? currentCoords?.longitude ?? null;
+    let address = geoState.address;
+
+    // If still resolving or coordinates missing, actively acquire GPS
+    if (lat === null || lng === null) {
+      setAcquiringGps(true);
+      try {
+        const pos = await getCurrentGPSPosition(5000);
+        lat = parseFloat(pos.latitude.toFixed(7));
+        lng = parseFloat(pos.longitude.toFixed(7));
+        const resolved = await reverseGeocodeCoords(lat, lng);
+        if (resolved) address = resolved;
+      } catch (err) {
+        console.warn("Could not lock GPS on Start Work:", err?.message);
+        const cached = getLastKnownCoords();
+        if (cached) {
+          lat = cached.latitude;
+          lng = cached.longitude;
+        }
+      } finally {
+        setAcquiringGps(false);
+      }
+    }
+
     const payload = {
-      location: geoState.address || spoke || "Office Workspace",
-      latitude: geoState.latitude,
-      longitude: geoState.longitude,
+      location: address || spoke || "Office Workspace",
+      latitude: lat !== null && lat !== undefined ? Number(lat) : undefined,
+      longitude: lng !== null && lng !== undefined ? Number(lng) : undefined,
       spoke,
     };
 

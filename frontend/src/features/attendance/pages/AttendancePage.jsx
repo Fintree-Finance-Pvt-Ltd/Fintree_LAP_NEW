@@ -21,6 +21,10 @@ import { useAuth } from "../../../hooks/useAuth.js";
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
 import { attendanceApi } from "../attendanceApi.js";
 import RouteMapModal from "../components/RouteMapModal.jsx";
+import {
+  cleanLocationName,
+  reverseGeocodeCoords,
+} from "../../../utils/geoUtils.js";
 
 export default function AttendancePage() {
   const { user } = useAuth();
@@ -41,6 +45,7 @@ export default function AttendancePage() {
   const [selectedDate, setSelectedDate] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedRouteId, setSelectedRouteId] = useState(null);
+  const [geoAddressMap, setGeoAddressMap] = useState({});
 
   // Normalize User Roles
   const userRoles = useMemo(() => {
@@ -104,6 +109,116 @@ export default function AttendancePage() {
     loadData();
   }, []);
 
+  // Background Reverse Geocoding for displayed records with missing address names
+  useEffect(() => {
+    const list = [...myRecords, ...allRecords];
+    if (!list.length) return;
+
+    let isMounted = true;
+    const pendingCoords = [];
+
+    list.forEach((item) => {
+      const isItemEnded =
+        item.status !== "IN_PROGRESS" &&
+        Boolean(
+          item.endTime ||
+            item.end_time ||
+            item.status === "COMPLETED" ||
+            item.status === "AUTO_END_WORK" ||
+            item.status === "auto_end_work" ||
+            item.status === "AUTO_ENDED" ||
+            item.status === "END_WORK_HOUR"
+        );
+
+      const sLat =
+        item.startLatitude ??
+        item.start_latitude ??
+        item.currentLatitude ??
+        item.current_latitude;
+      const sLng =
+        item.startLongitude ??
+        item.start_longitude ??
+        item.currentLongitude ??
+        item.current_longitude;
+      const sLoc = item.startLocation || item.start_location || "";
+      if (
+        sLat &&
+        sLng &&
+        (!sLoc ||
+          sLoc.includes("° N") ||
+          sLoc.includes("° E") ||
+          sLoc === "Office Workspace")
+      ) {
+        pendingCoords.push({ lat: Number(sLat), lng: Number(sLng) });
+      }
+
+      // Live location geocoding
+      const curLat = item.currentLatitude ?? item.current_latitude;
+      const curLng = item.currentLongitude ?? item.current_longitude;
+      const curLoc = item.currentLocation || item.current_location || "";
+      if (
+        curLat &&
+        curLng &&
+        (!curLoc ||
+          curLoc.includes("° N") ||
+          curLoc.includes("° E") ||
+          curLoc === "Office Workspace")
+      ) {
+        pendingCoords.push({ lat: Number(curLat), lng: Number(curLng) });
+      }
+
+      // End location geocoding - only if ended
+      if (isItemEnded) {
+        const eLat = item.endLatitude ?? item.end_latitude;
+        const eLng = item.endLongitude ?? item.end_longitude;
+        const eLoc = item.endLocation || item.end_location || "";
+        if (
+          eLat &&
+          eLng &&
+          (!eLoc ||
+            eLoc.includes("° N") ||
+            eLoc.includes("° E") ||
+            eLoc === "Office Workspace")
+        ) {
+          pendingCoords.push({ lat: Number(eLat), lng: Number(eLng) });
+        }
+      }
+    });
+
+    if (!pendingCoords.length) return;
+
+    const uniqueCoords = Array.from(
+      new Set(
+        pendingCoords.map((c) => `${c.lat.toFixed(3)},${c.lng.toFixed(3)}`)
+      )
+    ).map((key) => {
+      const [lat, lng] = key.split(",").map(Number);
+      return { lat, lng, key };
+    });
+
+    Promise.allSettled(
+      uniqueCoords.slice(0, 15).map(async ({ lat, lng, key }) => {
+        const addr = await reverseGeocodeCoords(lat, lng);
+        return { key, addr };
+      })
+    ).then((results) => {
+      if (!isMounted) return;
+      const updates = {};
+      results.forEach((r) => {
+        if (r.status === "fulfilled" && r.value?.addr) {
+          updates[r.value.key] = r.value.addr;
+        }
+      });
+      if (Object.keys(updates).length > 0) {
+        setGeoAddressMap((prev) => ({ ...prev, ...updates }));
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [myRecords, allRecords]);
+
   const currentRecords = activeTab === "all" ? allRecords : myRecords;
 
   // Filtered Records
@@ -113,8 +228,35 @@ export default function AttendancePage() {
         item.user?.name || (item.userId === user?.id ? user?.name : "");
       const empEmail =
         item.user?.email || (item.userId === user?.id ? user?.email : "");
-      const startLoc = item.startLocation || "";
-      const endLoc = item.endLocation || "";
+      const isItemEnded =
+        item.status !== "IN_PROGRESS" &&
+        Boolean(
+          item.endTime ||
+            item.end_time ||
+            item.status === "COMPLETED" ||
+            item.status === "AUTO_END_WORK" ||
+            item.status === "auto_end_work" ||
+            item.status === "AUTO_ENDED" ||
+            item.status === "END_WORK_HOUR"
+        );
+
+      const startLoc = cleanLocationName(
+        item.startLocation || item.start_location || ""
+      );
+      const endLoc = isItemEnded
+        ? cleanLocationName(item.endLocation || item.end_location || "")
+        : "";
+      const liveLoc = cleanLocationName(
+        item.currentLocation || item.current_location || ""
+      );
+      const startLat = item.startLatitude ?? item.start_latitude;
+      const startLng = item.startLongitude ?? item.start_longitude;
+      const endLat = isItemEnded
+        ? item.endLatitude ?? item.end_latitude
+        : null;
+      const endLng = isItemEnded
+        ? item.endLongitude ?? item.end_longitude
+        : null;
 
       const query = searchTerm.trim().toLowerCase();
       const matchSearch =
@@ -122,7 +264,22 @@ export default function AttendancePage() {
         empName.toLowerCase().includes(query) ||
         empEmail.toLowerCase().includes(query) ||
         startLoc.toLowerCase().includes(query) ||
-        endLoc.toLowerCase().includes(query) ||
+        (isItemEnded && endLoc.toLowerCase().includes(query)) ||
+        liveLoc.toLowerCase().includes(query) ||
+        (startLat !== undefined &&
+          startLat !== null &&
+          String(startLat).includes(query)) ||
+        (startLng !== undefined &&
+          startLng !== null &&
+          String(startLng).includes(query)) ||
+        (isItemEnded &&
+          endLat !== undefined &&
+          endLat !== null &&
+          String(endLat).includes(query)) ||
+        (isItemEnded &&
+          endLng !== undefined &&
+          endLng !== null &&
+          String(endLng).includes(query)) ||
         String(item.date).includes(query);
 
       const matchDate = !selectedDate || item.date === selectedDate;
@@ -168,31 +325,76 @@ export default function AttendancePage() {
       "Email",
       "Date",
       "Punch In Time",
-      "Start Location",
+      "Start Location Name",
+      "Start Latitude",
+      "Start Longitude",
       "Start Coordinates",
-      "Exit Time",
-      "Exit Location",
+      "Live Location Name",
+      "Live Latitude",
+      "Live Longitude",
+      "Punch Out Time",
+      "End Location Name",
+      "End Latitude",
+      "End Longitude",
       "End Coordinates",
       "Distance (KM)",
       "Total Hours",
       "Status",
     ];
 
-    const rows = filteredRecords.map((r) => [
-      r.id,
-      `"${r.user?.name || (r.userId === user?.id ? user?.name : "Employee #" + r.userId)}"`,
-      `"${r.user?.email || (r.userId === user?.id ? user?.email : "")}"`,
-      r.date,
-      r.startTime ? new Date(r.startTime).toLocaleTimeString() : "-",
-      `"${r.startLocation || ""}"`,
-      r.startLatitude ? `"${r.startLatitude}, ${r.startLongitude}"` : "-",
-      r.endTime ? new Date(r.endTime).toLocaleTimeString() : "-",
-      `"${r.endLocation || ""}"`,
-      r.endLatitude ? `"${r.endLatitude}, ${r.endLongitude}"` : "-",
-      r.totalDistanceKm || "0.0",
-      `"${r.totalHours || "-"}"`,
-      r.status,
-    ]);
+    const rows = filteredRecords.map((r) => {
+      const isRecordEnded =
+        r.status !== "IN_PROGRESS" &&
+        Boolean(
+          r.endTime ||
+            r.end_time ||
+            r.status === "COMPLETED" ||
+            r.status === "AUTO_END_WORK" ||
+            r.status === "auto_end_work" ||
+            r.status === "AUTO_ENDED" ||
+            r.status === "END_WORK_HOUR"
+        );
+
+      const startLat = r.startLatitude ?? r.start_latitude ?? "";
+      const startLng = r.startLongitude ?? r.start_longitude ?? "";
+      const sKey = startLat && startLng ? `${Number(startLat).toFixed(3)},${Number(startLng).toFixed(3)}` : "";
+      const startLocName = geoAddressMap[sKey] || cleanLocationName(r.startLocation || r.start_location, "Office Workspace");
+
+      const liveLat = r.currentLatitude ?? r.current_latitude ?? startLat;
+      const liveLng = r.currentLongitude ?? r.current_longitude ?? startLng;
+      const lKey = liveLat && liveLng ? `${Number(liveLat).toFixed(3)},${Number(liveLng).toFixed(3)}` : "";
+      const liveLocName = geoAddressMap[lKey] || cleanLocationName(r.currentLocation || r.current_location, "Active Movement");
+
+      const endLat = isRecordEnded ? (r.endLatitude ?? r.end_latitude ?? "") : "";
+      const endLng = isRecordEnded ? (r.endLongitude ?? r.end_longitude ?? "") : "";
+      const eKey = endLat && endLng ? `${Number(endLat).toFixed(3)},${Number(endLng).toFixed(3)}` : "";
+      const endLocName = isRecordEnded
+        ? (geoAddressMap[eKey] || cleanLocationName(r.endLocation || r.end_location, "Office Workspace"))
+        : "-";
+
+      return [
+        r.id,
+        `"${r.user?.name || (r.userId === user?.id ? user?.name : "Employee #" + r.userId)}"`,
+        `"${r.user?.email || (r.userId === user?.id ? user?.email : "")}"`,
+        r.date,
+        r.startTime ? new Date(r.startTime).toLocaleTimeString() : "-",
+        `"${startLocName}"`,
+        startLat || "-",
+        startLng || "-",
+        startLat && startLng ? `"${startLat}, ${startLng}"` : "-",
+        `"${liveLocName}"`,
+        liveLat || "-",
+        liveLng || "-",
+        isRecordEnded && r.endTime ? new Date(r.endTime).toLocaleTimeString() : "In Progress",
+        `"${endLocName}"`,
+        endLat || "-",
+        endLng || "-",
+        endLat && endLng ? `"${endLat}, ${endLng}"` : "-",
+        r.totalDistanceKm || r.total_distance_km || "0.0",
+        `"${r.totalHours || r.total_hours || "In Progress"}"`,
+        r.status,
+      ];
+    });
 
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -203,7 +405,7 @@ export default function AttendancePage() {
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `lap_attendance_routes_${new Date().toISOString().slice(0, 10)}.csv`,
+      `lap_attendance_routes_${new Date().toISOString().slice(0, 10)}.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -508,9 +710,12 @@ export default function AttendancePage() {
                 <th className="px-4 py-3.5">Employee</th>
                 <th className="px-4 py-3.5">Date</th>
                 <th className="px-4 py-3.5">Punch In Time</th>
-                <th className="px-4 py-3.5">Start Location</th>
+                <th className="px-4 py-3.5">Start Location Name</th>
+                <th className="px-4 py-3.5">Start Lat / Long</th>
+                <th className="px-4 py-3.5">Live Location Name</th>
                 <th className="px-4 py-3.5">Punch Out Time</th>
-                <th className="px-4 py-3.5">Exit / Live Location</th>
+                <th className="px-4 py-3.5">End Location Name</th>
+                <th className="px-4 py-3.5">End Lat / Long</th>
                 <th className="px-4 py-3.5">Distance</th>
                 <th className="px-4 py-3.5">Total Hours</th>
                 <th className="px-4 py-3.5 text-center">Status</th>
@@ -520,14 +725,14 @@ export default function AttendancePage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan="11" className="py-12 text-center text-slate-400">
+                  <td colSpan="14" className="py-12 text-center text-slate-400">
                     <FiRefreshCw className="mx-auto h-6 w-6 animate-spin text-blue-600 mb-2" />
                     Loading attendance records & route data...
                   </td>
                 </tr>
               ) : filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan="11" className="py-12 text-center text-slate-400">
+                  <td colSpan="14" className="py-12 text-center text-slate-400">
                     <FiCalendar className="mx-auto h-8 w-8 text-slate-300 mb-2" />
                     No attendance records found matching your filters.
                   </td>
@@ -545,20 +750,82 @@ export default function AttendancePage() {
                   const empLocation = item.user?.location || "";
                   const isLive = item.status === "IN_PROGRESS";
                   const startTimeStr = safeFormatTime(
-                    item.startTime || item.start_time,
+                    item.startTime || item.start_time
                   );
                   const endTimeStr = safeFormatTime(
-                    item.endTime || item.end_time,
+                    item.endTime || item.end_time
                   );
+
+                  const startLat =
+                    item.startLatitude ??
+                    item.start_latitude ??
+                    item.currentLatitude ??
+                    item.current_latitude ??
+                    item.endLatitude ??
+                    item.end_latitude;
+                  const startLng =
+                    item.startLongitude ??
+                    item.start_longitude ??
+                    item.currentLongitude ??
+                    item.current_longitude ??
+                    item.endLongitude ??
+                    item.end_longitude;
+                  const sKey =
+                    startLat && startLng
+                      ? `${Number(startLat).toFixed(3)},${Number(startLng).toFixed(3)}`
+                      : "";
                   const startLoc =
-                    item.startLocation ||
-                    item.start_location ||
-                    "Office Workspace";
-                  const endLoc =
-                    item.endLocation ||
-                    item.end_location ||
-                    item.currentLocation ||
-                    item.current_location;
+                    geoAddressMap[sKey] ||
+                    cleanLocationName(
+                      item.startLocation || item.start_location,
+                      item.endLocation || item.currentLocation || "Office Workspace"
+                    );
+
+                  const liveLat =
+                    item.currentLatitude ?? item.current_latitude ?? startLat;
+                  const liveLng =
+                    item.currentLongitude ?? item.current_longitude ?? startLng;
+                  const lKey =
+                    liveLat && liveLng
+                      ? `${Number(liveLat).toFixed(3)},${Number(liveLng).toFixed(3)}`
+                      : "";
+                  const liveLoc =
+                    geoAddressMap[lKey] ||
+                    cleanLocationName(
+                      item.currentLocation || item.current_location,
+                      isLive ? "Active Movement" : "-"
+                    );
+
+                  const isEnded =
+                    !isLive &&
+                    Boolean(
+                      item.endTime ||
+                        item.end_time ||
+                        item.status === "COMPLETED" ||
+                        item.status === "AUTO_END_WORK" ||
+                        item.status === "auto_end_work" ||
+                        item.status === "AUTO_ENDED" ||
+                        item.status === "END_WORK_HOUR"
+                    );
+
+                  const endLat = isEnded
+                    ? item.endLatitude ?? item.end_latitude ?? null
+                    : null;
+                  const endLng = isEnded
+                    ? item.endLongitude ?? item.end_longitude ?? null
+                    : null;
+                  const eKey =
+                    endLat && endLng
+                      ? `${Number(endLat).toFixed(3)},${Number(endLng).toFixed(3)}`
+                      : "";
+                  const endLoc = isEnded
+                    ? geoAddressMap[eKey] ||
+                      cleanLocationName(
+                        item.endLocation || item.end_location,
+                        "Office Workspace"
+                      )
+                    : null;
+
                   const totalHrs = item.totalHours || item.total_hours;
                   const distKm = item.totalDistanceKm || item.total_distance_km;
 
@@ -599,15 +866,55 @@ export default function AttendancePage() {
                         </div>
                       </td>
 
-                      {/* Start Location */}
-                      <td className="px-4 py-4 max-w-[170px] text-slate-600">
+                      {/* Start Location Name */}
+                      <td className="px-4 py-4 max-w-[250px] text-slate-700">
                         <div
-                          className="flex items-center gap-1 truncate"
+                          className="flex items-center gap-1.5 "
                           title={startLoc}
                         >
                           <FiMapPin className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                          <span className="truncate">{startLoc}</span>
+                          <span className=" font-medium">{startLoc}</span>
                         </div>
+                      </td>
+
+                      {/* Start Lat / Long */}
+                      <td className="px-4 py-4 whitespace-nowrap font-mono text-[11px] text-slate-600">
+                        {startLat && startLng ? (
+                          <div
+                            className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-slate-700 border border-slate-200/80 font-mono"
+                            title={`Start GPS: ${Number(startLat).toFixed(6)}, ${Number(startLng).toFixed(6)}`}
+                          >
+                            <span className="text-emerald-600 font-bold text-[10px]">📍</span>
+                            <span>
+                              {Number(startLat).toFixed(4)}, {Number(startLng).toFixed(4)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-sans text-xs">-</span>
+                        )}
+                      </td>
+
+                      {/* Live Location Name */}
+                      <td className="px-4 py-4 max-w-[190px] text-slate-700">
+                        {isLive ? (
+                          <div
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 text-emerald-800 font-semibold truncate max-w-full"
+                            title={`Live Coords: ${liveLat ? `${Number(liveLat).toFixed(4)}, ${Number(liveLng).toFixed(4)}` : "Tracking"} | Location: ${liveLoc}`}
+                          >
+                            <span className="relative flex h-2 w-2 shrink-0">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span className=" font-medium">{liveLoc || "Active Movement"}</span>
+                          </div>
+                        ) : liveLoc && liveLoc !== "-" ? (
+                          <div className="flex items-center gap-1.5  text-slate-600" title={liveLoc}>
+                            <span className="text-slate-400">📡</span>
+                            <span className="">{liveLoc}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-sans text-xs">-</span>
+                        )}
                       </td>
 
                       {/* Punch Out / Work End Time */}
@@ -624,31 +931,40 @@ export default function AttendancePage() {
                         )}
                       </td>
 
-                      {/* Exit / Live Location */}
-                      <td className="px-4 py-4 max-w-[180px] text-slate-600">
-                        {isLive ? (
+                      {/* End Location Name */}
+                      <td className="px-4 py-4 max-w-[180px] text-slate-700">
+                        {endLoc ? (
                           <div
-                            className="flex items-center gap-1 text-emerald-700 font-medium truncate"
-                            title={endLoc || "Live GPS Tracking"}
-                          >
-                            <span className="relative flex h-2 w-2 shrink-0">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                            <span className="truncate">
-                              {endLoc || "Active Movement"}
-                            </span>
-                          </div>
-                        ) : endLoc ? (
-                          <div
-                            className="flex items-center gap-1 truncate"
+                            className="flex items-center gap-1.5"
                             title={endLoc}
                           >
                             <FiMapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
-                            <span className="truncate">{endLoc}</span>
+                            <span className=" font-medium">{endLoc}</span>
                           </div>
                         ) : (
                           <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+
+                      {/* End Lat / Long */}
+                      <td className="px-4 py-4 whitespace-nowrap font-mono text-[11px] text-slate-600">
+                        {endLat && endLng ? (
+                          <div
+                            className={`inline-flex items-center gap-1 rounded-md px-2 py-1 border font-mono ${
+                              isLive
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
+                                : "bg-slate-100 text-slate-700 border border-slate-200/80"
+                            }`}
+                            title={`${isLive ? "Live Tracking Coords" : "Exit Coords"}: ${Number(endLat).toFixed(6)}, ${Number(endLng).toFixed(6)}`}
+                          >
+                            {/* <span className="text-[10px]">{isLive ? "📡" : "🏁"}</span> */}
+                             <span className="text-emerald-600 font-bold text-[10px]">📍</span>
+                            <span>
+                              {Number(endLat).toFixed(4)}, {Number(endLng).toFixed(4)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-sans text-xs">-</span>
                         )}
                       </td>
 
