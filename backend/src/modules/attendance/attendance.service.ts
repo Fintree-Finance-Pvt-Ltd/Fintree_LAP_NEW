@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cron } from '@nestjs/schedule';
 import { Repository } from 'typeorm';
 import { EndWorkDto } from './dto/end-work.dto';
 import { StartWorkDto } from './dto/start-work.dto';
@@ -9,6 +10,8 @@ import { LapAttendanceLocation } from './entities/lap-attendance-location.entity
 
 @Injectable()
 export class AttendanceService {
+  private readonly logger = new Logger(AttendanceService.name);
+
   constructor(
     @InjectRepository(LapAttendance)
     private readonly attendanceRepo: Repository<LapAttendance>,
@@ -48,9 +51,123 @@ export class AttendanceService {
     return R * c;
   }
 
+  /**
+   * Daily Cron at 10:00 PM (22:00 IST):
+   * Auto-ends open work sessions for users who forgot to click "End Work".
+   */
+  @Cron('0 0 22 * * *', {
+    name: 'auto-end-attendance-10pm',
+    timeZone: 'Asia/Kolkata',
+  })
+  async handleAutoEndWorkCron() {
+    this.logger.log('⏰ Running daily 10:00 PM IST Auto-End Attendance Cron...');
+    try {
+      const result = await this.autoEndForgottenSessions();
+      this.logger.log(
+        `✅ Auto-End Attendance Cron finished. Auto-ended ${result.affectedCount} open sessions with status auto_end_work.`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Failed during Auto-End Attendance Cron: ${error?.message || error}`,
+        error?.stack,
+      );
+    }
+  }
+
+  /**
+   * Auto-closes a single open attendance record with 10:00 PM cutoff timestamp.
+   */
+  async autoCloseSingleRecord(record: LapAttendance): Promise<LapAttendance> {
+    if (
+      !record ||
+      record.status === 'COMPLETED' ||
+      record.status === 'AUTO_END_WORK' ||
+      record.status === 'auto_end_work' ||
+      record.status === 'AUTO_ENDED' ||
+      record.status === 'END_WORK_HOUR'
+    ) {
+      return record;
+    }
+
+    const [y, m, d] = (record.date || this.getTodayDateString()).split('-').map((v) => parseInt(v, 10));
+    // Set auto-end time to 10:00 PM (22:00:00) on that session's date
+    const autoEndTime = new Date(y, m - 1, d, 22, 0, 0, 0);
+
+    const startMillis = record.startTime ? new Date(record.startTime).getTime() : autoEndTime.getTime();
+    const endMillis = autoEndTime.getTime();
+    const diffMinutes = Math.max(0, Math.round((endMillis - startMillis) / (1000 * 60)));
+    const formattedDuration = this.formatDuration(diffMinutes);
+
+    record.endTime = autoEndTime;
+    record.endLocation =
+      record.currentLocation || record.startLocation || 'Office Workspace (Auto Ended at 10 PM)';
+
+    const endLat = record.currentLatitude ?? record.startLatitude ?? null;
+    const endLng = record.currentLongitude ?? record.startLongitude ?? null;
+
+    if (endLat !== null) record.endLatitude = endLat;
+    if (endLng !== null) record.endLongitude = endLng;
+
+    record.totalMinutes = diffMinutes;
+    record.totalHours = formattedDuration;
+    record.status = 'AUTO_END_WORK';
+    record.updatedBy = record.userId;
+
+    const saved = await this.attendanceRepo.save(record);
+
+    // Save final location breadcrumb if coordinates exist
+    if (endLat && endLng) {
+      try {
+        const finalLoc = this.locationRepo.create({
+          attendanceId: record.id,
+          userId: record.userId,
+          latitude: endLat,
+          longitude: endLng,
+          locationName: record.endLocation,
+          recordedAt: autoEndTime,
+        });
+        await this.locationRepo.save(finalLoc);
+      } catch (locErr: any) {
+        this.logger.warn(`Could not save auto-end breadcrumb for session ${record.id}: ${locErr?.message}`);
+      }
+    }
+
+    return saved;
+  }
+
+  /**
+   * Process all open IN_PROGRESS sessions on or before target date.
+   */
+  async autoEndForgottenSessions(targetDate?: string) {
+    const todayStr = targetDate || this.getTodayDateString();
+
+    const openRecords = await this.attendanceRepo
+      .createQueryBuilder('att')
+      .where('att.status = :status', { status: 'IN_PROGRESS' })
+      .andWhere('att.date <= :todayStr', { todayStr })
+      .getMany();
+
+    let affectedCount = 0;
+    for (const record of openRecords) {
+      try {
+        await this.autoCloseSingleRecord(record);
+        affectedCount++;
+      } catch (err: any) {
+        this.logger.warn(
+          `Failed to auto-end session ID ${record.id} for user ${record.userId}: ${err?.message}`,
+        );
+      }
+    }
+
+    return {
+      message: 'Auto-end check completed successfully',
+      affectedCount,
+    };
+  }
+
   async getTodayStatus(userId: number) {
     const todayStr = this.getTodayDateString();
-    const record = await this.attendanceRepo.findOne({
+    let record = await this.attendanceRepo.findOne({
       where: { userId, date: todayStr },
       order: { id: 'DESC' },
     });
@@ -58,6 +175,12 @@ export class AttendanceService {
     const now = new Date();
     const currentHour = now.getHours();
     const isAfter8AM = currentHour >= 8;
+    const isPast10PM = currentHour >= 22;
+
+    // Auto-close lazily if still IN_PROGRESS and past 10:00 PM
+    if (record && record.status === 'IN_PROGRESS' && isPast10PM) {
+      record = await this.autoCloseSingleRecord(record);
+    }
 
     if (!record) {
       return {
@@ -71,7 +194,13 @@ export class AttendanceService {
     }
 
     const isWorkStarted = Boolean(record.startTime);
-    const isWorkEnded = Boolean(record.endTime) || record.status === 'COMPLETED';
+    const isWorkEnded =
+      Boolean(record.endTime) ||
+      record.status === 'COMPLETED' ||
+      record.status === 'AUTO_END_WORK' ||
+      record.status === 'auto_end_work' ||
+      record.status === 'AUTO_ENDED' ||
+      record.status === 'END_WORK_HOUR';
 
     return {
       isWorkStarted,
@@ -253,9 +382,16 @@ export class AttendanceService {
       throw new NotFoundException('No active work attendance record found for today.');
     }
 
-    if (record.status === 'COMPLETED' && record.endTime) {
+    if (
+      (record.status === 'COMPLETED' ||
+        record.status === 'AUTO_END_WORK' ||
+        record.status === 'auto_end_work' ||
+        record.status === 'AUTO_ENDED' ||
+        record.status === 'END_WORK_HOUR') &&
+      record.endTime
+    ) {
       return {
-        message: 'Work was already completed today',
+        message: 'Work was already completed or auto-ended today',
         data: record,
       };
     }
@@ -379,7 +515,14 @@ export class AttendanceService {
     return { data: list };
   }
 
-  async getAllAttendance(options?: { date?: string; month?: string; search?: string; limit?: number; page?: number }) {
+  async getAllAttendance(options?: {
+    date?: string;
+    month?: string;
+    search?: string;
+    status?: string;
+    limit?: number;
+    page?: number;
+  }) {
     const limit = options?.limit ?? 100;
     const page = options?.page ?? 1;
     const skip = (page - 1) * limit;
@@ -400,10 +543,31 @@ export class AttendanceService {
       qb.andWhere('att.date LIKE :month', { month: `${options.month}%` });
     }
 
+    if (options?.status && options.status !== 'ALL') {
+      if (
+        options.status === 'AUTO_END_WORK' ||
+        options.status === 'auto_end_work' ||
+        options.status === 'AUTO_ENDED' ||
+        options.status === 'END_WORK_HOUR'
+      ) {
+        qb.andWhere('(att.status = :s1 OR att.status = :s2 OR att.status = :s3 OR att.status = :s4)', {
+          s1: 'AUTO_END_WORK',
+          s2: 'auto_end_work',
+          s3: 'AUTO_ENDED',
+          s4: 'END_WORK_HOUR',
+        });
+      } else {
+        qb.andWhere('att.status = :status', { status: options.status });
+      }
+    }
+
     if (options?.search) {
-      qb.andWhere('(user.name LIKE :search OR user.email LIKE :search OR att.startLocation LIKE :search OR att.endLocation LIKE :search)', {
-        search: `%${options.search}%`,
-      });
+      qb.andWhere(
+        '(user.name LIKE :search OR user.email LIKE :search OR att.startLocation LIKE :search OR att.endLocation LIKE :search)',
+        {
+          search: `%${options.search}%`,
+        },
+      );
     }
 
     const [items, total] = await qb.getManyAndCount();

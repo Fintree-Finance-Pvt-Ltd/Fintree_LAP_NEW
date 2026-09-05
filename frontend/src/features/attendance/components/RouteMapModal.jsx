@@ -294,13 +294,25 @@ export default function RouteMapModal({ attendanceId, onClose }) {
                   {att.userName || "Employee"} • Route Movement Map
                 </h3>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                     att.status === "COMPLETED"
                       ? "bg-blue-500/20 text-blue-300 border border-blue-400/30"
+                      : att.status === "AUTO_END_WORK" ||
+                        att.status === "auto_end_work" ||
+                        att.status === "AUTO_ENDED" ||
+                        att.status === "END_WORK_HOUR"
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-400/30 font-mono"
                       : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 animate-pulse"
                   }`}
                 >
-                  {att.status === "COMPLETED" ? "Completed" : "Live Tracking Active"}
+                  {att.status === "COMPLETED"
+                    ? "Completed"
+                    : att.status === "AUTO_END_WORK" ||
+                      att.status === "auto_end_work" ||
+                      att.status === "AUTO_ENDED" ||
+                      att.status === "END_WORK_HOUR"
+                    ? "auto_end_work"
+                    : "Live Tracking Active"}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">

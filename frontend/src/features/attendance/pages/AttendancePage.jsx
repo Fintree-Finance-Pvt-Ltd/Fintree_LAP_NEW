@@ -128,7 +128,13 @@ export default function AttendancePage() {
       const matchDate = !selectedDate || item.date === selectedDate;
 
       const matchStatus =
-        statusFilter === "ALL" || item.status === statusFilter;
+        statusFilter === "ALL" ||
+        item.status === statusFilter ||
+        (statusFilter === "AUTO_END_WORK" &&
+          (item.status === "AUTO_END_WORK" ||
+            item.status === "auto_end_work" ||
+            item.status === "AUTO_ENDED" ||
+            item.status === "END_WORK_HOUR"));
 
       return matchSearch && matchDate && matchStatus;
     });
@@ -478,6 +484,7 @@ export default function AttendancePage() {
               <option value="ALL">All Status</option>
               <option value="IN_PROGRESS">In Progress</option>
               <option value="COMPLETED">Completed</option>
+              <option value="AUTO_END_WORK">auto_end_work</option>
             </select>
 
             {/* Export CSV */}
@@ -673,24 +680,28 @@ export default function AttendancePage() {
 
                       {/* Status */}
                       <td className="px-4 py-4 text-center whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                            item.status === "COMPLETED"
-                              ? "bg-blue-50 text-blue-700 border border-blue-200/60"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                          }`}
-                        >
+                        {item.status === "COMPLETED" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60">
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                            Completed
+                          </span>
+                        ) : item.status === "AUTO_END_WORK" ||
+                          item.status === "auto_end_work" ||
+                          item.status === "AUTO_ENDED" ||
+                          item.status === "END_WORK_HOUR" ? (
                           <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              item.status === "COMPLETED"
-                                ? "bg-blue-600"
-                                : "bg-emerald-600 animate-pulse"
-                            }`}
-                          />
-                          {item.status === "COMPLETED"
-                            ? "Completed"
-                            : "Live Active"}
-                        </span>
+                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80 shadow-2xs font-mono"
+                            title="Automatically ended at 10:00 PM"
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                            auto_end_work
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                            Live Active
+                          </span>
+                        )}
                       </td>
 
                       {/* View Route Map Action */}
