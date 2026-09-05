@@ -173,8 +173,8 @@ export default function StartWorkModal() {
       : user?.spoke || "Workspace";
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-md transition-all animate-fadeIn">
-      <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-white/20 bg-gradient-to-b from-[#0f2942] to-[#081a2c] text-white shadow-2xl transition-all">
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-slate-950/70 p-3 backdrop-blur-md transition-all animate-fadeIn sm:items-center sm:p-4">
+      <div className="relative max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/20 bg-gradient-to-b from-[#0f2942] to-[#081a2c] text-white shadow-2xl transition-all sm:rounded-3xl">
         {/* Decorative Top Accent Bar */}
         <div className="h-2 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400" />
 
@@ -188,7 +188,7 @@ export default function StartWorkModal() {
           <FiX className="h-5 w-5" />
         </button>
 
-        <div className="p-6 md:p-8">
+        <div className="p-5 sm:p-6 md:p-8">
           {/* Header Title */}
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-400 shadow-inner border border-blue-400/30">
@@ -221,18 +221,18 @@ export default function StartWorkModal() {
           {/* Info Details List */}
           <div className="mt-5 space-y-3">
             {/* User & Spoke */}
-            <div className="flex items-center justify-between rounded-xl bg-slate-900/50 px-4 py-3 border border-white/5 text-xs">
+            <div className="flex flex-col gap-2 rounded-xl border border-white/5 bg-slate-900/50 px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2.5 text-slate-300">
                 <FiUser className="h-4 w-4 text-blue-400" />
                 <span>Employee</span>
               </div>
-              <span className="font-semibold text-white">
+              <span className="break-words font-semibold text-white sm:text-right">
                 {user?.name || user?.email || "User"} ({spoke})
               </span>
             </div>
 
             {/* Location */}
-            <div className="flex items-center justify-between rounded-xl bg-slate-900/50 px-4 py-3 border border-white/5 text-xs">
+            <div className="flex flex-col gap-2 rounded-xl border border-white/5 bg-slate-900/50 px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2.5 text-slate-300">
                 <FiMapPin className="h-4 w-4 text-emerald-400" />
                 <span>Punch Location</span>
@@ -243,7 +243,7 @@ export default function StartWorkModal() {
                 ) : (
                   <>
                     <FiCheckCircle className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    <span className="max-w-[200px] truncate text-right">
+                    <span className="max-w-[min(100%,16rem)] truncate text-left sm:text-right">
                       {geoState.address || spoke || "Verified Location"}
                     </span>
                   </>

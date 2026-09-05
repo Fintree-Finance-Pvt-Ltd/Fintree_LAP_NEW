@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { useMemo } from "react";
 import {
   FaBriefcase,
   FaFileAlt,
@@ -33,8 +32,6 @@ import {
   FaClock
 } from "react-icons/fa";
 import { useAuth } from "../../hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
-import { rmApi } from "../../features/rm/rmApi.js";
 
 const rolesConfig = {
   RM: [
@@ -511,50 +508,36 @@ function normalizeRoles(user) {
     .filter(Boolean);
 }
 
-export default function Sidebar() {
+export function useSidebarNav() {
   const { user } = useAuth();
   const location = useLocation();
   const roles = normalizeRoles(user);
-  const currentPath = window.location.pathname;
   const currentRoleAccessTab =
-    new URLSearchParams(
-      location.search,
-    ).get("tab") || "users";
-
-  const workflowQuery = useQuery({
-    queryKey: ["rm-sidebar-workflow"],
-    queryFn: async () => {
-      const leads = (await rmApi.applications({ page: 1, limit: 20 })).data ?? [];
-      const latest = leads[0];
-      if (!latest?.id) return {};
-      return (await rmApi.workflowStatus(latest.id)).data ?? {};
-    },
-    enabled: roles.includes("RM") && ["/my-leads", "/create-lead", "/customer-visit", "/geo-verification", "/kyc-documents", "/submit-bm"].includes(currentPath),
-    retry: false,
-  });
-
-  const workflowState = workflowQuery.data ?? {};
-  const nextRoute = useMemo(() => {
-    if (!workflowState.leadSubmitted) return "/create-lead";
-    if (!workflowState.customerVisit) return "/customer-visit";
-    if (!workflowState.businessVisit) return "/customer-visit";
-    if (!workflowState.geoVerification) return "/geo-verification";
-    if (!workflowState.documentsUploaded) return "/kyc-documents";
-    if (!workflowState.submittedToBm) return "/submit-bm";
-    return "/submit-bm";
-  }, [workflowState]);
+    new URLSearchParams(location.search).get("tab") || "users";
 
   const allowedGroups = groupOrder
     .map((category) => {
       const collected = [];
       const seenTo = new Set();
 
-      const roleKeysInOrder = ["RM", "BM", "ADMIN", "CM", "CREDIT_MAKER", "CREDIT_CHECKER", "VALUATION", "LEGAL", "OPS_CHECKER", "OPS_HEAD", "OPS_MAKER", "LMS", "COMMON", "LEGALCLEARED"];
+      const roleKeysInOrder = [
+        "RM",
+        "BM",
+        "ADMIN",
+        "CM",
+        "CREDIT_MAKER",
+        "CREDIT_CHECKER",
+        "VALUATION",
+        "LEGAL",
+        "OPS_CHECKER",
+        "OPS_HEAD",
+        "OPS_MAKER",
+        "LMS",
+        "COMMON",
+        "LEGALCLEARED",
+      ];
       for (const roleKey of roleKeysInOrder) {
-        if (
-          roleKey !== "COMMON" &&
-          !roles.includes(roleKey)
-        ) {
+        if (roleKey !== "COMMON" && !roles.includes(roleKey)) {
           continue;
         }
         const roleGroups = rolesConfig[roleKey] || [];
@@ -573,80 +556,62 @@ export default function Sidebar() {
     })
     .filter(Boolean);
 
+  return { allowedGroups, location, currentRoleAccessTab };
+}
+
+export function SidebarNavLinks({ onNavigate }) {
+  const { allowedGroups, location, currentRoleAccessTab } = useSidebarNav();
+
   return (
-    <aside className="hidden w-72 shrink-0 bg-[#0b1426] text-slate-400 p-5 md:flex flex-col h-screen overflow-y-auto select-none border-r border-slate-800/40">
-      {/* Brand Header */}
+    <nav className="flex-1 space-y-6">
+      {allowedGroups.map((group) => (
+        <div key={group.category} className="space-y-1">
+          <div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            {group.displayCategory || group.category}
+          </div>
+
+          {group.items.map(({ to, label, Icon, tab }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={onNavigate}
+              className={({ isActive }) => {
+                const roleAccessActive =
+                  tab &&
+                  location.pathname === "/roles-access" &&
+                  currentRoleAccessTab === tab;
+
+                const itemIsActive = tab ? roleAccessActive : isActive;
+
+                return `flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                  itemIsActive
+                    ? "border-l-4 border-cyan-400 bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold text-white shadow-lg shadow-blue-600/10"
+                    : "hover:bg-white/5 hover:text-slate-200"
+                }`;
+              }}
+            >
+              <Icon className="shrink-0 text-base opacity-80" />
+              <span className="truncate">{label}</span>
+            </NavLink>
+          ))}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+export default function Sidebar() {
+  return (
+    <aside className="hidden h-screen w-64 shrink-0 select-none flex-col overflow-y-auto border-r border-slate-800/40 bg-[#0b1426] p-5 text-slate-400 lg:flex lg:w-72">
       <div className="mb-8 px-2">
-        <div className="text-white text-xl font-bold tracking-wider bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+        <div className="bg-gradient-to-r from-white to-slate-300 bg-clip-text text-xl font-bold tracking-wider text-transparent text-white">
           Fintree LAP
         </div>
-        <div className="text-[10px] text-cyan-500 font-bold tracking-widest mt-1 uppercase">
+        <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-cyan-500">
           LOS • LMS PORTAL
         </div>
       </div>
-
-      {/* Navigation Groups */}
-      <nav className="space-y-6 flex-1">
-        {allowedGroups.map((group) => (
-          <div key={group.category} className="space-y-1">
-            <div className="px-3 text-[10px] font-bold tracking-widest text-slate-500 uppercase mb-2">
-              {group.displayCategory || group.category}
-            </div>
-
-            {/* {group.items.map(({ to, label, Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  `flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${isActive
-                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/10 font-semibold border-l-4 border-cyan-400"
-                    : "hover:bg-white/5 hover:text-slate-200"
-                  }`
-                }
-              >
-                <Icon className="text-base shrink-0 opacity-80" />
-                <span className="truncate">{label}</span>
-              </NavLink>
-            ))} */}
-
-            {group.items.map(
-              ({
-                to,
-                label,
-                Icon,
-                tab,
-              }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) => {
-                    const roleAccessActive =
-                      tab &&
-                      location.pathname ===
-                      "/roles-access" &&
-                      currentRoleAccessTab === tab;
-
-                    const itemIsActive = tab
-                      ? roleAccessActive
-                      : isActive;
-
-                    return `flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${itemIsActive
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/10 font-semibold border-l-4 border-cyan-400"
-                      : "hover:bg-white/5 hover:text-slate-200"
-                      }`;
-                  }}
-                >
-                  <Icon className="text-base shrink-0 opacity-80" />
-
-                  <span className="truncate">
-                    {label}
-                  </span>
-                </NavLink>
-              ),
-            )}
-          </div>
-        ))}
-      </nav>
+      <SidebarNavLinks />
     </aside>
   );
 }

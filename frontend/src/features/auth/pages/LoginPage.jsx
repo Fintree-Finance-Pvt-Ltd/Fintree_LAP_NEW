@@ -90,14 +90,14 @@ const submit = async (event) => {
 };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#021933]">
+    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-[#021933]">
       {/* Left Column: Brand Hero Banner */}
-      <div className="relative hidden md:flex w-[40%] xl:w-[35%] flex-col justify-between bg-gradient-to-b from-[#031e3d] to-[#010f20] p-12 text-white border-r border-slate-900/20">
+      <div className="relative hidden w-[40%] flex-col justify-between border-r border-slate-900/20 bg-gradient-to-b from-[#031e3d] to-[#010f20] p-8 text-white lg:flex lg:p-12 xl:w-[35%]">
         <div className="absolute inset-0 opacity-10 mix-blend-overlay bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200')] bg-cover bg-center" />
 
         {/* Brand Header */}
         <div className="relative z-10 flex items-center gap-2">
-          <div className="flex h-25 w-48 items-center justify-start bg-transparent ml-40">
+          <div className="ml-0 flex h-20 w-40 items-center justify-start bg-transparent xl:ml-10 xl:h-24 xl:w-48">
             <img
               src="/images/logo-removebg-preview.png"
               alt="Fintree Finance Logo"
@@ -123,12 +123,19 @@ const submit = async (event) => {
       </div>
 
       {/* Right Column: Glassmorphism Form Wrapper */}
-      <div className="flex flex-1 flex-col items-center justify-center p-6 md:p-12 lg:p-16 bg-gradient-to-br from-[#021933] to-[#010f20] overflow-y-auto">
-        <div className="w-full max-w-md lg:max-w-lg transition-all duration-300">
-          <Card className="w-full border border-white/10 shadow-2xl bg-white/5 backdrop-blur-xl rounded-2xl">
-            <CardContent className="p-8 md:p-10">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-white">
+      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto bg-gradient-to-br from-[#021933] to-[#010f20] p-4 sm:p-6 md:p-12 lg:p-16">
+        <div className="w-full max-w-md transition-all duration-300 lg:max-w-lg">
+          <div className="mb-6 flex justify-center lg:hidden">
+            <img
+              src="/images/logo-removebg-preview.png"
+              alt="Fintree Finance Logo"
+              className="h-14 w-auto object-contain"
+            />
+          </div>
+          <Card className="w-full rounded-2xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
+            <CardContent className="p-5 sm:p-8 md:p-10">
+              <div className="mb-8 text-center">
+                <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl md:text-4xl">
                   Secure login
                 </h2>
                 <p className="mt-2 text-base text-slate-400">
@@ -308,7 +315,7 @@ const submit = async (event) => {
                 </div>
 
                 {/* Remember + Forgot */}
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
                   <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
                     <input
                       type="checkbox"

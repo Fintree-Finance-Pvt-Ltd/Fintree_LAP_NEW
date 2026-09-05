@@ -68,9 +68,9 @@ export function LmsPageShell({
   rightAction,
 }) {
   return (
-    <div className="min-h-screen bg-[#f4f7fb] p-5 text-slate-900 md:p-8">
+    <div className="min-h-0 bg-transparent p-0 text-slate-900 md:p-0">
       <div className="mx-auto max-w-[1800px] space-y-6">
-        <div className="relative overflow-hidden rounded-[30px] bg-gradient-to-r from-[#0f2942] via-[#2563eb] to-[#22c7c7] p-7 text-white shadow-xl shadow-blue-900/10">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0f2942] via-[#2563eb] to-[#22c7c7] p-5 text-white shadow-xl shadow-blue-900/10 sm:rounded-[30px] sm:p-7">
           <div className="absolute -left-16 -top-20 h-56 w-56 rounded-full bg-cyan-300/30" />
           <div className="absolute -right-20 -bottom-24 h-72 w-72 rounded-full bg-white/10" />
 
@@ -149,7 +149,7 @@ export function LmsDataTable({
   }, [rows, search]);
 
   return (
-    <div className="rounded-[26px] border border-slate-100 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[26px] sm:p-6">
       <div className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h2 className="text-lg font-black text-[#0f2942]">{title}</h2>

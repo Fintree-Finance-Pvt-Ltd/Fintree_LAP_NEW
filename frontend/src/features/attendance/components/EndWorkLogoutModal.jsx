@@ -200,8 +200,8 @@ export default function EndWorkLogoutModal({ onDirectLogout }) {
   });
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-md transition-all animate-fadeIn">
-      <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-white/20 bg-gradient-to-b from-[#0f2942] to-[#081a2c] text-white shadow-2xl transition-all">
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-slate-950/70 p-3 backdrop-blur-md transition-all animate-fadeIn sm:items-center sm:p-4">
+      <div className="relative max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/20 bg-gradient-to-b from-[#0f2942] to-[#081a2c] text-white shadow-2xl transition-all sm:rounded-3xl">
         {/* Decorative Top Accent Bar */}
         <div className="h-2 w-full bg-gradient-to-r from-amber-500 via-rose-500 to-red-500" />
 
@@ -215,7 +215,7 @@ export default function EndWorkLogoutModal({ onDirectLogout }) {
           <FiX className="h-5 w-5" />
         </button>
 
-        <div className="p-6 md:p-8">
+        <div className="p-5 sm:p-6 md:p-8">
           {/* Header Title */}
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400 shadow-inner border border-amber-400/30">

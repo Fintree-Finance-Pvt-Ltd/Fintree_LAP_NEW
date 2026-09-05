@@ -1,39 +1,35 @@
-// import { Outlet } from 'react-router-dom';
-// import Sidebar from './Sidebar.jsx';
-// import Header from './Header.jsx';
-
-// export default function AppLayout() {
-//   return <div className="flex min-h-screen bg-[#f4f7fb]"><Sidebar /><main className="min-w-0 flex-1"><Header /><div className="p-4 md:p-6"><Outlet /></div></main></div>;
-// }
-
-
+import { useState } from "react";
 import { Outlet } from "react-router-dom";
 
 import Sidebar from "./Sidebar.jsx";
 import HeaderContainer from "./HeaderContainer.jsx";
+import MobileSidebar from "./MobileSidebar.jsx";
+import { LayoutContext } from "./LayoutContext.jsx";
 import StartWorkModal from "../../features/attendance/components/StartWorkModal.jsx";
 
 export default function AppLayout() {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f4f7fb]">
-      {/* Sidebar has its own height and scrolling */}
-      <Sidebar />
+    <LayoutContext.Provider value={{ mobileNavOpen, setMobileNavOpen }}>
+      <div className="flex h-[100dvh] overflow-hidden bg-[#f4f7fb]">
+        <Sidebar />
+        <MobileSidebar />
 
-      {/* Right section */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Header remains fixed */}
-        <div className="shrink-0">
-          <HeaderContainer />
-        </div>
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="shrink-0">
+            <HeaderContainer />
+          </div>
 
-        {/* Only this section scrolls */}
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
-          <Outlet />
-        </div>
-      </main>
+          <div className="app-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-6">
+            <div className="mx-auto w-full min-w-0 max-w-[1800px]">
+              <Outlet />
+            </div>
+          </div>
+        </main>
 
-      {/* Daily Start Work Modal */}
-      <StartWorkModal />
-    </div>
+        <StartWorkModal />
+      </div>
+    </LayoutContext.Provider>
   );
-}
+}

@@ -105,9 +105,9 @@ export default function LmsDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] p-5 text-slate-900 md:p-8">
+    <div className="min-h-screen bg-[#f4f7fb] p-0 text-slate-900 sm:p-2 md:p-4">
       <div className="mx-auto max-w-[1800px] space-y-6">
-        <div className="relative overflow-hidden rounded-[30px] bg-gradient-to-r from-[#0f2942] via-[#2563eb] to-[#22c7c7] p-7 text-white shadow-xl shadow-blue-900/10">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0f2942] via-[#2563eb] to-[#22c7c7] p-5 text-white shadow-xl shadow-blue-900/10 sm:rounded-[30px] sm:p-7">
           <div className="absolute -left-16 -top-20 h-56 w-56 rounded-full bg-cyan-300/30" />
           <div className="absolute -right-20 -bottom-24 h-72 w-72 rounded-full bg-white/10" />
 
@@ -118,9 +118,9 @@ export default function LmsDashboard() {
               </div>
 
               <div>
-                <h1 className="text-3xl font-black tracking-tight md:text-4xl">
-                  LMS Dashboard
-                </h1>
+              <h1 className="text-2xl font-black tracking-tight sm:text-3xl md:text-4xl">
+                LMS Dashboard
+              </h1>
 
                 <p className="mt-2 max-w-3xl text-sm font-semibold leading-relaxed text-white/90">
                   Loan servicing workspace for disbursement, repayments, UTR,
