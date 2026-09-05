@@ -20,6 +20,7 @@ export default function EndWorkLogoutModal({ onDirectLogout }) {
     isWorkStarted,
     isWorkEnded,
     attendanceRecord,
+    currentCoords,
     endWork,
     isSubmitting,
   } = useAttendance();
@@ -42,17 +43,30 @@ export default function EndWorkLogoutModal({ onDirectLogout }) {
   useEffect(() => {
     if (!showEndModal) return;
 
-    if (!navigator.geolocation) {
+    // Use currentCoords as immediate initial coordinates
+    const initialLat = currentCoords?.latitude ?? attendanceRecord?.currentLatitude ?? attendanceRecord?.startLatitude ?? null;
+    const initialLng = currentCoords?.longitude ?? attendanceRecord?.currentLongitude ?? attendanceRecord?.startLongitude ?? null;
+
+    if (initialLat && initialLng) {
       setGeoState({
         loading: false,
-        latitude: null,
-        longitude: null,
-        address: user?.spoke || "Workspace Spoke",
+        latitude: parseFloat(Number(initialLat).toFixed(6)),
+        longitude: parseFloat(Number(initialLng).toFixed(6)),
+        address: `${Number(initialLat).toFixed(4)}° N, ${Number(initialLng).toFixed(4)}° E (${user?.spoke || "Workspace"})`,
       });
-      return;
     }
 
-    setGeoState((prev) => ({ ...prev, loading: true }));
+    if (!navigator.geolocation) {
+      if (!initialLat) {
+        setGeoState({
+          loading: false,
+          latitude: null,
+          longitude: null,
+          address: user?.spoke || "Workspace Spoke",
+        });
+      }
+      return;
+    }
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -65,55 +79,65 @@ export default function EndWorkLogoutModal({ onDirectLogout }) {
         });
       },
       (err) => {
-        console.warn("End work geolocation fetch skipped:", err.message);
-        setGeoState({
+        console.warn("End work geolocation fetch note:", err.message);
+        setGeoState((prev) => ({
+          ...prev,
           loading: false,
-          latitude: null,
-          longitude: null,
-          address: user?.spoke ? `Spoke: ${user.spoke}` : "Workspace Office",
-        });
+          address: prev.address || (user?.spoke ? `Spoke: ${user.spoke}` : "Workspace Office"),
+        }));
       },
-      { timeout: 8000, enableHighAccuracy: true }
+      { timeout: 6000, enableHighAccuracy: true }
     );
-  }, [showEndModal, user?.spoke]);
+  }, [showEndModal, user?.spoke, currentCoords, attendanceRecord]);
 
   if (!showEndModal) return null;
 
-  const handleEndWorkOnly = async () => {
+  const getFinalPayload = () => {
     const spoke =
       typeof user?.spoke === "object"
         ? user?.spoke?.name
         : user?.spoke || "Workspace";
 
-    const payload = {
-      location: geoState.address || spoke || "Office Workspace",
-      latitude: geoState.latitude,
-      longitude: geoState.longitude,
-    };
+    const finalLat =
+      geoState.latitude ??
+      currentCoords?.latitude ??
+      attendanceRecord?.currentLatitude ??
+      attendanceRecord?.startLatitude ??
+      null;
 
+    const finalLng =
+      geoState.longitude ??
+      currentCoords?.longitude ??
+      attendanceRecord?.currentLongitude ??
+      attendanceRecord?.startLongitude ??
+      null;
+
+    const locName =
+      geoState.address ||
+      (finalLat && finalLng
+        ? `${Number(finalLat).toFixed(4)}° N, ${Number(finalLng).toFixed(4)}° E (${spoke})`
+        : spoke || "Office Workspace");
+
+    return {
+      location: locName,
+      latitude: finalLat ? Number(finalLat) : undefined,
+      longitude: finalLng ? Number(finalLng) : undefined,
+    };
+  };
+
+  const handleEndWorkOnly = async () => {
+    const payload = getFinalPayload();
     if (isWorkStarted && !isWorkEnded) {
       await endWork(payload);
     }
-
     setShowEndModal(false);
   };
 
   const handleEndWorkAndSignOut = async () => {
-    const spoke =
-      typeof user?.spoke === "object"
-        ? user?.spoke?.name
-        : user?.spoke || "Workspace";
-
-    const payload = {
-      location: geoState.address || spoke || "Office Workspace",
-      latitude: geoState.latitude,
-      longitude: geoState.longitude,
-    };
-
+    const payload = getFinalPayload();
     if (isWorkStarted && !isWorkEnded) {
       await endWork(payload);
     }
-
     setShowEndModal(false);
     if (typeof onDirectLogout === "function") {
       onDirectLogout();

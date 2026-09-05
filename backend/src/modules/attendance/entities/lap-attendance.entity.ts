@@ -4,10 +4,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { LapAttendanceLocation } from './lap-attendance-location.entity';
 
 @Entity('lap_attendance')
 export class LapAttendance {
@@ -56,6 +58,38 @@ export class LapAttendance {
   })
   startLongitude: number | null;
 
+  @Column({
+    name: 'current_latitude',
+    type: 'decimal',
+    precision: 10,
+    scale: 7,
+    nullable: true,
+    transformer: {
+      to: (value?: number | null) => value,
+      from: (value?: string | null) => (value ? parseFloat(value) : null),
+    },
+  })
+  currentLatitude: number | null;
+
+  @Column({
+    name: 'current_longitude',
+    type: 'decimal',
+    precision: 10,
+    scale: 7,
+    nullable: true,
+    transformer: {
+      to: (value?: number | null) => value,
+      from: (value?: string | null) => (value ? parseFloat(value) : null),
+    },
+  })
+  currentLongitude: number | null;
+
+  @Column({ name: 'current_location', type: 'varchar', length: 255, nullable: true })
+  currentLocation: string | null;
+
+  @Column({ name: 'last_tracked_at', type: 'datetime', precision: 6, nullable: true })
+  lastTrackedAt: Date | null;
+
   @Column({ name: 'end_time', type: 'datetime', precision: 6, nullable: true })
   endTime: Date | null;
 
@@ -94,6 +128,20 @@ export class LapAttendance {
   @Column({ name: 'total_minutes', type: 'int', unsigned: true, nullable: true })
   totalMinutes: number | null;
 
+  @Column({
+    name: 'total_distance_km',
+    type: 'decimal',
+    precision: 8,
+    scale: 3,
+    nullable: true,
+    default: 0,
+    transformer: {
+      to: (value?: number | null) => value,
+      from: (value?: string | null) => (value ? parseFloat(value) : 0),
+    },
+  })
+  totalDistanceKm: number | null;
+
   @Column({ type: 'varchar', length: 40, default: 'IN_PROGRESS' })
   status: string;
 
@@ -108,4 +156,7 @@ export class LapAttendance {
 
   @Column({ name: 'updated_by', type: 'bigint', unsigned: true, nullable: true })
   updatedBy?: number | null;
+
+  @OneToMany(() => LapAttendanceLocation, (loc) => loc.attendance)
+  locations?: LapAttendanceLocation[];
 }

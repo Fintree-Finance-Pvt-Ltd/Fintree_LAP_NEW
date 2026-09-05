@@ -3,17 +3,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EndWorkDto } from './dto/end-work.dto';
 import { StartWorkDto } from './dto/start-work.dto';
+import { TrackLocationDto } from './dto/track-location.dto';
 import { LapAttendance } from './entities/lap-attendance.entity';
+import { LapAttendanceLocation } from './entities/lap-attendance-location.entity';
 
 @Injectable()
 export class AttendanceService {
   constructor(
     @InjectRepository(LapAttendance)
     private readonly attendanceRepo: Repository<LapAttendance>,
+    @InjectRepository(LapAttendanceLocation)
+    private readonly locationRepo: Repository<LapAttendanceLocation>,
   ) {}
 
   private getTodayDateString(dateObj: Date = new Date()): string {
-    // Return YYYY-MM-DD in local time
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
@@ -28,6 +31,21 @@ export class AttendanceService {
       return `${mins} min${mins === 1 ? '' : 's'}`;
     }
     return `${hrs} hr${hrs === 1 ? '' : 's'} ${mins} min${mins === 1 ? '' : 's'}`;
+  }
+
+  // Haversine formula to compute distance in KM between two coordinates
+  private calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth's radius in KM
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   async getTodayStatus(userId: number) {
@@ -68,12 +86,17 @@ export class AttendanceService {
         startLocation: record.startLocation,
         startLatitude: record.startLatitude,
         startLongitude: record.startLongitude,
+        currentLatitude: record.currentLatitude,
+        currentLongitude: record.currentLongitude,
+        currentLocation: record.currentLocation,
+        lastTrackedAt: record.lastTrackedAt,
         endTime: record.endTime,
         endLocation: record.endLocation,
         endLatitude: record.endLatitude,
         endLongitude: record.endLongitude,
         totalHours: record.totalHours,
         totalMinutes: record.totalMinutes,
+        totalDistanceKm: record.totalDistanceKm,
         status: record.status,
         createdAt: record.createdAt,
       },
@@ -102,13 +125,31 @@ export class AttendanceService {
       date: todayStr,
       startTime: now,
       startLocation: location,
-      startLatitude: dto.latitude ?? null,
-      startLongitude: dto.longitude ?? null,
+      startLatitude: dto.latitude !== undefined && dto.latitude !== null ? dto.latitude : null,
+      startLongitude: dto.longitude !== undefined && dto.longitude !== null ? dto.longitude : null,
+      currentLatitude: dto.latitude !== undefined && dto.latitude !== null ? dto.latitude : null,
+      currentLongitude: dto.longitude !== undefined && dto.longitude !== null ? dto.longitude : null,
+      currentLocation: location,
+      lastTrackedAt: now,
+      totalDistanceKm: 0,
       status: 'IN_PROGRESS',
       createdBy: userId,
     });
 
     const saved = await this.attendanceRepo.save(attendance);
+
+    // Save initial starting breadcrumb
+    if (dto.latitude && dto.longitude) {
+      const initialLoc = this.locationRepo.create({
+        attendanceId: saved.id,
+        userId,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        locationName: location,
+        recordedAt: now,
+      });
+      await this.locationRepo.save(initialLoc);
+    }
 
     return {
       message: 'Work started successfully',
@@ -116,10 +157,86 @@ export class AttendanceService {
     };
   }
 
+  async trackLocation(userId: number, dto: TrackLocationDto) {
+    const todayStr = this.getTodayDateString();
+
+    let attendance: LapAttendance | null = null;
+    if (dto.attendanceId) {
+      attendance = await this.attendanceRepo.findOne({
+        where: { id: dto.attendanceId, userId },
+      });
+    }
+
+    if (!attendance) {
+      attendance = await this.attendanceRepo.findOne({
+        where: { userId, date: todayStr, status: 'IN_PROGRESS' },
+        order: { id: 'DESC' },
+      });
+    }
+
+    if (!attendance) {
+      return { message: 'No active attendance session to track' };
+    }
+
+    const now = new Date();
+    const lat = dto.latitude;
+    const lng = dto.longitude;
+
+    // Calculate distance from last point
+    let distanceIncrement = 0;
+    const prevLat = attendance.currentLatitude ?? attendance.startLatitude;
+    const prevLng = attendance.currentLongitude ?? attendance.startLongitude;
+
+    if (prevLat && prevLng) {
+      distanceIncrement = this.calculateDistanceKm(
+        Number(prevLat),
+        Number(prevLng),
+        lat,
+        lng,
+      );
+      // Filter out small GPS jitter (< 20 meters)
+      if (distanceIncrement < 0.02) {
+        distanceIncrement = 0;
+      }
+    }
+
+    const currentTotalDist = Number(attendance.totalDistanceKm || 0) + distanceIncrement;
+
+    attendance.currentLatitude = lat;
+    attendance.currentLongitude = lng;
+    if (dto.locationName) attendance.currentLocation = dto.locationName;
+    attendance.lastTrackedAt = now;
+    attendance.totalDistanceKm = parseFloat(currentTotalDist.toFixed(3));
+    await this.attendanceRepo.save(attendance);
+
+    const locationPoint = this.locationRepo.create({
+      attendanceId: attendance.id,
+      userId,
+      latitude: lat,
+      longitude: lng,
+      accuracy: dto.accuracy ?? null,
+      speed: dto.speed ?? null,
+      heading: dto.heading ?? null,
+      locationName: dto.locationName ?? null,
+      recordedAt: now,
+    });
+    await this.locationRepo.save(locationPoint);
+
+    return {
+      message: 'Location tracked successfully',
+      data: {
+        attendanceId: attendance.id,
+        latitude: lat,
+        longitude: lng,
+        totalDistanceKm: attendance.totalDistanceKm,
+        lastTrackedAt: now,
+      },
+    };
+  }
+
   async endWork(userId: number, dto: EndWorkDto) {
     const todayStr = this.getTodayDateString();
 
-    // Find the active attendance for today or latest unclosed session
     let record = await this.attendanceRepo.findOne({
       where: { userId, date: todayStr, status: 'IN_PROGRESS' },
       order: { id: 'DESC' },
@@ -150,19 +267,106 @@ export class AttendanceService {
     const formattedDuration = this.formatDuration(diffMinutes);
 
     record.endTime = now;
-    record.endLocation = dto.location || record.startLocation || 'Location detected';
-    if (dto.latitude !== undefined) record.endLatitude = dto.latitude;
-    if (dto.longitude !== undefined) record.endLongitude = dto.longitude;
+    record.endLocation = dto.location || record.currentLocation || record.startLocation || 'Office Workspace';
+
+    const endLat = dto.latitude ?? record.currentLatitude ?? record.startLatitude ?? null;
+    const endLng = dto.longitude ?? record.currentLongitude ?? record.startLongitude ?? null;
+
+    if (endLat !== null) record.endLatitude = endLat;
+    if (endLng !== null) record.endLongitude = endLng;
+
+    // Add remaining distance if final coords provided and differ from current
+    if (dto.latitude && dto.longitude && record.currentLatitude && record.currentLongitude) {
+      const dist = this.calculateDistanceKm(
+        Number(record.currentLatitude),
+        Number(record.currentLongitude),
+        dto.latitude,
+        dto.longitude,
+      );
+      if (dist >= 0.02) {
+        record.totalDistanceKm = parseFloat(
+          (Number(record.totalDistanceKm || 0) + dist).toFixed(3),
+        );
+      }
+    }
+
     record.totalMinutes = diffMinutes;
     record.totalHours = formattedDuration;
     record.status = 'COMPLETED';
     record.updatedBy = userId;
+
+    // Save final location point
+    if (endLat && endLng) {
+      const finalLoc = this.locationRepo.create({
+        attendanceId: record.id,
+        userId,
+        latitude: endLat,
+        longitude: endLng,
+        locationName: record.endLocation,
+        recordedAt: now,
+      });
+      await this.locationRepo.save(finalLoc);
+    }
 
     const updated = await this.attendanceRepo.save(record);
 
     return {
       message: 'Work ended successfully',
       data: updated,
+    };
+  }
+
+  async getAttendanceRoute(attendanceId: number) {
+    const attendance = await this.attendanceRepo.findOne({
+      where: { id: attendanceId },
+      relations: ['user'],
+    });
+
+    if (!attendance) {
+      throw new NotFoundException('Attendance record not found');
+    }
+
+    const points = await this.locationRepo.find({
+      where: { attendanceId },
+      order: { recordedAt: 'ASC' },
+    });
+
+    return {
+      data: {
+        attendance: {
+          id: attendance.id,
+          userId: attendance.userId,
+          userName: attendance.user?.name || `Employee #${attendance.userId}`,
+          userEmail: attendance.user?.email || '',
+          date: attendance.date,
+          startTime: attendance.startTime,
+          startLocation: attendance.startLocation,
+          startLatitude: attendance.startLatitude,
+          startLongitude: attendance.startLongitude,
+          endTime: attendance.endTime,
+          endLocation: attendance.endLocation,
+          endLatitude: attendance.endLatitude,
+          endLongitude: attendance.endLongitude,
+          currentLatitude: attendance.currentLatitude,
+          currentLongitude: attendance.currentLongitude,
+          currentLocation: attendance.currentLocation,
+          lastTrackedAt: attendance.lastTrackedAt,
+          totalHours: attendance.totalHours,
+          totalMinutes: attendance.totalMinutes,
+          totalDistanceKm: attendance.totalDistanceKm || 0,
+          status: attendance.status,
+        },
+        points: points.map((p) => ({
+          id: p.id,
+          latitude: Number(p.latitude),
+          longitude: Number(p.longitude),
+          accuracy: p.accuracy,
+          speed: p.speed,
+          heading: p.heading,
+          locationName: p.locationName,
+          recordedAt: p.recordedAt,
+        })),
+      },
     };
   }
 
@@ -197,7 +401,7 @@ export class AttendanceService {
     }
 
     if (options?.search) {
-      qb.andWhere('(user.name LIKE :search OR user.email LIKE :search OR att.startLocation LIKE :search)', {
+      qb.andWhere('(user.name LIKE :search OR user.email LIKE :search OR att.startLocation LIKE :search OR att.endLocation LIKE :search)', {
         search: `%${options.search}%`,
       });
     }
@@ -215,4 +419,3 @@ export class AttendanceService {
     };
   }
 }
-

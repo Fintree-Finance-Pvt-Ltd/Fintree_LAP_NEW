@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AttendanceService } from './attendance.service';
 import { EndWorkDto } from './dto/end-work.dto';
 import { StartWorkDto } from './dto/start-work.dto';
+import { TrackLocationDto } from './dto/track-location.dto';
 
 @Controller('attendance')
 export class AttendanceController {
@@ -23,12 +24,27 @@ export class AttendanceController {
     return this.attendanceService.startWork(user.id, dto);
   }
 
+  @Post('track-location')
+  async trackLocation(
+    @CurrentUser() user: { id: number; email: string; roles: string[] },
+    @Body() dto: TrackLocationDto,
+  ) {
+    return this.attendanceService.trackLocation(user.id, dto);
+  }
+
   @Post('end-work')
   async endWork(
     @CurrentUser() user: { id: number; email: string; roles: string[] },
     @Body() dto: EndWorkDto,
   ) {
     return this.attendanceService.endWork(user.id, dto);
+  }
+
+  @Get('route/:attendanceId')
+  async getRoute(
+    @Param('attendanceId', ParseIntPipe) attendanceId: number,
+  ) {
+    return this.attendanceService.getAttendanceRoute(attendanceId);
   }
 
   @Get('my-history')
@@ -57,4 +73,5 @@ export class AttendanceController {
     });
   }
 }
+
 

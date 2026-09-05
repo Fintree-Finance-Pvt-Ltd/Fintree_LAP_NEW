@@ -13,10 +13,19 @@ export const attendanceApi = {
       skipToast: false,
     }),
 
+  trackLocation: (payload) =>
+    apiClient.post("/attendance/track-location", payload, {
+      skipToast: true,
+    }),
+
+  getRoute: (attendanceId) =>
+    apiClient.get(`/attendance/route/${attendanceId}`),
+
   getMyHistory: (limit = 60) =>
     apiClient.get(`/attendance/my-history?limit=${limit}`),
 
   getAll: (params = {}) =>
     apiClient.get("/attendance/all", { params }),
 };
+
 

@@ -99,6 +99,67 @@ export function AttendanceProvider({ children }) {
     }
   }, [isAuthenticated, user?.id, fetchStatus]);
 
+  const lastTrackTimeRef = useState(0);
+  const [currentCoords, setCurrentCoords] = useState(null);
+
+  // Live Location Tracking during active work day
+  useEffect(() => {
+    let watchId = null;
+    let heartbeatTimer = null;
+
+    if (isAuthenticated && isWorkStarted && !isWorkEnded && navigator.geolocation) {
+      console.log("📍 Starting continuous geolocation tracking for active work day...");
+
+      const sendLocationPing = (pos) => {
+        const { latitude, longitude, accuracy, speed, heading } = pos.coords;
+        setCurrentCoords({ latitude, longitude, accuracy });
+
+        const now = Date.now();
+        // Send updates at most once every 45 seconds to conserve battery/bandwidth
+        if (now - lastTrackTimeRef[0] > 45 * 1000) {
+          lastTrackTimeRef[0] = now;
+          attendanceApi
+            .trackLocation({
+              attendanceId: attendanceRecord?.id,
+              latitude: parseFloat(latitude.toFixed(7)),
+              longitude: parseFloat(longitude.toFixed(7)),
+              accuracy: accuracy ? parseFloat(accuracy.toFixed(1)) : undefined,
+              speed: speed ?? undefined,
+              heading: heading ?? undefined,
+            })
+            .catch((err) => console.warn("Background tracking ping skipped:", err.message));
+        }
+      };
+
+      try {
+        watchId = navigator.geolocation.watchPosition(
+          sendLocationPing,
+          (err) => console.warn("GPS watch position note:", err.message),
+          { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 }
+        );
+
+        // Heartbeat interval to force-ping location periodically every 60s
+        heartbeatTimer = setInterval(() => {
+          navigator.geolocation.getCurrentPosition(
+            sendLocationPing,
+            () => {},
+            { enableHighAccuracy: true, timeout: 15000 }
+          );
+        }, 60 * 1000);
+      } catch (e) {
+        console.warn("Geolocation watch error:", e);
+      }
+    }
+
+    return () => {
+      if (watchId !== null && navigator.geolocation) {
+        console.log("🛑 Stopping continuous geolocation tracking.");
+        navigator.geolocation.clearWatch(watchId);
+      }
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+    };
+  }, [isAuthenticated, isWorkStarted, isWorkEnded, attendanceRecord?.id]);
+
   const dismissStartModalForSession = () => {
     if (user?.id) {
       const todayStr = getTodayStr();
@@ -154,6 +215,7 @@ export function AttendanceProvider({ children }) {
       isWorkStarted,
       isWorkEnded,
       attendanceRecord,
+      currentCoords,
       statusLoading,
       isSubmitting,
       showStartModal,
@@ -169,6 +231,7 @@ export function AttendanceProvider({ children }) {
       isWorkStarted,
       isWorkEnded,
       attendanceRecord,
+      currentCoords,
       statusLoading,
       isSubmitting,
       showStartModal,
@@ -176,6 +239,7 @@ export function AttendanceProvider({ children }) {
       fetchStatus,
     ]
   );
+
 
   return (
     <AttendanceContext.Provider value={value}>
