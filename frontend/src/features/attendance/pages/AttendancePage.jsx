@@ -867,7 +867,7 @@ export default function AttendancePage() {
                       </td>
 
                       {/* Start Location Name */}
-                      <td className="px-4 py-4 max-w-[250px] text-slate-700">
+                      <td className="px-4 py-4 min-w-[200px] w-[200px] text-slate-700">
                         <div
                           className="flex items-center gap-1.5 "
                           title={startLoc}
@@ -895,7 +895,7 @@ export default function AttendancePage() {
                       </td>
 
                       {/* Live Location Name */}
-                      <td className="px-4 py-4 max-w-[190px] text-slate-700">
+                      <td className="px-4 py-4 min-w-[200px] w-[200px] text-slate-700">
                         {isLive ? (
                           <div
                             className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 text-emerald-800 font-semibold truncate max-w-full"
@@ -932,7 +932,7 @@ export default function AttendancePage() {
                       </td>
 
                       {/* End Location Name */}
-                      <td className="px-4 py-4 max-w-[180px] text-slate-700">
+                      <td className="px-4 py-4 min-w-[200px] w-[200px] text-slate-700">
                         {endLoc ? (
                           <div
                             className="flex items-center gap-1.5"
