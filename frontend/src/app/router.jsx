@@ -65,7 +65,7 @@ import OperationsDashboard from '../features/Operation/pages/OperationsDashboard
 import OpsChecker from "../features/Operation/pages/OpsChecker.jsx";
 import OpsMaker from "../features/Operation/pages/OpsMaker.jsx";
 // MIS Reports
-import MISReports from "../features/applications/pages/MISReports.jsx";
+import MISReports from "../features/applications/pages/MisReports.jsx";
 import OPSReview from '../features/Operation/pages/OpsReview.jsx';
 import LegalCleared from '../features/Operation/pages/LegalCleared.jsx';
 import OpsHead from '../features/Operation/pages/OpsHead.jsx';

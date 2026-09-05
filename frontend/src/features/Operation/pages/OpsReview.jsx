@@ -19,7 +19,7 @@ import {
 } from "react-router-dom";
 import { useSelector } from "react-redux";
 
-import { operationApi } from "../operationApi.js";
+import { operationApi } from "../operationapi.js";
 
 const DEFAULT_STAGES = [
   {

@@ -21,7 +21,7 @@ import {
 } from "react-icons/fa";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 
-import { operationApi } from "../operationApi.js";
+import { operationApi } from "../operationapi.js";
 
 const workflowSteps = [
   { id: 1, label: "Lead", state: "completed" },

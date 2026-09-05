@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 
 import { rmApi } from "../rmApi.js";
 import { formatCurrency, getNextWorkflowStep, statusClass } from "../rmUtils.js";
-import { bmApi } from "../../bm/bmApi.js";
+import { bmApi } from "../../BM/bmApi.js";
 
 const workflowStepsConfig = [
   { key: "leadCreated", label: "Lead Created" },
