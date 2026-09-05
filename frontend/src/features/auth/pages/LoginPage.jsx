@@ -34,60 +34,53 @@ export default function LoginPage() {
     }
   }, [spokes]);
 
-const submit = async (event) => {
-  event.preventDefault();
+  const submit = async (event) => {
+    event.preventDefault();
 
-  try {
-    const response = await authApi.login(form);
-
-    // Save either Axios envelope or direct data response.
-    const authData = response.data?.data ?? response.data;
-
-    dispatch(setCredentials(authData));
-
-    // Clear previous dismissal flags so Start Work popup shows on fresh login
     try {
-      Object.keys(sessionStorage).forEach((key) => {
-        if (key.startsWith("lap_attendance_dismissed")) {
-          sessionStorage.removeItem(key);
-        }
-      });
-    } catch {
-      // ignore
-    }
+      const response = await authApi.login(form);
 
-    // Store login details for session persistence.
-    try {
-      window.localStorage.setItem(
-        "loginDetails",
-        JSON.stringify(authData)
-      );
-    } catch {
-      // ignore storage errors (e.g., private mode)
-    }
+      // Save either Axios envelope or direct data response.
+      const authData = response.data?.data ?? response.data;
 
+      dispatch(setCredentials(authData));
 
-    const roles = Array.isArray(authData?.user?.roles)
-      ? authData.user.roles
-      : [];
+      // Clear previous dismissal flags so Start Work popup shows on fresh login
+      try {
+        Object.keys(sessionStorage).forEach((key) => {
+          if (key.startsWith("lap_attendance_dismissed")) {
+            sessionStorage.removeItem(key);
+          }
+        });
+      } catch {
+        // ignore
+      }
 
-    const destination = roles.includes("RM")
-      ? "/rmDashboard"
-      : "/dashboard";
+      // Store login details for session persistence.
+      try {
+        window.localStorage.setItem("loginDetails", JSON.stringify(authData));
+      } catch {
+        // ignore storage errors (e.g., private mode)
+      }
+
+      const roles = Array.isArray(authData?.user?.roles)
+        ? authData.user.roles
+        : [];
+
+      const destination = roles.includes("RM") ? "/rmDashboard" : "/dashboard";
 
       // const destination = roles.includes("ADMIN")
       // ? "/adminDashboard"
       // : "/dashboard";
 
-
-    navigate(destination, { replace: true });
-  } catch (error) {
-    console.error(
-      "Login failed:",
-      error?.response?.data?.message ?? error.message
-    );
-  }
-};
+      navigate(destination, { replace: true });
+    } catch (error) {
+      console.error(
+        "Login failed:",
+        error?.response?.data?.message ?? error.message,
+      );
+    }
+  };
 
   return (
     <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-[#021933]">
@@ -96,8 +89,9 @@ const submit = async (event) => {
         <div className="absolute inset-0 opacity-10 mix-blend-overlay bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200')] bg-cover bg-center" />
 
         {/* Brand Header */}
+
         <div className="relative z-10 flex items-center gap-2">
-          <div className="ml-0 flex h-20 w-40 items-center justify-start bg-transparent xl:ml-10 xl:h-24 xl:w-48">
+          <div className="flex h-25 w-48 items-center justify-start bg-transparent ml-40">
             <img
               src="/images/logo-removebg-preview.png"
               alt="Fintree Finance Logo"
@@ -347,4 +341,3 @@ const submit = async (event) => {
     </div>
   );
 }
-
