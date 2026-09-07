@@ -19,6 +19,7 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { attendanceApi } from "../attendanceApi.js";
+import { fetchRoadRoute } from "../../../utils/geoUtils.js";
 
 // Custom Leaflet Icons
 const createCustomIcon = (color, label, emoji) => {
@@ -58,11 +59,17 @@ export default function RouteMapModal({ attendanceId, onClose }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const polylineRef = useRef(null);
+  const glowPolylineRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [routeData, setRouteData] = useState(null);
   const [activeView, setActiveView] = useState("map"); // "map" | "timeline"
   const [showStats, setShowStats] = useState(true);
+  const [routeStats, setRouteStats] = useState({
+    roadDistanceKm: 0,
+    isRoadRoute: false,
+    calculating: false,
+  });
 
   // Close on Escape key press
   useEffect(() => {
@@ -101,9 +108,9 @@ export default function RouteMapModal({ attendanceId, onClose }) {
     }
   };
 
-  const fetchRoute = async () => {
+  const fetchRoute = useCallback(async (silent = false) => {
     if (!attendanceId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await attendanceApi.getRoute(attendanceId);
       const raw = res?.data?.data || res?.data || res;
@@ -112,20 +119,31 @@ export default function RouteMapModal({ attendanceId, onClose }) {
     } catch (error) {
       console.error("Failed to load route data:", error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, [attendanceId]);
 
   useEffect(() => {
     fetchRoute();
-  }, [attendanceId]);
+  }, [fetchRoute]);
+
+  // Live Auto-Refresh (every 15 seconds) if attendance is IN_PROGRESS
+  useEffect(() => {
+    if (!routeData?.attendance || routeData.attendance.status !== "IN_PROGRESS") return;
+
+    const interval = setInterval(() => {
+      fetchRoute(true);
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [routeData?.attendance, fetchRoute]);
 
   // Handler to fit map bounds to route
   const fitRouteBounds = useCallback(() => {
     if (mapInstanceRef.current && polylineRef.current) {
       try {
         mapInstanceRef.current.fitBounds(polylineRef.current.getBounds(), {
-          padding: [40, 40],
+          padding: [45, 45],
           maxZoom: 16,
         });
       } catch (e) {
@@ -134,10 +152,11 @@ export default function RouteMapModal({ attendanceId, onClose }) {
     }
   }, []);
 
-  // Initialize and update Leaflet Map
+  // Initialize and update Leaflet Map with actual Road Route
   useEffect(() => {
     if (!routeData || activeView !== "map" || !mapContainerRef.current) return;
 
+    let isSubscribed = true;
     const points = routeData.points || [];
     const att = routeData.attendance || {};
 
@@ -146,27 +165,27 @@ export default function RouteMapModal({ attendanceId, onClose }) {
     const endLat = att.endLatitude || att.end_latitude || att.currentLatitude || att.current_latitude;
     const endLng = att.endLongitude || att.end_longitude || att.currentLongitude || att.current_longitude;
 
-    // Collect all valid coordinates
-    const latLngs = [];
+    // Collect all valid waypoint coordinates
+    const keyCoords = [];
 
     if (startLat && startLng) {
-      latLngs.push([Number(startLat), Number(startLng)]);
+      keyCoords.push([Number(startLat), Number(startLng)]);
     }
 
     points.forEach((p) => {
       const pLat = p.latitude || p.lat;
       const pLng = p.longitude || p.lng;
       if (pLat && pLng) {
-        latLngs.push([Number(pLat), Number(pLng)]);
+        keyCoords.push([Number(pLat), Number(pLng)]);
       }
     });
 
     if (endLat && endLng) {
-      const exists = latLngs.some(
+      const exists = keyCoords.some(
         ([la, lo]) => Math.abs(la - Number(endLat)) < 0.0001 && Math.abs(lo - Number(endLng)) < 0.0001
       );
       if (!exists) {
-        latLngs.push([Number(endLat), Number(endLng)]);
+        keyCoords.push([Number(endLat), Number(endLng)]);
       }
     }
 
@@ -179,8 +198,8 @@ export default function RouteMapModal({ attendanceId, onClose }) {
       delete mapContainerRef.current._leaflet_id;
     }
 
-    // Default center (e.g. coordinates or default Mumbai center)
-    const initialCenter = latLngs.length > 0 ? latLngs[0] : [18.9559, 72.8152];
+    // Default center
+    const initialCenter = keyCoords.length > 0 ? keyCoords[0] : [18.9559, 72.8152];
 
     try {
       const map = L.map(mapContainerRef.current, {
@@ -191,7 +210,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
       });
       mapInstanceRef.current = map;
 
-      // Position zoom control for mobile friendliness (bottom right)
+      // Position zoom control (bottom right)
       map.zoomControl.setPosition("bottomright");
 
       // OpenStreetMap Tile Layer
@@ -205,40 +224,13 @@ export default function RouteMapModal({ attendanceId, onClose }) {
       const t2 = setTimeout(() => map?.invalidateSize?.(), 300);
       const t3 = setTimeout(() => map?.invalidateSize?.(), 600);
 
-      // Draw Route Polyline
-      if (latLngs.length > 1) {
-        // Glow underlay
-        L.polyline(latLngs, {
-          color: "#3b82f6",
-          weight: 6,
-          opacity: 0.8,
-          lineCap: "round",
-          lineJoin: "round",
-        }).addTo(map);
-
-        // Dashed top path
-        const polyline = L.polyline(latLngs, {
-          color: "#60a5fa",
-          weight: 3,
-          opacity: 1,
-          dashArray: "6, 8",
-          lineCap: "round",
-          lineJoin: "round",
-        }).addTo(map);
-
-        polylineRef.current = polyline;
-        map.fitBounds(polyline.getBounds(), { padding: [40, 40], maxZoom: 16 });
-      } else if (latLngs.length === 1) {
-        map.setView(latLngs[0], 15);
-      }
-
       const popupOptions = {
         autoPan: true,
         autoPanPadding: [20, 20],
         maxWidth: 280,
       };
 
-      // Start Marker
+      // Add Start Marker
       if (startLat && startLng) {
         const startPos = [Number(startLat), Number(startLng)];
         const startTimeStr = safeFormatTime(att.startTime || att.start_time);
@@ -259,7 +251,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
           );
       }
 
-      // Waypoint Markers
+      // Add Waypoint Markers
       points.forEach((p, idx) => {
         const pLat = p.latitude || p.lat;
         const pLng = p.longitude || p.lng;
@@ -283,7 +275,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
           );
       });
 
-      // End / Live Marker
+      // Add End / Live Marker
       const isLive = att.status === "IN_PROGRESS";
       if (endLat && endLng) {
         const endPos = [Number(endLat), Number(endLng)];
@@ -310,13 +302,63 @@ export default function RouteMapModal({ attendanceId, onClose }) {
           );
       }
 
-      // Resize listener to keep map responsive on orientation changes
+      // Render Route Polyline: Fetch accurate road path geometry
+      if (keyCoords.length >= 2) {
+        setRouteStats((prev) => ({ ...prev, calculating: true }));
+
+        fetchRoadRoute(keyCoords).then((routeRes) => {
+          if (!isSubscribed || !mapInstanceRef.current) return;
+
+          const renderCoords =
+            routeRes.roadCoordinates && routeRes.roadCoordinates.length > 0
+              ? routeRes.roadCoordinates
+              : keyCoords;
+
+          setRouteStats({
+            roadDistanceKm: routeRes.distanceKm,
+            isRoadRoute: routeRes.isRoadRoute,
+            calculating: false,
+          });
+
+          // Glow Underlay line
+          const glow = L.polyline(renderCoords, {
+            color: "#1d4ed8",
+            weight: 7,
+            opacity: 0.5,
+            lineCap: "round",
+            lineJoin: "round",
+          }).addTo(map);
+          glowPolylineRef.current = glow;
+
+          // Main Road Route Line
+          const polyline = L.polyline(renderCoords, {
+            color: "#38bdf8",
+            weight: 4,
+            opacity: 0.95,
+            dashArray: routeRes.isRoadRoute ? undefined : "6, 8",
+            lineCap: "round",
+            lineJoin: "round",
+          }).addTo(map);
+          polylineRef.current = polyline;
+
+          try {
+            map.fitBounds(polyline.getBounds(), { padding: [45, 45], maxZoom: 16 });
+          } catch (fitErr) {
+            console.warn("fitBounds note:", fitErr);
+          }
+        });
+      } else if (keyCoords.length === 1) {
+        map.setView(keyCoords[0], 15);
+      }
+
+      // Resize listener
       const handleResize = () => {
         map?.invalidateSize?.();
       };
       window.addEventListener("resize", handleResize);
 
       return () => {
+        isSubscribed = false;
         clearTimeout(t1);
         clearTimeout(t2);
         clearTimeout(t3);
@@ -330,6 +372,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
       console.error("Leaflet initialization caught error:", err);
     }
   }, [routeData, activeView]);
+
 
   // Handle map resizing when stats collapsible toggles
   useEffect(() => {
@@ -465,10 +508,18 @@ export default function RouteMapModal({ attendanceId, onClose }) {
                 <FiCompass className="text-cyan-400 shrink-0" /> Total Distance
               </span>
               <div className="mt-0.5 font-bold text-cyan-300 text-xs sm:text-sm">
-                {att.totalDistanceKm || att.total_distance_km ? `${att.totalDistanceKm || att.total_distance_km} km` : "0.0 km"}
+                {routeStats.roadDistanceKm > 0
+                  ? `${routeStats.roadDistanceKm} km`
+                  : att.totalDistanceKm || att.total_distance_km
+                  ? `${att.totalDistanceKm || att.total_distance_km} km`
+                  : "0.0 km"}
               </div>
-              <div className="text-[10px] text-slate-400">
-                {points.length} waypoints
+              <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                {routeStats.isRoadRoute ? (
+                  <span className="text-emerald-400 font-semibold">🛣️ Road route</span>
+                ) : (
+                  <span>{points.length} waypoints</span>
+                )}
               </div>
             </div>
 

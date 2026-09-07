@@ -132,14 +132,106 @@ export function getLastKnownCoords() {
 }
 
 /**
+ * Fetch true road route geometry between multiple coordinates using OSRM Routing Engine.
+ * Converts waypoints into realistic on-road driving paths.
+ */
+export async function fetchRoadRoute(rawPoints = []) {
+  if (!rawPoints || rawPoints.length < 2) {
+    return {
+      roadCoordinates: rawPoints.map((p) => (Array.isArray(p) ? p : [p.latitude || p.lat, p.longitude || p.lng])),
+      distanceKm: 0,
+      durationMin: 0,
+      isRoadRoute: false,
+    };
+  }
+
+  // Normalize points to { lat, lng }
+  const normalized = [];
+  rawPoints.forEach((p) => {
+    const lat = Array.isArray(p) ? Number(p[0]) : Number(p.latitude || p.lat);
+    const lng = Array.isArray(p) ? Number(p[1]) : Number(p.longitude || p.lng);
+    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+      // Check if duplicate of last point to avoid OSRM zero-distance errors
+      const last = normalized[normalized.length - 1];
+      if (!last || Math.abs(last.lat - lat) > 0.00005 || Math.abs(last.lng - lng) > 0.00005) {
+        normalized.push({ lat, lng });
+      }
+    }
+  });
+
+  if (normalized.length < 2) {
+    return {
+      roadCoordinates: normalized.map((p) => [p.lat, p.lng]),
+      distanceKm: 0,
+      durationMin: 0,
+      isRoadRoute: false,
+    };
+  }
+
+  // If there are too many intermediate crumbs (e.g. > 25), sample them down for OSRM URL limits
+  let sampled = normalized;
+  if (normalized.length > 25) {
+    sampled = [normalized[0]];
+    const step = (normalized.length - 2) / 23;
+    for (let i = 1; i <= 23; i++) {
+      sampled.push(normalized[Math.round(i * step)]);
+    }
+    sampled.push(normalized[normalized.length - 1]);
+  }
+
+  // OSRM expects coordinates in "longitude,latitude" format separated by semicolon
+  const coordString = sampled.map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(";");
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson&steps=false`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.code === "Ok" && data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        // OSRM GeoJSON coordinates are [lon, lat] -> Leaflet requires [lat, lng]
+        const roadCoordinates = (route.geometry?.coordinates || []).map(([lon, lat]) => [lat, lon]);
+
+        if (roadCoordinates.length > 0) {
+          const distanceKm = route.distance ? parseFloat((route.distance / 1000).toFixed(2)) : 0;
+          const durationMin = route.duration ? Math.round(route.duration / 60) : 0;
+
+          return {
+            roadCoordinates,
+            distanceKm,
+            durationMin,
+            isRoadRoute: true,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.debug("OSRM road routing fallback to direct polyline:", err?.message);
+  }
+
+  // Fallback to straight-line connection between normalized points
+  return {
+    roadCoordinates: normalized.map((p) => [p.lat, p.lng]),
+    distanceKm: 0,
+    durationMin: 0,
+    isRoadRoute: false,
+  };
+}
+
+/**
  * Robust GPS position promise with high-accuracy + standard accuracy fallback
  */
-export function getCurrentGPSPosition(timeoutMs = 8000) {
+export function getCurrentGPSPosition(timeoutMs = 9000) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       const cached = getLastKnownCoords();
       if (cached) return resolve(cached);
-      return reject(new Error("Geolocation not supported by browser"));
+      return reject(new Error("Geolocation is not supported by your browser"));
     }
 
     let resolved = false;
@@ -182,12 +274,21 @@ export function getCurrentGPSPosition(timeoutMs = 8000) {
               return resolve(cached);
             }
             resolved = true;
-            reject(err2);
+            const message =
+              err2.code === 1
+                ? "Location permission was denied. Please allow location access in your browser."
+                : err2.code === 2
+                ? "Location unavailable. Please ensure GPS/location services are enabled."
+                : "Location request timed out. Please retry.";
+            const customError = new Error(message);
+            customError.code = err2.code;
+            reject(customError);
           },
-          { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 60000 }
+          { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 30000 }
         );
       },
-      { enableHighAccuracy: true, timeout: Math.min(timeoutMs, 4000), maximumAge: 15000 }
+      { enableHighAccuracy: true, timeout: Math.min(timeoutMs, 5000), maximumAge: 0 }
     );
   });
 }
+

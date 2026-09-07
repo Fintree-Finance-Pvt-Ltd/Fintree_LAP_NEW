@@ -4,13 +4,28 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useAuth } from "../hooks/useAuth.js";
 import { attendanceApi } from "../features/attendance/attendanceApi.js";
-import { reverseGeocodeCoords } from "../utils/geoUtils.js";
+import { reverseGeocodeCoords, saveLastKnownCoords } from "../utils/geoUtils.js";
 
 const AttendanceContext = createContext(null);
+
+// Haversine distance in meters
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // meters
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 export function AttendanceProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
@@ -23,17 +38,17 @@ export function AttendanceProvider({ children }) {
   const [showEndModal, setShowEndModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const lastTrackTimeRef = useRef(0);
+  const lastCoordsRef = useRef(null);
+  const isPingingRef = useRef(false);
+  const [currentCoords, setCurrentCoords] = useState(null);
+
   const getTodayStr = () => {
     const d = new Date();
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
-  };
-
-  const isCurrentTimeAfter8AM = () => {
-    const now = new Date();
-    return now.getHours() >= 8;
   };
 
   const fetchStatus = useCallback(async () => {
@@ -80,7 +95,6 @@ export function AttendanceProvider({ children }) {
     }
   }, [isAuthenticated, user?.id]);
 
-
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       fetchStatus();
@@ -100,71 +114,185 @@ export function AttendanceProvider({ children }) {
     }
   }, [isAuthenticated, user?.id, fetchStatus]);
 
-  const lastTrackTimeRef = useState(0);
-  const [currentCoords, setCurrentCoords] = useState(null);
+  const [isLocationDisabledDuringWork, setIsLocationDisabledDuringWork] = useState(false);
+  const [locationErrorDetails, setLocationErrorDetails] = useState(null);
+
+  const retryRequestLocationPermission = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocationDisabledDuringWork(false);
+        setLocationErrorDetails(null);
+      },
+      (err) => {
+        setIsLocationDisabledDuringWork(true);
+        const msg =
+          err.code === 1
+            ? "Location permission was denied in browser. Please enable location permission."
+            : err.code === 2
+            ? "Device GPS/Location services are turned off. Please turn on GPS."
+            : "Location request timed out. Retrying...";
+        setLocationErrorDetails(msg);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+  }, []);
 
   // Live Location Tracking during active work day
   useEffect(() => {
     let watchId = null;
     let heartbeatTimer = null;
+    let permissionPromptRetryTimer = null;
 
-    if (isAuthenticated && isWorkStarted && !isWorkEnded && navigator.geolocation) {
-      console.log("📍 Starting continuous geolocation tracking for active work day...");
+    if (isAuthenticated && isWorkStarted && !isWorkEnded && typeof navigator !== "undefined" && navigator.geolocation) {
+      console.log("📍 Continuous GPS route tracking active for user work session...");
+
+      const handleLocationSuccess = (pos) => {
+        setIsLocationDisabledDuringWork(false);
+        setLocationErrorDetails(null);
+        sendLocationPing(pos);
+      };
+
+      const handleLocationError = (err) => {
+        console.warn("GPS tracking error during active work:", err?.message);
+        setIsLocationDisabledDuringWork(true);
+        const msg =
+          err.code === 1
+            ? "Location permission was denied. Please allow location access."
+            : err.code === 2
+            ? "Device GPS/location services are turned off. Please enable GPS."
+            : "Location tracking error. Retrying...";
+        setLocationErrorDetails(msg);
+      };
 
       const sendLocationPing = async (pos) => {
+        if (!pos?.coords || isPingingRef.current) return;
+
         const { latitude, longitude, accuracy, speed, heading } = pos.coords;
-        setCurrentCoords({ latitude, longitude, accuracy });
-
         const now = Date.now();
-        // Send updates at most once every 30 seconds to conserve battery/bandwidth while keeping live location fresh
-        if (now - lastTrackTimeRef[0] > 30 * 1000) {
-          lastTrackTimeRef[0] = now;
-          const lat = parseFloat(latitude.toFixed(7));
-          const lng = parseFloat(longitude.toFixed(7));
-          const locationName = await reverseGeocodeCoords(lat, lng).catch(() => "");
 
-          attendanceApi
-            .trackLocation({
+        // Update local state with latest position
+        saveLastKnownCoords(latitude, longitude);
+        setCurrentCoords({
+          latitude,
+          longitude,
+          accuracy,
+          speed,
+          heading,
+          timestamp: now,
+        });
+
+        // Determine if we should transmit ping to backend
+        const last = lastCoordsRef.current;
+        const timeSinceLastPing = now - lastTrackTimeRef.current;
+        let distanceMovedMeters = 0;
+
+        if (last) {
+          distanceMovedMeters = getDistanceMeters(last.latitude, last.longitude, latitude, longitude);
+        }
+
+        // Send ping if:
+        // 1. First ping (last === null)
+        // 2. User moved >= 15 meters
+        // 3. At least 30 seconds elapsed since last update
+        const shouldSend = !last || distanceMovedMeters >= 15 || timeSinceLastPing >= 30 * 1000;
+
+        if (shouldSend) {
+          isPingingRef.current = true;
+          lastTrackTimeRef.current = now;
+          lastCoordsRef.current = { latitude, longitude };
+
+          const lat = parseFloat(Number(latitude).toFixed(7));
+          const lng = parseFloat(Number(longitude).toFixed(7));
+
+          try {
+            const locName = await reverseGeocodeCoords(lat, lng).catch(() => "");
+            const res = await attendanceApi.trackLocation({
               attendanceId: attendanceRecord?.id,
               latitude: lat,
               longitude: lng,
-              locationName: locationName || undefined,
+              locationName: locName || undefined,
               accuracy: accuracy ? parseFloat(accuracy.toFixed(1)) : undefined,
-              speed: speed ?? undefined,
-              heading: heading ?? undefined,
-            })
-            .catch((err) => console.warn("Background tracking ping skipped:", err.message));
+              speed: speed !== null && speed !== undefined ? parseFloat(Number(speed).toFixed(2)) : undefined,
+              heading: heading !== null && heading !== undefined ? parseFloat(Number(heading).toFixed(1)) : undefined,
+            });
+
+            // Update live attendance record with new coordinates and distance
+            const trackData = res?.data?.data || res?.data;
+            if (trackData) {
+              setAttendanceRecord((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  currentLatitude: lat,
+                  currentLongitude: lng,
+                  currentLocation: locName || trackData.locationName || prev.currentLocation,
+                  lastTrackedAt: new Date().toISOString(),
+                  totalDistanceKm: trackData.totalDistanceKm ?? prev.totalDistanceKm,
+                };
+              });
+            }
+          } catch (err) {
+            console.warn("Background tracking ping skipped:", err?.message);
+          } finally {
+            isPingingRef.current = false;
+          }
         }
       };
 
       try {
+        // High accuracy continuous watcher with zero cache to pick up movement immediately
         watchId = navigator.geolocation.watchPosition(
-          sendLocationPing,
-          (err) => console.warn("GPS watch position note:", err.message),
-          { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 }
+          handleLocationSuccess,
+          handleLocationError,
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
         );
 
-        // Heartbeat interval to force-ping location periodically every 60s
+        // Heartbeat interval (every 30 seconds) to ensure tracking stays active in background tabs
         heartbeatTimer = setInterval(() => {
           navigator.geolocation.getCurrentPosition(
-            sendLocationPing,
-            () => {},
-            { enableHighAccuracy: true, timeout: 15000 }
+            handleLocationSuccess,
+            handleLocationError,
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
           );
-        }, 60 * 1000);
+        }, 30 * 1000);
+
+        // Persistent re-request loop: If location is turned off or denied, re-prompt every 5 seconds
+        permissionPromptRetryTimer = setInterval(() => {
+          if (isLocationDisabledDuringWork) {
+            console.log("🔄 Re-requesting location permission after location was turned off...");
+            retryRequestLocationPermission();
+          }
+        }, 5000);
+
+        // Wake handler: capture immediate position when user switches back to this tab
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === "visible") {
+            navigator.geolocation.getCurrentPosition(
+              handleLocationSuccess,
+              handleLocationError,
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+          }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", handleVisibilityChange);
+
+        return () => {
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+          }
+          if (heartbeatTimer) clearInterval(heartbeatTimer);
+          if (permissionPromptRetryTimer) clearInterval(permissionPromptRetryTimer);
+          document.removeEventListener("visibilitychange", handleVisibilityChange);
+          window.removeEventListener("focus", handleVisibilityChange);
+        };
       } catch (e) {
         console.warn("Geolocation watch error:", e);
       }
     }
-
-    return () => {
-      if (watchId !== null && navigator.geolocation) {
-        console.log("🛑 Stopping continuous geolocation tracking.");
-        navigator.geolocation.clearWatch(watchId);
-      }
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
-    };
-  }, [isAuthenticated, isWorkStarted, isWorkEnded, attendanceRecord?.id]);
+  }, [isAuthenticated, isWorkStarted, isWorkEnded, attendanceRecord?.id, isLocationDisabledDuringWork, retryRequestLocationPermission]);
 
   const dismissStartModalForSession = () => {
     if (user?.id) {
@@ -226,6 +354,9 @@ export function AttendanceProvider({ children }) {
       isSubmitting,
       showStartModal,
       showEndModal,
+      isLocationDisabledDuringWork,
+      locationErrorDetails,
+      retryRequestLocationPermission,
       setShowStartModal,
       setShowEndModal,
       dismissStartModalForSession,
@@ -242,6 +373,9 @@ export function AttendanceProvider({ children }) {
       isSubmitting,
       showStartModal,
       showEndModal,
+      isLocationDisabledDuringWork,
+      locationErrorDetails,
+      retryRequestLocationPermission,
       fetchStatus,
     ]
   );

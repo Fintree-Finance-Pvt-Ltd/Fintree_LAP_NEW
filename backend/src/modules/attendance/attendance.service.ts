@@ -331,8 +331,12 @@ export class AttendanceService {
     const lat = dto.latitude !== undefined && dto.latitude !== null ? Number(dto.latitude) : null;
     const lng = dto.longitude !== undefined && dto.longitude !== null ? Number(dto.longitude) : null;
 
+    if (lat === null || isNaN(lat) || lng === null || isNaN(lng)) {
+      throw new BadRequestException('GPS location coordinates (latitude and longitude) are mandatory to start work.');
+    }
+
     let location = this.cleanLocationName(dto.location || dto.spoke);
-    if (lat && lng && (!location || location === 'Office Workspace' || location === 'Location detected')) {
+    if (lat && lng && (!location || location === 'Office Workspace' || location === 'Location detected' || location === 'Verified Location')) {
       location = await this.reverseGeocode(lat, lng, location || dto.spoke || 'Office Workspace');
     } else if (!location) {
       location = dto.spoke || 'Office Workspace';

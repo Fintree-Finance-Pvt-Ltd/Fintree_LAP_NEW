@@ -6,6 +6,7 @@ import HeaderContainer from "./HeaderContainer.jsx";
 import MobileSidebar from "./MobileSidebar.jsx";
 import { LayoutContext } from "./LayoutContext.jsx";
 import StartWorkModal from "../../features/attendance/components/StartWorkModal.jsx";
+import LocationRequiredPromptModal from "../../features/attendance/components/LocationRequiredPromptModal.jsx";
 
 export default function AppLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -29,6 +30,7 @@ export default function AppLayout() {
         </main>
 
         <StartWorkModal />
+        <LocationRequiredPromptModal />
       </div>
     </LayoutContext.Provider>
   );
