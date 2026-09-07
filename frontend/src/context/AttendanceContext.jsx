@@ -138,14 +138,55 @@ export function AttendanceProvider({ children }) {
     );
   }, []);
 
+// Background Keep-Alive for Mobile Browsers (prevents OS from pausing GPS when screen is in pocket)
+function startBackgroundKeepAlive() {
+  let audioContext = null;
+  let oscillator = null;
+  let wakeLock = null;
+
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioContext = new AudioContextClass();
+      oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = 0.00001; // Inaudible silent sound
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.start();
+    }
+  } catch (e) {
+    console.debug("Background audio keepalive note:", e?.message);
+  }
+
+  // Request Screen WakeLock if supported
+  if (typeof navigator !== "undefined" && navigator.wakeLock) {
+    navigator.wakeLock.request("screen").then((lock) => {
+      wakeLock = lock;
+    }).catch(() => {});
+  }
+
+  return () => {
+    try {
+      if (oscillator) oscillator.stop();
+      if (audioContext && audioContext.state !== "closed") audioContext.close();
+      if (wakeLock) wakeLock.release();
+    } catch (_) {}
+  };
+}
+
   // Live Location Tracking during active work day
   useEffect(() => {
     let watchId = null;
     let heartbeatTimer = null;
     let permissionPromptRetryTimer = null;
+    let stopKeepAlive = null;
 
     if (isAuthenticated && isWorkStarted && !isWorkEnded && typeof navigator !== "undefined" && navigator.geolocation) {
-      console.log("📍 Continuous GPS route tracking active for user work session...");
+      console.log("📍 Continuous GPS route tracking active for user work session (with pocket background keep-alive)...");
+
+      // Start background keepalive to keep GPS running when phone screen is locked
+      stopKeepAlive = startBackgroundKeepAlive();
 
       const handleLocationSuccess = (pos) => {
         setIsLocationDisabledDuringWork(false);
@@ -248,14 +289,14 @@ export function AttendanceProvider({ children }) {
           { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
         );
 
-        // Heartbeat interval (every 30 seconds) to ensure tracking stays active in background tabs
+        // Heartbeat interval (every 15 seconds) to ensure tracking stays active in background tabs
         heartbeatTimer = setInterval(() => {
           navigator.geolocation.getCurrentPosition(
             handleLocationSuccess,
             handleLocationError,
             { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
           );
-        }, 30 * 1000);
+        }, 15 * 1000);
 
         // Persistent re-request loop: If location is turned off or denied, re-prompt every 5 seconds
         permissionPromptRetryTimer = setInterval(() => {
@@ -280,6 +321,7 @@ export function AttendanceProvider({ children }) {
         window.addEventListener("focus", handleVisibilityChange);
 
         return () => {
+          if (stopKeepAlive) stopKeepAlive();
           if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
           }
