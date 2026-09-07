@@ -234,9 +234,9 @@ function startBackgroundKeepAlive() {
 
         // Send ping if:
         // 1. First ping (last === null)
-        // 2. User moved >= 2 meters
+        // 2. User moved >= 1 meter
         // 3. At least 5 seconds elapsed since last update
-        const shouldSend = !last || distanceMovedMeters >= 2 || timeSinceLastPing >= 5 * 1000;
+        const shouldSend = !last || distanceMovedMeters >= 1 || timeSinceLastPing >= 5 * 1000;
 
         if (shouldSend) {
           isPingingRef.current = true;
@@ -245,6 +245,8 @@ function startBackgroundKeepAlive() {
 
           const lat = parseFloat(Number(latitude).toFixed(7));
           const lng = parseFloat(Number(longitude).toFixed(7));
+
+          console.log(`📡 [GPS Live Ping] Sending location to DB -> Lat: ${lat}, Lng: ${lng}, Moved: ${distanceMovedMeters.toFixed(1)}m, Time: ${(timeSinceLastPing / 1000).toFixed(1)}s`);
 
           try {
             const res = await attendanceApi.trackLocation({
@@ -255,6 +257,8 @@ function startBackgroundKeepAlive() {
               speed: speed !== null && speed !== undefined ? parseFloat(Number(speed).toFixed(2)) : undefined,
               heading: heading !== null && heading !== undefined ? parseFloat(Number(heading).toFixed(1)) : undefined,
             });
+
+            console.log(`✅ [GPS Live Ping] Saved to lap_attendance_locations table! Attendance ID: ${attendanceRecord?.id}`);
 
             // Update live attendance record with new coordinates and distance
             const trackData = res?.data?.data || res?.data;
@@ -272,9 +276,12 @@ function startBackgroundKeepAlive() {
               });
             }
           } catch (err) {
-            console.warn("Background tracking ping skipped:", err?.message);
+            console.warn("⚠️ Background tracking ping skipped:", err?.message);
           } finally {
-            isPingingRef.current = false;
+            // Safety unlock
+            setTimeout(() => {
+              isPingingRef.current = false;
+            }, 1000);
           }
         }
       };
