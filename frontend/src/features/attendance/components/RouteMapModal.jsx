@@ -573,10 +573,9 @@ export default function RouteMapModal({ attendanceId, onClose }) {
           </div>
         )}
 
-        {/* View Tabs & Travel Mode Selector */}
+        {/* View Tabs & Route Legend */}
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5 border-b border-white/10 px-3 py-1.5 sm:px-6 sm:py-2 bg-slate-900/30">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* View switcher */}
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setActiveView("map")}
@@ -601,36 +600,6 @@ export default function RouteMapModal({ attendanceId, onClose }) {
               <FiList className="h-3.5 w-3.5" />
               <span>Timeline ({points.length})</span>
             </button>
-
-            {/* Travel Mode switcher (Road vs Train/Transit Trail) */}
-            {activeView === "map" && (
-              <div className="flex items-center gap-1 ml-1 pl-2 border-l border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setTravelMode("road")}
-                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition-all cursor-pointer touch-manipulation ${
-                    travelMode === "road"
-                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40"
-                      : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
-                  }`}
-                  title="Route along roads & highways"
-                >
-                  <span>🚗 Road Route</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTravelMode("transit")}
-                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition-all cursor-pointer touch-manipulation ${
-                    travelMode === "transit"
-                      ? "bg-indigo-500/20 text-indigo-300 border border-indigo-400/40"
-                      : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
-                  }`}
-                  title="Direct GPS trail (Train, Metro, Ferry)"
-                >
-                  <span>🚆 Train / GPS Trail</span>
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="flex items-center gap-2.5 text-[10px] sm:text-[11px] text-slate-400">
