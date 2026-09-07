@@ -193,9 +193,9 @@ export function AttendanceProvider({ children }) {
 
         // Send ping if:
         // 1. First ping (last === null)
-        // 2. User moved >= 15 meters
-        // 3. At least 30 seconds elapsed since last update
-        const shouldSend = !last || distanceMovedMeters >= 15 || timeSinceLastPing >= 30 * 1000;
+        // 2. User moved >= 5 meters
+        // 3. At least 10 seconds elapsed since last update
+        const shouldSend = !last || distanceMovedMeters >= 5 || timeSinceLastPing >= 10 * 1000;
 
         if (shouldSend) {
           isPingingRef.current = true;

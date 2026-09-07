@@ -128,13 +128,13 @@ export default function RouteMapModal({ attendanceId, onClose }) {
     fetchRoute();
   }, [fetchRoute]);
 
-  // Live Auto-Refresh (every 15 seconds) if attendance is IN_PROGRESS
+  // Live Auto-Refresh (every 5 seconds) if attendance is IN_PROGRESS
   useEffect(() => {
     if (!routeData?.attendance || routeData.attendance.status !== "IN_PROGRESS") return;
 
     const interval = setInterval(() => {
       fetchRoute(true);
-    }, 15000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [routeData?.attendance, fetchRoute]);

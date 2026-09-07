@@ -416,8 +416,8 @@ export class AttendanceService {
         lat,
         lng,
       );
-      // Filter out small GPS jitter (< 20 meters)
-      if (distanceIncrement < 0.02) {
+      // Filter out negligible GPS jitter (< 5 meters)
+      if (distanceIncrement < 0.005) {
         distanceIncrement = 0;
       }
     }
