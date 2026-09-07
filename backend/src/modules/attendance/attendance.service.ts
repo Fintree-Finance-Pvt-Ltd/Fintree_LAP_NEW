@@ -424,14 +424,11 @@ export class AttendanceService {
 
     const currentTotalDist = Number(attendance.totalDistanceKm || 0) + distanceIncrement;
 
-    let locName = this.cleanLocationName(dto.locationName);
-    if (!locName && lat && lng) {
-      locName = await this.reverseGeocode(lat, lng, attendance.currentLocation || 'Active Movement');
-    }
+    let locName = this.cleanLocationName(dto.locationName) || attendance.currentLocation || 'Active Movement';
 
     attendance.currentLatitude = lat;
     attendance.currentLongitude = lng;
-    if (locName) attendance.currentLocation = locName;
+    attendance.currentLocation = locName;
     attendance.lastTrackedAt = now;
     attendance.totalDistanceKm = parseFloat(currentTotalDist.toFixed(3));
 

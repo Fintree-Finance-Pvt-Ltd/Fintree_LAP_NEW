@@ -64,7 +64,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
   const [loading, setLoading] = useState(true);
   const [routeData, setRouteData] = useState(null);
   const [activeView, setActiveView] = useState("map"); // "map" | "timeline"
-  const [travelMode, setTravelMode] = useState("road"); // "road" | "transit"
+  const [travelMode, setTravelMode] = useState("exact"); // "exact" | "road"
   const [showStats, setShowStats] = useState(true);
   const [routeStats, setRouteStats] = useState({
     roadDistanceKm: 0,
@@ -303,10 +303,10 @@ export default function RouteMapModal({ attendanceId, onClose }) {
           );
       }
 
-      // Render Route Polyline: Fetch accurate road path geometry or direct transit/GPS trail
+      // Render Route Polyline: Exact User GPS Trail or Road Snapping
       if (keyCoords.length >= 2) {
-        if (travelMode === "transit") {
-          // Direct GPS trail for train / rail / transit movement
+        if (travelMode === "exact") {
+          // Direct high-resolution GPS trail connecting every single recorded coordinate
           setRouteStats({
             roadDistanceKm: 0,
             isRoadRoute: false,
@@ -315,7 +315,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
 
           // Glow Underlay line
           const glow = L.polyline(keyCoords, {
-            color: "#4f46e5",
+            color: "#1d4ed8",
             weight: 7,
             opacity: 0.6,
             lineCap: "round",
@@ -323,12 +323,11 @@ export default function RouteMapModal({ attendanceId, onClose }) {
           }).addTo(map);
           glowPolylineRef.current = glow;
 
-          // Main Transit Polyline
+          // Main User Traveled Trail
           const polyline = L.polyline(keyCoords, {
-            color: "#a5b4fc",
+            color: "#38bdf8",
             weight: 4,
             opacity: 1,
-            dashArray: "4, 6",
             lineCap: "round",
             lineJoin: "round",
           }).addTo(map);
@@ -573,9 +572,9 @@ export default function RouteMapModal({ attendanceId, onClose }) {
           </div>
         )}
 
-        {/* View Tabs & Route Legend */}
+        {/* View Tabs & Route Style Selector */}
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5 border-b border-white/10 px-3 py-1.5 sm:px-6 sm:py-2 bg-slate-900/30">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
               type="button"
               onClick={() => setActiveView("map")}
@@ -600,6 +599,36 @@ export default function RouteMapModal({ attendanceId, onClose }) {
               <FiList className="h-3.5 w-3.5" />
               <span>Timeline ({points.length})</span>
             </button>
+
+            {/* Trail Mode Switcher */}
+            {activeView === "map" && (
+              <div className="flex items-center gap-1 ml-1 pl-2 border-l border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setTravelMode("exact")}
+                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition-all cursor-pointer touch-manipulation ${
+                    travelMode === "exact"
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40"
+                      : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
+                  title="Exact walk/travel GPS trail connecting every recorded point"
+                >
+                  <span>📍 Exact Walk/Travel Trail</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTravelMode("road")}
+                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition-all cursor-pointer touch-manipulation ${
+                    travelMode === "road"
+                      ? "bg-blue-500/20 text-blue-300 border border-blue-400/40"
+                      : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
+                  title="Snap to car roads"
+                >
+                  <span>🚗 Road Driving</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2.5 text-[10px] sm:text-[11px] text-slate-400">

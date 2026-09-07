@@ -234,9 +234,9 @@ function startBackgroundKeepAlive() {
 
         // Send ping if:
         // 1. First ping (last === null)
-        // 2. User moved >= 5 meters
-        // 3. At least 10 seconds elapsed since last update
-        const shouldSend = !last || distanceMovedMeters >= 5 || timeSinceLastPing >= 10 * 1000;
+        // 2. User moved >= 2 meters
+        // 3. At least 5 seconds elapsed since last update
+        const shouldSend = !last || distanceMovedMeters >= 2 || timeSinceLastPing >= 5 * 1000;
 
         if (shouldSend) {
           isPingingRef.current = true;
@@ -247,12 +247,10 @@ function startBackgroundKeepAlive() {
           const lng = parseFloat(Number(longitude).toFixed(7));
 
           try {
-            const locName = await reverseGeocodeCoords(lat, lng).catch(() => "");
             const res = await attendanceApi.trackLocation({
               attendanceId: attendanceRecord?.id,
               latitude: lat,
               longitude: lng,
-              locationName: locName || undefined,
               accuracy: accuracy ? parseFloat(accuracy.toFixed(1)) : undefined,
               speed: speed !== null && speed !== undefined ? parseFloat(Number(speed).toFixed(2)) : undefined,
               heading: heading !== null && heading !== undefined ? parseFloat(Number(heading).toFixed(1)) : undefined,
@@ -267,7 +265,7 @@ function startBackgroundKeepAlive() {
                   ...prev,
                   currentLatitude: lat,
                   currentLongitude: lng,
-                  currentLocation: locName || trackData.locationName || prev.currentLocation,
+                  currentLocation: trackData.locationName || prev.currentLocation,
                   lastTrackedAt: new Date().toISOString(),
                   totalDistanceKm: trackData.totalDistanceKm ?? prev.totalDistanceKm,
                 };
@@ -286,17 +284,17 @@ function startBackgroundKeepAlive() {
         watchId = navigator.geolocation.watchPosition(
           handleLocationSuccess,
           handleLocationError,
-          { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
         );
 
-        // Heartbeat interval (every 15 seconds) to ensure tracking stays active in background tabs
+        // Heartbeat interval (every 5 seconds) to ensure tracking stays active continuously
         heartbeatTimer = setInterval(() => {
           navigator.geolocation.getCurrentPosition(
             handleLocationSuccess,
             handleLocationError,
-            { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
           );
-        }, 15 * 1000);
+        }, 5 * 1000);
 
         // Persistent re-request loop: If location is turned off or denied, re-prompt every 5 seconds
         permissionPromptRetryTimer = setInterval(() => {
