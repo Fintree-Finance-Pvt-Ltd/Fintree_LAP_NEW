@@ -51,15 +51,17 @@ export class AttendanceController {
   async getMyHistory(
     @CurrentUser() user: { id: number; email: string; roles: string[] },
     @Query('limit') limit?: string,
+    @Query('month') month?: string,
   ) {
-    const take = limit ? parseInt(limit, 10) : 60;
-    return this.attendanceService.getMyHistory(user.id, take);
+    const take = limit ? parseInt(limit, 10) : 100;
+    return this.attendanceService.getMyHistory(user.id, take, month);
   }
 
   @Get('all')
   async getAll(
     @Query('date') date?: string,
     @Query('month') month?: string,
+    @Query('userId') userId?: string,
     @Query('search') search?: string,
     @Query('limit') limit?: string,
     @Query('page') page?: string,
@@ -67,6 +69,7 @@ export class AttendanceController {
     return this.attendanceService.getAllAttendance({
       date,
       month,
+      userId: userId ? parseInt(userId, 10) : undefined,
       search,
       limit: limit ? parseInt(limit, 10) : 100,
       page: page ? parseInt(page, 10) : 1,

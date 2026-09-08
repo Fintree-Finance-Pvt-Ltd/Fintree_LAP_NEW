@@ -21,10 +21,12 @@ import { useAuth } from "../../../hooks/useAuth.js";
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
 import { attendanceApi } from "../attendanceApi.js";
 import RouteMapModal from "../components/RouteMapModal.jsx";
+import AttendanceCalendar from "../components/AttendanceCalendar.jsx";
 import {
   cleanLocationName,
   reverseGeocodeCoords,
 } from "../../../utils/geoUtils.js";
+import { calculateRecordDuration } from "../../../utils/attendanceUtils.js";
 
 export default function AttendancePage() {
   const { user } = useAuth();
@@ -37,6 +39,8 @@ export default function AttendancePage() {
     setShowEndModal,
   } = useAttendance();
 
+  const [viewMode, setViewMode] = useState("calendar"); // "calendar" | "table"
+  const [selectedCalendarUserId, setSelectedCalendarUserId] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const [myRecords, setMyRecords] = useState([]);
@@ -219,6 +223,45 @@ export default function AttendancePage() {
     };
   }, [myRecords, allRecords]);
 
+  // Distinct users list for the Calendar dropdown
+  const distinctUsers = useMemo(() => {
+    const map = new Map();
+    if (user?.id) {
+      map.set(String(user.id), {
+        id: user.id,
+        name: user.name ? `${user.name} (Me)` : "Me",
+        email: user.email || "",
+        role: "You",
+      });
+    }
+    allRecords.forEach((r) => {
+      const uid = r.userId || r.user?.id;
+      if (uid && !map.has(String(uid))) {
+        map.set(String(uid), {
+          id: uid,
+          name: r.user?.name || `Employee #${uid}`,
+          email: r.user?.email || "",
+          location: r.user?.location || "",
+          role: r.user?.role || "",
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [allRecords, user]);
+
+  // Calendar Records for the selected employee
+  const calendarRecords = useMemo(() => {
+    if (
+      !selectedCalendarUserId ||
+      String(selectedCalendarUserId) === String(user?.id)
+    ) {
+      return myRecords;
+    }
+    return allRecords.filter(
+      (r) => String(r.userId || r.user?.id) === String(selectedCalendarUserId)
+    );
+  }, [selectedCalendarUserId, myRecords, allRecords, user]);
+
   const currentRecords = activeTab === "all" ? allRecords : myRecords;
 
   // Filtered Records
@@ -305,8 +348,11 @@ export default function AttendancePage() {
     let totalDist = 0;
 
     list.forEach((r) => {
-      if (r.totalMinutes) totalMins += Number(r.totalMinutes);
-      if (r.totalDistanceKm) totalDist += Number(r.totalDistanceKm);
+      const dur = calculateRecordDuration(r);
+      if (dur.totalMinutes) totalMins += Number(dur.totalMinutes);
+      if (r.totalDistanceKm || r.total_distance_km) {
+        totalDist += Number(r.totalDistanceKm || r.total_distance_km || 0);
+      }
     });
 
     const totalHrs = (totalMins / 60).toFixed(1);
@@ -372,6 +418,8 @@ export default function AttendancePage() {
         ? (geoAddressMap[eKey] || cleanLocationName(r.endLocation || r.end_location, "Office Workspace"))
         : "-";
 
+      const durInfo = calculateRecordDuration(r);
+
       return [
         r.id,
         `"${r.user?.name || (r.userId === user?.id ? user?.name : "Employee #" + r.userId)}"`,
@@ -391,7 +439,7 @@ export default function AttendancePage() {
         endLng || "-",
         endLat && endLng ? `"${endLat}, ${endLng}"` : "-",
         r.totalDistanceKm || r.total_distance_km || "0.0",
-        `"${r.totalHours || r.total_hours || "In Progress"}"`,
+        `"${durInfo.formattedDuration || "In Progress"}"`,
         r.status,
       ];
     });
@@ -516,7 +564,61 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* View Mode Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-100/90 p-1 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setViewMode("calendar")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+              viewMode === "calendar"
+                ? "bg-[#0f2942] text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900 bg-transparent hover:bg-slate-200/60"
+            }`}
+          >
+            <FiCalendar className={`h-4 w-4 ${viewMode === "calendar" ? "text-blue-300" : "text-slate-500"}`} />
+            <span>Attendance Calendar</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode("table")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+              viewMode === "table"
+                ? "bg-[#0f2942] text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900 bg-transparent hover:bg-slate-200/60"
+            }`}
+          >
+            <FiUsers className={`h-4 w-4 ${viewMode === "table" ? "text-indigo-300" : "text-slate-500"}`} />
+            <span>Detailed Table Logs</span>
+          </button>
+        </div>
+
+        <div className="text-xs text-slate-500 font-medium">
+          {viewMode === "calendar" ? (
+            <span>Viewing monthly calendar with working hours indicator</span>
+          ) : (
+            <span>Viewing table records ({filteredRecords.length} results)</span>
+          )}
+        </div>
+      </div>
+
+      {/* Main View Area */}
+      {viewMode === "calendar" ? (
+        <AttendanceCalendar
+          records={calendarRecords}
+          allUsers={distinctUsers}
+          selectedUserId={selectedCalendarUserId}
+          onSelectUserId={setSelectedCalendarUserId}
+          isAdminOrBM={isAdminOrBM}
+          currentUser={user}
+          onOpenRouteMap={setSelectedRouteId}
+          isLoading={loading}
+          onRefresh={loadData}
+        />
+      ) : (
+        <>
+          {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Today's Status */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
@@ -826,7 +928,8 @@ export default function AttendancePage() {
                       )
                     : null;
 
-                  const totalHrs = item.totalHours || item.total_hours;
+                  const durInfo = calculateRecordDuration(item);
+                  const totalHrs = isLive ? "In Progress" : durInfo.formattedDuration;
                   const distKm = item.totalDistanceKm || item.total_distance_km;
 
                   return (
@@ -1040,6 +1143,8 @@ export default function AttendancePage() {
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* Interactive Route Map Modal */}
       {selectedRouteId && (

@@ -21,8 +21,15 @@ export const attendanceApi = {
   getRoute: (attendanceId) =>
     apiClient.get(`/attendance/route/${attendanceId}`),
 
-  getMyHistory: (limit = 60) =>
-    apiClient.get(`/attendance/my-history?limit=${limit}`),
+  getMyHistory: (options = 100) => {
+    if (typeof options === "number") {
+      return apiClient.get(`/attendance/my-history?limit=${options}`);
+    }
+    const params = new URLSearchParams();
+    if (options?.limit) params.append("limit", options.limit);
+    if (options?.month) params.append("month", options.month);
+    return apiClient.get(`/attendance/my-history?${params.toString()}`);
+  },
 
   getAll: (params = {}) =>
     apiClient.get("/attendance/all", { params }),

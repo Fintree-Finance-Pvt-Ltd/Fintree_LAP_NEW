@@ -591,6 +591,57 @@ export class AttendanceService {
     };
   }
 
+  cleanAndRecalculateRecord(item: LapAttendance): LapAttendance {
+    if (!item) return item;
+
+    if ((item.startLatitude === null || item.startLatitude === undefined) && (item.currentLatitude || item.endLatitude)) {
+      item.startLatitude = item.currentLatitude ?? item.endLatitude ?? null;
+      item.startLongitude = item.currentLongitude ?? item.endLongitude ?? null;
+    }
+
+    item.startLocation = this.cleanLocationName(item.startLocation) || item.startLocation;
+    item.currentLocation = this.cleanLocationName(item.currentLocation) || item.currentLocation;
+
+    const isEnded =
+      item.status === 'COMPLETED' ||
+      item.status === 'AUTO_END_WORK' ||
+      item.status === 'auto_end_work' ||
+      item.status === 'AUTO_ENDED' ||
+      item.status === 'END_WORK_HOUR' ||
+      Boolean(item.endTime);
+
+    if (!isEnded) {
+      item.endLocation = null;
+      item.endLatitude = null;
+      item.endLongitude = null;
+    } else {
+      item.endLocation = this.cleanLocationName(item.endLocation) || item.endLocation;
+      if ((!item.startLocation || item.startLocation.startsWith('Spoke')) && item.endLocation && !item.endLocation.startsWith('Spoke')) {
+        item.startLocation = item.endLocation;
+      }
+    }
+
+    // Recalculate true working duration from startTime & endTime
+    if (item.startTime && item.endTime) {
+      const startMs = new Date(item.startTime).getTime();
+      const endMs = new Date(item.endTime).getTime();
+      if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
+        const diffMinutes = Math.round((endMs - startMs) / 60000);
+        item.totalMinutes = diffMinutes;
+        item.totalHours = this.formatDuration(diffMinutes);
+      }
+    } else if (item.startTime && item.status === 'IN_PROGRESS') {
+      const startMs = new Date(item.startTime).getTime();
+      if (!isNaN(startMs)) {
+        const diffMinutes = Math.max(0, Math.round((Date.now() - startMs) / 60000));
+        item.totalMinutes = diffMinutes;
+        item.totalHours = this.formatDuration(diffMinutes);
+      }
+    }
+
+    return item;
+  }
+
   async getAttendanceRoute(attendanceId: number) {
     const attendance = await this.attendanceRepo.findOne({
       where: { id: attendanceId },
@@ -601,6 +652,8 @@ export class AttendanceService {
       throw new NotFoundException('Attendance record not found');
     }
 
+    const cleaned = this.cleanAndRecalculateRecord(attendance);
+
     const points = await this.locationRepo.find({
       where: { attendanceId },
       order: { recordedAt: 'ASC' },
@@ -609,27 +662,27 @@ export class AttendanceService {
     return {
       data: {
         attendance: {
-          id: attendance.id,
-          userId: attendance.userId,
-          userName: attendance.user?.name || `Employee #${attendance.userId}`,
-          userEmail: attendance.user?.email || '',
-          date: attendance.date,
-          startTime: attendance.startTime,
-          startLocation: this.cleanLocationName(attendance.startLocation) || 'Office Workspace',
-          startLatitude: attendance.startLatitude,
-          startLongitude: attendance.startLongitude,
-          endTime: attendance.endTime,
-          endLocation: attendance.endTime ? (this.cleanLocationName(attendance.endLocation) || 'Office Workspace') : null,
-          endLatitude: attendance.endTime ? attendance.endLatitude : null,
-          endLongitude: attendance.endTime ? attendance.endLongitude : null,
-          currentLatitude: attendance.currentLatitude,
-          currentLongitude: attendance.currentLongitude,
-          currentLocation: this.cleanLocationName(attendance.currentLocation) || 'Office Workspace',
-          lastTrackedAt: attendance.lastTrackedAt,
-          totalHours: attendance.totalHours,
-          totalMinutes: attendance.totalMinutes,
-          totalDistanceKm: attendance.totalDistanceKm || 0,
-          status: attendance.status,
+          id: cleaned.id,
+          userId: cleaned.userId,
+          userName: cleaned.user?.name || `Employee #${cleaned.userId}`,
+          userEmail: cleaned.user?.email || '',
+          date: cleaned.date,
+          startTime: cleaned.startTime,
+          startLocation: cleaned.startLocation || 'Office Workspace',
+          startLatitude: cleaned.startLatitude,
+          startLongitude: cleaned.startLongitude,
+          endTime: cleaned.endTime,
+          endLocation: cleaned.endLocation,
+          endLatitude: cleaned.endLatitude,
+          endLongitude: cleaned.endLongitude,
+          currentLatitude: cleaned.currentLatitude,
+          currentLongitude: cleaned.currentLongitude,
+          currentLocation: cleaned.currentLocation || 'Office Workspace',
+          lastTrackedAt: cleaned.lastTrackedAt,
+          totalHours: cleaned.totalHours,
+          totalMinutes: cleaned.totalMinutes,
+          totalDistanceKm: cleaned.totalDistanceKm || 0,
+          status: cleaned.status,
         },
         points: points.map((p) => ({
           id: p.id,
@@ -645,37 +698,23 @@ export class AttendanceService {
     };
   }
 
-  async getMyHistory(userId: number, limit = 60) {
-    const list = await this.attendanceRepo.find({
-      where: { userId },
-      order: { date: 'DESC', startTime: 'DESC' },
-      take: limit,
-    });
+  async getMyHistory(userId: number, limit = 60, month?: string) {
+    const qb = this.attendanceRepo
+      .createQueryBuilder('att')
+      .where('att.userId = :userId', { userId })
+      .orderBy('att.date', 'DESC')
+      .addOrderBy('att.startTime', 'DESC');
 
-    // Clean any legacy raw coords strings in location names & heal missing start coords
-    const cleaned = list.map((item) => {
-      if ((item.startLatitude === null || item.startLatitude === undefined) && (item.currentLatitude || item.endLatitude)) {
-        item.startLatitude = item.currentLatitude ?? item.endLatitude ?? null;
-        item.startLongitude = item.currentLongitude ?? item.endLongitude ?? null;
-      }
+    if (month) {
+      qb.andWhere('att.date LIKE :month', { month: `${month}%` });
+    }
 
-      item.startLocation = this.cleanLocationName(item.startLocation) || item.startLocation;
-      item.currentLocation = this.cleanLocationName(item.currentLocation) || item.currentLocation;
+    if (!month && limit) {
+      qb.take(limit);
+    }
 
-      const isEnded = item.status === 'COMPLETED' || item.status === 'AUTO_END_WORK' || item.status === 'auto_end_work' || item.status === 'AUTO_ENDED' || item.status === 'END_WORK_HOUR' || Boolean(item.endTime);
-
-      if (!isEnded) {
-        item.endLocation = null;
-        item.endLatitude = null;
-        item.endLongitude = null;
-      } else {
-        item.endLocation = this.cleanLocationName(item.endLocation) || item.endLocation;
-        if ((!item.startLocation || item.startLocation.startsWith('Spoke')) && item.endLocation && !item.endLocation.startsWith('Spoke')) {
-          item.startLocation = item.endLocation;
-        }
-      }
-      return item;
-    });
+    const list = await qb.getMany();
+    const cleaned = list.map((item) => this.cleanAndRecalculateRecord(item));
 
     return { data: cleaned };
   }
@@ -683,6 +722,7 @@ export class AttendanceService {
   async getAllAttendance(options?: {
     date?: string;
     month?: string;
+    userId?: number;
     search?: string;
     status?: string;
     limit?: number;
@@ -699,6 +739,10 @@ export class AttendanceService {
       .addOrderBy('att.startTime', 'DESC')
       .take(limit)
       .skip(skip);
+
+    if (options?.userId) {
+      qb.andWhere('att.userId = :userId', { userId: options.userId });
+    }
 
     if (options?.date) {
       qb.andWhere('att.date = :date', { date: options.date });
@@ -736,30 +780,7 @@ export class AttendanceService {
     }
 
     const [items, total] = await qb.getManyAndCount();
-
-    const cleanedItems = items.map((item) => {
-      if ((item.startLatitude === null || item.startLatitude === undefined) && (item.currentLatitude || item.endLatitude)) {
-        item.startLatitude = item.currentLatitude ?? item.endLatitude ?? null;
-        item.startLongitude = item.currentLongitude ?? item.endLongitude ?? null;
-      }
-
-      item.startLocation = this.cleanLocationName(item.startLocation) || item.startLocation;
-      item.currentLocation = this.cleanLocationName(item.currentLocation) || item.currentLocation;
-
-      const isEnded = item.status === 'COMPLETED' || item.status === 'AUTO_END_WORK' || item.status === 'auto_end_work' || item.status === 'AUTO_ENDED' || item.status === 'END_WORK_HOUR' || Boolean(item.endTime);
-
-      if (!isEnded) {
-        item.endLocation = null;
-        item.endLatitude = null;
-        item.endLongitude = null;
-      } else {
-        item.endLocation = this.cleanLocationName(item.endLocation) || item.endLocation;
-        if ((!item.startLocation || item.startLocation.startsWith('Spoke')) && item.endLocation && !item.endLocation.startsWith('Spoke')) {
-          item.startLocation = item.endLocation;
-        }
-      }
-      return item;
-    });
+    const cleanedItems = items.map((item) => this.cleanAndRecalculateRecord(item));
 
     return {
       data: cleanedItems,
