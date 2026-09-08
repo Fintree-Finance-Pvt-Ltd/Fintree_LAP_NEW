@@ -46,6 +46,7 @@ import { PartnerModule } from './modules/partners/partner.module';
 import { HubModule } from './modules/admin/hub/hub.module';
 import { SpokesModule } from './modules/admin/spokes/spokes.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
+import { LeavesModule } from './modules/leaves/leaves.module';
 
 
 @Module({
@@ -98,6 +99,7 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
     
     SpokesModule,
     AttendanceModule,
+    LeavesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: RateLimitGuard },

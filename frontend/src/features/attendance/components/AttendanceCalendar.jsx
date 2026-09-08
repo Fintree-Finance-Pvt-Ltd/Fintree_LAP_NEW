@@ -21,6 +21,7 @@ import {
   TARGET_HOURS_LABEL,
 } from "../../../utils/attendanceUtils.js";
 import AttendanceDayModal from "./AttendanceDayModal.jsx";
+import { leavesApi } from "../../leaves/leavesApi.js";
 
 const MONTH_NAMES = [
   "January",
@@ -47,6 +48,72 @@ const WEEKDAY_NAMES = [
   { full: "Saturday", short: "Sat", mini: "S", isWeekend: false },
 ];
 
+// Helper to build a comprehensive date -> leave map from any API response format
+function buildDateLeaveMap(leavesResponse) {
+  const map = {};
+
+  // 1. Direct dateMap if provided
+  const directMap =
+    leavesResponse?.data?.dateMap ||
+    leavesResponse?.dateMap ||
+    (leavesResponse?.data && typeof leavesResponse.data === "object" && !Array.isArray(leavesResponse.data) ? leavesResponse.data : null);
+
+  if (directMap && typeof directMap === "object") {
+    Object.keys(directMap).forEach((key) => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(key)) {
+        const val = directMap[key];
+        map[key] = Array.isArray(val) ? val : [val];
+      }
+    });
+  }
+
+  // 2. Also process raw list of leaves
+  const list = Array.isArray(leavesResponse?.data?.data)
+    ? leavesResponse.data.data
+    : Array.isArray(leavesResponse?.data)
+    ? leavesResponse.data
+    : Array.isArray(leavesResponse)
+    ? leavesResponse
+    : [];
+
+  list.forEach((leave) => {
+    if (!leave) return;
+    const isApproved =
+      String(leave.status).toUpperCase() === "APPROVED" ||
+      String(leave.status).toUpperCase() === "APPROVE";
+    if (!isApproved) return;
+
+    const startStr = leave.startDate || leave.start_date;
+    const endStr = leave.endDate || leave.end_date || startStr;
+    if (!startStr) return;
+
+    try {
+      const [sY, sM, sD] = startStr.split("-").map(Number);
+      const [eY, eM, eD] = endStr.split("-").map(Number);
+      const cur = new Date(Date.UTC(sY, sM - 1, sD));
+      const end = new Date(Date.UTC(eY, eM - 1, eD));
+
+      while (cur <= end) {
+        const y = cur.getUTCFullYear();
+        const m = String(cur.getUTCMonth() + 1).padStart(2, "0");
+        const d = String(cur.getUTCDate()).padStart(2, "0");
+        const dateKey = `${y}-${m}-${d}`;
+        if (!map[dateKey]) {
+          map[dateKey] = [];
+        }
+        if (!map[dateKey].some((item) => item.id === leave.id)) {
+          map[dateKey].push(leave);
+        }
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    } catch {
+      if (!map[startStr]) map[startStr] = [leave];
+    }
+  });
+
+  return map;
+}
+
 export default function AttendanceCalendar({
   records = [],
   allUsers = [],
@@ -57,11 +124,38 @@ export default function AttendanceCalendar({
   onOpenRouteMap,
   isLoading = false,
   onRefresh,
+  approvedLeaves: externalApprovedLeaves = null,
 }) {
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth()); // 0-11
   const [selectedDayData, setSelectedDayData] = useState(null);
   const [liveElapsedMins, setLiveElapsedMins] = useState(0);
+  const [calendarLeavesMap, setCalendarLeavesMap] = useState({});
+
+  // Fetch approved leaves for the displayed month
+  useEffect(() => {
+    let isMounted = true;
+    const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}`;
+    const targetUid = selectedUserId || currentUser?.id;
+
+    leavesApi
+      .getCalendarLeaves({
+        userId: targetUid || undefined,
+        month: monthStr,
+      })
+      .then((res) => {
+        if (!isMounted) return;
+        const mapped = buildDateLeaveMap(res);
+        setCalendarLeavesMap(mapped);
+      })
+      .catch((err) => {
+        console.debug("Failed to fetch calendar leaves:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentYear, currentMonth, selectedUserId, currentUser?.id, isLoading]);
 
   // Update live timer every 30 seconds for in-progress sessions
   useEffect(() => {
@@ -193,6 +287,8 @@ export default function AttendanceCalendar({
       const isFuture = dateStr > todayStr;
 
       const record = recordsByDate.get(dateStr);
+      const leaveList = calendarLeavesMap[dateStr] || [];
+      const leaveInfo = leaveList.length > 0 ? leaveList[0] : null;
 
       const durationInfo = record
         ? calculateRecordDuration(record)
@@ -212,11 +308,12 @@ export default function AttendanceCalendar({
       // 1. Total work target is 8.30 hours (510 minutes).
       // 2. If user completed >= 8.30 hrs -> Green background.
       // 3. If user worked but < 8.30 hrs -> Amber/Orange background.
-      // 4. If absent on working day -> Red background.
-      // 5. If Sunday & no work -> Gray background.
-      // 6. If Sunday & user worked -> Green (if >= 8.30h) or Amber (if < 8.30h).
-      // 7. Today in progress -> Active live pulse.
-      // 8. Future dates -> Neutral.
+      // 4. If approved leave -> Purple background ("On Leave").
+      // 5. If absent on working day -> Red background.
+      // 6. If Sunday & no work -> Gray background.
+      // 7. If Sunday & user worked -> Green (if >= 8.30h) or Amber (if < 8.30h).
+      // 8. Today in progress -> Active live pulse.
+      // 9. Future dates -> Neutral.
 
       let statusType = "NEUTRAL";
       let badgeLabel = "";
@@ -280,8 +377,19 @@ export default function AttendanceCalendar({
           badgeClasses = "bg-amber-500 text-white";
           dotColor = "bg-amber-500";
         }
+      } else if (leaveInfo) {
+        // User has an approved leave on this date and did not punch in
+        statusType = "ON_LEAVE";
+        badgeLabel = leaveInfo.isHalfDay
+          ? `Leave (${leaveInfo.halfDayType === "FIRST_HALF" ? "1st Half" : "2nd Half"})`
+          : `On Leave (${leaveInfo.leaveType})`;
+        bgClasses = "bg-purple-50/90 dark:bg-purple-950/40";
+        borderClasses = "border-purple-300 ring-1 ring-purple-400/50 hover:border-purple-500";
+        textClasses = "text-purple-950 dark:text-purple-100";
+        badgeClasses = "bg-purple-600 text-white";
+        dotColor = "bg-purple-600";
       } else if (isPast) {
-        // Past working day with no attendance
+        // Past working day with no attendance & no leave
         statusType = "ABSENT";
         badgeLabel = "Absent";
         bgClasses = "bg-rose-50/80 dark:bg-rose-950/40";
@@ -327,6 +435,7 @@ export default function AttendanceCalendar({
         isPast,
         isFuture,
         record,
+        leaveInfo,
         statusType,
         badgeLabel,
         bgClasses,
@@ -366,6 +475,7 @@ export default function AttendanceCalendar({
     currentYear,
     currentMonth,
     recordsByDate,
+    calendarLeavesMap,
     todayStr,
     liveElapsedMins,
   ]);
@@ -375,6 +485,7 @@ export default function AttendanceCalendar({
     let fullDays = 0;
     let shortDays = 0;
     let absentDays = 0;
+    let leaveDays = 0;
     let sundaysOff = 0;
     let sundaysWorked = 0;
     let totalMinutesWorked = 0;
@@ -399,6 +510,8 @@ export default function AttendanceCalendar({
         totalMinutesWorked += d.totalMinutes;
       } else if (d.statusType === "SUNDAY_OFF") {
         sundaysOff++;
+      } else if (d.statusType === "ON_LEAVE") {
+        leaveDays += d.leaveInfo?.isHalfDay ? 0.5 : 1;
       } else if (d.statusType === "ABSENT") {
         absentDays++;
         workingDaysElapsed++;
@@ -423,6 +536,7 @@ export default function AttendanceCalendar({
       fullDays,
       shortDays,
       absentDays,
+      leaveDays,
       sundaysOff,
       sundaysWorked,
       totalHours,
@@ -529,7 +643,7 @@ export default function AttendanceCalendar({
       </div>
 
       {/* Monthly KPI Overview Bar */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7 sm:gap-3">
         {/* Full Day Card */}
         <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-2.5 sm:p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
@@ -559,6 +673,22 @@ export default function AttendanceCalendar({
           </div>
           <p className="text-[9px] sm:text-[10px] font-medium text-amber-700 mt-0.5 truncate">
             &lt; 8.30 hrs worked
+          </p>
+        </div>
+
+        {/* Approved Leave Card */}
+        <div className="rounded-2xl border border-purple-200/90 bg-purple-50/60 p-2.5 sm:p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-purple-800">
+              Leaves
+            </span>
+            <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-purple-500" />
+          </div>
+          <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-black text-purple-900">
+            {monthlyStats.leaveDays}
+          </div>
+          <p className="text-[9px] sm:text-[10px] font-medium text-purple-700 mt-0.5 truncate">
+            Admin approved leaves
           </p>
         </div>
 
@@ -653,6 +783,14 @@ export default function AttendanceCalendar({
               </span>
             </div>
 
+            {/* Purple On Leave */}
+            <div className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-md bg-purple-600 border border-purple-700 shrink-0" />
+              <span className="font-semibold text-purple-900 text-[11px]">
+                On Leave (Approved)
+              </span>
+            </div>
+
             {/* Red */}
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-md bg-rose-500 border border-rose-600 shrink-0" />
@@ -666,14 +804,6 @@ export default function AttendanceCalendar({
               <span className="h-3 w-3 rounded-md bg-slate-300 border border-slate-400 shrink-0" />
               <span className="font-semibold text-slate-700 text-[11px]">
                 Sunday (Off)
-              </span>
-            </div>
-
-            {/* Sunday Worked */}
-            <div className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-md bg-emerald-100 border-2 border-dashed border-emerald-600 shrink-0" />
-              <span className="font-semibold text-slate-700 text-[11px]">
-                Sunday Worked
               </span>
             </div>
 
@@ -728,7 +858,12 @@ export default function AttendanceCalendar({
             }
 
             const hasRecord = Boolean(day.record);
-            const isClickable = hasRecord || day.statusType === "ABSENT" || day.statusType === "SUNDAY_OFF" || day.statusType === "IN_PROGRESS";
+            const isClickable =
+              hasRecord ||
+              day.statusType === "ON_LEAVE" ||
+              day.statusType === "ABSENT" ||
+              day.statusType === "SUNDAY_OFF" ||
+              day.statusType === "IN_PROGRESS";
 
             return (
               <div
@@ -797,6 +932,13 @@ export default function AttendanceCalendar({
                     </div>
                   )}
 
+                  {/* Leave note */}
+                  {day.statusType === "ON_LEAVE" && (
+                    <div className="text-[10px] font-medium text-purple-800 leading-tight">
+                      Approved Leave
+                    </div>
+                  )}
+
                   {/* Absent message */}
                   {day.statusType === "ABSENT" && (
                     <div className="text-[10px] font-medium text-rose-700 leading-tight">
@@ -822,6 +964,13 @@ export default function AttendanceCalendar({
                         }`}
                       >
                         {day.durationFormatted}
+                      </span>
+                    </div>
+                  ) : day.statusType === "ON_LEAVE" ? (
+                    <div className="flex flex-col items-center justify-center gap-0.5 w-full">
+                      <span className="h-1.5 w-1.5 rounded-full bg-purple-600" />
+                      <span className="text-[8px] font-bold text-purple-800 leading-none">
+                        Leave
                       </span>
                     </div>
                   ) : day.statusType === "ABSENT" ? (

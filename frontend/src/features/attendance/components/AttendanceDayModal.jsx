@@ -132,6 +132,13 @@ export default function AttendanceDayModal({
             </div>
 
             {/* Status Badge */}
+            {statusType === "ON_LEAVE" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-purple-800 border border-purple-300 text-[11px]">
+                <FiCheckCircle className="h-3 w-3 text-purple-600" />
+                On Leave ({dayData.leaveInfo?.leaveType || "Approved"})
+              </span>
+            )}
+
             {statusType === "FULL_DAY" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-emerald-800 border border-emerald-300 text-[11px]">
                 <FiCheckCircle className="h-3 w-3 text-emerald-600" />
@@ -195,6 +202,59 @@ export default function AttendanceDayModal({
               </span>
             )}
           </div>
+
+          {/* Approved Leave Details Card */}
+          {dayData.leaveInfo && (
+            <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-3.5 sm:p-4 shadow-2xs space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FiCalendar className="h-4 w-4 text-purple-600" />
+                  <span className="font-bold text-purple-950 text-xs sm:text-sm">
+                    Approved Leave Details
+                  </span>
+                </div>
+                <span className="rounded-md bg-purple-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase">
+                  {dayData.leaveInfo.leaveType}
+                </span>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between border-b border-purple-100 pb-1.5">
+                  <span className="text-purple-700 font-medium">Leave Scope:</span>
+                  <span className="font-bold text-purple-950">
+                    {dayData.leaveInfo.isHalfDay
+                      ? `Half Day (${dayData.leaveInfo.halfDayType === "FIRST_HALF" ? "Morning Shift" : "Afternoon Shift"})`
+                      : `Full Day (${dayData.leaveInfo.totalDays || 1} day)`}
+                  </span>
+                </div>
+
+                <div className="flex justify-between border-b border-purple-100 pb-1.5">
+                  <span className="text-purple-700 font-medium">Reason:</span>
+                  <span className="font-semibold text-purple-900 text-right max-w-[250px]">
+                    "{dayData.leaveInfo.reason}"
+                  </span>
+                </div>
+
+                {dayData.leaveInfo.approvedBy && (
+                  <div className="flex justify-between border-b border-purple-100 pb-1.5">
+                    <span className="text-purple-700 font-medium">Approved By:</span>
+                    <span className="font-bold text-purple-950">
+                      {dayData.leaveInfo.approvedBy}
+                    </span>
+                  </div>
+                )}
+
+                {dayData.leaveInfo.adminRemarks && (
+                  <div className="flex justify-between pt-0.5">
+                    <span className="text-purple-700 font-medium">Admin Remarks:</span>
+                    <span className="font-medium italic text-purple-800 text-right max-w-[250px]">
+                      "{dayData.leaveInfo.adminRemarks}"
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Working Hours Target & Progress Card (if worked) */}
           {(record || statusType === "IN_PROGRESS") && (

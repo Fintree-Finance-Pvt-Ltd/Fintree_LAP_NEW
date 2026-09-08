@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FiClock,
   FiCalendar,
@@ -16,12 +17,14 @@ import {
   FiNavigation,
   FiCompass,
   FiEye,
+  FiPlus,
 } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth.js";
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
 import { attendanceApi } from "../attendanceApi.js";
 import RouteMapModal from "../components/RouteMapModal.jsx";
 import AttendanceCalendar from "../components/AttendanceCalendar.jsx";
+import ApplyLeaveModal from "../../leaves/components/ApplyLeaveModal.jsx";
 import {
   cleanLocationName,
   reverseGeocodeCoords,
@@ -29,6 +32,7 @@ import {
 import { calculateRecordDuration } from "../../../utils/attendanceUtils.js";
 
 export default function AttendancePage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const {
     isWorkStarted,
@@ -43,6 +47,7 @@ export default function AttendancePage() {
   const [selectedCalendarUserId, setSelectedCalendarUserId] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [isApplyLeaveModalOpen, setIsApplyLeaveModalOpen] = useState(false);
   const [myRecords, setMyRecords] = useState([]);
   const [allRecords, setAllRecords] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -524,6 +529,26 @@ export default function AttendancePage() {
               <span>GPS Live Tracking Active</span>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => setIsApplyLeaveModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2.5 text-xs font-bold text-purple-700 shadow-xs transition hover:bg-purple-100 active:scale-95 cursor-pointer"
+            title="Apply for Leave"
+          >
+            <FiPlus className="h-4 w-4 text-purple-600" />
+            <span>Apply Leave</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate("/leave-management")}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 active:scale-95 cursor-pointer"
+            title="Open Leave Management System"
+          >
+            <FiCalendar className="h-4 w-4 text-slate-500" />
+            <span className="hidden sm:inline">Leave System</span>
+          </button>
 
           <button
             type="button"
@@ -1153,6 +1178,15 @@ export default function AttendancePage() {
           onClose={() => setSelectedRouteId(null)}
         />
       )}
+
+      {/* Apply Leave Modal */}
+      <ApplyLeaveModal
+        isOpen={isApplyLeaveModalOpen}
+        onClose={() => setIsApplyLeaveModalOpen(false)}
+        onSuccess={() => {
+          loadData();
+        }}
+      />
     </div>
   );
 }

@@ -29,7 +29,8 @@ import {
   FaBuilding,
   FaSitemap,
   FaTachometerAlt,
-  FaClock
+  FaClock,
+  FaCalendarCheck,
 } from "react-icons/fa";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -475,6 +476,11 @@ const rolesConfig = {
           to: "/attendance",
           label: "Attendance",
           Icon: FaClock,
+        },
+        {
+          to: "/leave-management",
+          label: "Leave Management",
+          Icon: FaCalendarCheck,
         },
       ],
     },

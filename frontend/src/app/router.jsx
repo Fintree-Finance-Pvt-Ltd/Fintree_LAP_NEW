@@ -76,10 +76,13 @@ import OpsHead from '../features/Operation/pages/OpsHead.jsx';
 import LmsDashboard from "../features/lms/pages/LmsDashboard.jsx";
 import LegalApprovedCases from '../features/credit/pages/LegalApprovedCases.jsx';
 import AttendancePage from '../features/attendance/pages/AttendancePage.jsx';
+import LeaveManagementPage from '../features/leaves/pages/LeaveManagementPage.jsx';
 
 const protectedChildren = [
   { path: '/dashboard', element: <RoleDashboardRedirect /> },
   { path: '/attendance', element: <AttendancePage /> },
+  { path: '/leave-management', element: <LeaveManagementPage /> },
+  { path: '/leaves', element: <LeaveManagementPage /> },
   { path: '/applications', element: <ApplicationsPage /> },
   { path: '/applications/create', element: <CreateApplicationPage /> },
 
