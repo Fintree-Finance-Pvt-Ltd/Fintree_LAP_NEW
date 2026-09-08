@@ -74,58 +74,129 @@ function formatTime(d) {
   }
 }
 
-// Custom Leaflet Icons for Individual Markers & Route
-const createMarkerIcon = (color, text, isLive = false) => {
+// Distinct Route Colors for Multiple Users
+const USER_ROUTE_COLORS = [
+  "#38bdf8", // Sky Blue
+  "#10b981", // Emerald
+  "#a855f7", // Purple
+  "#f59e0b", // Amber
+  "#ec4899", // Pink
+  "#06b6d4", // Cyan
+  "#f97316", // Orange
+  "#14b8a6", // Teal
+  "#e11d48", // Rose
+  "#6366f1", // Indigo
+];
+
+function getUserColor(userId, index = 0) {
+  const num = Number(userId) || (index + 1);
+  return USER_ROUTE_COLORS[(num - 1) % USER_ROUTE_COLORS.length];
+}
+
+// Custom Leaflet Named User Marker Icon (Shows Full User Name on Top + Pin)
+const createNamedUserMarkerIcon = ({ name, color, initials, isLive = false, subtitle = "" }) => {
   return L.divIcon({
-    className: "custom-user-map-pin",
+    className: "custom-user-named-marker",
     html: `
-      <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+        <!-- Full Name Badge Header on Top -->
+        <div style="
+          background: rgba(11, 20, 38, 0.95);
+          color: #ffffff;
+          border: 1.5px solid ${color};
+          border-radius: 8px;
+          padding: 2px 8px;
+          font-size: 11px;
+          font-weight: 700;
+          white-space: nowrap;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          margin-bottom: 2px;
+          user-select: none;
+        ">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: ${isLive ? '#10b981' : color};"></span>
+          <span>${name}</span>
+          ${subtitle ? `<span style="font-size: 9px; opacity: 0.8; font-weight: normal;">• ${subtitle}</span>` : ""}
+          ${isLive ? '<span style="font-size: 9px; color: #34d399; font-weight: bold;">(Live)</span>' : ""}
+        </div>
+
+        <!-- Avatar Pin Circle -->
         <div style="
           background: ${color};
           color: white;
-          border: 2.5px solid white;
+          border: 2px solid white;
           box-shadow: 0 4px 14px rgba(0,0,0,0.45);
           border-radius: 50%;
-          width: 36px;
-          height: 36px;
+          width: 32px;
+          height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-weight: 800;
-          font-size: 13px;
-          user-select: none;
+          font-size: 12px;
           position: relative;
         ">
-          ${text || "📍"}
-          ${
-            isLive
-              ? `<span style="
-                  position: absolute;
-                  top: -3px;
-                  right: -3px;
-                  width: 11px;
-                  height: 11px;
-                  background: #10b981;
-                  border: 2px solid white;
-                  border-radius: 50%;
-                  animation: pulse 1.5s infinite;
-                "></span>`
-              : ""
-          }
+          ${isLive ? "📡" : initials || "📍"}
         </div>
+        <!-- Pin Arrow -->
         <div style="
           width: 0;
           height: 0;
-          border-left: 6px solid transparent;
-          border-right: 6px solid transparent;
-          border-top: 7px solid ${color};
+          border-left: 5px solid transparent;
+          border-right: 5px solid transparent;
+          border-top: 6px solid ${color};
           margin-top: -1px;
         "></div>
       </div>
     `,
-    iconSize: [36, 44],
-    iconAnchor: [18, 43],
-    popupAnchor: [0, -42],
+    iconSize: [140, 68],
+    iconAnchor: [70, 67],
+    popupAnchor: [0, -65],
+  });
+};
+
+const createStartMarkerIcon = (userName, color = "#10b981") => {
+  return L.divIcon({
+    className: "custom-start-named-marker",
+    html: `
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+        <div style="
+          background: rgba(6, 78, 59, 0.95);
+          color: #a7f3d0;
+          border: 1px solid #10b981;
+          border-radius: 6px;
+          padding: 1px 6px;
+          font-size: 10px;
+          font-weight: 700;
+          white-space: nowrap;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+          margin-bottom: 2px;
+        ">
+          🟢 ${userName} (Start)
+        </div>
+        <div style="
+          background: #10b981;
+          color: white;
+          border: 2px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+          border-radius: 50%;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: bold;
+        ">
+          🏁
+        </div>
+      </div>
+    `,
+    iconSize: [120, 50],
+    iconAnchor: [60, 49],
+    popupAnchor: [0, -48],
   });
 };
 
@@ -430,7 +501,7 @@ export default function TodaysMapPage() {
       glowPolylineRef.current = null;
     }
 
-    // SCENARIO 1: A specific employee is selected -> Draw their complete route!
+    // SCENARIO 1: A specific employee is selected -> Draw their focused complete route!
     if (selectedUser) {
       const points = selectedUser.points || [];
       const startLat = selectedUser.startLatitude;
@@ -464,12 +535,17 @@ export default function TodaysMapPage() {
         }
       }
 
-      // Add Start Marker
+      const userName = selectedUser.user?.name || `Employee #${selectedUser.userId}`;
+      const userColor = getUserColor(selectedUser.userId || selectedUser.id, 0);
+
+      // Add Start Marker with Name
       if (startLat && startLng) {
-        const startMarker = L.marker([Number(startLat), Number(startLng)], { icon: startIcon }).bindPopup(`
+        const startMarker = L.marker([Number(startLat), Number(startLng)], {
+          icon: createStartMarkerIcon(userName, "#10b981"),
+        }).bindPopup(`
           <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #0f172a; padding: 2px;">
             <b style="color: #059669; font-size: 13px;">🟢 PUNCH IN (Start)</b><br/>
-            <b>Employee:</b> ${selectedUser.user?.name || `Employee #${selectedUser.userId}`}<br/>
+            <b>Employee:</b> ${userName}<br/>
             <b>Time:</b> ${formatTime(selectedUser.startTime)}<br/>
             <b>Location:</b> ${selectedUser.startLocation || "Office Workspace"}<br/>
             <b>Coords:</b> ${Number(startLat).toFixed(5)}, ${Number(startLng).toFixed(5)}
@@ -493,13 +569,13 @@ export default function TodaysMapPage() {
         markersGroup.addLayer(wpMarker);
       });
 
-      // Add Current / End Marker
+      // Add Current / End Marker with Name Badge
       const isLive = selectedUser.status === "IN_PROGRESS";
       const finalLat = endLat || startLat;
       const finalLng = endLng || startLng;
 
       if (finalLat && finalLng) {
-        const initials = (selectedUser.user?.name || "U")
+        const initials = userName
           .split(" ")
           .map((n) => n[0])
           .join("")
@@ -508,15 +584,22 @@ export default function TodaysMapPage() {
 
         const color = isLive ? "#2563eb" : selectedUser.status === "COMPLETED" ? "#10b981" : "#f59e0b";
         const endMarker = L.marker([Number(finalLat), Number(finalLng)], {
-          icon: createMarkerIcon(color, isLive ? "📡" : initials, isLive),
+          icon: createNamedUserMarkerIcon({
+            name: userName,
+            color,
+            initials,
+            isLive,
+            subtitle: selectedUser.totalDistanceKm ? `${selectedUser.totalDistanceKm} km` : "",
+          }),
         }).bindPopup(`
           <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #0f172a; padding: 2px;">
             <b style="color: ${color}; font-size: 13px;">
               ${isLive ? "📡 LIVE ACTIVE LOCATION" : "🔴 PUNCH OUT (End)"}
             </b><br/>
-            <b>Employee:</b> ${selectedUser.user?.name || `Employee #${selectedUser.userId}`}<br/>
+            <b>Employee:</b> ${userName}<br/>
             <b>Time:</b> ${formatTime(selectedUser.endTime || selectedUser.lastTrackedAt)}<br/>
             <b>Location:</b> ${selectedUser.endLocation || selectedUser.currentLocation || "Location"}<br/>
+            <b>Distance:</b> ${selectedUser.totalDistanceKm || 0} km • <b>Duration:</b> ${selectedUser.totalHours || "-"}<br/>
             <b>Coords:</b> ${Number(finalLat).toFixed(5)}, ${Number(finalLng).toFixed(5)}
           </div>
         `);
@@ -528,9 +611,9 @@ export default function TodaysMapPage() {
         if (travelMode === "exact") {
           // Direct GPS trail connecting every breadcrumb
           const glow = L.polyline(routeCoords, {
-            color: "#1d4ed8",
-            weight: 7,
-            opacity: 0.55,
+            color: userColor,
+            weight: 8,
+            opacity: 0.45,
             lineCap: "round",
             lineJoin: "round",
           }).addTo(map);
@@ -538,7 +621,7 @@ export default function TodaysMapPage() {
 
           const polyline = L.polyline(routeCoords, {
             color: "#38bdf8",
-            weight: 4,
+            weight: 4.5,
             opacity: 1,
             lineCap: "round",
             lineJoin: "round",
@@ -556,9 +639,9 @@ export default function TodaysMapPage() {
             setRoadRouteStats({ distanceKm: res.distanceKm, isRoad: res.isRoadRoute });
 
             const glow = L.polyline(roadPts, {
-              color: "#1d4ed8",
-              weight: 7,
-              opacity: 0.5,
+              color: userColor,
+              weight: 8,
+              opacity: 0.45,
               lineCap: "round",
               lineJoin: "round",
             }).addTo(map);
@@ -566,7 +649,7 @@ export default function TodaysMapPage() {
 
             const polyline = L.polyline(roadPts, {
               color: "#38bdf8",
-              weight: 4,
+              weight: 4.5,
               opacity: 0.95,
               dashArray: res.isRoadRoute ? undefined : "6, 8",
               lineCap: "round",
@@ -583,19 +666,11 @@ export default function TodaysMapPage() {
         map.setView(routeCoords[0], 15);
       }
     } else {
-      // SCENARIO 2: All Users Overview -> Plot all active employees
-      const boundsCoords = [];
+      // SCENARIO 2: All Users Overview -> Plot ALL Users' Locations & Travel Routes simultaneously!
+      const allBoundsCoords = [];
 
-      filteredRecords.forEach((item) => {
-        const lat = item.latestLatitude ?? item.currentLatitude ?? item.endLatitude ?? item.startLatitude;
-        const lng = item.latestLongitude ?? item.currentLongitude ?? item.endLongitude ?? item.startLongitude;
-
-        if (!lat || !lng) return;
-
-        const isLive = item.status === "IN_PROGRESS";
-        const isCompleted = item.status === "COMPLETED";
-        const color = isLive ? "#3b82f6" : isCompleted ? "#10b981" : "#f59e0b";
-
+      filteredRecords.forEach((item, index) => {
+        const userColor = getUserColor(item.userId || item.id, index);
         const name = item.user?.name || `Employee #${item.userId}`;
         const initials = name
           .split(" ")
@@ -604,72 +679,159 @@ export default function TodaysMapPage() {
           .substring(0, 2)
           .toUpperCase();
 
-        const markerPos = [Number(lat), Number(lng)];
-        boundsCoords.push(markerPos);
+        const isLive = item.status === "IN_PROGRESS";
+        const isCompleted = item.status === "COMPLETED";
 
-        const marker = L.marker(markerPos, {
-          icon: createMarkerIcon(color, initials, isLive),
-        });
+        const startLat = item.startLatitude;
+        const startLng = item.startLongitude;
+        const currentLat = item.currentLatitude ?? item.latestLatitude;
+        const currentLng = item.currentLongitude ?? item.latestLongitude;
+        const endLat = item.endLatitude;
+        const endLng = item.endLongitude;
+        const points = item.points || [];
 
-        // Popup content with quick "View Route" button
-        const popupContent = document.createElement("div");
-        popupContent.style.fontFamily = "sans-serif";
-        popupContent.style.fontSize = "12px";
-        popupContent.style.lineHeight = "1.4";
-        popupContent.style.color = "#0f172a";
-        popupContent.style.padding = "2px";
-        popupContent.innerHTML = `
-          <div style="font-weight: bold; font-size: 13px; color: ${color}; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <span>${name}</span>
-            <span style="font-size: 10px; padding: 2px 6px; border-radius: 9999px; background: ${color}20; color: ${color}; border: 1px solid ${color}40;">
-              ${isLive ? "Working Now" : isCompleted ? "Completed" : "Auto-Ended"}
-            </span>
-          </div>
-          <div style="margin-top: 4px; color: #475569;">
-            <b>Time:</b> ${formatTime(item.lastTrackedAt || item.endTime || item.startTime)}<br/>
-            <b>Location:</b> ${item.currentLocation || item.endLocation || item.startLocation || "Office"}<br/>
-            <b>Distance:</b> ${item.totalDistanceKm || 0} km • <b>Duration:</b> ${item.totalHours || "-"}<br/>
-            <b>GPS:</b> ${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}
-          </div>
-          <button id="btn-view-route-${item.id}" style="
-            margin-top: 8px;
-            width: 100%;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            border: none;
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-          ">
-            🗺️ Trace Travel Route
-          </button>
-        `;
+        const userRouteCoords = [];
 
-        marker.bindPopup(popupContent);
+        if (startLat && startLng) {
+          userRouteCoords.push([Number(startLat), Number(startLng)]);
+          allBoundsCoords.push([Number(startLat), Number(startLng)]);
+        }
 
-        marker.on("popupopen", () => {
-          const btn = document.getElementById(`btn-view-route-${item.id}`);
-          if (btn) {
-            btn.onclick = () => {
-              handleSelectUser(item);
-            };
+        points.forEach((p) => {
+          if (p.latitude && p.longitude) {
+            userRouteCoords.push([Number(p.latitude), Number(p.longitude)]);
+            allBoundsCoords.push([Number(p.latitude), Number(p.longitude)]);
           }
         });
 
-        markersGroup.addLayer(marker);
+        const latestLat = currentLat ?? endLat ?? startLat ?? (points.length > 0 ? points[points.length - 1].latitude : null);
+        const latestLng = currentLng ?? endLng ?? startLng ?? (points.length > 0 ? points[points.length - 1].longitude : null);
+
+        if (latestLat && latestLng) {
+          const exists = userRouteCoords.some(
+            ([la, lo]) => Math.abs(la - Number(latestLat)) < 0.0001 && Math.abs(lo - Number(latestLng)) < 0.0001
+          );
+          if (!exists) {
+            userRouteCoords.push([Number(latestLat), Number(latestLng)]);
+          }
+          allBoundsCoords.push([Number(latestLat), Number(latestLng)]);
+        }
+
+        // Draw User's Travel Route Polyline if 2 or more coordinates exist
+        if (userRouteCoords.length >= 2) {
+          // Glow underlay
+          const glow = L.polyline(userRouteCoords, {
+            color: userColor,
+            weight: 6,
+            opacity: 0.35,
+            lineCap: "round",
+            lineJoin: "round",
+          });
+          glow.on("click", () => handleSelectUser(item));
+          markersGroup.addLayer(glow);
+
+          // Solid line with color
+          const polyline = L.polyline(userRouteCoords, {
+            color: userColor,
+            weight: 3.5,
+            opacity: 0.85,
+            lineCap: "round",
+            lineJoin: "round",
+          });
+          polyline.on("click", () => handleSelectUser(item));
+          markersGroup.addLayer(polyline);
+
+          // Add Start Punch Pin if distinct from latest location
+          if (
+            startLat &&
+            startLng &&
+            latestLat &&
+            latestLng &&
+            (Math.abs(Number(startLat) - Number(latestLat)) > 0.0005 ||
+              Math.abs(Number(startLng) - Number(latestLng)) > 0.0005)
+          ) {
+            const startMarker = L.marker([Number(startLat), Number(startLng)], {
+              icon: createStartMarkerIcon(name, userColor),
+            });
+            startMarker.on("click", () => handleSelectUser(item));
+            markersGroup.addLayer(startMarker);
+          }
+        }
+
+        // Add Latest Location Marker with Full User Name Badge on Top!
+        if (latestLat && latestLng) {
+          const markerPos = [Number(latestLat), Number(latestLng)];
+          const marker = L.marker(markerPos, {
+            icon: createNamedUserMarkerIcon({
+              name,
+              color: userColor,
+              initials,
+              isLive,
+              subtitle: item.totalDistanceKm ? `${item.totalDistanceKm} km` : "",
+            }),
+          });
+
+          // Popup content with quick "Trace Travel Route" button
+          const popupContent = document.createElement("div");
+          popupContent.style.fontFamily = "sans-serif";
+          popupContent.style.fontSize = "12px";
+          popupContent.style.lineHeight = "1.4";
+          popupContent.style.color = "#0f172a";
+          popupContent.style.padding = "2px";
+          popupContent.innerHTML = `
+            <div style="font-weight: bold; font-size: 13px; color: ${userColor}; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <span>${name}</span>
+              <span style="font-size: 10px; padding: 2px 6px; border-radius: 9999px; background: ${userColor}20; color: ${userColor}; border: 1px solid ${userColor}40;">
+                ${isLive ? "Working Now" : isCompleted ? "Completed" : "Auto-Ended"}
+              </span>
+            </div>
+            <div style="margin-top: 4px; color: #475569;">
+              <b>Time:</b> ${formatTime(item.lastTrackedAt || item.endTime || item.startTime)}<br/>
+              <b>Start:</b> ${item.startLocation || "Office"}<br/>
+              <b>Current:</b> ${item.currentLocation || item.endLocation || "Location"}<br/>
+              <b>Distance:</b> ${item.totalDistanceKm || 0} km • <b>Duration:</b> ${item.totalHours || "-"}<br/>
+              <b>GPS:</b> ${Number(latestLat).toFixed(4)}, ${Number(latestLng).toFixed(4)}
+            </div>
+            <button id="btn-view-route-${item.id}" style="
+              margin-top: 8px;
+              width: 100%;
+              background: linear-gradient(135deg, ${userColor}, #1d4ed8);
+              color: white;
+              border: none;
+              padding: 6px 10px;
+              border-radius: 8px;
+              font-size: 11px;
+              font-weight: 600;
+              cursor: pointer;
+            ">
+              🗺️ Trace Detailed Route (${userRouteCoords.length} pts)
+            </button>
+          `;
+
+          marker.bindPopup(popupContent);
+
+          marker.on("popupopen", () => {
+            const btn = document.getElementById(`btn-view-route-${item.id}`);
+            if (btn) {
+              btn.onclick = () => {
+                handleSelectUser(item);
+              };
+            }
+          });
+
+          markersGroup.addLayer(marker);
+        }
       });
 
-      // Fit map to all users if bounds exist
-      if (boundsCoords.length > 0) {
+      // Fit map to all users & routes if bounds exist
+      if (allBoundsCoords.length > 0) {
         try {
-          const bounds = L.latLngBounds(boundsCoords);
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+          const bounds = L.latLngBounds(allBoundsCoords);
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
         } catch (_) {}
       }
     }
-  }, [selectedUser, filteredRecords, travelMode]);
+  }, [selectedUser, filteredRecords, travelMode, handleSelectUser]);
 
   // Fit bounds helper
   const fitMapBounds = useCallback(() => {
