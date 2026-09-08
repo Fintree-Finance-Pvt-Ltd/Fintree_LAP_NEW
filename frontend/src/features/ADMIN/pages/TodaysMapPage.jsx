@@ -260,6 +260,7 @@ export default function TodaysMapPage() {
   const [activeTab, setActiveTab] = useState("list"); // "list" | "timeline"
   const [travelMode, setTravelMode] = useState("exact"); // "exact" | "road"
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [mobileView, setMobileView] = useState("map"); // "map" | "list"
   const [roadRouteStats, setRoadRouteStats] = useState({ distanceKm: 0, isRoad: false });
 
   // Refs for Leaflet
@@ -395,6 +396,11 @@ export default function TodaysMapPage() {
   // Helper to select an employee and load their full route if not already loaded
   const handleSelectUser = useCallback(async (item) => {
     setSelectedUser(item);
+    setMobileView("map");
+    setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize?.();
+    }, 150);
+
     if (!item?.points || item.points.length === 0) {
       try {
         const res = await attendanceApi.getRoute(item.id);
@@ -415,6 +421,18 @@ export default function TodaysMapPage() {
       }
     }
   }, []);
+
+  // Map resize invalidation when mobile view toggles
+  useEffect(() => {
+    if (mobileView === "map" && mapInstanceRef.current) {
+      const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 100);
+      const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 300);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [mobileView]);
 
   useEffect(() => {
     fetchMapData();
@@ -902,6 +920,36 @@ export default function TodaysMapPage() {
 
           {/* Date Picker & Controls */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Mobile View Toggle (Map / Users) */}
+            <div className="flex md:hidden items-center rounded-xl bg-white/10 p-0.5 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileView("map");
+                  setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 100);
+                  setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 300);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  mobileView === "map"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <FiMap className="h-3.5 w-3.5" /> Map
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileView("list")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  mobileView === "list"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <FiUsers className="h-3.5 w-3.5" /> Users ({filteredRecords.length})
+              </button>
+            </div>
+
             <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1 text-xs">
               <FiCalendar className="ml-1.5 h-3.5 w-3.5 text-slate-400" />
               <input
@@ -1029,7 +1077,11 @@ export default function TodaysMapPage() {
       {/* Main Split Layout: Left Panel & Right Map */}
       <div className="relative flex flex-1 overflow-hidden">
         {/* Left Side: Users Drawer / Timeline */}
-        <aside className="flex w-full flex-col border-r border-white/10 bg-[#0b1426] md:w-80 lg:w-96 shrink-0">
+        <aside
+          className={`flex flex-col border-r border-white/10 bg-[#0b1426] md:w-80 lg:w-96 shrink-0 transition-all ${
+            mobileView === "list" ? "w-full flex-1" : "hidden md:flex"
+          }`}
+        >
           {/* Header of Drawer */}
           <div className="border-b border-white/10 p-3 bg-slate-900/40">
             {selectedUser ? (
@@ -1304,7 +1356,11 @@ export default function TodaysMapPage() {
         </aside>
 
         {/* Right Side: Interactive Leaflet Map */}
-        <main className="relative flex-1 w-full h-full overflow-hidden bg-slate-950">
+        <main
+          className={`relative flex-1 w-full h-full overflow-hidden bg-slate-950 ${
+            mobileView === "map" ? "flex flex-col" : "hidden md:flex md:flex-col"
+          }`}
+        >
           {/* Floating Top Route Controller (when user is selected) */}
           {selectedUser && (
             <div className="absolute top-3 left-3 right-3 z-[1001] flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/20 bg-slate-900/90 p-2.5 shadow-2xl backdrop-blur-md">
@@ -1368,7 +1424,19 @@ export default function TodaysMapPage() {
             </button>
           </div>
 
-          {/* Map Legend (Bottom Right) */}
+          {/* Floating Mobile Toggle Button on Map */}
+          <div className="md:hidden absolute bottom-6 right-6 z-[1001]">
+            <button
+              type="button"
+              onClick={() => setMobileView("list")}
+              className="flex items-center gap-1.5 rounded-xl border border-blue-400/40 bg-blue-600/90 px-3 py-2 text-xs font-bold text-white shadow-2xl backdrop-blur-md active:scale-95 transition cursor-pointer"
+            >
+              <FiUsers className="h-4 w-4" />
+              <span>Users ({filteredRecords.length})</span>
+            </button>
+          </div>
+
+          {/* Map Legend (Bottom Right - Desktop) */}
           <div className="absolute bottom-6 right-16 z-[1001] hidden sm:flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/90 px-3 py-1.5 text-[11px] font-medium text-slate-300 shadow-xl backdrop-blur-md">
             <span className="flex items-center gap-1">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Start / Done
