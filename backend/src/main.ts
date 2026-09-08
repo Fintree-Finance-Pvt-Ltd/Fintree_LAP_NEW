@@ -1,3 +1,6 @@
+// Ensure Node.js runtime timezone defaults to Indian Standard Time (IST)
+process.env.TZ = process.env.TZ || 'Asia/Kolkata';
+
 import {
   Logger,
   ValidationPipe,

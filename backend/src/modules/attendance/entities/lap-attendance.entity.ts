@@ -1,4 +1,6 @@
 import {
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   CreateDateColumn,
   Entity,
@@ -150,6 +152,20 @@ export class LapAttendance {
 
   @UpdateDateColumn({ name: 'updated_at', precision: 6 })
   updatedAt: Date;
+
+  @BeforeInsert()
+  setTimestampsOnInsert() {
+    const now = new Date();
+    if (!this.createdAt) {
+      this.createdAt = now;
+    }
+    this.updatedAt = now;
+  }
+
+  @BeforeUpdate()
+  setTimestampsOnUpdate() {
+    this.updatedAt = new Date();
+  }
 
   @Column({ name: 'created_by', type: 'bigint', unsigned: true, nullable: true })
   createdBy?: number | null;

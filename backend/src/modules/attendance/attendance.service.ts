@@ -97,10 +97,13 @@ export class AttendanceService {
   }
 
   private getTodayDateString(dateObj: Date = new Date()): string {
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    return formatter.format(dateObj);
   }
 
   private formatDuration(minutes: number): string {
@@ -166,9 +169,9 @@ export class AttendanceService {
       return record;
     }
 
-    const [y, m, d] = (record.date || this.getTodayDateString()).split('-').map((v) => parseInt(v, 10));
-    // Set auto-end time to 10:00 PM (22:00:00) on that session's date
-    const autoEndTime = new Date(y, m - 1, d, 22, 0, 0, 0);
+    const targetDateStr = record.date || this.getTodayDateString();
+    // Set auto-end time to 10:00 PM (22:00:00) IST on that session's date
+    const autoEndTime = new Date(`${targetDateStr}T22:00:00+05:30`);
 
     const startMillis = record.startTime ? new Date(record.startTime).getTime() : autoEndTime.getTime();
     const endMillis = autoEndTime.getTime();
@@ -193,6 +196,7 @@ export class AttendanceService {
     record.totalHours = formattedDuration;
     record.status = 'AUTO_END_WORK';
     record.updatedBy = record.userId;
+    record.updatedAt = new Date();
 
     const saved = await this.attendanceRepo.save(record);
 
@@ -254,7 +258,12 @@ export class AttendanceService {
     });
 
     const now = new Date();
-    const currentHour = now.getHours();
+    const istHourStr = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: 'numeric',
+      hour12: false,
+    }).format(now);
+    const currentHour = parseInt(istHourStr, 10);
     const isAfter8AM = currentHour >= 8;
     const isPast10PM = currentHour >= 22;
 
@@ -355,6 +364,8 @@ export class AttendanceService {
       lastTrackedAt: now,
       totalDistanceKm: 0,
       status: 'IN_PROGRESS',
+      createdAt: now,
+      updatedAt: now,
       createdBy: userId,
     });
 
@@ -430,6 +441,7 @@ export class AttendanceService {
     attendance.currentLongitude = lng;
     attendance.currentLocation = locName;
     attendance.lastTrackedAt = now;
+    attendance.updatedAt = now;
     attendance.totalDistanceKm = parseFloat(currentTotalDist.toFixed(3));
 
     // If start latitude was missing when session started, backfill with first tracked coordinate
@@ -556,6 +568,7 @@ export class AttendanceService {
     record.totalHours = formattedDuration;
     record.status = 'COMPLETED';
     record.updatedBy = userId;
+    record.updatedAt = now;
 
     // Save final location point
     if (endLat && endLng) {

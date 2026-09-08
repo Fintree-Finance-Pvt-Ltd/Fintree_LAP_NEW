@@ -1,4 +1,5 @@
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
@@ -67,4 +68,15 @@ export class LapAttendanceLocation {
 
   @CreateDateColumn({ name: 'created_at', precision: 6 })
   createdAt: Date;
+
+  @BeforeInsert()
+  setTimestampsOnInsert() {
+    const now = new Date();
+    if (!this.recordedAt) {
+      this.recordedAt = now;
+    }
+    if (!this.createdAt) {
+      this.createdAt = now;
+    }
+  }
 }

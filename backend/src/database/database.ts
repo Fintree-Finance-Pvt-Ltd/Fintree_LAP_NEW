@@ -12,6 +12,7 @@ export default new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
   charset: 'utf8mb4',
+  timezone: process.env.DB_TIMEZONE ?? '+05:30',
   synchronize: false,
   logging: process.env.DB_LOGGING === 'true',
   entities: ['src/modules/**/*.entity.ts'],
