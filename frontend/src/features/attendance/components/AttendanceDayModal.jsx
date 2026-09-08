@@ -83,9 +83,9 @@ export default function AttendanceDayModal({
       const [y, m, d] = dateStr.split("-").map(Number);
       const dateObj = new Date(y, m - 1, d);
       return dateObj.toLocaleDateString("en-US", {
-        weekday: "long",
+        weekday: "short",
         day: "numeric",
-        month: "long",
+        month: "short",
         year: "numeric",
       });
     } catch {
@@ -94,19 +94,19 @@ export default function AttendanceDayModal({
   })();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-xs animate-fadeIn">
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/40 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-500/20">
-              <FiCalendar className="h-5 w-5" />
+        <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/40 px-4 sm:px-6 py-3.5 sm:py-4">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+              <FiCalendar className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-800">
+              <h2 className="text-sm sm:text-base font-bold text-slate-800">
                 Attendance Details
               </h2>
-              <p className="text-xs font-medium text-slate-500">
+              <p className="text-[11px] sm:text-xs font-medium text-slate-500">
                 {formattedFullDate}
               </p>
             </div>
@@ -121,60 +121,60 @@ export default function AttendanceDayModal({
         </div>
 
         {/* Content Body */}
-        <div className="max-h-[75vh] overflow-y-auto p-6 space-y-4 text-xs">
+        <div className="max-h-[75vh] overflow-y-auto p-4 sm:p-6 space-y-3.5 sm:space-y-4 text-xs">
           {/* Employee & Status Pill Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 p-3 border border-slate-100">
-            <div className="flex items-center gap-2">
-              <FiUser className="h-4 w-4 text-slate-400" />
-              <span className="font-semibold text-slate-700">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 p-2.5 sm:p-3 border border-slate-100">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <FiUser className="h-3.5 w-3.5 text-slate-400" />
+              <span className="font-bold text-slate-700 text-xs">
                 {employeeName || "Employee"}
               </span>
             </div>
 
             {/* Status Badge */}
             {statusType === "FULL_DAY" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 font-bold text-emerald-800 border border-emerald-300">
-                <FiCheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                Completed Full Day (≥ 8.30 hrs)
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-emerald-800 border border-emerald-300 text-[11px]">
+                <FiCheckCircle className="h-3 w-3 text-emerald-600" />
+                Full Day (≥ 8.30 hrs)
               </span>
             )}
 
             {statusType === "SHORT_DAY" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 font-bold text-amber-800 border border-amber-300">
-                <FiAlertCircle className="h-3.5 w-3.5 text-amber-600" />
-                Short Working Hours (&lt; 8.30 hrs)
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-amber-800 border border-amber-300 text-[11px]">
+                <FiAlertCircle className="h-3 w-3 text-amber-600" />
+                Short Shift (&lt; 8.30 hrs)
               </span>
             )}
 
             {statusType === "SUNDAY_WORKED_FULL" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 font-bold text-emerald-800 border border-emerald-300">
-                <FiCheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                Sunday Worked (Full Day ≥ 8.30 hrs)
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-emerald-800 border border-emerald-300 text-[11px]">
+                <FiCheckCircle className="h-3 w-3 text-emerald-600" />
+                Sunday (Full Day)
               </span>
             )}
 
             {statusType === "SUNDAY_WORKED_PARTIAL" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 font-bold text-amber-800 border border-amber-300">
-                <FiAlertCircle className="h-3.5 w-3.5 text-amber-600" />
-                Sunday Worked (Partial &lt; 8.30 hrs)
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-amber-800 border border-amber-300 text-[11px]">
+                <FiAlertCircle className="h-3 w-3 text-amber-600" />
+                Sunday (Partial)
               </span>
             )}
 
             {statusType === "SUNDAY_OFF" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-3 py-1 font-bold text-slate-600 border border-slate-300">
-                ⚪ Sunday (Weekly Off)
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-slate-600 border border-slate-300 text-[11px]">
+                ⚪ Sunday Off
               </span>
             )}
 
             {statusType === "ABSENT" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1 font-bold text-rose-800 border border-rose-300">
-                <FiAlertCircle className="h-3.5 w-3.5 text-rose-600" />
-                Absent (No Punch-in)
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-rose-800 border border-rose-300 text-[11px]">
+                <FiAlertCircle className="h-3 w-3 text-rose-600" />
+                Absent (No Punch)
               </span>
             )}
 
             {statusType === "IN_PROGRESS" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 font-bold text-emerald-800 border border-emerald-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-emerald-800 border border-emerald-300 text-[11px]">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -184,13 +184,13 @@ export default function AttendanceDayModal({
             )}
 
             {statusType === "TODAY_NOT_STARTED" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 font-bold text-blue-700 border border-blue-200">
-                Today (Pending Check-in)
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 sm:px-3 sm:py-1 font-bold text-blue-700 border border-blue-200 text-[11px]">
+                Today (Pending)
               </span>
             )}
 
             {statusType === "FUTURE" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-500 border border-slate-200">
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 sm:px-3 sm:py-1 font-medium text-slate-500 border border-slate-200 text-[11px]">
                 Upcoming Date
               </span>
             )}
@@ -199,14 +199,14 @@ export default function AttendanceDayModal({
           {/* Working Hours Target & Progress Card (if worked) */}
           {(record || statusType === "IN_PROGRESS") && (
             <div
-              className={`rounded-xl border p-4 shadow-2xs ${
+              className={`rounded-xl border p-3 sm:p-4 shadow-2xs ${
                 totalMinutes >= TARGET_WORKING_MINUTES
                   ? "border-emerald-200 bg-emerald-50/50"
                   : "border-amber-200 bg-amber-50/50"
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <FiClock
                     className={`h-4 w-4 ${
                       totalMinutes >= TARGET_WORKING_MINUTES
@@ -214,13 +214,12 @@ export default function AttendanceDayModal({
                         : "text-amber-600"
                     }`}
                   />
-                  <span className="font-bold text-slate-800 text-sm">
+                  <span className="font-bold text-slate-800 text-xs sm:text-sm">
                     {durationFormatted || "0h 0m"}
                   </span>
                 </div>
-                <span className="font-medium text-slate-600">
-                  Target: <strong className="text-slate-800">8h 30m</strong>{" "}
-                  (8.30 hrs)
+                <span className="font-medium text-slate-600 text-[11px]">
+                  Target: <strong className="text-slate-800">8h 30m</strong>
                 </span>
               </div>
 
@@ -236,8 +235,8 @@ export default function AttendanceDayModal({
                 />
               </div>
 
-              <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                <span>Shift Completion: {progressPercent}%</span>
+              <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500 font-medium">
+                <span>Progress: {progressPercent}%</span>
                 {totalMinutes >= TARGET_WORKING_MINUTES ? (
                   <span className="text-emerald-700 font-semibold">
                     ✓ Full shift completed
@@ -253,10 +252,10 @@ export default function AttendanceDayModal({
 
           {/* Punch In / Out Grid */}
           {record && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {/* Punch In Card */}
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3.5 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 sm:p-3.5 space-y-1">
+                <div className="flex items-center gap-1.5 text-emerald-800 font-bold text-xs">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   <span>Punch In</span>
                 </div>
@@ -277,8 +276,8 @@ export default function AttendanceDayModal({
               </div>
 
               {/* Punch Out Card */}
-              <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-3.5 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-rose-800 font-bold">
+              <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-3 sm:p-3.5 space-y-1">
+                <div className="flex items-center gap-1.5 text-rose-800 font-bold text-xs">
                   <span className="h-2 w-2 rounded-full bg-rose-500" />
                   <span>Punch Out</span>
                 </div>
@@ -302,22 +301,22 @@ export default function AttendanceDayModal({
 
           {/* Distance & GPS Stats */}
           {record && (
-            <div className="flex items-center justify-between rounded-xl border border-cyan-100 bg-cyan-50/50 p-3.5">
+            <div className="flex items-center justify-between rounded-xl border border-cyan-100 bg-cyan-50/50 p-3 sm:p-3.5">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-100 text-cyan-700">
-                  <FiCompass className="h-4 w-4" />
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-cyan-100 text-cyan-700">
+                  <FiCompass className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
                 <div>
-                  <div className="font-bold text-slate-800">
-                    GPS Route Travel Distance
+                  <div className="font-bold text-slate-800 text-xs">
+                    GPS Route Distance
                   </div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[10px] text-slate-500">
                     Continuous tracking logged
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-base font-bold text-cyan-800 font-mono">
+                <span className="text-sm sm:text-base font-bold text-cyan-800 font-mono">
                   {distanceKm || "0.0"} km
                 </span>
               </div>
@@ -326,8 +325,8 @@ export default function AttendanceDayModal({
 
           {/* Absent Explanation */}
           {statusType === "ABSENT" && (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 space-y-1">
-              <div className="flex items-center gap-2 font-bold text-rose-900">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-rose-800 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-rose-900 text-xs">
                 <FiAlertCircle className="h-4 w-4 text-rose-600" />
                 <span>Marked as Absent</span>
               </div>
@@ -340,8 +339,8 @@ export default function AttendanceDayModal({
 
           {/* Sunday Explanation */}
           {statusType === "SUNDAY_OFF" && (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600 space-y-1">
-              <div className="flex items-center gap-2 font-bold text-slate-700">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-slate-600 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-slate-700 text-xs">
                 <FiCalendar className="h-4 w-4 text-slate-500" />
                 <span>Sunday Weekly Off</span>
               </div>
@@ -353,7 +352,7 @@ export default function AttendanceDayModal({
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-3.5">
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 px-4 sm:px-6 py-3">
           {record && record.id && onOpenRouteMap && (
             <button
               type="button"
@@ -361,7 +360,7 @@ export default function AttendanceDayModal({
                 onClose();
                 onOpenRouteMap(record.id);
               }}
-              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 active:scale-95 transition cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 sm:px-4 py-2 text-xs font-bold text-white shadow-sm shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 active:scale-95 transition cursor-pointer"
             >
               <FiNavigation className="h-3.5 w-3.5" />
               <span>View Route Map</span>
@@ -371,7 +370,7 @@ export default function AttendanceDayModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 active:scale-95 transition cursor-pointer"
+            className="rounded-xl border border-slate-200 bg-white px-3.5 sm:px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 active:scale-95 transition cursor-pointer"
           >
             Close
           </button>
