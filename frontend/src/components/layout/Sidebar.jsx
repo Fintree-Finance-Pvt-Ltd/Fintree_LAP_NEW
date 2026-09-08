@@ -77,6 +77,11 @@ const rolesConfig = {
       category: "MODULES",
       items: [
         {
+          to: "/admin/todays-map",
+          label: "Today's Map",
+          Icon: FaMapMarkerAlt,
+        },
+        {
           to: "/admin/administration",
           label: "Administration",
           Icon: FaSlidersH,

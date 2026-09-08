@@ -57,6 +57,13 @@ export class AttendanceController {
     return this.attendanceService.getMyHistory(user.id, take, month);
   }
 
+  @Get('todays-map')
+  async getTodaysMap(
+    @Query('date') date?: string,
+  ) {
+    return this.attendanceService.getTodaysMapData(date);
+  }
+
   @Get('all')
   async getAll(
     @Query('date') date?: string,

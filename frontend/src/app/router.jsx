@@ -28,6 +28,7 @@ import RolesAccess from '../features/ADMIN/pages/rolesAccess.jsx';
 import Hub from "../features/Hub/pages/Hub.jsx"; //Hub
 import Spokes from "../features/Spokes/pages/Spokes.jsx"; //Spokes
 import Administration from "../features/ADMIN/pages/Administration.jsx"; //Administration
+import TodaysMapPage from "../features/ADMIN/pages/TodaysMapPage.jsx"; // Today's Map
 
 import PartnersManagement from "../features/Partners/pages/PartnersManagement.jsx"; //Partners
 
@@ -91,6 +92,8 @@ const protectedChildren = [
   { path: "/admin/hub", element: <Hub /> },
   { path: "/admin/spokes", element: <Spokes /> },
   { path: "/admin/administration", element: <Administration /> },
+  { path: "/admin/todays-map", element: <TodaysMapPage /> },
+  { path: "/todays-map", element: <TodaysMapPage /> },
 
   // BM routes (wired to Sidebar.jsx)
   { path: '/bmDashboard', element: <BmDashboard /> },

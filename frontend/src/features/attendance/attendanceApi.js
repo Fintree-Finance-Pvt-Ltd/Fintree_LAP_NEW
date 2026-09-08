@@ -33,6 +33,9 @@ export const attendanceApi = {
 
   getAll: (params = {}) =>
     apiClient.get("/attendance/all", { params }),
+
+  getTodaysMap: (params = {}) =>
+    apiClient.get("/attendance/todays-map", { params }),
 };
 
 

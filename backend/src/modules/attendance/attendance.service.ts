@@ -792,4 +792,103 @@ export class AttendanceService {
       },
     };
   }
+
+  async getTodaysMapData(date?: string) {
+    const targetDate = date || this.getTodayDateString();
+
+    const attendances = await this.attendanceRepo
+      .createQueryBuilder('att')
+      .leftJoinAndSelect('att.user', 'user')
+      .leftJoinAndSelect('att.locations', 'loc')
+      .where('att.date = :targetDate', { targetDate })
+      .orderBy('att.startTime', 'DESC')
+      .addOrderBy('loc.recordedAt', 'ASC')
+      .getMany();
+
+    const cleanedRecords = attendances.map((item) => {
+      const cleaned = this.cleanAndRecalculateRecord(item);
+      const points = (item.locations || []).map((loc) => ({
+        id: loc.id,
+        latitude: Number(loc.latitude),
+        longitude: Number(loc.longitude),
+        accuracy: loc.accuracy,
+        speed: loc.speed,
+        heading: loc.heading,
+        locationName: this.cleanLocationName(loc.locationName) || null,
+        recordedAt: loc.recordedAt,
+      }));
+
+      const startLat = cleaned.startLatitude !== null && cleaned.startLatitude !== undefined ? Number(cleaned.startLatitude) : null;
+      const startLng = cleaned.startLongitude !== null && cleaned.startLongitude !== undefined ? Number(cleaned.startLongitude) : null;
+      const currentLat = cleaned.currentLatitude !== null && cleaned.currentLatitude !== undefined ? Number(cleaned.currentLatitude) : null;
+      const currentLng = cleaned.currentLongitude !== null && cleaned.currentLongitude !== undefined ? Number(cleaned.currentLongitude) : null;
+      const endLat = cleaned.endLatitude !== null && cleaned.endLatitude !== undefined ? Number(cleaned.endLatitude) : null;
+      const endLng = cleaned.endLongitude !== null && cleaned.endLongitude !== undefined ? Number(cleaned.endLongitude) : null;
+
+      // Determine the best latest/current location point
+      const latestLat = currentLat ?? endLat ?? startLat ?? (points.length > 0 ? points[points.length - 1].latitude : null);
+      const latestLng = currentLng ?? endLng ?? startLng ?? (points.length > 0 ? points[points.length - 1].longitude : null);
+
+      return {
+        id: cleaned.id,
+        userId: cleaned.userId,
+        user: cleaned.user
+          ? {
+              id: cleaned.user.id,
+              name: cleaned.user.name,
+              email: cleaned.user.email,
+              role: (cleaned.user as any).role || (cleaned.user as any).roles || null,
+              phone: (cleaned.user as any).phone || null,
+            }
+          : null,
+        date: cleaned.date,
+        startTime: cleaned.startTime,
+        startLocation: cleaned.startLocation || 'Office Workspace',
+        startLatitude: startLat,
+        startLongitude: startLng,
+        currentLatitude: currentLat,
+        currentLongitude: currentLng,
+        currentLocation: cleaned.currentLocation || 'Office Workspace',
+        lastTrackedAt: cleaned.lastTrackedAt,
+        endTime: cleaned.endTime,
+        endLocation: cleaned.endLocation,
+        endLatitude: endLat,
+        endLongitude: endLng,
+        latestLatitude: latestLat,
+        latestLongitude: latestLng,
+        totalHours: cleaned.totalHours,
+        totalMinutes: cleaned.totalMinutes,
+        totalDistanceKm: cleaned.totalDistanceKm || 0,
+        status: cleaned.status,
+        points,
+        hasCoordinates: Boolean(latestLat && latestLng),
+      };
+    });
+
+    const activeCount = cleanedRecords.filter((r) => r.status === 'IN_PROGRESS').length;
+    const completedCount = cleanedRecords.filter((r) => r.status === 'COMPLETED').length;
+    const autoEndedCount = cleanedRecords.filter(
+      (r) =>
+        r.status === 'AUTO_END_WORK' ||
+        r.status === 'auto_end_work' ||
+        r.status === 'AUTO_ENDED' ||
+        r.status === 'END_WORK_HOUR',
+    ).length;
+    const totalDistanceKm = cleanedRecords.reduce(
+      (sum, r) => sum + (Number(r.totalDistanceKm) || 0),
+      0,
+    );
+
+    return {
+      date: targetDate,
+      stats: {
+        totalUsers: cleanedRecords.length,
+        activeCount,
+        completedCount,
+        autoEndedCount,
+        totalDistanceKm: parseFloat(totalDistanceKm.toFixed(2)),
+      },
+      data: cleanedRecords,
+    };
+  }
 }
