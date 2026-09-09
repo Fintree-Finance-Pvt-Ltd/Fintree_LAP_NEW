@@ -104,6 +104,9 @@ export default function TodayFollowUpsRouteModal({
   const navigate = useNavigate();
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const layerGroupRef = useRef(null);
+  const hasFittedBoundsRef = useRef(false);
+  const hasResolvedGpsRef = useRef(false);
 
   const [travelMode, setTravelMode] = useState("DRIVING"); // "DRIVING" | "TRANSIT"
   const [loadingRoute, setLoadingRoute] = useState(true);
@@ -112,12 +115,28 @@ export default function TodayFollowUpsRouteModal({
   const [userGps, setUserGps] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // 1. Resolve starting GPS location
+  // Reset resolution flag when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      hasResolvedGpsRef.current = false;
+      hasFittedBoundsRef.current = false;
+      setRoutePlan(null);
+      setUserGps(null);
+    }
+  }, [isOpen]);
+
+  // 1. Resolve starting GPS location (only on modal open or explicit user refresh)
   useEffect(() => {
     if (!isOpen) return;
 
+    if (hasResolvedGpsRef.current && refreshTrigger === 0) {
+      return;
+    }
+
     let isMounted = true;
     async function initGps() {
+      hasResolvedGpsRef.current = true;
+
       if (currentCoords?.latitude && currentCoords?.longitude) {
         if (isMounted) {
           setUserGps({
@@ -166,7 +185,7 @@ export default function TodayFollowUpsRouteModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, currentCoords, userName, spokeLocation, refreshTrigger]);
+  }, [isOpen, refreshTrigger, userName, spokeLocation]);
 
   // 2. Compute Nearest-Neighbor Route Optimization
   useEffect(() => {
@@ -197,186 +216,214 @@ export default function TodayFollowUpsRouteModal({
     };
   }, [isOpen, userGps, todayLeads, refreshTrigger]);
 
-  // 3. Render Leaflet Map
+  // 3. Initialize Map Instance Once
   useEffect(() => {
-    if (!isOpen || !routePlan || !mapContainerRef.current) return;
+    if (!isOpen || !mapContainerRef.current) return;
 
-    // Clean up previous instance
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-    }
+    if (!mapInstanceRef.current) {
+      if (mapContainerRef.current._leaflet_id) {
+        delete mapContainerRef.current._leaflet_id;
+      }
 
-    if (mapContainerRef.current._leaflet_id) {
-      delete mapContainerRef.current._leaflet_id;
-    }
-
-    try {
       const map = L.map(mapContainerRef.current, {
         zoomControl: true,
         scrollWheelZoom: true,
       });
-      mapInstanceRef.current = map;
 
-      // Clean OpenStreetMap Tiles
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
       }).addTo(map);
 
-      const boundsGroup = [];
+      layerGroupRef.current = L.layerGroup().addTo(map);
+      mapInstanceRef.current = map;
 
-      // 1. Add Starting RM Marker
-      const startPt = routePlan.startPoint;
-      if (startPt && startPt.lat && startPt.lng) {
-        const startMarker = L.marker([startPt.lat, startPt.lng], {
-          icon: createStartIcon(),
-        }).addTo(map);
+      const t1 = setTimeout(() => map?.invalidateSize?.(), 100);
+      const t2 = setTimeout(() => map?.invalidateSize?.(), 300);
 
-        startMarker.bindPopup(`
-          <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4;">
-            <b style="color: #059669; font-size: 13px;">🟢 Start Location (RM Live)</b><br/>
-            <span>${startPt.customerName || "Your Location"}</span><br/>
-            <span style="color: #64748b;">${startPt.address || ""}</span>
-          </div>
-        `);
-        boundsGroup.push([startPt.lat, startPt.lng]);
-      }
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    } else {
+      mapInstanceRef.current.invalidateSize();
+    }
+  }, [isOpen]);
 
-      // 2. Add Stop Markers
-      routePlan.orderedStops.forEach((stop, index) => {
-        const stopMarker = L.marker([stop.lat, stop.lng], {
-          icon: createStopIcon(stop.stopNumber, stop.sequenceRankLabel),
-        }).addTo(map);
+  // Cleanup Map on modal close
+  useEffect(() => {
+    if (!isOpen && mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+      layerGroupRef.current = null;
+    }
+  }, [isOpen]);
 
-        stopMarker.bindPopup(`
-          <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; min-width: 200px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-              <span style="background: #2563eb; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px;">
-                Stop #${stop.stopNumber} (${stop.sequenceRankLabel})
-              </span>
-              <span style="color: #64748b; font-size: 11px;">${stop.distanceFromPrevKm} km away</span>
-            </div>
-            <b style="font-size: 14px; color: #0f172a;">${stop.customerName}</b><br/>
-            <span style="color: #475569;">📞 ${stop.mobile}</span><br/>
-            <span style="color: #64748b; font-size: 11px;">📍 ${stop.address}</span><br/>
-            <div style="margin-top: 6px; padding-top: 4px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #334155;">
-              <b>Follow-up Time:</b> ${stop.followUpTime}<br/>
-              <b>Est. Bike Fuel:</b> ₹${stop.costEstimates?.bikeCost || 0} • <b>Auto:</b> ₹${stop.costEstimates?.autoCost || 0}
-            </div>
-            ${
-              stop.trainTransit?.destStation
-                ? `<div style="margin-top: 4px; background: #f5f3ff; color: #6d28d9; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">
-                     🚆 Nearest Stn: ${stop.trainTransit.destStation.name} • Est. Transit ₹${stop.costEstimates?.trainCost?.total || 0}
-                   </div>`
-                : ""
-            }
-          </div>
-        `);
+  // 4. Render and Update Layers (Markers & Polylines) without recreating the map
+  useEffect(() => {
+    if (!isOpen || !routePlan || !mapInstanceRef.current || !layerGroupRef.current) return;
 
-        stopMarker.on("click", () => {
-          setSelectedStopIndex(index);
-        });
+    const map = mapInstanceRef.current;
+    const layerGroup = layerGroupRef.current;
 
-        boundsGroup.push([stop.lat, stop.lng]);
+    layerGroup.clearLayers();
+    const boundsGroup = [];
+
+    // 1. Add Starting RM Marker
+    const startPt = routePlan.startPoint;
+    if (startPt && startPt.lat && startPt.lng) {
+      const startMarker = L.marker([startPt.lat, startPt.lng], {
+        icon: createStartIcon(),
       });
 
-      // 3. Render Route Polylines based on Travel Mode
-      if (travelMode === "DRIVING") {
-        if (routePlan.routePolyline && routePlan.routePolyline.length > 1) {
-          // Shadow/glow line
-          L.polyline(routePlan.routePolyline, {
-            color: "#3b82f6",
-            weight: 7,
-            opacity: 0.35,
-          }).addTo(map);
-
-          // Main road polyline
-          L.polyline(routePlan.routePolyline, {
-            color: "#2563eb",
-            weight: 4,
-            opacity: 0.95,
-            dashArray: "1, 8",
-            lineCap: "round",
-          }).addTo(map);
-        }
-      } else if (travelMode === "TRANSIT") {
-        // Draw railway stations & transit lines for stops
-        routePlan.orderedStops.forEach((stop) => {
-          const transit = stop.trainTransit;
-          if (transit && transit.startStation && transit.destStation) {
-            // Start Station Marker
-            const startStnMarker = L.marker([transit.startStation.lat, transit.startStation.lng], {
-              icon: createStationIcon(transit.startStation.name, false),
-            }).addTo(map);
-            startStnMarker.bindPopup(`<b>Boarding Station:</b> ${transit.startStation.name}<br/>Line: ${transit.startStation.line}`);
-            boundsGroup.push([transit.startStation.lat, transit.startStation.lng]);
-
-            // Destination Station Marker
-            const destStnMarker = L.marker([transit.destStation.lat, transit.destStation.lng], {
-              icon: createStationIcon(transit.destStation.name, true),
-            }).addTo(map);
-            destStnMarker.bindPopup(`<b>Destination Station:</b> ${transit.destStation.name}<br/>Line: ${transit.destStation.line}`);
-            boundsGroup.push([transit.destStation.lat, transit.destStation.lng]);
-
-            // First-Mile Leg: Start Point -> Start Station (Dotted green)
-            L.polyline(
-              [
-                [startPt.lat, startPt.lng],
-                [transit.startStation.lat, transit.startStation.lng],
-              ],
-              {
-                color: "#10b981",
-                weight: 3,
-                dashArray: "4, 6",
-                opacity: 0.8,
-              }
-            ).addTo(map);
-
-            // Train Line Track: Start Station -> Destination Station (Purple railway track line)
-            L.polyline(
-              [
-                [transit.startStation.lat, transit.startStation.lng],
-                [transit.destStation.lat, transit.destStation.lng],
-              ],
-              {
-                color: "#7c3aed",
-                weight: 5,
-                opacity: 0.9,
-              }
-            ).addTo(map);
-
-            // Last-Mile Leg: Dest Station -> Customer Address (Dotted orange)
-            L.polyline(
-              [
-                [transit.destStation.lat, transit.destStation.lng],
-                [stop.lat, stop.lng],
-              ],
-              {
-                color: "#ea580c",
-                weight: 3,
-                dashArray: "4, 6",
-                opacity: 0.8,
-              }
-            ).addTo(map);
-          }
-        });
-      }
-
-      // Fit map bounds with padding
-      if (boundsGroup.length > 0) {
-        map.fitBounds(boundsGroup, { padding: [45, 45], maxZoom: 14 });
-      }
-    } catch (err) {
-      console.error("Leaflet initialization error:", err);
+      startMarker.bindPopup(`
+        <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4;">
+          <b style="color: #059669; font-size: 13px;">🟢 Start Location (RM Live)</b><br/>
+          <span>${startPt.customerName || "Your Location"}</span><br/>
+          <span style="color: #64748b;">${startPt.address || ""}</span>
+        </div>
+      `);
+      layerGroup.addLayer(startMarker);
+      boundsGroup.push([startPt.lat, startPt.lng]);
     }
 
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
+    // 2. Add Stop Markers
+    routePlan.orderedStops.forEach((stop, index) => {
+      const stopMarker = L.marker([stop.lat, stop.lng], {
+        icon: createStopIcon(stop.stopNumber, stop.sequenceRankLabel),
+      });
+
+      stopMarker.bindPopup(`
+        <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; min-width: 200px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <span style="background: #2563eb; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px;">
+              Stop #${stop.stopNumber} (${stop.sequenceRankLabel})
+            </span>
+            <span style="color: #64748b; font-size: 11px;">${stop.distanceFromPrevKm} km away</span>
+          </div>
+          <b style="font-size: 14px; color: #0f172a;">${stop.customerName}</b><br/>
+          <span style="color: #475569;">📞 ${stop.mobile}</span><br/>
+          <span style="color: #64748b; font-size: 11px;">📍 ${stop.address}</span><br/>
+          <div style="margin-top: 6px; padding-top: 4px; border-top: 1px dashed #cbd5e1; font-size: 11px; color: #334155;">
+            <b>Follow-up Time:</b> ${stop.followUpTime}<br/>
+            <b>Est. Bike Fuel:</b> ₹${stop.costEstimates?.bikeCost || 0} • <b>Auto:</b> ₹${stop.costEstimates?.autoCost || 0}
+          </div>
+          ${
+            stop.trainTransit?.destStation
+              ? `<div style="margin-top: 4px; background: #f5f3ff; color: #6d28d9; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">
+                   🚆 Nearest Stn: ${stop.trainTransit.destStation.name} • Est. Transit ₹${stop.costEstimates?.trainCost?.total || 0}
+                 </div>`
+              : ""
+          }
+        </div>
+      `);
+
+      stopMarker.on("click", () => {
+        setSelectedStopIndex(index);
+      });
+
+      layerGroup.addLayer(stopMarker);
+      boundsGroup.push([stop.lat, stop.lng]);
+    });
+
+    // 3. Render Route Polylines based on Travel Mode
+    if (travelMode === "DRIVING") {
+      if (routePlan.routePolyline && routePlan.routePolyline.length > 1) {
+        // Shadow/glow line
+        const glow = L.polyline(routePlan.routePolyline, {
+          color: "#3b82f6",
+          weight: 7,
+          opacity: 0.35,
+        });
+        layerGroup.addLayer(glow);
+
+        // Main road polyline
+        const polyline = L.polyline(routePlan.routePolyline, {
+          color: "#2563eb",
+          weight: 4,
+          opacity: 0.95,
+          dashArray: "1, 8",
+          lineCap: "round",
+        });
+        layerGroup.addLayer(polyline);
       }
-    };
+    } else if (travelMode === "TRANSIT") {
+      // Draw railway stations & transit lines for stops
+      routePlan.orderedStops.forEach((stop) => {
+        const transit = stop.trainTransit;
+        if (transit && transit.startStation && transit.destStation) {
+          // Start Station Marker
+          const startStnMarker = L.marker([transit.startStation.lat, transit.startStation.lng], {
+            icon: createStationIcon(transit.startStation.name, false),
+          });
+          startStnMarker.bindPopup(`<b>Boarding Station:</b> ${transit.startStation.name}<br/>Line: ${transit.startStation.line}`);
+          layerGroup.addLayer(startStnMarker);
+          boundsGroup.push([transit.startStation.lat, transit.startStation.lng]);
+
+          // Destination Station Marker
+          const destStnMarker = L.marker([transit.destStation.lat, transit.destStation.lng], {
+            icon: createStationIcon(transit.destStation.name, true),
+          });
+          destStnMarker.bindPopup(`<b>Destination Station:</b> ${transit.destStation.name}<br/>Line: ${transit.destStation.line}`);
+          layerGroup.addLayer(destStnMarker);
+          boundsGroup.push([transit.destStation.lat, transit.destStation.lng]);
+
+          // First-Mile Leg: Start Point -> Start Station
+          const firstLeg = L.polyline(
+            [
+              [startPt.lat, startPt.lng],
+              [transit.startStation.lat, transit.startStation.lng],
+            ],
+            {
+              color: "#10b981",
+              weight: 3,
+              dashArray: "4, 6",
+              opacity: 0.8,
+            }
+          );
+          layerGroup.addLayer(firstLeg);
+
+          // Train Line Track
+          const trainTrack = L.polyline(
+            [
+              [transit.startStation.lat, transit.startStation.lng],
+              [transit.destStation.lat, transit.destStation.lng],
+            ],
+            {
+              color: "#7c3aed",
+              weight: 5,
+              opacity: 0.9,
+            }
+          );
+          layerGroup.addLayer(trainTrack);
+
+          // Last-Mile Leg
+          const lastLeg = L.polyline(
+            [
+              [transit.destStation.lat, transit.destStation.lng],
+              [stop.lat, stop.lng],
+            ],
+            {
+              color: "#ea580c",
+              weight: 3,
+              dashArray: "4, 6",
+              opacity: 0.8,
+            }
+          );
+          layerGroup.addLayer(lastLeg);
+        }
+      });
+    }
+
+    // Fit map bounds only on initial load or manual refresh
+    if (boundsGroup.length > 0 && !hasFittedBoundsRef.current) {
+      try {
+        map.fitBounds(boundsGroup, { padding: [45, 45], maxZoom: 14 });
+        hasFittedBoundsRef.current = true;
+      } catch (err) {
+        console.warn("fitBounds warning:", err);
+      }
+    }
   }, [isOpen, routePlan, travelMode]);
 
   // Focus map on selected stop
@@ -454,7 +501,11 @@ export default function TodayFollowUpsRouteModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setRefreshTrigger((prev) => prev + 1)}
+              onClick={() => {
+                hasFittedBoundsRef.current = false;
+                hasResolvedGpsRef.current = false;
+                setRefreshTrigger((prev) => prev + 1);
+              }}
               title="Recalculate GPS Route"
               className="hidden sm:flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-white/25"
             >

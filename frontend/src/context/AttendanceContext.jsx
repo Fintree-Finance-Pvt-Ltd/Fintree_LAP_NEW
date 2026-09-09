@@ -249,8 +249,11 @@ function startBackgroundKeepAlive() {
           console.log(`📡 [GPS Live Ping] Sending location to DB -> Lat: ${lat}, Lng: ${lng}, Moved: ${distanceMovedMeters.toFixed(1)}m, Time: ${(timeSinceLastPing / 1000).toFixed(1)}s`);
 
           try {
+            const rawId = attendanceRecord?.id;
+            const attId = rawId !== undefined && rawId !== null && !isNaN(Number(rawId)) ? Number(rawId) : undefined;
+
             const res = await attendanceApi.trackLocation({
-              attendanceId: attendanceRecord?.id,
+              ...(attId !== undefined ? { attendanceId: attId } : {}),
               latitude: lat,
               longitude: lng,
               accuracy: accuracy ? parseFloat(accuracy.toFixed(1)) : undefined,

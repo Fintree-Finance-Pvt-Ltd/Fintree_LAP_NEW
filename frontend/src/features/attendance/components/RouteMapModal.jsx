@@ -58,8 +58,11 @@ const waypointIcon = createCustomIcon("#6366f1", "Point", "•");
 export default function RouteMapModal({ attendanceId, onClose }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const routeLayerGroupRef = useRef(null);
   const polylineRef = useRef(null);
   const glowPolylineRef = useRef(null);
+  const hasFittedBoundsRef = useRef(false);
+  const lastAttendanceIdRef = useRef(attendanceId);
 
   const [loading, setLoading] = useState(true);
   const [routeData, setRouteData] = useState(null);
@@ -71,6 +74,12 @@ export default function RouteMapModal({ attendanceId, onClose }) {
     isRoadRoute: false,
     calculating: false,
   });
+
+  // Reset fitted bounds flag if attendanceId changes
+  if (lastAttendanceIdRef.current !== attendanceId) {
+    lastAttendanceIdRef.current = attendanceId;
+    hasFittedBoundsRef.current = false;
+  }
 
   // Close on Escape key press
   useEffect(() => {
@@ -139,7 +148,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
     return () => clearInterval(interval);
   }, [routeData?.attendance, fetchRoute]);
 
-  // Handler to fit map bounds to route
+  // Handler to manually fit map bounds to route
   const fitRouteBounds = useCallback(() => {
     if (mapInstanceRef.current && polylineRef.current) {
       try {
@@ -153,11 +162,68 @@ export default function RouteMapModal({ attendanceId, onClose }) {
     }
   }, []);
 
-  // Initialize and update Leaflet Map with actual Road Route
+  // 1. Initialize Map Instance Once
   useEffect(() => {
-    if (!routeData || activeView !== "map" || !mapContainerRef.current) return;
+    if (activeView !== "map" || !mapContainerRef.current) return;
+
+    if (!mapInstanceRef.current) {
+      if (mapContainerRef.current._leaflet_id) {
+        delete mapContainerRef.current._leaflet_id;
+      }
+
+      const map = L.map(mapContainerRef.current, {
+        center: [18.9559, 72.8152],
+        zoom: 14,
+        zoomControl: true,
+        tap: true,
+      });
+
+      map.zoomControl.setPosition("bottomright");
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map);
+
+      routeLayerGroupRef.current = L.layerGroup().addTo(map);
+      mapInstanceRef.current = map;
+
+      const t1 = setTimeout(() => map?.invalidateSize?.(), 100);
+      const t2 = setTimeout(() => map?.invalidateSize?.(), 300);
+      const t3 = setTimeout(() => map?.invalidateSize?.(), 600);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    } else {
+      mapInstanceRef.current.invalidateSize();
+    }
+  }, [activeView]);
+
+  // Cleanup Map on modal unmount
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // 2. Render and Update Layers (Markers, Polyline) without recreating the map
+  useEffect(() => {
+    if (!routeData || activeView !== "map" || !mapInstanceRef.current || !routeLayerGroupRef.current) return;
 
     let isSubscribed = true;
+    const map = mapInstanceRef.current;
+    const layerGroup = routeLayerGroupRef.current;
+
+    layerGroup.clearLayers();
+    polylineRef.current = null;
+    glowPolylineRef.current = null;
+
     const points = routeData.points || [];
     const att = routeData.attendance || {};
 
@@ -190,224 +256,180 @@ export default function RouteMapModal({ attendanceId, onClose }) {
       }
     }
 
-    // Clean up previous map instance safely
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
+    const popupOptions = {
+      autoPan: true,
+      autoPanPadding: [20, 20],
+      maxWidth: 280,
+    };
+
+    // Add Start Marker
+    if (startLat && startLng) {
+      const startPos = [Number(startLat), Number(startLng)];
+      const startTimeStr = safeFormatTime(att.startTime || att.start_time);
+      const startLocName = att.startLocation || att.start_location || "Start Location";
+
+      const startMarker = L.marker(startPos, { icon: startIcon }).bindPopup(
+        `
+        <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #1e293b; padding: 2px;">
+          <b style="color: #059669; font-size: 13px;">🟢 PUNCH IN (Start Work)</b><br/>
+          <b>Time:</b> ${startTimeStr}<br/>
+          <b>Location:</b> ${startLocName}<br/>
+          <b>Coords:</b> ${Number(startLat).toFixed(5)}, ${Number(startLng).toFixed(5)}
+        </div>
+      `,
+        popupOptions
+      );
+      layerGroup.addLayer(startMarker);
     }
-    if (mapContainerRef.current && mapContainerRef.current._leaflet_id) {
-      delete mapContainerRef.current._leaflet_id;
+
+    // Add Waypoint Markers
+    points.forEach((p, idx) => {
+      const pLat = p.latitude || p.lat;
+      const pLng = p.longitude || p.lng;
+      if (!pLat || !pLng) return;
+
+      const pos = [Number(pLat), Number(pLng)];
+      const timeStr = safeFormatTime(p.recordedAt || p.recorded_at);
+
+      const wpMarker = L.marker(pos, { icon: waypointIcon }).bindPopup(
+        `
+        <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #1e293b; padding: 2px;">
+          <b style="color: #4f46e5; font-size: 13px;">📍 Route Stop #${idx + 1}</b><br/>
+          <b>Time:</b> ${timeStr}<br/>
+          <b>Location:</b> ${p.locationName || p.location_name || "Waypoint Trail"}<br/>
+          <b>Coords:</b> ${Number(pLat).toFixed(5)}, ${Number(pLng).toFixed(5)}
+        </div>
+      `,
+        popupOptions
+      );
+      layerGroup.addLayer(wpMarker);
+    });
+
+    // Add End / Live Marker
+    const isLive = att.status === "IN_PROGRESS";
+    if (endLat && endLng) {
+      const endPos = [Number(endLat), Number(endLng)];
+      const endTimeStr = safeFormatTime(
+        att.endTime || att.end_time || att.lastTrackedAt || att.last_tracked_at
+      );
+      const endLocName =
+        att.endLocation || att.end_location || att.currentLocation || att.current_location || "Location";
+
+      const endMarker = L.marker(endPos, { icon: isLive ? currentLiveIcon : endIcon }).bindPopup(
+        `
+        <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #1e293b; padding: 2px;">
+          <b style="color: ${isLive ? "#2563eb" : "#dc2626"}; font-size: 13px;">
+            ${isLive ? "📡 LIVE CURRENT LOCATION" : "🔴 PUNCH OUT (End Work)"}
+          </b><br/>
+          <b>Time:</b> ${endTimeStr}<br/>
+          <b>Location:</b> ${endLocName}<br/>
+          <b>Coords:</b> ${Number(endLat).toFixed(5)}, ${Number(endLng).toFixed(5)}
+        </div>
+      `,
+        popupOptions
+      );
+      layerGroup.addLayer(endMarker);
     }
 
-    // Default center
-    const initialCenter = keyCoords.length > 0 ? keyCoords[0] : [18.9559, 72.8152];
+    // Render Route Polyline
+    if (keyCoords.length >= 2) {
+      if (travelMode === "exact") {
+        setRouteStats({
+          roadDistanceKm: 0,
+          isRoadRoute: false,
+          calculating: false,
+        });
 
-    try {
-      const map = L.map(mapContainerRef.current, {
-        center: initialCenter,
-        zoom: 14,
-        zoomControl: true,
-        tap: true,
-      });
-      mapInstanceRef.current = map;
+        // Glow Underlay line
+        const glow = L.polyline(keyCoords, {
+          color: "#1d4ed8",
+          weight: 7,
+          opacity: 0.6,
+          lineCap: "round",
+          lineJoin: "round",
+        });
+        layerGroup.addLayer(glow);
+        glowPolylineRef.current = glow;
 
-      // Position zoom control (bottom right)
-      map.zoomControl.setPosition("bottomright");
+        // Main User Traveled Trail
+        const polyline = L.polyline(keyCoords, {
+          color: "#38bdf8",
+          weight: 4,
+          opacity: 1,
+          lineCap: "round",
+          lineJoin: "round",
+        });
+        layerGroup.addLayer(polyline);
+        polylineRef.current = polyline;
 
-      // OpenStreetMap Tile Layer
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
-      }).addTo(map);
+        // Only auto-fit bounds on initial load, not during periodic live 5s background updates
+        if (!hasFittedBoundsRef.current) {
+          try {
+            map.fitBounds(polyline.getBounds(), { padding: [45, 45], maxZoom: 16 });
+            hasFittedBoundsRef.current = true;
+          } catch (fitErr) {
+            console.warn("fitBounds note:", fitErr);
+          }
+        }
+      } else {
+        setRouteStats((prev) => ({ ...prev, calculating: true }));
 
-      // Invalidate size once modal layout settles
-      const t1 = setTimeout(() => map?.invalidateSize?.(), 100);
-      const t2 = setTimeout(() => map?.invalidateSize?.(), 300);
-      const t3 = setTimeout(() => map?.invalidateSize?.(), 600);
+        fetchRoadRoute(keyCoords).then((routeRes) => {
+          if (!isSubscribed || !mapInstanceRef.current || !routeLayerGroupRef.current) return;
 
-      const popupOptions = {
-        autoPan: true,
-        autoPanPadding: [20, 20],
-        maxWidth: 280,
-      };
+          const renderCoords =
+            routeRes.roadCoordinates && routeRes.roadCoordinates.length > 0
+              ? routeRes.roadCoordinates
+              : keyCoords;
 
-      // Add Start Marker
-      if (startLat && startLng) {
-        const startPos = [Number(startLat), Number(startLng)];
-        const startTimeStr = safeFormatTime(att.startTime || att.start_time);
-        const startLocName = att.startLocation || att.start_location || "Start Location";
-
-        L.marker(startPos, { icon: startIcon })
-          .addTo(map)
-          .bindPopup(
-            `
-            <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #1e293b; padding: 2px;">
-              <b style="color: #059669; font-size: 13px;">🟢 PUNCH IN (Start Work)</b><br/>
-              <b>Time:</b> ${startTimeStr}<br/>
-              <b>Location:</b> ${startLocName}<br/>
-              <b>Coords:</b> ${Number(startLat).toFixed(5)}, ${Number(startLng).toFixed(5)}
-            </div>
-          `,
-            popupOptions
-          );
-      }
-
-      // Add Waypoint Markers
-      points.forEach((p, idx) => {
-        const pLat = p.latitude || p.lat;
-        const pLng = p.longitude || p.lng;
-        if (!pLat || !pLng) return;
-
-        const pos = [Number(pLat), Number(pLng)];
-        const timeStr = safeFormatTime(p.recordedAt || p.recorded_at);
-
-        L.marker(pos, { icon: waypointIcon })
-          .addTo(map)
-          .bindPopup(
-            `
-            <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #1e293b; padding: 2px;">
-              <b style="color: #4f46e5; font-size: 13px;">📍 Route Stop #${idx + 1}</b><br/>
-              <b>Time:</b> ${timeStr}<br/>
-              <b>Location:</b> ${p.locationName || p.location_name || "Waypoint Trail"}<br/>
-              <b>Coords:</b> ${Number(pLat).toFixed(5)}, ${Number(pLng).toFixed(5)}
-            </div>
-          `,
-            popupOptions
-          );
-      });
-
-      // Add End / Live Marker
-      const isLive = att.status === "IN_PROGRESS";
-      if (endLat && endLng) {
-        const endPos = [Number(endLat), Number(endLng)];
-        const endTimeStr = safeFormatTime(
-          att.endTime || att.end_time || att.lastTrackedAt || att.last_tracked_at
-        );
-        const endLocName =
-          att.endLocation || att.end_location || att.currentLocation || att.current_location || "Location";
-
-        L.marker(endPos, { icon: isLive ? currentLiveIcon : endIcon })
-          .addTo(map)
-          .bindPopup(
-            `
-            <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #1e293b; padding: 2px;">
-              <b style="color: ${isLive ? "#2563eb" : "#dc2626"}; font-size: 13px;">
-                ${isLive ? "📡 LIVE CURRENT LOCATION" : "🔴 PUNCH OUT (End Work)"}
-              </b><br/>
-              <b>Time:</b> ${endTimeStr}<br/>
-              <b>Location:</b> ${endLocName}<br/>
-              <b>Coords:</b> ${Number(endLat).toFixed(5)}, ${Number(endLng).toFixed(5)}
-            </div>
-          `,
-            popupOptions
-          );
-      }
-
-      // Render Route Polyline: Exact User GPS Trail or Road Snapping
-      if (keyCoords.length >= 2) {
-        if (travelMode === "exact") {
-          // Direct high-resolution GPS trail connecting every single recorded coordinate
           setRouteStats({
-            roadDistanceKm: 0,
-            isRoadRoute: false,
+            roadDistanceKm: routeRes.distanceKm,
+            isRoadRoute: routeRes.isRoadRoute,
             calculating: false,
           });
 
           // Glow Underlay line
-          const glow = L.polyline(keyCoords, {
+          const glow = L.polyline(renderCoords, {
             color: "#1d4ed8",
             weight: 7,
-            opacity: 0.6,
+            opacity: 0.5,
             lineCap: "round",
             lineJoin: "round",
-          }).addTo(map);
+          });
+          layerGroup.addLayer(glow);
           glowPolylineRef.current = glow;
 
-          // Main User Traveled Trail
-          const polyline = L.polyline(keyCoords, {
+          // Main Road Route Line
+          const polyline = L.polyline(renderCoords, {
             color: "#38bdf8",
             weight: 4,
-            opacity: 1,
+            opacity: 0.95,
+            dashArray: routeRes.isRoadRoute ? undefined : "6, 8",
             lineCap: "round",
             lineJoin: "round",
-          }).addTo(map);
+          });
+          layerGroup.addLayer(polyline);
           polylineRef.current = polyline;
 
-          try {
-            map.fitBounds(polyline.getBounds(), { padding: [45, 45], maxZoom: 16 });
-          } catch (fitErr) {
-            console.warn("fitBounds note:", fitErr);
-          }
-        } else {
-          // Road driving route
-          setRouteStats((prev) => ({ ...prev, calculating: true }));
-
-          fetchRoadRoute(keyCoords).then((routeRes) => {
-            if (!isSubscribed || !mapInstanceRef.current) return;
-
-            const renderCoords =
-              routeRes.roadCoordinates && routeRes.roadCoordinates.length > 0
-                ? routeRes.roadCoordinates
-                : keyCoords;
-
-            setRouteStats({
-              roadDistanceKm: routeRes.distanceKm,
-              isRoadRoute: routeRes.isRoadRoute,
-              calculating: false,
-            });
-
-            // Glow Underlay line
-            const glow = L.polyline(renderCoords, {
-              color: "#1d4ed8",
-              weight: 7,
-              opacity: 0.5,
-              lineCap: "round",
-              lineJoin: "round",
-            }).addTo(map);
-            glowPolylineRef.current = glow;
-
-            // Main Road Route Line
-            const polyline = L.polyline(renderCoords, {
-              color: "#38bdf8",
-              weight: 4,
-              opacity: 0.95,
-              dashArray: routeRes.isRoadRoute ? undefined : "6, 8",
-              lineCap: "round",
-              lineJoin: "round",
-            }).addTo(map);
-            polylineRef.current = polyline;
-
+          // Only auto-fit bounds on initial load
+          if (!hasFittedBoundsRef.current) {
             try {
               map.fitBounds(polyline.getBounds(), { padding: [45, 45], maxZoom: 16 });
+              hasFittedBoundsRef.current = true;
             } catch (fitErr) {
               console.warn("fitBounds note:", fitErr);
             }
-          });
-        }
-      } else if (keyCoords.length === 1) {
-        map.setView(keyCoords[0], 15);
+          }
+        });
       }
-
-      // Resize listener
-      const handleResize = () => {
-        map?.invalidateSize?.();
-      };
-      window.addEventListener("resize", handleResize);
-
-      return () => {
-        isSubscribed = false;
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-        window.removeEventListener("resize", handleResize);
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.remove();
-          mapInstanceRef.current = null;
-        }
-      };
-    } catch (err) {
-      console.error("Leaflet initialization caught error:", err);
+    } else if (keyCoords.length === 1 && !hasFittedBoundsRef.current) {
+      map.setView(keyCoords[0], 15);
+      hasFittedBoundsRef.current = true;
     }
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [routeData, activeView, travelMode]);
 
 

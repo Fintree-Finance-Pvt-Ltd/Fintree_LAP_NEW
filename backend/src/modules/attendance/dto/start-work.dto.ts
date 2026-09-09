@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class StartWorkDto {
@@ -7,10 +8,12 @@ export class StartWorkDto {
   location?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   latitude?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   longitude?: number;
 

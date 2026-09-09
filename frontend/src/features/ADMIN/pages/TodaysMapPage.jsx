@@ -273,6 +273,8 @@ export default function TodaysMapPage() {
   const polylineRef = useRef(null);
   const glowPolylineRef = useRef(null);
   const markersGroupRef = useRef(null);
+  const hasFittedOverviewBoundsRef = useRef(false);
+  const lastSelectedUserIdRef = useRef(null);
 
   // Fetch today's map data with robust response parsing and fallback
   const fetchMapData = useCallback(
@@ -570,6 +572,10 @@ export default function TodaysMapPage() {
 
     // SCENARIO 1: A specific employee is selected -> Draw their focused complete route!
     if (selectedUser) {
+      const currentSelectedId = selectedUser.id || selectedUser.userId;
+      const isNewUserSelection = lastSelectedUserIdRef.current !== currentSelectedId;
+      lastSelectedUserIdRef.current = currentSelectedId;
+
       const points = selectedUser.points || [];
       const startLat = selectedUser.startLatitude;
       const startLng = selectedUser.startLongitude;
@@ -710,12 +716,14 @@ export default function TodaysMapPage() {
           }).addTo(map);
           polylineRef.current = polyline;
 
-          try {
-            map.fitBounds(polyline.getBounds(), {
-              padding: [50, 50],
-              maxZoom: 16,
-            });
-          } catch (_) {}
+          if (isNewUserSelection) {
+            try {
+              map.fitBounds(polyline.getBounds(), {
+                padding: [50, 50],
+                maxZoom: 16,
+              });
+            } catch (_) {}
+          }
         } else {
           // Road snapped route via OSRM
           fetchRoadRoute(routeCoords).then((res) => {
@@ -748,18 +756,21 @@ export default function TodaysMapPage() {
             }).addTo(map);
             polylineRef.current = polyline;
 
-            try {
-              map.fitBounds(polyline.getBounds(), {
-                padding: [50, 50],
-                maxZoom: 16,
-              });
-            } catch (_) {}
+            if (isNewUserSelection) {
+              try {
+                map.fitBounds(polyline.getBounds(), {
+                  padding: [50, 50],
+                  maxZoom: 16,
+                });
+              } catch (_) {}
+            }
           });
         }
-      } else if (routeCoords.length === 1) {
+      } else if (routeCoords.length === 1 && isNewUserSelection) {
         map.setView(routeCoords[0], 15);
       }
     } else {
+      lastSelectedUserIdRef.current = null;
       // SCENARIO 2: All Users Overview -> Plot ALL Users' Locations & Travel Routes simultaneously!
       const allBoundsCoords = [];
 
@@ -929,15 +940,21 @@ export default function TodaysMapPage() {
         }
       });
 
-      // Fit map to all users & routes if bounds exist
-      if (allBoundsCoords.length > 0) {
+      // Fit map to all users & routes if bounds exist and not fitted yet
+      if (allBoundsCoords.length > 0 && !hasFittedOverviewBoundsRef.current) {
         try {
           const bounds = L.latLngBounds(allBoundsCoords);
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+          hasFittedOverviewBoundsRef.current = true;
         } catch (_) {}
       }
     }
   }, [selectedUser, filteredRecords, travelMode, handleSelectUser]);
+
+  // Reset overview bounds flag on date or filter changes
+  useEffect(() => {
+    hasFittedOverviewBoundsRef.current = false;
+  }, [selectedDate, statusFilter]);
 
   // Fit bounds helper
   const fitMapBounds = useCallback(() => {
