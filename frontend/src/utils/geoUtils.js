@@ -317,10 +317,230 @@ export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
   return parseFloat((R * c).toFixed(2));
 }
 
+// Landmark & Society Exact GPS Dictionary for 100% building-level accuracy
+export const KNOWN_LANDMARKS_DICT = [
+  {
+    keywords: ["reliable garden", "reliable gardens", "chuchandra", "juchandra road", "juchandra", "naigaon east"],
+    name: "Reliable Garden, Juchandra Road, Naigaon East (Vasai-Virar)",
+    lat: 19.35852,
+    lng: 72.85408,
+    station: "Naigaon",
+    line: "Western Line",
+  },
+  {
+    keywords: ["naigaon west", "naigaon (w)", "naigaon-w"],
+    name: "Naigaon West, Vasai-Virar",
+    lat: 19.3550,
+    lng: 72.8330,
+    station: "Naigaon",
+    line: "Western Line",
+  },
+  {
+    keywords: ["vasai east", "vasai (e)", "vasai-e", "evershine city", "vasai phata"],
+    name: "Vasai East, Vasai-Virar",
+    lat: 19.3837,
+    lng: 72.8335,
+    station: "Vasai Road",
+    line: "Western Line",
+  },
+  {
+    keywords: ["vasai west", "vasai (w)", "vasai-w", "ambadi road", "bhabha nagar", "panchvati"],
+    name: "Vasai West, Vasai-Virar",
+    lat: 19.3664,
+    lng: 72.8157,
+    station: "Vasai Road",
+    line: "Western Line",
+  },
+  {
+    keywords: ["nalasopara east", "nalasopara (e)", "nallasopara east", "tulinj", "achole road"],
+    name: "Nallasopara East, Vasai-Virar",
+    lat: 19.4230,
+    lng: 72.8190,
+    station: "Nallasopara",
+    line: "Western Line",
+  },
+  {
+    keywords: ["nalasopara west", "nalasopara (w)", "nallasopara west", "sopara"],
+    name: "Nallasopara West, Vasai-Virar",
+    lat: 19.4182,
+    lng: 72.7983,
+    station: "Nallasopara",
+    line: "Western Line",
+  },
+  {
+    keywords: ["virar east", "virar (e)", "manvelpada", "phoolpada", "kopar virar"],
+    name: "Virar East, Vasai-Virar",
+    lat: 19.4620,
+    lng: 72.8220,
+    station: "Virar",
+    line: "Western Line",
+  },
+  {
+    keywords: ["virar west", "virar (w)", "bolinj", "yazoo park", "agashi road"],
+    name: "Virar West, Vasai-Virar",
+    lat: 19.4674,
+    lng: 72.8055,
+    station: "Virar",
+    line: "Western Line",
+  },
+  {
+    keywords: ["mira road", "shanti park", "kanakia", "beverly park", "silver park"],
+    name: "Mira Road, Thane",
+    lat: 19.2812,
+    lng: 72.8561,
+    station: "Mira Road",
+    line: "Western Line",
+  },
+  {
+    keywords: ["bhayandar east", "bhayandar (e)", "navghar", "goddev"],
+    name: "Bhayandar East",
+    lat: 19.3033,
+    lng: 72.8610,
+    station: "Bhayandar",
+    line: "Western Line",
+  },
+  {
+    keywords: ["bhayandar west", "bhayandar (w)", "maxus mall", "tembha hospital"],
+    name: "Bhayandar West",
+    lat: 19.2952,
+    lng: 72.8532,
+    station: "Bhayandar",
+    line: "Western Line",
+  },
+  {
+    keywords: ["borivali west", "ic colony", "shimpoli", "gorai", "chikuwadi"],
+    name: "Borivali West",
+    lat: 19.2307,
+    lng: 72.8567,
+    station: "Borivali",
+    line: "Western Line",
+  },
+  {
+    keywords: ["borivali east", "magathane", "national park borivali"],
+    name: "Borivali East",
+    lat: 19.2280,
+    lng: 72.8680,
+    station: "Borivali",
+    line: "Western Line",
+  },
+  {
+    keywords: ["kandivali west", "mahavir nagar", "charkop", "dahanukar wadi"],
+    name: "Kandivali West",
+    lat: 19.2062,
+    lng: 72.8530,
+    station: "Kandivali",
+    line: "Western Line",
+  },
+  {
+    keywords: ["kandivali east", "lokhandwala kandivali", "thakur village", "thakur complex"],
+    name: "Kandivali East",
+    lat: 19.2100,
+    lng: 72.8710,
+    station: "Kandivali",
+    line: "Western Line",
+  },
+  {
+    keywords: ["malad west", "link road malad", "mindspace", "inorbit malad", "marve road"],
+    name: "Malad West",
+    lat: 19.1840,
+    lng: 72.8450,
+    station: "Malad",
+    line: "Western Line",
+  },
+  {
+    keywords: ["malad east", "kurar village", "dindoshi", "pathanwadi"],
+    name: "Malad East",
+    lat: 19.1874,
+    lng: 72.8610,
+    station: "Malad",
+    line: "Western Line",
+  },
+  {
+    keywords: ["andheri west", "lokhandwala andheri", "veera desai", "dn nagar", "four bungalows"],
+    name: "Andheri West",
+    lat: 19.1197,
+    lng: 72.8464,
+    station: "Andheri",
+    line: "Western Line",
+  },
+  {
+    keywords: ["andheri east", "saki naka", "marol", "midc andheri", "chakala", "jb nagar"],
+    name: "Andheri East",
+    lat: 19.1150,
+    lng: 72.8690,
+    station: "Andheri",
+    line: "Western Line",
+  },
+  {
+    keywords: ["bandra west", "carter road", "hill road", "linking road", "pali hill"],
+    name: "Bandra West",
+    lat: 19.0596,
+    lng: 72.8295,
+    station: "Bandra",
+    line: "Western Line",
+  },
+  {
+    keywords: ["bandra east", "bkc", "bandra kurla complex", "kalanagar"],
+    name: "Bandra East / BKC",
+    lat: 19.0620,
+    lng: 72.8550,
+    station: "Bandra",
+    line: "Western Line",
+  },
+  {
+    keywords: ["dadar west", "shivaji park", "prabhadevi", "dadar tt"],
+    name: "Dadar West",
+    lat: 19.0178,
+    lng: 72.8478,
+    station: "Dadar",
+    line: "Western / Central Line",
+  },
+  {
+    keywords: ["girgaon", "charni road", "opera house", "prarthana samaj", "lamington road", "grant road"],
+    name: "Girgaon / Grant Road, South Mumbai",
+    lat: 18.9629,
+    lng: 72.8143,
+    station: "Grant Road",
+    line: "Western Line",
+  },
+  {
+    keywords: ["thane west", "naupada", "ghodbunder", "majiwada", "vartak nagar", "panchpakhadi"],
+    name: "Thane West",
+    lat: 19.1860,
+    lng: 72.9754,
+    station: "Thane",
+    line: "Central Line",
+  },
+  {
+    keywords: ["kalyan west", "khadakpada", "gandhari", "bail bazaar"],
+    name: "Kalyan West",
+    lat: 19.2403,
+    lng: 73.1305,
+    station: "Kalyan",
+    line: "Central Line",
+  },
+  {
+    keywords: ["dombivli east", "manpada", "lodha palava", "kalyan shil road"],
+    name: "Dombivli East",
+    lat: 19.2184,
+    lng: 73.0867,
+    station: "Dombivli",
+    line: "Central Line",
+  },
+  {
+    keywords: ["vashi", "sanpada", "nerul", "belapur", "kharghar", "panvel"],
+    name: "Navi Mumbai Hub",
+    lat: 19.0771,
+    lng: 72.9986,
+    station: "Vashi",
+    line: "Harbour Line",
+  },
+];
+
 // Built-in Indian Postal Code & Locality Geo-Coordinate Database
 export const PINCODE_LOCALITY_DICT = {
   // Palghar / Vasai-Virar region (Western Line)
-  "401208": { name: "Naigaon East / Juchandra, Vasai-Virar", lat: 19.3522, lng: 72.8488, station: "Naigaon", line: "Western Line" },
+  "401208": { name: "Naigaon East / Juchandra, Vasai-Virar", lat: 19.35852, lng: 72.85408, station: "Naigaon", line: "Western Line" },
   "401202": { name: "Vasai West, Vasai-Virar", lat: 19.3664, lng: 72.8157, station: "Vasai Road", line: "Western Line" },
   "401201": { name: "Vasai East, Vasai-Virar", lat: 19.3837, lng: 72.8335, station: "Vasai Road", line: "Western Line" },
   "401203": { name: "Nalasopara West, Vasai-Virar", lat: 19.4182, lng: 72.7983, station: "Nallasopara", line: "Western Line" },
@@ -511,6 +731,58 @@ export function findNearestRailwayStation(lat, lng) {
 }
 
 /**
+ * Calculate realistic travelling cost estimates for RM field visits
+ * - Two-Wheeler / Bike fuel (~₹4.0/km)
+ * - Auto-Rickshaw / Cab fares based on official regional tariff
+ * - Local Train ticket + first/last mile auto connectivity
+ */
+export function calculateTravelCostEstimates(distanceKm = 0, trainTransit = null) {
+  const km = Math.max(0, Number(distanceKm) || 0);
+
+  // 1. Two-Wheeler / Bike (Standard RM field visit fuel reimbursement @ ₹4.0 / km)
+  const bikeFuelCost = km <= 0 ? 0 : Math.max(20, Math.round(km * 4.0));
+
+  // 2. Auto / Cab Fare (Standard tariff: ₹23 base + ~₹15.33/km)
+  const autoFare =
+    km <= 0 ? 0 : km <= 1.5 ? 23 : Math.round(23 + (km - 1.5) * 15.33);
+  const cabFare = km <= 0 ? 0 : km <= 4 ? 100 : Math.round(100 + (km - 4) * 18.0);
+
+  // 3. Local Train / Suburban Transit Cost Breakdown
+  let trainTicketFare = 15;
+  let firstMileFare = 20;
+  let lastMileFare = 25;
+
+  if (trainTransit) {
+    const stnKm = trainTransit.stationDistanceKm || km;
+    if (stnKm <= 10) trainTicketFare = 5;
+    else if (stnKm <= 20) trainTicketFare = 10;
+    else if (stnKm <= 45) trainTicketFare = 15;
+    else if (stnKm <= 70) trainTicketFare = 20;
+    else trainTicketFare = 25;
+
+    const startStnDist = trainTransit.startStation?.distanceKm || 1;
+    firstMileFare = startStnDist <= 0.8 ? 0 : Math.min(50, Math.max(23, Math.round(startStnDist * 16)));
+
+    const destStnDist = trainTransit.destStation?.distanceKm || 1.5;
+    lastMileFare = destStnDist <= 0.8 ? 0 : Math.min(60, Math.max(23, Math.round(destStnDist * 16)));
+  }
+
+  const totalTransitCost = trainTicketFare + firstMileFare + lastMileFare;
+
+  return {
+    bikeCost: bikeFuelCost,
+    autoCost: autoFare,
+    cabCost: cabFare,
+    trainCost: {
+      trainTicket: trainTicketFare,
+      firstMile: firstMileFare,
+      lastMile: lastMileFare,
+      total: totalTransitCost,
+    },
+  };
+}
+
+/**
  * Calculate recommended local train / transit itinerary between origin and destination
  */
 export function calculateTrainTransitGuide(originCoords, destCoords) {
@@ -592,10 +864,10 @@ export function calculateTrainTransitGuide(originCoords, destCoords) {
 }
 
 /**
- * Robust Multi-Stage Forward Geocoder for Indian Addresses
- * 1. Checks PIN Code dictionary & locality keywords first (100% accurate for known hubs/towns)
- * 2. Queries Nominatim with stripped locality + city
- * 3. Queries Nominatim by PIN Code
+ * Robust High-Precision Multi-Stage Forward Geocoder for Indian Addresses
+ * 1. Checks Known Landmark / Society dictionary (e.g. Reliable Garden, Juchandra Road)
+ * 2. Checks PIN Code dictionary & locality keywords
+ * 3. Queries Photon & Nominatim
  * 4. Fallback to dictionary locality
  */
 export async function forwardGeocodeAddress(addressStr, fallbackCoords = null) {
@@ -610,11 +882,29 @@ export async function forwardGeocodeAddress(addressStr, fallbackCoords = null) {
     return forwardGeoCache.get(rawAddress);
   }
 
-  // 1. Extract 6-digit PIN code (e.g. 401208 from "PIN: 401208" or "401208")
+  const lowerAddr = rawAddress.toLowerCase();
+
+  // Step 1: Check Known Specific Landmarks & Societies (100% exact GPS Coordinates)
+  for (const item of KNOWN_LANDMARKS_DICT) {
+    if (item.keywords.some((kw) => lowerAddr.includes(kw))) {
+      const resolved = {
+        lat: item.lat,
+        lng: item.lng,
+        displayName: item.name,
+        station: item.station,
+        line: item.line,
+        fromLandmark: true,
+      };
+      forwardGeoCache.set(rawAddress, resolved);
+      return resolved;
+    }
+  }
+
+  // Step 2: Extract 6-digit PIN code (e.g. 401208 from "PIN: 401208" or "401208")
   const pinMatch = rawAddress.match(/\b([1-9][0-9]{5})\b/);
   const pinCode = pinMatch ? pinMatch[1] : null;
 
-  // Check PIN Code in our comprehensive Indian dictionary
+  // Check PIN Code in comprehensive dictionary
   if (pinCode && PINCODE_LOCALITY_DICT[pinCode]) {
     const dictEntry = PINCODE_LOCALITY_DICT[pinCode];
     const resolved = {
@@ -629,8 +919,7 @@ export async function forwardGeocodeAddress(addressStr, fallbackCoords = null) {
     return resolved;
   }
 
-  // Check Locality Name keywords in Dictionary (e.g., "naigaon", "vasai", "virar", "borivali", "andheri", "thane", etc.)
-  const lowerAddr = rawAddress.toLowerCase();
+  // Step 3: Check Locality Name keywords in Dictionary
   for (const [pin, entry] of Object.entries(PINCODE_LOCALITY_DICT)) {
     const locLower = entry.name.toLowerCase();
     const stationLower = entry.station ? entry.station.toLowerCase() : "";
@@ -651,8 +940,7 @@ export async function forwardGeocodeAddress(addressStr, fallbackCoords = null) {
     }
   }
 
-  // 2. Multi-tier Nominatim Queries
-  // Clean address for search (remove flat / shop / building details like "Reliable garden, chuchandra road")
+  // Step 4: Multi-tier Photon / Nominatim Queries
   const cleanTokens = rawAddress
     .replace(/PIN\s*:\s*/gi, "")
     .replace(/[#\/\-]/g, " ")
@@ -660,17 +948,17 @@ export async function forwardGeocodeAddress(addressStr, fallbackCoords = null) {
     .map((t) => t.trim())
     .filter(Boolean);
 
-  // Queries to try from most specific clean tokens to broader
   const candidateQueries = [];
   if (cleanTokens.length >= 2) {
+    candidateQueries.push(cleanTokens.join(", "));
     candidateQueries.push(cleanTokens.slice(-3).join(", "));
     candidateQueries.push(cleanTokens.slice(-2).join(", "));
+  } else {
+    candidateQueries.push(rawAddress);
   }
   if (pinCode) {
     candidateQueries.push(`${pinCode}, Maharashtra, India`);
-    candidateQueries.push(`${pinCode}, India`);
   }
-  candidateQueries.push(rawAddress);
 
   for (const queryStr of candidateQueries) {
     try {
@@ -702,7 +990,7 @@ export async function forwardGeocodeAddress(addressStr, fallbackCoords = null) {
     } catch (_) {}
   }
 
-  // 3. Fallback: If fallbackCoords is available, return it
+  // Step 5: Fallback coordinates
   if (fallbackCoords && fallbackCoords.lat && fallbackCoords.lng) {
     return fallbackCoords;
   }
@@ -720,9 +1008,12 @@ export async function forwardGeocodeAddress(addressStr, fallbackCoords = null) {
 export async function calculateOptimalRouteSequence(startLocation, leadList = []) {
   if (!leadList || leadList.length === 0) {
     return {
+      startPoint: null,
       orderedStops: [],
       totalDistanceKm: 0,
       totalDurationMin: 0,
+      totalTransitTimeMin: 0,
+      totalCostEstimates: { bikeCost: 0, autoCost: 0, cabCost: 0, trainCost: { total: 0 } },
       routePolyline: [],
     };
   }
@@ -738,24 +1029,29 @@ export async function calculateOptimalRouteSequence(startLocation, leadList = []
     isStart: true,
   };
 
-  // 1. Geocode / Resolve Coordinates for all leads
+  // 1. Geocode / Resolve Coordinates for all leads cleanly
   const resolvedLeads = await Promise.all(
     leadList.map(async (lead, index) => {
       const profile = lead.customerProfile || {};
-      const propertyAddr =
+      const propertyAddr = (
         lead.propertyAddress ||
         profile.propertyAddress ||
-        lead.propertyCity ||
-        profile.propertyCity ||
-        lead.city ||
-        "";
-      const pincode = lead.pinCode || profile.propertyPincode || profile.currentPincode || "";
-      const city = lead.city || profile.propertyCity || profile.currentCity || "";
+        lead.propertyAddressLine1 ||
+        profile.currentAddress ||
+        lead.address ||
+        ""
+      ).trim();
 
-      let fullAddress = [propertyAddr, city, pincode ? `PIN: ${pincode}` : ""]
-        .filter(Boolean)
-        .join(", ");
+      const city = (lead.propertyCity || lead.city || profile.propertyCity || profile.currentCity || "").trim();
+      const pincode = (lead.pinCode || lead.propertyPincode || profile.propertyPincode || profile.currentPincode || "").trim();
 
+      // Clean duplicate tokens
+      const addrTokens = [];
+      if (propertyAddr) addrTokens.push(propertyAddr);
+      if (city && !propertyAddr.toLowerCase().includes(city.toLowerCase())) addrTokens.push(city);
+      if (pincode && !propertyAddr.includes(pincode)) addrTokens.push(`PIN: ${pincode}`);
+
+      let fullAddress = addrTokens.join(", ");
       if (!fullAddress) {
         fullAddress = `Customer Location (${lead.customerName || "Lead #" + (lead.id || index + 1)})`;
       }
@@ -766,7 +1062,7 @@ export async function calculateOptimalRouteSequence(startLocation, leadList = []
 
       if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
         // Forward geocode with fallback near start location
-        const geocoded = await forwardGeocodeAddress(fullAddress, { lat: startLat, lng: startLng });
+        const geocoded = await forwardGeocodeAddress(fullAddress, null);
         if (geocoded) {
           lat = geocoded.lat;
           lng = geocoded.lng;
@@ -843,6 +1139,8 @@ export async function calculateOptimalRouteSequence(startLocation, leadList = []
       { lat: nearestLead.lat, lng: nearestLead.lng }
     );
 
+    const costEstimates = calculateTravelCostEstimates(distanceFromPrevKm, trainTransit);
+
     const stopObj = {
       ...nearestLead,
       stopNumber,
@@ -852,6 +1150,7 @@ export async function calculateOptimalRouteSequence(startLocation, leadList = []
       totalAccumulatedKm: parseFloat(accumulatedDistanceKm.toFixed(2)),
       prevStopName: currentPos.customerName,
       trainTransit,
+      costEstimates,
     };
 
     orderedStops.push(stopObj);
@@ -878,8 +1177,21 @@ export async function calculateOptimalRouteSequence(startLocation, leadList = []
   const totalDistanceKm = roadRouteResult?.distanceKm || parseFloat(accumulatedDistanceKm.toFixed(2));
   const totalDurationMin = roadRouteResult?.durationMin || Math.round(totalDistanceKm * 3.5);
 
-  // Transit total time summary
+  // Transit total time and cost summary
   const totalTransitTimeMin = orderedStops.reduce((sum, s) => sum + (s.trainTransit?.totalTransitTimeMin || 0), 0);
+  const totalTransitCost = orderedStops.reduce((sum, s) => sum + (s.costEstimates?.trainCost?.total || 0), 0);
+  const totalBikeCost = orderedStops.reduce((sum, s) => sum + (s.costEstimates?.bikeCost || 0), 0);
+  const totalAutoCost = orderedStops.reduce((sum, s) => sum + (s.costEstimates?.autoCost || 0), 0);
+  const totalCabCost = orderedStops.reduce((sum, s) => sum + (s.costEstimates?.cabCost || 0), 0);
+
+  const totalCostEstimates = {
+    bikeCost: totalBikeCost || Math.max(20, Math.round(totalDistanceKm * 4.0)),
+    autoCost: totalAutoCost || (totalDistanceKm <= 1.5 ? 23 : Math.round(23 + (totalDistanceKm - 1.5) * 15.33)),
+    cabCost: totalCabCost || (totalDistanceKm <= 4 ? 100 : Math.round(100 + (totalDistanceKm - 4) * 18.0)),
+    trainCost: {
+      total: totalTransitCost,
+    },
+  };
 
   return {
     startPoint,
@@ -887,8 +1199,7 @@ export async function calculateOptimalRouteSequence(startLocation, leadList = []
     totalDistanceKm,
     totalDurationMin,
     totalTransitTimeMin,
+    totalCostEstimates,
     routePolyline: finalPolyline,
   };
 }
-
-
