@@ -1,27 +1,23 @@
-import React, { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  FiActivity,
   FiChevronLeft,
   FiChevronRight,
-  FiCalendar,
   FiClock,
-  FiCheckCircle,
-  FiAlertCircle,
   FiCompass,
-  FiUsers,
-  FiUser,
-  FiRefreshCw,
-  FiActivity,
   FiInfo,
+  FiRefreshCw,
+  FiUser
 } from "react-icons/fi";
-import { cleanLocationName } from "../../../utils/geoUtils.js";
 import {
   calculateRecordDuration,
   formatMinutesToDuration,
-  TARGET_WORKING_MINUTES,
   TARGET_HOURS_LABEL,
+  TARGET_WORKING_MINUTES,
 } from "../../../utils/attendanceUtils.js";
-import AttendanceDayModal from "./AttendanceDayModal.jsx";
+import { cleanLocationName } from "../../../utils/geoUtils.js";
 import { leavesApi } from "../../leaves/leavesApi.js";
+import AttendanceDayModal from "./AttendanceDayModal.jsx";
 
 const MONTH_NAMES = [
   "January",

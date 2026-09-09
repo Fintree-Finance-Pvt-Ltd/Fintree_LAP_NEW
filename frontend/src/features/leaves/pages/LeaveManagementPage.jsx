@@ -1,21 +1,17 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FiCalendar,
   FiClock,
-  FiCheckCircle,
-  FiXCircle,
+  FiFileText,
   FiPlus,
   FiRefreshCw,
-  FiUsers,
   FiUserCheck,
-  FiActivity,
-  FiFileText,
 } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth.js";
-import { leavesApi } from "../leavesApi.js";
 import ApplyLeaveModal from "../components/ApplyLeaveModal.jsx";
 import LeaveApprovalsTable from "../components/LeaveApprovalsTable.jsx";
 import MyLeavesList from "../components/MyLeavesList.jsx";
+import { leavesApi } from "../leavesApi.js";
 
 export default function LeaveManagementPage() {
   const { user } = useAuth();
@@ -72,17 +68,20 @@ export default function LeaveManagementPage() {
       const results = await Promise.allSettled(promises);
 
       if (results[0].status === "fulfilled") {
-        const raw = results[0].value?.data?.data ?? results[0].value?.data ?? [];
+        const raw =
+          results[0].value?.data?.data ?? results[0].value?.data ?? [];
         setMyLeaves(Array.isArray(raw) ? raw : []);
       }
 
       if (results[1].status === "fulfilled") {
-        const raw = results[1].value?.data?.data ?? results[1].value?.data ?? {};
+        const raw =
+          results[1].value?.data?.data ?? results[1].value?.data ?? {};
         setStats(raw);
       }
 
       if (isAdmin && results[2] && results[2].status === "fulfilled") {
-        const raw = results[2].value?.data?.data ?? results[2].value?.data ?? [];
+        const raw =
+          results[2].value?.data?.data ?? results[2].value?.data ?? [];
         setAllLeaves(Array.isArray(raw) ? raw : []);
       }
     } catch (err) {
@@ -100,6 +99,44 @@ export default function LeaveManagementPage() {
     return allLeaves.filter((l) => l.status === "PENDING").length;
   }, [allLeaves]);
 
+  // Dynamically compute stats based on active tab:
+  // When Admin is on "Admin Approvals Queue", show organization-wide stats across all employees.
+  // When on "My Personal Leaves" (or for regular employees), show personal leave stats.
+  const currentStats = useMemo(() => {
+    if (isAdmin && activeTab === "approvals") {
+      const pending = allLeaves.filter((l) => l.status === "PENDING").length;
+      const approved = allLeaves.filter((l) => l.status === "APPROVED").length;
+      const rejected = allLeaves.filter((l) => l.status === "REJECTED").length;
+      const totalApprovedDays = allLeaves
+        .filter((l) => l.status === "APPROVED")
+        .reduce((sum, l) => sum + (Number(l.totalDays) || 0), 0);
+
+      return {
+        pending,
+        approved,
+        rejected,
+        totalApprovedDays: Math.round(totalApprovedDays * 10) / 10,
+        isOrgLevel: true,
+      };
+    }
+
+    const pending = myLeaves.filter((l) => l.status === "PENDING").length;
+    const approved = myLeaves.filter((l) => l.status === "APPROVED").length;
+    const rejected = myLeaves.filter((l) => l.status === "REJECTED").length;
+    const totalApprovedDays = myLeaves
+      .filter((l) => l.status === "APPROVED")
+      .reduce((sum, l) => sum + (Number(l.totalDays) || 0), 0);
+
+    return {
+      pending: stats.pending ?? pending,
+      approved: stats.approved ?? approved,
+      rejected: stats.rejected ?? rejected,
+      totalApprovedDays:
+        stats.totalApprovedDays ?? Math.round(totalApprovedDays * 10) / 10,
+      isOrgLevel: false,
+    };
+  }, [isAdmin, activeTab, allLeaves, myLeaves, stats]);
+
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* Top Header */}
@@ -113,7 +150,8 @@ export default function LeaveManagementPage() {
               Leave Management System
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Apply for leaves, track approval status, and manage employee leave requests
+              Apply for leaves, track approval status, and manage employee leave
+              requests
             </p>
           </div>
         </div>
@@ -125,7 +163,9 @@ export default function LeaveManagementPage() {
             disabled={loading}
             className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 active:scale-95 transition cursor-pointer"
           >
-            <FiRefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-blue-600" : "text-slate-500"}`} />
+            <FiRefreshCw
+              className={`h-3.5 w-3.5 ${loading ? "animate-spin text-blue-600" : "text-slate-500"}`}
+            />
             <span className="hidden sm:inline">Refresh</span>
           </button>
 
@@ -146,15 +186,19 @@ export default function LeaveManagementPage() {
         <div className="rounded-2xl border border-amber-200/90 bg-amber-50/60 p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-              Pending Approvals
+              {currentStats.isOrgLevel
+                ? "Pending Approvals"
+                : "My Pending Requests"}
             </span>
             <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-amber-900">
-            {isAdmin ? pendingApprovalsCount : stats.pending || 0}
+            {currentStats.pending}
           </div>
           <p className="text-[10px] font-medium text-amber-700 mt-0.5">
-            {isAdmin ? "Awaiting your review" : "Awaiting Admin action"}
+            {currentStats.isOrgLevel
+              ? "Awaiting your review"
+              : "Awaiting Admin action"}
           </p>
         </div>
 
@@ -162,15 +206,19 @@ export default function LeaveManagementPage() {
         <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-              Approved Leaves
+              {currentStats.isOrgLevel
+                ? "Approved Leaves (Org)"
+                : "My Approved Leaves"}
             </span>
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-emerald-900">
-            {stats.approved || 0}
+            {currentStats.approved}
           </div>
           <p className="text-[10px] font-medium text-emerald-700 mt-0.5">
-            Active on Attendance Calendar
+            {currentStats.isOrgLevel
+              ? "Active across organization"
+              : "Active on Attendance Calendar"}
           </p>
         </div>
 
@@ -178,15 +226,20 @@ export default function LeaveManagementPage() {
         <div className="rounded-2xl border border-blue-200/90 bg-blue-50/60 p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
-              Approved Days
+              {currentStats.isOrgLevel
+                ? "Approved Days (Org)"
+                : "My Approved Days"}
             </span>
             <FiClock className="h-3.5 w-3.5 text-blue-600" />
           </div>
           <div className="mt-2 text-2xl font-black text-blue-950 font-mono">
-            {stats.totalApprovedDays || 0} <span className="text-xs font-bold text-blue-700">days</span>
+            {currentStats.totalApprovedDays}{" "}
+            <span className="text-xs font-bold text-blue-700">days</span>
           </div>
           <p className="text-[10px] font-medium text-blue-700 mt-0.5">
-            Total days approved
+            {currentStats.isOrgLevel
+              ? "Total employee days approved"
+              : "My total approved days"}
           </p>
         </div>
 
@@ -194,15 +247,19 @@ export default function LeaveManagementPage() {
         <div className="rounded-2xl border border-rose-200/90 bg-rose-50/60 p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">
-              Rejected Requests
+              {currentStats.isOrgLevel
+                ? "Rejected Requests"
+                : "My Rejected Requests"}
             </span>
             <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-rose-900">
-            {stats.rejected || 0}
+            {currentStats.rejected}
           </div>
           <p className="text-[10px] font-medium text-rose-700 mt-0.5">
-            Declined requests
+            {currentStats.isOrgLevel
+              ? "Declined across organization"
+              : "My declined requests"}
           </p>
         </div>
       </div>

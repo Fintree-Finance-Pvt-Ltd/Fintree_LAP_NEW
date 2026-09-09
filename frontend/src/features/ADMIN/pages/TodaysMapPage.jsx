@@ -1,39 +1,34 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Navigate } from "react-router-dom";
-import {
-  FiMapPin,
-  FiClock,
-  FiActivity,
-  FiUser,
-  FiRefreshCw,
-  FiNavigation,
-  FiCheckCircle,
-  FiCompass,
-  FiFlag,
-  FiMaximize2,
-  FiSearch,
-  FiList,
-  FiMap,
-  FiUsers,
-  FiCalendar,
-  FiChevronRight,
-  FiArrowLeft,
-  FiLayers,
-  FiEye,
-  FiZap,
-} from "react-icons/fi";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FiActivity,
+  FiArrowLeft,
+  FiCalendar,
+  FiCheckCircle,
+  FiChevronRight,
+  FiClock,
+  FiCompass,
+  FiMap,
+  FiMapPin,
+  FiMaximize2,
+  FiRefreshCw,
+  FiSearch,
+  FiUsers
+} from "react-icons/fi";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth.js";
-import { attendanceApi } from "../../attendance/attendanceApi.js";
 import { fetchRoadRoute } from "../../../utils/geoUtils.js";
+import { attendanceApi } from "../../attendance/attendanceApi.js";
 
 // Helper: Normalize roles
 function normalizeRoles(user) {
   const roles = user?.roles ?? user?.role;
   if (!roles) return [];
   return (Array.isArray(roles) ? roles : [roles])
-    .map((role) => String(role?.code || role?.name || role?.role || role).toUpperCase())
+    .map((role) =>
+      String(role?.code || role?.name || role?.role || role).toUpperCase(),
+    )
     .filter(Boolean);
 }
 
@@ -89,12 +84,18 @@ const USER_ROUTE_COLORS = [
 ];
 
 function getUserColor(userId, index = 0) {
-  const num = Number(userId) || (index + 1);
+  const num = Number(userId) || index + 1;
   return USER_ROUTE_COLORS[(num - 1) % USER_ROUTE_COLORS.length];
 }
 
 // Custom Leaflet Named User Marker Icon (Shows Full User Name on Top + Pin)
-const createNamedUserMarkerIcon = ({ name, color, initials, isLive = false, subtitle = "" }) => {
+const createNamedUserMarkerIcon = ({
+  name,
+  color,
+  initials,
+  isLive = false,
+  subtitle = "",
+}) => {
   return L.divIcon({
     className: "custom-user-named-marker",
     html: `
@@ -116,7 +117,7 @@ const createNamedUserMarkerIcon = ({ name, color, initials, isLive = false, subt
           margin-bottom: 2px;
           user-select: none;
         ">
-          <span style="width: 7px; height: 7px; border-radius: 50%; background: ${isLive ? '#10b981' : color};"></span>
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: ${isLive ? "#10b981" : color};"></span>
           <span>${name}</span>
           ${subtitle ? `<span style="font-size: 9px; opacity: 0.8; font-weight: normal;">• ${subtitle}</span>` : ""}
           ${isLive ? '<span style="font-size: 9px; color: #34d399; font-weight: bold;">(Live)</span>' : ""}
@@ -261,7 +262,10 @@ export default function TodaysMapPage() {
   const [travelMode, setTravelMode] = useState("exact"); // "exact" | "road"
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [mobileView, setMobileView] = useState("map"); // "map" | "list"
-  const [roadRouteStats, setRoadRouteStats] = useState({ distanceKm: 0, isRoad: false });
+  const [roadRouteStats, setRoadRouteStats] = useState({
+    distanceKm: 0,
+    isRoad: false,
+  });
 
   // Refs for Leaflet
   const mapContainerRef = useRef(null);
@@ -278,10 +282,18 @@ export default function TodaysMapPage() {
       try {
         let rawResponse = null;
         try {
-          rawResponse = await attendanceApi.getTodaysMap({ date: selectedDate });
+          rawResponse = await attendanceApi.getTodaysMap({
+            date: selectedDate,
+          });
         } catch (apiErr) {
-          console.warn("getTodaysMap endpoint fallback to getAll:", apiErr?.message);
-          rawResponse = await attendanceApi.getAll({ date: selectedDate, limit: 300 });
+          console.warn(
+            "getTodaysMap endpoint fallback to getAll:",
+            apiErr?.message,
+          );
+          rawResponse = await attendanceApi.getAll({
+            date: selectedDate,
+            limit: 300,
+          });
         }
 
         // Handle various response wrappers
@@ -296,7 +308,8 @@ export default function TodaysMapPage() {
             extractedStats = rawResponse.stats || null;
           } else if (Array.isArray(rawResponse.data?.data)) {
             records = rawResponse.data.data;
-            extractedStats = rawResponse.data.stats || rawResponse.stats || null;
+            extractedStats =
+              rawResponse.data.stats || rawResponse.stats || null;
           } else if (Array.isArray(rawResponse.items)) {
             records = rawResponse.items;
             extractedStats = rawResponse.stats || null;
@@ -341,16 +354,42 @@ export default function TodaysMapPage() {
             ...r,
             id: r.id,
             userId: r.userId || r.user_id,
-            user: r.user || (r.userId ? { id: r.userId, name: `Employee #${r.userId}` } : null),
-            startLatitude: startLat !== null && !isNaN(Number(startLat)) ? Number(startLat) : null,
-            startLongitude: startLng !== null && !isNaN(Number(startLng)) ? Number(startLng) : null,
-            currentLatitude: currentLat !== null && !isNaN(Number(currentLat)) ? Number(currentLat) : null,
-            currentLongitude: currentLng !== null && !isNaN(Number(currentLng)) ? Number(currentLng) : null,
-            endLatitude: endLat !== null && !isNaN(Number(endLat)) ? Number(endLat) : null,
-            endLongitude: endLng !== null && !isNaN(Number(endLng)) ? Number(endLng) : null,
-            latestLatitude: latestLat !== null && !isNaN(Number(latestLat)) ? Number(latestLat) : null,
-            latestLongitude: latestLng !== null && !isNaN(Number(latestLng)) ? Number(latestLng) : null,
-            totalDistanceKm: Number(r.totalDistanceKm || r.total_distance_km || 0),
+            user:
+              r.user ||
+              (r.userId
+                ? { id: r.userId, name: `Employee #${r.userId}` }
+                : null),
+            startLatitude:
+              startLat !== null && !isNaN(Number(startLat))
+                ? Number(startLat)
+                : null,
+            startLongitude:
+              startLng !== null && !isNaN(Number(startLng))
+                ? Number(startLng)
+                : null,
+            currentLatitude:
+              currentLat !== null && !isNaN(Number(currentLat))
+                ? Number(currentLat)
+                : null,
+            currentLongitude:
+              currentLng !== null && !isNaN(Number(currentLng))
+                ? Number(currentLng)
+                : null,
+            endLatitude:
+              endLat !== null && !isNaN(Number(endLat)) ? Number(endLat) : null,
+            endLongitude:
+              endLng !== null && !isNaN(Number(endLng)) ? Number(endLng) : null,
+            latestLatitude:
+              latestLat !== null && !isNaN(Number(latestLat))
+                ? Number(latestLat)
+                : null,
+            latestLongitude:
+              latestLng !== null && !isNaN(Number(latestLng))
+                ? Number(latestLng)
+                : null,
+            totalDistanceKm: Number(
+              r.totalDistanceKm || r.total_distance_km || 0,
+            ),
             totalHours: r.totalHours || r.total_hours || "In progress",
             status: r.status,
             points,
@@ -358,18 +397,22 @@ export default function TodaysMapPage() {
         });
 
         // Compute statistics if not provided directly
-        const activeCount = formattedRecords.filter((r) => r.status === "IN_PROGRESS").length;
-        const completedCount = formattedRecords.filter((r) => r.status === "COMPLETED").length;
+        const activeCount = formattedRecords.filter(
+          (r) => r.status === "IN_PROGRESS",
+        ).length;
+        const completedCount = formattedRecords.filter(
+          (r) => r.status === "COMPLETED",
+        ).length;
         const autoEndedCount = formattedRecords.filter(
           (r) =>
             r.status === "AUTO_END_WORK" ||
             r.status === "auto_end_work" ||
             r.status === "AUTO_ENDED" ||
-            r.status === "END_WORK_HOUR"
+            r.status === "END_WORK_HOUR",
         ).length;
         const totalDistanceKm = formattedRecords.reduce(
           (sum, r) => sum + (Number(r.totalDistanceKm) || 0),
-          0
+          0,
         );
 
         const computedStats = extractedStats || {
@@ -390,7 +433,7 @@ export default function TodaysMapPage() {
         if (!silent) setLoading(false);
       }
     },
-    [selectedDate, isAdmin]
+    [selectedDate, isAdmin],
   );
 
   // Helper to select an employee and load their full route if not already loaded
@@ -425,8 +468,14 @@ export default function TodaysMapPage() {
   // Map resize invalidation when mobile view toggles
   useEffect(() => {
     if (mobileView === "map" && mapInstanceRef.current) {
-      const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 100);
-      const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 300);
+      const t1 = setTimeout(
+        () => mapInstanceRef.current?.invalidateSize?.(),
+        100,
+      );
+      const t2 = setTimeout(
+        () => mapInstanceRef.current?.invalidateSize?.(),
+        300,
+      );
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
@@ -525,9 +574,13 @@ export default function TodaysMapPage() {
       const startLat = selectedUser.startLatitude;
       const startLng = selectedUser.startLongitude;
       const endLat =
-        selectedUser.endLatitude ?? selectedUser.currentLatitude ?? (points.length > 0 ? points[points.length - 1].latitude : null);
+        selectedUser.endLatitude ??
+        selectedUser.currentLatitude ??
+        (points.length > 0 ? points[points.length - 1].latitude : null);
       const endLng =
-        selectedUser.endLongitude ?? selectedUser.currentLongitude ?? (points.length > 0 ? points[points.length - 1].longitude : null);
+        selectedUser.endLongitude ??
+        selectedUser.currentLongitude ??
+        (points.length > 0 ? points[points.length - 1].longitude : null);
 
       const routeCoords = [];
 
@@ -546,14 +599,17 @@ export default function TodaysMapPage() {
       // End / Current coordinate
       if (endLat && endLng) {
         const exists = routeCoords.some(
-          ([la, lo]) => Math.abs(la - Number(endLat)) < 0.0001 && Math.abs(lo - Number(endLng)) < 0.0001
+          ([la, lo]) =>
+            Math.abs(la - Number(endLat)) < 0.0001 &&
+            Math.abs(lo - Number(endLng)) < 0.0001,
         );
         if (!exists) {
           routeCoords.push([Number(endLat), Number(endLng)]);
         }
       }
 
-      const userName = selectedUser.user?.name || `Employee #${selectedUser.userId}`;
+      const userName =
+        selectedUser.user?.name || `Employee #${selectedUser.userId}`;
       const userColor = getUserColor(selectedUser.userId || selectedUser.id, 0);
 
       // Add Start Marker with Name
@@ -575,7 +631,9 @@ export default function TodaysMapPage() {
       // Add Waypoint Markers
       points.forEach((pt, idx) => {
         if (!pt.latitude || !pt.longitude) return;
-        const wpMarker = L.marker([Number(pt.latitude), Number(pt.longitude)], { icon: waypointIcon }).bindPopup(`
+        const wpMarker = L.marker([Number(pt.latitude), Number(pt.longitude)], {
+          icon: waypointIcon,
+        }).bindPopup(`
           <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #0f172a; padding: 2px;">
             <b style="color: #4f46e5; font-size: 13px;">📍 Waypoint #${idx + 1}</b><br/>
             <b>Time:</b> ${formatTime(pt.recordedAt)}<br/>
@@ -600,14 +658,20 @@ export default function TodaysMapPage() {
           .substring(0, 2)
           .toUpperCase();
 
-        const color = isLive ? "#2563eb" : selectedUser.status === "COMPLETED" ? "#10b981" : "#f59e0b";
+        const color = isLive
+          ? "#2563eb"
+          : selectedUser.status === "COMPLETED"
+            ? "#10b981"
+            : "#f59e0b";
         const endMarker = L.marker([Number(finalLat), Number(finalLng)], {
           icon: createNamedUserMarkerIcon({
             name: userName,
             color,
             initials,
             isLive,
-            subtitle: selectedUser.totalDistanceKm ? `${selectedUser.totalDistanceKm} km` : "",
+            subtitle: selectedUser.totalDistanceKm
+              ? `${selectedUser.totalDistanceKm} km`
+              : "",
           }),
         }).bindPopup(`
           <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; color: #0f172a; padding: 2px;">
@@ -647,14 +711,23 @@ export default function TodaysMapPage() {
           polylineRef.current = polyline;
 
           try {
-            map.fitBounds(polyline.getBounds(), { padding: [50, 50], maxZoom: 16 });
+            map.fitBounds(polyline.getBounds(), {
+              padding: [50, 50],
+              maxZoom: 16,
+            });
           } catch (_) {}
         } else {
           // Road snapped route via OSRM
           fetchRoadRoute(routeCoords).then((res) => {
             if (!mapInstanceRef.current) return;
-            const roadPts = res.roadCoordinates?.length > 0 ? res.roadCoordinates : routeCoords;
-            setRoadRouteStats({ distanceKm: res.distanceKm, isRoad: res.isRoadRoute });
+            const roadPts =
+              res.roadCoordinates?.length > 0
+                ? res.roadCoordinates
+                : routeCoords;
+            setRoadRouteStats({
+              distanceKm: res.distanceKm,
+              isRoad: res.isRoadRoute,
+            });
 
             const glow = L.polyline(roadPts, {
               color: userColor,
@@ -676,7 +749,10 @@ export default function TodaysMapPage() {
             polylineRef.current = polyline;
 
             try {
-              map.fitBounds(polyline.getBounds(), { padding: [50, 50], maxZoom: 16 });
+              map.fitBounds(polyline.getBounds(), {
+                padding: [50, 50],
+                maxZoom: 16,
+              });
             } catch (_) {}
           });
         }
@@ -722,12 +798,22 @@ export default function TodaysMapPage() {
           }
         });
 
-        const latestLat = currentLat ?? endLat ?? startLat ?? (points.length > 0 ? points[points.length - 1].latitude : null);
-        const latestLng = currentLng ?? endLng ?? startLng ?? (points.length > 0 ? points[points.length - 1].longitude : null);
+        const latestLat =
+          currentLat ??
+          endLat ??
+          startLat ??
+          (points.length > 0 ? points[points.length - 1].latitude : null);
+        const latestLng =
+          currentLng ??
+          endLng ??
+          startLng ??
+          (points.length > 0 ? points[points.length - 1].longitude : null);
 
         if (latestLat && latestLng) {
           const exists = userRouteCoords.some(
-            ([la, lo]) => Math.abs(la - Number(latestLat)) < 0.0001 && Math.abs(lo - Number(latestLng)) < 0.0001
+            ([la, lo]) =>
+              Math.abs(la - Number(latestLat)) < 0.0001 &&
+              Math.abs(lo - Number(latestLng)) < 0.0001,
           );
           if (!exists) {
             userRouteCoords.push([Number(latestLat), Number(latestLng)]);
@@ -785,7 +871,9 @@ export default function TodaysMapPage() {
               color: userColor,
               initials,
               isLive,
-              subtitle: item.totalDistanceKm ? `${item.totalDistanceKm} km` : "",
+              subtitle: item.totalDistanceKm
+                ? `${item.totalDistanceKm} km`
+                : "",
             }),
           });
 
@@ -858,20 +946,34 @@ export default function TodaysMapPage() {
 
     if (selectedUser && polylineRef.current) {
       try {
-        map.fitBounds(polylineRef.current.getBounds(), { padding: [50, 50], maxZoom: 16 });
+        map.fitBounds(polylineRef.current.getBounds(), {
+          padding: [50, 50],
+          maxZoom: 16,
+        });
       } catch (_) {}
     } else {
       const coords = filteredRecords
         .map((r) => {
-          const lat = r.latestLatitude ?? r.currentLatitude ?? r.endLatitude ?? r.startLatitude;
-          const lng = r.latestLongitude ?? r.currentLongitude ?? r.endLongitude ?? r.startLongitude;
+          const lat =
+            r.latestLatitude ??
+            r.currentLatitude ??
+            r.endLatitude ??
+            r.startLatitude;
+          const lng =
+            r.latestLongitude ??
+            r.currentLongitude ??
+            r.endLongitude ??
+            r.startLongitude;
           return lat && lng ? [Number(lat), Number(lng)] : null;
         })
         .filter(Boolean);
 
       if (coords.length > 0) {
         try {
-          map.fitBounds(L.latLngBounds(coords), { padding: [50, 50], maxZoom: 14 });
+          map.fitBounds(L.latLngBounds(coords), {
+            padding: [50, 50],
+            maxZoom: 14,
+          });
         } catch (_) {}
       }
     }
@@ -884,17 +986,21 @@ export default function TodaysMapPage() {
 
   const stats = mapData.stats || {
     totalUsers: mapData.data?.length || 0,
-    activeCount: mapData.data?.filter((r) => r.status === "IN_PROGRESS").length || 0,
-    completedCount: mapData.data?.filter((r) => r.status === "COMPLETED").length || 0,
+    activeCount:
+      mapData.data?.filter((r) => r.status === "IN_PROGRESS").length || 0,
+    completedCount:
+      mapData.data?.filter((r) => r.status === "COMPLETED").length || 0,
     autoEndedCount:
       mapData.data?.filter(
         (r) =>
           r.status === "AUTO_END_WORK" ||
           r.status === "auto_end_work" ||
           r.status === "AUTO_ENDED" ||
-          r.status === "END_WORK_HOUR"
+          r.status === "END_WORK_HOUR",
       ).length || 0,
-    totalDistanceKm: mapData.data?.reduce((s, r) => s + (Number(r.totalDistanceKm) || 0), 0) || 0,
+    totalDistanceKm:
+      mapData.data?.reduce((s, r) => s + (Number(r.totalDistanceKm) || 0), 0) ||
+      0,
   };
 
   return (
@@ -909,12 +1015,16 @@ export default function TodaysMapPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-white sm:text-lg">Today&apos;s Live Map</h1>
+                <h1 className="text-base font-bold text-white sm:text-lg">
+                  Today&apos;s Live Map
+                </h1>
                 <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold text-cyan-300 border border-cyan-400/30">
                   ADMIN ONLY
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Real-time user locations, movement status & travel routes</p>
+              <p className="text-xs text-slate-400">
+                Real-time user locations, movement status & travel routes
+              </p>
             </div>
           </div>
 
@@ -926,8 +1036,14 @@ export default function TodaysMapPage() {
                 type="button"
                 onClick={() => {
                   setMobileView("map");
-                  setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 100);
-                  setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 300);
+                  setTimeout(
+                    () => mapInstanceRef.current?.invalidateSize?.(),
+                    100,
+                  );
+                  setTimeout(
+                    () => mapInstanceRef.current?.invalidateSize?.(),
+                    300,
+                  );
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
                   mobileView === "map"
@@ -946,7 +1062,8 @@ export default function TodaysMapPage() {
                     : "text-slate-400 hover:text-white"
                 }`}
               >
-                <FiUsers className="h-3.5 w-3.5" /> Users ({filteredRecords.length})
+                <FiUsers className="h-3.5 w-3.5" /> Users (
+                {filteredRecords.length})
               </button>
             </div>
 
@@ -1003,7 +1120,9 @@ export default function TodaysMapPage() {
               }`}
               title="Auto-refresh live locations every 15 seconds"
             >
-              <span className={`h-2 w-2 rounded-full ${autoRefresh ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
+              <span
+                className={`h-2 w-2 rounded-full ${autoRefresh ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}
+              />
               <span className="hidden sm:inline">Live 15s</span>
             </button>
 
@@ -1015,7 +1134,9 @@ export default function TodaysMapPage() {
               className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white active:scale-95 disabled:opacity-50"
               title="Refresh GPS Data"
             >
-              <FiRefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-blue-400" : ""}`} />
+              <FiRefreshCw
+                className={`h-4 w-4 ${loading ? "animate-spin text-blue-400" : ""}`}
+              />
             </button>
           </div>
         </div>
@@ -1027,8 +1148,12 @@ export default function TodaysMapPage() {
               <FiUsers />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Total Users</div>
-              <div className="text-sm font-bold text-white">{stats.totalUsers}</div>
+              <div className="text-[10px] uppercase font-bold text-slate-400">
+                Total Users
+              </div>
+              <div className="text-sm font-bold text-white">
+                {stats.totalUsers}
+              </div>
             </div>
           </div>
 
@@ -1037,8 +1162,12 @@ export default function TodaysMapPage() {
               <FiActivity className="animate-pulse" />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] uppercase font-bold text-blue-300">Working Now</div>
-              <div className="text-sm font-bold text-blue-400">{stats.activeCount} Live</div>
+              <div className="text-[10px] uppercase font-bold text-blue-300">
+                Working Now
+              </div>
+              <div className="text-sm font-bold text-blue-400">
+                {stats.activeCount} Live
+              </div>
             </div>
           </div>
 
@@ -1047,8 +1176,12 @@ export default function TodaysMapPage() {
               <FiCheckCircle />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] uppercase font-bold text-emerald-300">Completed</div>
-              <div className="text-sm font-bold text-emerald-400">{stats.completedCount}</div>
+              <div className="text-[10px] uppercase font-bold text-emerald-300">
+                Completed
+              </div>
+              <div className="text-sm font-bold text-emerald-400">
+                {stats.completedCount}
+              </div>
             </div>
           </div>
 
@@ -1057,8 +1190,12 @@ export default function TodaysMapPage() {
               <FiClock />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] uppercase font-bold text-amber-300">Auto Ended</div>
-              <div className="text-sm font-bold text-amber-400">{stats.autoEndedCount}</div>
+              <div className="text-[10px] uppercase font-bold text-amber-300">
+                Auto Ended
+              </div>
+              <div className="text-sm font-bold text-amber-400">
+                {stats.autoEndedCount}
+              </div>
             </div>
           </div>
 
@@ -1067,8 +1204,12 @@ export default function TodaysMapPage() {
               <FiCompass />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] uppercase font-bold text-cyan-300">Total Distance</div>
-              <div className="text-sm font-bold text-cyan-400">{stats.totalDistanceKm} km</div>
+              <div className="text-[10px] uppercase font-bold text-cyan-300">
+                Total Distance
+              </div>
+              <div className="text-sm font-bold text-cyan-400">
+                {stats.totalDistanceKm} km
+              </div>
             </div>
           </div>
         </div>
@@ -1099,7 +1240,9 @@ export default function TodaysMapPage() {
                     type="button"
                     onClick={() => setActiveTab("list")}
                     className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
-                      activeTab === "list" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+                      activeTab === "list"
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-400 hover:text-white"
                     }`}
                   >
                     User Info
@@ -1108,7 +1251,9 @@ export default function TodaysMapPage() {
                     type="button"
                     onClick={() => setActiveTab("timeline")}
                     className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
-                      activeTab === "timeline" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+                      activeTab === "timeline"
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-400 hover:text-white"
                     }`}
                   >
                     Timeline ({selectedUser.points?.length || 0})
@@ -1134,8 +1279,14 @@ export default function TodaysMapPage() {
                   {[
                     { id: "ALL", label: `All (${mapData.data?.length || 0})` },
                     { id: "IN_PROGRESS", label: `Live (${stats.activeCount})` },
-                    { id: "COMPLETED", label: `Done (${stats.completedCount})` },
-                    { id: "AUTO_END_WORK", label: `Auto-End (${stats.autoEndedCount})` },
+                    {
+                      id: "COMPLETED",
+                      label: `Done (${stats.completedCount})`,
+                    },
+                    {
+                      id: "AUTO_END_WORK",
+                      label: `Auto-End (${stats.autoEndedCount})`,
+                    },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -1172,34 +1323,47 @@ export default function TodaysMapPage() {
                           .toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-bold text-white truncate">{selectedUser.user?.name || `Employee #${selectedUser.userId}`}</h3>
-                        <p className="text-xs text-slate-400 truncate">{selectedUser.user?.email || "No email"}</p>
+                        <h3 className="text-sm font-bold text-white truncate">
+                          {selectedUser.user?.name ||
+                            `Employee #${selectedUser.userId}`}
+                        </h3>
+                        <p className="text-xs text-slate-400 truncate">
+                          {selectedUser.user?.email || "No email"}
+                        </p>
                         <span
                           className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold ${
                             selectedUser.status === "IN_PROGRESS"
                               ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 animate-pulse"
                               : selectedUser.status === "COMPLETED"
-                              ? "bg-blue-500/20 text-blue-300 border border-blue-400/30"
-                              : "bg-amber-500/20 text-amber-300 border border-amber-400/30"
+                                ? "bg-blue-500/20 text-blue-300 border border-blue-400/30"
+                                : "bg-amber-500/20 text-amber-300 border border-amber-400/30"
                           }`}
                         >
                           {selectedUser.status === "IN_PROGRESS"
                             ? "Active / Working Now"
                             : selectedUser.status === "COMPLETED"
-                            ? "Shift Completed"
-                            : "Auto Ended at 10 PM"}
+                              ? "Shift Completed"
+                              : "Auto Ended at 10 PM"}
                         </span>
                       </div>
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 gap-2 text-xs border-t border-white/10 pt-3">
                       <div>
-                        <span className="text-[10px] text-slate-400">Total Distance</span>
-                        <div className="font-bold text-cyan-300">{selectedUser.totalDistanceKm || 0} km</div>
+                        <span className="text-[10px] text-slate-400">
+                          Total Distance
+                        </span>
+                        <div className="font-bold text-cyan-300">
+                          {selectedUser.totalDistanceKm || 0} km
+                        </div>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400">Shift Duration</span>
-                        <div className="font-bold text-amber-300">{selectedUser.totalHours || "In progress"}</div>
+                        <span className="text-[10px] text-slate-400">
+                          Shift Duration
+                        </span>
+                        <div className="font-bold text-amber-300">
+                          {selectedUser.totalHours || "In progress"}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1207,13 +1371,20 @@ export default function TodaysMapPage() {
                   {/* Punch In */}
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs">
                     <div className="flex items-center justify-between text-emerald-400 font-bold mb-1">
-                      <span className="flex items-center gap-1">🟢 Punch In (Start)</span>
-                      <span className="font-mono text-[11px] text-slate-300">{formatTime(selectedUser.startTime)}</span>
+                      <span className="flex items-center gap-1">
+                        🟢 Punch In (Start)
+                      </span>
+                      <span className="font-mono text-[11px] text-slate-300">
+                        {formatTime(selectedUser.startTime)}
+                      </span>
                     </div>
-                    <p className="text-slate-300 truncate">{selectedUser.startLocation || "Office Workspace"}</p>
+                    <p className="text-slate-300 truncate">
+                      {selectedUser.startLocation || "Office Workspace"}
+                    </p>
                     {selectedUser.startLatitude && (
                       <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                        Coords: {Number(selectedUser.startLatitude).toFixed(4)}, {Number(selectedUser.startLongitude).toFixed(4)}
+                        Coords: {Number(selectedUser.startLatitude).toFixed(4)},{" "}
+                        {Number(selectedUser.startLongitude).toFixed(4)}
                       </p>
                     )}
                   </div>
@@ -1222,19 +1393,34 @@ export default function TodaysMapPage() {
                   <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-xs">
                     <div className="flex items-center justify-between text-blue-400 font-bold mb-1">
                       <span className="flex items-center gap-1">
-                        {selectedUser.status === "IN_PROGRESS" ? "📡 Current Live Location" : "🔴 Punch Out (End)"}
+                        {selectedUser.status === "IN_PROGRESS"
+                          ? "📡 Current Live Location"
+                          : "🔴 Punch Out (End)"}
                       </span>
                       <span className="font-mono text-[11px] text-slate-300">
-                        {formatTime(selectedUser.endTime || selectedUser.lastTrackedAt)}
+                        {formatTime(
+                          selectedUser.endTime || selectedUser.lastTrackedAt,
+                        )}
                       </span>
                     </div>
                     <p className="text-slate-300 truncate">
-                      {selectedUser.endLocation || selectedUser.currentLocation || "Location recorded"}
+                      {selectedUser.endLocation ||
+                        selectedUser.currentLocation ||
+                        "Location recorded"}
                     </p>
-                    {(selectedUser.endLatitude || selectedUser.currentLatitude) && (
+                    {(selectedUser.endLatitude ||
+                      selectedUser.currentLatitude) && (
                       <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                        Coords: {Number(selectedUser.endLatitude || selectedUser.currentLatitude).toFixed(4)},{" "}
-                        {Number(selectedUser.endLongitude || selectedUser.currentLongitude).toFixed(4)}
+                        Coords:{" "}
+                        {Number(
+                          selectedUser.endLatitude ||
+                            selectedUser.currentLatitude,
+                        ).toFixed(4)}
+                        ,{" "}
+                        {Number(
+                          selectedUser.endLongitude ||
+                            selectedUser.currentLongitude,
+                        ).toFixed(4)}
                       </p>
                     )}
                   </div>
@@ -1246,9 +1432,13 @@ export default function TodaysMapPage() {
                   <div className="rounded-xl border border-emerald-500/30 bg-white/5 p-2.5">
                     <div className="flex items-center justify-between font-bold text-emerald-400">
                       <span>🟢 Punch In</span>
-                      <span className="font-mono text-[11px] text-slate-400">{formatTime(selectedUser.startTime)}</span>
+                      <span className="font-mono text-[11px] text-slate-400">
+                        {formatTime(selectedUser.startTime)}
+                      </span>
                     </div>
-                    <p className="text-slate-300 mt-0.5 truncate">{selectedUser.startLocation || "Office"}</p>
+                    <p className="text-slate-300 mt-0.5 truncate">
+                      {selectedUser.startLocation || "Office"}
+                    </p>
                   </div>
 
                   {/* Waypoints */}
@@ -1258,15 +1448,25 @@ export default function TodaysMapPage() {
                     </div>
                   ) : (
                     selectedUser.points.map((pt, i) => (
-                      <div key={pt.id || i} className="rounded-xl border border-white/5 bg-white/5 p-2.5 hover:border-indigo-500/30 transition">
+                      <div
+                        key={pt.id || i}
+                        className="rounded-xl border border-white/5 bg-white/5 p-2.5 hover:border-indigo-500/30 transition"
+                      >
                         <div className="flex items-center justify-between font-semibold text-indigo-300">
                           <span>📍 Stop #{i + 1}</span>
-                          <span className="font-mono text-[11px] text-slate-400">{formatTime(pt.recordedAt)}</span>
+                          <span className="font-mono text-[11px] text-slate-400">
+                            {formatTime(pt.recordedAt)}
+                          </span>
                         </div>
-                        <p className="text-slate-300 mt-0.5 truncate">{pt.locationName || "Trail waypoint"}</p>
+                        <p className="text-slate-300 mt-0.5 truncate">
+                          {pt.locationName || "Trail waypoint"}
+                        </p>
                         <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                          {Number(pt.latitude).toFixed(4)}, {Number(pt.longitude).toFixed(4)}
-                          {pt.speed ? ` • ${(pt.speed * 3.6).toFixed(1)} km/h` : ""}
+                          {Number(pt.latitude).toFixed(4)},{" "}
+                          {Number(pt.longitude).toFixed(4)}
+                          {pt.speed
+                            ? ` • ${(pt.speed * 3.6).toFixed(1)} km/h`
+                            : ""}
                         </p>
                       </div>
                     ))
@@ -1275,13 +1475,21 @@ export default function TodaysMapPage() {
                   {/* End Point */}
                   <div className="rounded-xl border border-red-500/30 bg-white/5 p-2.5">
                     <div className="flex items-center justify-between font-bold text-red-400">
-                      <span>{selectedUser.status === "IN_PROGRESS" ? "📡 Current Live" : "🔴 Punch Out"}</span>
+                      <span>
+                        {selectedUser.status === "IN_PROGRESS"
+                          ? "📡 Current Live"
+                          : "🔴 Punch Out"}
+                      </span>
                       <span className="font-mono text-[11px] text-slate-400">
-                        {formatTime(selectedUser.endTime || selectedUser.lastTrackedAt)}
+                        {formatTime(
+                          selectedUser.endTime || selectedUser.lastTrackedAt,
+                        )}
                       </span>
                     </div>
                     <p className="text-slate-300 mt-0.5 truncate">
-                      {selectedUser.endLocation || selectedUser.currentLocation || "Location recorded"}
+                      {selectedUser.endLocation ||
+                        selectedUser.currentLocation ||
+                        "Location recorded"}
                     </p>
                   </div>
                 </div>
@@ -1289,9 +1497,13 @@ export default function TodaysMapPage() {
             ) : filteredRecords.length === 0 ? (
               <div className="rounded-2xl border border-white/5 bg-white/5 p-6 text-center text-slate-400 text-xs">
                 <FiUsers className="mx-auto h-8 w-8 text-slate-600 mb-2" />
-                <p className="font-semibold text-slate-300">No employees found</p>
+                <p className="font-semibold text-slate-300">
+                  No employees found
+                </p>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  {searchQuery ? "Try refining your search filter" : "No attendance recorded for this date"}
+                  {searchQuery
+                    ? "Try refining your search filter"
+                    : "No attendance recorded for this date"}
                 </p>
               </div>
             ) : (
@@ -1320,7 +1532,11 @@ export default function TodaysMapPage() {
                         </div>
                         <span
                           className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#0b1426] ${
-                            isLive ? "bg-emerald-400 animate-pulse" : isCompleted ? "bg-blue-400" : "bg-amber-400"
+                            isLive
+                              ? "bg-emerald-400 animate-pulse"
+                              : isCompleted
+                                ? "bg-blue-400"
+                                : "bg-amber-400"
                           }`}
                         />
                       </div>
@@ -1331,16 +1547,25 @@ export default function TodaysMapPage() {
                             {name}
                           </h4>
                           <span className="text-[10px] font-mono text-slate-400 shrink-0">
-                            {formatTime(item.lastTrackedAt || item.endTime || item.startTime)}
+                            {formatTime(
+                              item.lastTrackedAt ||
+                                item.endTime ||
+                                item.startTime,
+                            )}
                           </span>
                         </div>
 
                         <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                          {item.currentLocation || item.endLocation || item.startLocation || "Office Workspace"}
+                          {item.currentLocation ||
+                            item.endLocation ||
+                            item.startLocation ||
+                            "Office Workspace"}
                         </p>
 
                         <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-white/5 pt-1.5">
-                          <span className="font-semibold text-cyan-300">{item.totalDistanceKm || 0} km</span>
+                          <span className="font-semibold text-cyan-300">
+                            {item.totalDistanceKm || 0} km
+                          </span>
                           <span>{item.totalHours || "In progress"}</span>
                           <span className="flex items-center gap-0.5 text-blue-400 font-semibold group-hover:translate-x-0.5 transition">
                             Route <FiChevronRight className="h-3 w-3" />
@@ -1358,7 +1583,9 @@ export default function TodaysMapPage() {
         {/* Right Side: Interactive Leaflet Map */}
         <main
           className={`relative flex-1 w-full h-full overflow-hidden bg-slate-950 ${
-            mobileView === "map" ? "flex flex-col" : "hidden md:flex md:flex-col"
+            mobileView === "map"
+              ? "flex flex-col"
+              : "hidden md:flex md:flex-col"
           }`}
         >
           {/* Floating Top Route Controller (when user is selected) */}
@@ -1374,10 +1601,13 @@ export default function TodaysMapPage() {
                 </button>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-white truncate">
-                    {selectedUser.user?.name || `Employee #${selectedUser.userId}`} Route
+                    {selectedUser.user?.name ||
+                      `Employee #${selectedUser.userId}`}{" "}
+                    Route
                   </div>
                   <div className="text-[10px] text-slate-300">
-                    {selectedUser.totalDistanceKm || 0} km • {selectedUser.points?.length || 0} waypoints
+                    {selectedUser.totalDistanceKm || 0} km •{" "}
+                    {selectedUser.points?.length || 0} waypoints
                   </div>
                 </div>
               </div>
@@ -1439,13 +1669,16 @@ export default function TodaysMapPage() {
           {/* Map Legend (Bottom Right - Desktop) */}
           <div className="absolute bottom-6 right-16 z-[1001] hidden sm:flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/90 px-3 py-1.5 text-[11px] font-medium text-slate-300 shadow-xl backdrop-blur-md">
             <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Start / Done
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Start
+              / Done
             </span>
             <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" /> Live Working
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-500 animate-pulse" />{" "}
+              Live Working
             </span>
             <span className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Auto-Ended
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />{" "}
+              Auto-Ended
             </span>
           </div>
 

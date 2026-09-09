@@ -79,17 +79,25 @@ export class LeavesController {
     );
   }
 
-  /**
-   * Get leave KPI statistics
-   */
   @Get('stats')
   async getLeaveStats(
     @CurrentUser() user: { id: number; email: string; roles: string[] },
     @Query('userId') queryUserId?: string,
+    @Query('scope') scope?: string,
     @Query('month') month?: string,
   ) {
-    const isAdmin = user.roles?.includes(RoleCode.ADMIN);
-    const targetUserId = isAdmin && queryUserId ? parseInt(queryUserId, 10) : user.id;
+    const isAdmin =
+      user.roles?.includes(RoleCode.ADMIN) ||
+      (user.email && user.email.toLowerCase().includes('admin'));
+
+    let targetUserId: number | undefined = user.id;
+    if (isAdmin) {
+      if (scope === 'all' || queryUserId === 'all') {
+        targetUserId = undefined;
+      } else if (queryUserId && !isNaN(parseInt(queryUserId, 10))) {
+        targetUserId = parseInt(queryUserId, 10);
+      }
+    }
     return this.leavesService.getLeaveStats(targetUserId, month);
   }
 
