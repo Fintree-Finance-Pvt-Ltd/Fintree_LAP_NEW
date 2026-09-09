@@ -74,6 +74,9 @@ export class Application {
   })
   assignedTo?: number;
 
+  @Column({ name: 'next_follow_up_date', length: 30, nullable: true })
+  nextFollowUpDate?: string;
+
   @VersionColumn()
   version: number;
 

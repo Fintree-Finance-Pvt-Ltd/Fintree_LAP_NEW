@@ -1,11 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaChevronDown, FaPlus, FaSearch } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { FiNavigation, FiCompass, FiAlertCircle, FiCheckCircle } from "react-icons/fi";
+import { Link, useNavigate } from "react-router-dom";
 
 import { rmApi } from "../rmApi.js";
 import { formatCurrency, getNextWorkflowStep, statusClass } from "../rmUtils.js";
 import { bmApi } from "../../BM/bmApi.js";
+import { useAttendance } from "../../../context/AttendanceContext.jsx";
+import { useAuth } from "../../../hooks/useAuth.js";
+import TodayFollowUpsRouteModal from "../components/TodayFollowUpsRouteModal.jsx";
 
 const workflowStepsConfig = [
   { key: "leadCreated", label: "Lead Created" },
@@ -138,20 +142,57 @@ const getLocationLabel = (lead) => {
   );
 };
 
+const isDateToday = (dateValue) => {
+  if (!dateValue) return false;
+  const str = String(dateValue).trim();
+  if (!str) return false;
+
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const todayIso = `${y}-${m}-${d}`;
+
+  if (str.startsWith(todayIso)) return true;
+
+  // Try parsing ISO / standard date
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    return (
+      parsed.getFullYear() === now.getFullYear() &&
+      parsed.getMonth() === now.getMonth() &&
+      parsed.getDate() === now.getDate()
+    );
+  }
+
+  // DD-MM-YYYY or DD/MM/YYYY
+  const parts = str.split(/[-/]/);
+  if (parts.length === 3) {
+    if (
+      (parts[0] === d || Number(parts[0]) === now.getDate()) &&
+      (parts[1] === m || Number(parts[1]) === now.getMonth() + 1) &&
+      Number(parts[2]) === y
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 export default function MyLeads() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isWorkStarted, setShowStartModal, currentCoords } = useAttendance();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStage, setSelectedStage] = useState("All Stages");
+  const [showRouteModal, setShowRouteModal] = useState(false);
+  const [showWorkRequiredModal, setShowWorkRequiredModal] = useState(false);
+  const autoOpenedRef = useRef(false);
 
   const role = getLoginRole();
   const isBM = role === "BM";
-
-  // const query = useQuery({
-  //   queryKey: ["rm-applications", searchTerm],
-  //   queryFn: () =>
-  //     searchTerm.trim()
-  //       ? rmApi.searchApplications(searchTerm.trim())
-  //       : rmApi.applications({ page: 1, limit: 100 }),
-  // });
 
   const query = useQuery({
   queryKey: [
@@ -179,10 +220,6 @@ export default function MyLeads() {
   retry: false,
 });
 
-  // const allApplicationRows = useMemo(() => {
-  //   return query.data?.data ?? [];
-  // }, [query.data]);
-
   const allApplicationRows = useMemo(() => {
   const responseData =
     query.data?.data ?? query.data ?? {};
@@ -201,6 +238,37 @@ export default function MyLeads() {
     ? payload
     : [];
 }, [query.data, isBM]);
+
+  const todayFollowUpLeads = useMemo(() => {
+    return allApplicationRows.filter((lead) => {
+      const followUp =
+        lead.nextFollowUpDate ||
+        lead.next_follow_up_date ||
+        lead.customerProfile?.nextFollowUpDate ||
+        lead.customerProfile?.next_follow_up_date ||
+        lead.customerProfile?.nextFollowUp ||
+        lead.followUpDate ||
+        lead.follow_up_date;
+      return isDateToday(followUp);
+    });
+  }, [allApplicationRows]);
+
+  // Automatically open route planner modal when today's follow-up leads are detected
+  useEffect(() => {
+    if (todayFollowUpLeads.length > 0 && !autoOpenedRef.current) {
+      autoOpenedRef.current = true;
+      setShowRouteModal(true);
+    }
+  }, [todayFollowUpLeads.length]);
+
+  const handleCreateLeadClick = (e) => {
+    if (e) e.preventDefault();
+    if (!isWorkStarted) {
+      setShowWorkRequiredModal(true);
+      return;
+    }
+    navigate("/create-lead");
+  };
 
 
   const rmRows = useMemo(() => {
@@ -295,12 +363,26 @@ export default function MyLeads() {
             </div>
 
             {!isBM ? (
-              <Link
-                to="/create-lead"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/20 px-6 py-3 text-sm font-extrabold text-white backdrop-blur-md transition-all hover:bg-white/30"
-              >
-                <FaPlus className="text-xs" /> Create New Lead
-              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                {todayFollowUpLeads.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowRouteModal(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-5 py-3 text-sm font-black shadow-lg shadow-amber-500/25 transition-all active:scale-95 animate-bounce-subtle"
+                  >
+                    <FiCompass className="h-4 w-4 text-slate-900" />
+                    <span>Today's Route Plan ({todayFollowUpLeads.length})</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleCreateLeadClick}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/20 px-6 py-3 text-sm font-extrabold text-white backdrop-blur-md transition-all hover:bg-white/30 active:scale-95"
+                >
+                  <FaPlus className="text-xs" /> Create New Lead
+                </button>
+              </div>
             ) : (
               <div className="rounded-2xl bg-white/20 px-6 py-3 text-sm font-extrabold text-white backdrop-blur-md">
                 BM Review Queue
@@ -308,6 +390,52 @@ export default function MyLeads() {
             )}
           </div>
         </div>
+
+        {/* Work Status Notification Bar for RMs */}
+        {!isBM && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border px-5 py-3.5 text-xs font-semibold shadow-2xs transition-all ${
+            isWorkStarted
+              ? 'border-emerald-200 bg-emerald-50/80 text-emerald-900'
+              : 'border-amber-300 bg-amber-50 text-amber-900'
+          }">
+            <div className="flex items-center gap-3">
+              <span className={`flex h-8 w-8 items-center justify-center rounded-xl font-bold text-sm ${
+                isWorkStarted ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+              }`}>
+                {isWorkStarted ? '✓' : '⚠️'}
+              </span>
+              <div>
+                <span className="font-extrabold text-sm block text-slate-900">
+                  {isWorkStarted ? 'Work Session Active (Punched In)' : 'Work Session Not Started'}
+                </span>
+                <span className="text-slate-600 text-xs">
+                  {isWorkStarted
+                    ? 'Attendance recorded for today. You can create leads and manage visits.'
+                    : 'Please punch in your attendance before creating or creating new leads.'}
+                </span>
+              </div>
+            </div>
+
+            {!isWorkStarted ? (
+              <button
+                type="button"
+                onClick={() => setShowStartModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-2 font-bold text-white shadow-xs transition-all active:scale-95 shrink-0"
+              >
+                Punch In / Start Work ➔
+              </button>
+            ) : todayFollowUpLeads.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowRouteModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 font-bold text-white shadow-xs transition-all active:scale-95 shrink-0"
+              >
+                <FiNavigation className="h-3.5 w-3.5" />
+                View {todayFollowUpLeads.length} Scheduled Follow-Ups
+              </button>
+            ) : null}
+          </div>
+        )}
 
         <div className="rounded-[26px] border border-blue-100 bg-white/90 p-6 shadow-sm">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[280px_240px_140px]">
@@ -599,6 +727,56 @@ export default function MyLeads() {
           </div>
         )}
       </div>
+
+      {/* Today's Follow-Ups & Smart Route Planner Modal */}
+      <TodayFollowUpsRouteModal
+        isOpen={showRouteModal}
+        onClose={() => setShowRouteModal(false)}
+        todayLeads={todayFollowUpLeads}
+        currentCoords={currentCoords}
+        userName={user?.name || "Relationship Manager"}
+        spokeLocation={typeof user?.spoke === "object" ? user?.spoke?.name : user?.spoke || ""}
+      />
+
+      {/* Work Not Started Prompt Modal */}
+      {showWorkRequiredModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-slate-900/10 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 text-3xl font-black mb-4">
+              ⚠️
+            </div>
+
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">
+              Work Session Not Started
+            </h3>
+
+            <p className="mt-2 text-xs font-medium text-slate-600 leading-relaxed">
+              Company policy requires punch-in attendance before you can create new leads or register customer applications.
+            </p>
+
+            <div className="mt-6 flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowWorkRequiredModal(false);
+                  setShowStartModal(true);
+                }}
+                className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 text-xs font-black text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-600 hover:to-amber-700 active:scale-95"
+              >
+                Punch In & Start Work Now ➔
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowWorkRequiredModal(false)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

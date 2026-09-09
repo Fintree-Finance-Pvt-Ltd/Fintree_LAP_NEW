@@ -30,7 +30,7 @@ export default function AppLayout() {
         </main>
 
         <StartWorkModal />
-        <LocationRequiredPromptModal />
+        {/* <LocationRequiredPromptModal /> */}
       </div>
     </LayoutContext.Provider>
   );

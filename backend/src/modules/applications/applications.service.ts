@@ -127,6 +127,7 @@ export class ApplicationsService {
 
   const [data, total] =
     await this.applications.findAndCount({
+      relations: ['customerProfile'],
       order: {
         id: 'DESC',
       },
@@ -417,7 +418,7 @@ export class ApplicationsService {
     const where = term
       ? [{ applicationNumber: Like(`%${term}%`) }, { customerName: Like(`%${term}%`) }, { mobile: Like(`%${term}%`) }, { pan: Like(`%${term}%`) }]
       : [];
-    return { data: await this.applications.find({ where, order: { id: 'DESC' }, take: 25 }) };
+    return { data: await this.applications.find({ where, relations: ['customerProfile'], order: { id: 'DESC' }, take: 25 }) };
   }
 
   async create(dto: any, actor: Actor) {
@@ -492,6 +493,7 @@ export class ApplicationsService {
           mobile: dto.mobile.trim(),
           pan: dto.pan?.trim(),
           requestedAmount: dto.requestedAmount || '0',
+          nextFollowUpDate: dto.nextFollowUpDate || undefined,
           applicationNumber: 'TEMP',
           status: ApplicationStatus.DRAFT,
           stage: ApplicationStage.RM,
@@ -549,6 +551,9 @@ export class ApplicationsService {
         existingDraft.panVerified =
           Boolean(existingDraft.panVerified) && nextPan === existingDraft.pan;
         existingDraft.pan = nextPan;
+      }
+      if (dto.nextFollowUpDate !== undefined) {
+        existingDraft.nextFollowUpDate = dto.nextFollowUpDate;
       }
       existingDraft.requestedAmount = dto.requestedAmount || '0';
       existingDraft.updatedBy = actor.id;
@@ -1440,6 +1445,10 @@ async findOne(id: number) {
           application.requestedAmount = dto.requestedAmount;
         }
 
+        if (dto.nextFollowUpDate !== undefined) {
+          application.nextFollowUpDate = dto.nextFollowUpDate;
+        }
+
         application.updatedBy = actor.id;
 
         const savedApp = await applicationRepo.save(application);
@@ -1773,6 +1782,10 @@ async recordWorkflowStep(
       recommendedTenure: dto.recommendedTenure ?? undefined,
       rmRecommendation: dto.rmRecommendation || undefined,
       remarks: dto.remarks || undefined,
+      nextFollowUpDate: dto.nextFollowUpDate || undefined,
+      followUpTime: dto.followUpTime || undefined,
+      followUpNotes: dto.followUpNotes || undefined,
+      followUpStatus: dto.followUpStatus || undefined,
     };
   }
 }

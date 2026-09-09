@@ -9,6 +9,8 @@ import {
   PROPERTY_CATEGORY,
   PROPERTY_TYPE,
 } from "../rmUtils.js";
+import { useAttendance } from "../../../context/AttendanceContext.jsx";
+import ScheduleFollowUpModal from "../components/ScheduleFollowUpModal.jsx";
 
 
 
@@ -248,6 +250,15 @@ export default function CreateLead() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const location = useLocation();
+
+  const { isWorkStarted, setShowStartModal } = useAttendance();
+  const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
+  const [followUpData, setFollowUpData] = useState({
+    nextFollowUpDate: "",
+    followUpTime: "10:00 AM",
+    followUpNotes: "",
+    followUpStatus: "PENDING",
+  });
 
   const [customerPhotoFile, setCustomerPhotoFile] = useState(null);
 
@@ -1492,7 +1503,8 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
   const propertyTypeOptions = PROPERTY_TYPE[formData.propertyCategory] || [];
 
-  const buildPayload = (isPatchUpdate = false) => {
+  const buildPayload = (isPatchUpdate = false, customFollowUp = null) => {
+    const activeFollowUp = customFollowUp || followUpData;
     const basePayload = {
       customerName: formData.customerName.trim() || undefined,
       mobile: formData.mobileNumber.trim() || undefined,
@@ -1509,6 +1521,10 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
       propertyCity: formData.city.trim() || undefined,
       propertyState: formData.state.trim() || undefined,
       propertyPincode: formData.pinCode.trim() || undefined,
+      nextFollowUpDate: activeFollowUp?.nextFollowUpDate || undefined,
+      followUpTime: activeFollowUp?.followUpTime || undefined,
+      followUpNotes: activeFollowUp?.followUpNotes || undefined,
+      followUpStatus: activeFollowUp?.followUpStatus || undefined,
     };
 
     if (isPatchUpdate) {
@@ -1527,7 +1543,10 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
         "propertyCity",
         "propertyState",
         "propertyPincode",
-
+        "nextFollowUpDate",
+        "followUpTime",
+        "followUpNotes",
+        "followUpStatus",
       ];
       const filteredPayload = {};
       allowedPatchFields.forEach((field) => {
@@ -1595,11 +1614,11 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
   // UPDATE 1: saveNewDraftMutation
   // =========================================================================
   const saveNewDraftMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: (customFollowUp) => {
       if (createdApplicationId != null) {
-        return rmApi.updateApplication(createdApplicationId, buildPayload(true));
+        return rmApi.updateApplication(createdApplicationId, buildPayload(true, customFollowUp));
       }
-      return rmApi.saveDraft(buildPayload(false));
+      return rmApi.saveDraft(buildPayload(false, customFollowUp));
     },
     onSuccess: async (response) => {
       const result = unwrapResponse(response);
@@ -1625,7 +1644,7 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
       ]);
 
       setMessageType("success");
-      setMessage("Draft entry saved successfully.");
+      setMessage("Draft entry and next follow-up saved successfully.");
       if (newApplicationId) {
         navigate(`/create-lead/${newApplicationId}`, { replace: true });
       } else {
@@ -1642,10 +1661,10 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
   // UPDATE 2: updateDraftMutation
   // =========================================================================
   const updateDraftMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (customFollowUp) =>
       rmApi.updateApplication(
         createdApplicationId ?? applicationId,
-        buildPayload(true),
+        buildPayload(true, customFollowUp),
       ),
     onSuccess: async (response) => {
       const result = unwrapResponse(response);
@@ -1675,7 +1694,7 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
         queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] }),
       ]);
       setMessageType("success");
-      setMessage("Draft modified successfully.");
+      setMessage("Draft and next follow-up updated successfully.");
     },
     onError: (error) => {
       setMessageType("error");
@@ -2017,15 +2036,41 @@ setLocalAadhaarStatus("INITIATED");
     if (event) event.preventDefault();
     setMessage("");
 
+    if (!isWorkStarted) {
+      setMessageType("error");
+      setMessage("You must start work / punch in before creating or updating leads.");
+      setShowStartModal(true);
+      return;
+    }
+
+    if (!formData.customerName.trim()) {
+      setMessageType("error");
+      setMessage("Please enter Customer / Entity Name before saving draft.");
+      return;
+    }
+
+    if (!formData.mobileNumber.trim()) {
+      setMessageType("error");
+      setMessage("Please enter Customer Mobile Number before saving draft.");
+      return;
+    }
+
+    setFollowUpModalOpen(true);
+  };
+
+  const handleConfirmFollowUpAndSave = (scheduledData) => {
+    setFollowUpData(scheduledData);
+    setFollowUpModalOpen(false);
+
     if (createdApplicationId) {
-      updateDraftMutation.mutate();
+      updateDraftMutation.mutate(scheduledData);
       return;
     }
 
     if (!applicationId) {
-      saveNewDraftMutation.mutate();
+      saveNewDraftMutation.mutate(scheduledData);
     } else {
-      updateDraftMutation.mutate();
+      updateDraftMutation.mutate(scheduledData);
     }
   };
 
@@ -2810,6 +2855,44 @@ setLocalAadhaarStatus("INITIATED");
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Follow-up Scheduling Modal on Save Draft */}
+      <ScheduleFollowUpModal
+        isOpen={followUpModalOpen}
+        onClose={() => setFollowUpModalOpen(false)}
+        onConfirm={handleConfirmFollowUpAndSave}
+        customerName={formData.customerName}
+        initialDate={followUpData.nextFollowUpDate}
+        initialTime={followUpData.followUpTime}
+        initialNotes={followUpData.followUpNotes}
+        isSaving={saveNewDraftMutation.isPending || updateDraftMutation.isPending}
+      />
+
+      {/* Work Not Started Warning Banner */}
+      {!isWorkStarted && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-900 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white font-black text-lg">
+              ⚠️
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-950">
+                Attendance Punch-In Required
+              </h4>
+              <p className="text-xs text-amber-800">
+                You have not started your work session for today. Please punch in your attendance before creating or saving leads.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowStartModal(true)}
+            className="inline-flex items-center justify-center rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all active:scale-95 shrink-0"
+          >
+            Start Work Now ➔
+          </button>
         </div>
       )}
 
