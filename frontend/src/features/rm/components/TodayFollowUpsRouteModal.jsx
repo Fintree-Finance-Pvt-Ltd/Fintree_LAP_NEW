@@ -16,6 +16,8 @@ import {
   FiUser,
   FiShield,
   FiLayers,
+  FiCornerDownRight,
+  FiInfo,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import {
@@ -68,6 +70,27 @@ const createStopIcon = (stopNumber, rankLabel) => {
   });
 };
 
+const createStationIcon = (stationName, isDestination = false) =>
+  L.divIcon({
+    className: `custom-station-marker-${stationName}`,
+    html: `
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <div style="padding: 2px 6px; border-radius: 6px; background: ${
+          isDestination ? "#b91c1c" : "#6d28d9"
+        }; color: white; font-size: 10px; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.35); margin-bottom: 2px; border: 1px solid rgba(255,255,255,0.3);">
+          🚆 ${stationName} Stn
+        </div>
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: ${
+          isDestination ? "#ef4444" : "#8b5cf6"
+        }; border: 2.5px solid #ffffff; box-shadow: 0 3px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
+          🚉
+        </div>
+      </div>
+    `,
+    iconSize: [90, 50],
+    iconAnchor: [45, 50],
+  });
+
 export default function TodayFollowUpsRouteModal({
   isOpen,
   onClose,
@@ -80,6 +103,7 @@ export default function TodayFollowUpsRouteModal({
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
+  const [travelMode, setTravelMode] = useState("DRIVING"); // "DRIVING" | "TRANSIT"
   const [loadingRoute, setLoadingRoute] = useState(true);
   const [routePlan, setRoutePlan] = useState(null);
   const [selectedStopIndex, setSelectedStopIndex] = useState(0);
@@ -127,7 +151,7 @@ export default function TodayFollowUpsRouteModal({
         console.warn("Could not get high-accuracy GPS for route planner:", err);
         if (isMounted && !userGps) {
           setUserGps({
-            latitude: 19.0760, // Default Mumbai / fallback
+            latitude: 19.076, // Default Mumbai / fallback
             longitude: 72.8777,
             name: `${userName} (Spoke Area)`,
             address: spokeLocation || "Spoke Branch",
@@ -224,7 +248,7 @@ export default function TodayFollowUpsRouteModal({
         }).addTo(map);
 
         stopMarker.bindPopup(`
-          <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; min-width: 180px;">
+          <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; min-width: 190px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
               <span style="background: #2563eb; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px;">
                 Stop #${stop.stopNumber} (${stop.sequenceRankLabel})
@@ -238,6 +262,13 @@ export default function TodayFollowUpsRouteModal({
               <b>Follow-up Time:</b> ${stop.followUpTime}<br/>
               <b>Purpose:</b> ${stop.followUpNotes || "Verification / Site Visit"}
             </div>
+            ${
+              stop.trainTransit?.destStation
+                ? `<div style="margin-top: 4px; background: #f5f3ff; color: #6d28d9; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">
+                     🚆 Nearest Stn: ${stop.trainTransit.destStation.name} (${stop.trainTransit.destStation.line})
+                   </div>`
+                : ""
+            }
           </div>
         `);
 
@@ -248,28 +279,91 @@ export default function TodayFollowUpsRouteModal({
         boundsGroup.push([stop.lat, stop.lng]);
       });
 
-      // 3. Draw Road Polyline
-      if (routePlan.routePolyline && routePlan.routePolyline.length > 1) {
-        // Shadow/glow line
-        L.polyline(routePlan.routePolyline, {
-          color: "#3b82f6",
-          weight: 7,
-          opacity: 0.35,
-        }).addTo(map);
+      // 3. Render Route Polylines based on Travel Mode
+      if (travelMode === "DRIVING") {
+        if (routePlan.routePolyline && routePlan.routePolyline.length > 1) {
+          // Shadow/glow line
+          L.polyline(routePlan.routePolyline, {
+            color: "#3b82f6",
+            weight: 7,
+            opacity: 0.35,
+          }).addTo(map);
 
-        // Main polyline
-        L.polyline(routePlan.routePolyline, {
-          color: "#2563eb",
-          weight: 4,
-          opacity: 0.95,
-          dashArray: "1, 8",
-          lineCap: "round",
-        }).addTo(map);
+          // Main road polyline
+          L.polyline(routePlan.routePolyline, {
+            color: "#2563eb",
+            weight: 4,
+            opacity: 0.95,
+            dashArray: "1, 8",
+            lineCap: "round",
+          }).addTo(map);
+        }
+      } else if (travelMode === "TRANSIT") {
+        // Draw railway stations & transit lines for stops
+        routePlan.orderedStops.forEach((stop) => {
+          const transit = stop.trainTransit;
+          if (transit && transit.startStation && transit.destStation) {
+            // Start Station Marker
+            const startStnMarker = L.marker([transit.startStation.lat, transit.startStation.lng], {
+              icon: createStationIcon(transit.startStation.name, false),
+            }).addTo(map);
+            startStnMarker.bindPopup(`<b>Boarding Station:</b> ${transit.startStation.name}<br/>Line: ${transit.startStation.line}`);
+            boundsGroup.push([transit.startStation.lat, transit.startStation.lng]);
+
+            // Destination Station Marker
+            const destStnMarker = L.marker([transit.destStation.lat, transit.destStation.lng], {
+              icon: createStationIcon(transit.destStation.name, true),
+            }).addTo(map);
+            destStnMarker.bindPopup(`<b>Destination Station:</b> ${transit.destStation.name}<br/>Line: ${transit.destStation.line}`);
+            boundsGroup.push([transit.destStation.lat, transit.destStation.lng]);
+
+            // First-Mile Leg: Start Point -> Start Station (Dotted green)
+            L.polyline(
+              [
+                [startPt.lat, startPt.lng],
+                [transit.startStation.lat, transit.startStation.lng],
+              ],
+              {
+                color: "#10b981",
+                weight: 3,
+                dashArray: "4, 6",
+                opacity: 0.8,
+              }
+            ).addTo(map);
+
+            // Train Line Track: Start Station -> Destination Station (Purple railway track line)
+            L.polyline(
+              [
+                [transit.startStation.lat, transit.startStation.lng],
+                [transit.destStation.lat, transit.destStation.lng],
+              ],
+              {
+                color: "#7c3aed",
+                weight: 5,
+                opacity: 0.9,
+              }
+            ).addTo(map);
+
+            // Last-Mile Leg: Dest Station -> Customer Address (Dotted orange)
+            L.polyline(
+              [
+                [transit.destStation.lat, transit.destStation.lng],
+                [stop.lat, stop.lng],
+              ],
+              {
+                color: "#ea580c",
+                weight: 3,
+                dashArray: "4, 6",
+                opacity: 0.8,
+              }
+            ).addTo(map);
+          }
+        });
       }
 
       // Fit map bounds with padding
       if (boundsGroup.length > 0) {
-        map.fitBounds(boundsGroup, { padding: [40, 40], maxZoom: 15 });
+        map.fitBounds(boundsGroup, { padding: [45, 45], maxZoom: 14 });
       }
     } catch (err) {
       console.error("Leaflet initialization error:", err);
@@ -281,23 +375,24 @@ export default function TodayFollowUpsRouteModal({
         mapInstanceRef.current = null;
       }
     };
-  }, [isOpen, routePlan]);
+  }, [isOpen, routePlan, travelMode]);
 
   // Focus map on selected stop
   const handleSelectStop = (index) => {
     setSelectedStopIndex(index);
     if (!mapInstanceRef.current || !routePlan?.orderedStops?.[index]) return;
     const stop = routePlan.orderedStops[index];
-    mapInstanceRef.current.flyTo([stop.lat, stop.lng], 15, { duration: 1 });
+    mapInstanceRef.current.flyTo([stop.lat, stop.lng], 14, { duration: 1 });
   };
 
   const handleOpenGoogleMapsRoute = (stop) => {
     if (!stop || !userGps) return;
     const origin = `${userGps.latitude},${userGps.longitude}`;
     const destination = `${stop.lat},${stop.lng}`;
+    const mode = travelMode === "TRANSIT" ? "transit" : "driving";
     const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
       origin
-    )}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+    )}&destination=${encodeURIComponent(destination)}&travelmode=${mode}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -310,11 +405,12 @@ export default function TodayFollowUpsRouteModal({
       .slice(0, -1)
       .map((s) => `${s.lat},${s.lng}`)
       .join("|");
+    const mode = travelMode === "TRANSIT" ? "transit" : "driving";
 
     let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
       origin
-    )}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
-    if (waypoints) {
+    )}&destination=${encodeURIComponent(destination)}&travelmode=${mode}`;
+    if (waypoints && mode !== "transit") {
       url += `&waypoints=${encodeURIComponent(waypoints)}`;
     }
     window.open(url, "_blank", "noopener,noreferrer");
@@ -322,9 +418,11 @@ export default function TodayFollowUpsRouteModal({
 
   if (!isOpen) return null;
 
+  const activeStop = routePlan?.orderedStops?.[selectedStopIndex] || routePlan?.orderedStops?.[0];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-3 sm:p-5 backdrop-blur-md animate-fadeIn">
-      <div className="relative flex h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 p-2 sm:p-5 backdrop-blur-md animate-fadeIn">
+      <div className="relative flex h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-900/10">
         {/* Modal Top Header */}
         <div className="relative flex items-center justify-between bg-gradient-to-r from-blue-700 via-indigo-700 to-cyan-700 px-6 py-4 text-white shadow-md">
           <div className="flex items-center gap-3.5">
@@ -337,7 +435,7 @@ export default function TodayFollowUpsRouteModal({
                   Today's Follow-Up Route Planner
                 </h2>
                 <span className="rounded-full bg-emerald-400/30 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-100 ring-1 ring-emerald-400/40">
-                  {todayLeads.length} Scheduled Today
+                  {todayLeads.length} {todayLeads.length === 1 ? "Lead Scheduled" : "Leads Scheduled"}
                 </span>
               </div>
               <p className="text-xs font-medium text-blue-100">
@@ -366,19 +464,21 @@ export default function TodayFollowUpsRouteModal({
           </div>
         </div>
 
-        {/* Stats Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-slate-200 bg-slate-50/90 px-6 py-3 text-xs font-semibold text-slate-700">
-          <div className="flex items-center gap-2 border-r border-slate-200 pr-4">
+        {/* Stats Strip & Travel Mode Switcher */}
+        <div className="grid grid-cols-2 lg:grid-cols-12 border-b border-slate-200 bg-slate-50/90 px-4 sm:px-6 py-2.5 text-xs font-semibold text-slate-700 gap-2 items-center">
+          {/* Total Stops */}
+          <div className="flex items-center gap-2 pr-2 col-span-1 lg:col-span-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100 text-blue-700 font-black">
               📍
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Total Stops</div>
-              <div className="font-extrabold text-slate-900">{todayLeads.length} Leads</div>
+              <div className="font-extrabold text-slate-900">{todayLeads.length} {todayLeads.length === 1 ? "Lead" : "Leads"}</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 border-r border-slate-200 px-4">
+          {/* Distance */}
+          <div className="flex items-center gap-2 px-2 col-span-1 lg:col-span-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 font-black">
               🛣️
             </div>
@@ -390,27 +490,53 @@ export default function TodayFollowUpsRouteModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 border-r border-slate-200 px-4">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 font-black">
-              ⏱️
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Drive Time</div>
-              <div className="font-extrabold text-slate-900">
-                {routePlan ? `~${routePlan.totalDurationMin} mins` : "Calculating..."}
-              </div>
-            </div>
+          {/* Travel Mode Toggle Button */}
+          <div className="col-span-2 lg:col-span-5 flex items-center justify-center sm:justify-start gap-1 bg-slate-200/80 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setTravelMode("DRIVING")}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                travelMode === "DRIVING"
+                  ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-300"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>🚗 Road / Drive</span>
+              <span className="text-[11px] opacity-80 font-normal">
+                ({routePlan ? `~${routePlan.totalDurationMin}m` : "..."})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTravelMode("TRANSIT")}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                travelMode === "TRANSIT"
+                  ? "bg-purple-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-purple-700"
+              }`}
+            >
+              <span>🚆 Local Train & Transit</span>
+              <span className="text-[11px] opacity-90 font-normal">
+                ({routePlan ? `~${routePlan.totalTransitTimeMin || routePlan.totalDurationMin}m` : "..."})
+              </span>
+            </button>
           </div>
 
-          <div className="flex items-center justify-end pl-4">
+          {/* Full Google Maps Button */}
+          <div className="col-span-2 lg:col-span-3 flex items-center justify-end">
             <button
               type="button"
               onClick={handleOpenEntireRouteGoogleMaps}
               disabled={!routePlan || !routePlan.orderedStops.length}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95 disabled:opacity-50"
+              className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all active:scale-95 disabled:opacity-50 ${
+                travelMode === "TRANSIT"
+                  ? "bg-purple-600 hover:bg-purple-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
               <FiNavigation className="h-3.5 w-3.5" />
-              <span>Full Route in Google Maps</span>
+              <span>{travelMode === "TRANSIT" ? "Train Route in Maps" : "Full Route in Maps"}</span>
             </button>
           </div>
         </div>
@@ -421,18 +547,18 @@ export default function TodayFollowUpsRouteModal({
           <div className="flex flex-col border-r border-slate-200 bg-white lg:col-span-5 xl:col-span-5 overflow-hidden">
             <div className="border-b border-slate-100 bg-slate-50/50 px-5 py-3 flex items-center justify-between">
               <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
-                Sequential Visit Plan (Nearest First)
+                {todayLeads.length === 1 ? "Follow-Up Visit Plan" : "Sequential Visit Plan (Nearest First)"}
               </span>
               <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                Traveling Salesman Optimized
+                {travelMode === "TRANSIT" ? "Suburban Railway Transit" : "Nearest Neighbor Optimized"}
               </span>
             </div>
 
             {loadingRoute ? (
               <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
                 <FiRefreshCw className="h-8 w-8 animate-spin text-blue-600 mb-3" />
-                <p className="text-sm font-bold text-slate-700">Analyzing GPS and calculating nearest sequence...</p>
-                <p className="text-xs text-slate-400 mt-1">Measuring road distances to each follow-up address.</p>
+                <p className="text-sm font-bold text-slate-700">Analyzing GPS & Customer Address...</p>
+                <p className="text-xs text-slate-400 mt-1">Calculating road distances and nearest railway route.</p>
               </div>
             ) : !routePlan || routePlan.orderedStops.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
@@ -453,7 +579,7 @@ export default function TodayFollowUpsRouteModal({
                         {routePlan.startPoint.customerName}
                       </span>
                       <span className="rounded bg-emerald-200/70 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
-                        Origin
+                        Origin (Punch In)
                       </span>
                     </div>
                     <p className="text-xs text-emerald-800/80 truncate mt-0.5">
@@ -465,13 +591,15 @@ export default function TodayFollowUpsRouteModal({
                 {/* Ordered Stops List */}
                 {routePlan.orderedStops.map((stop, index) => {
                   const isSelected = selectedStopIndex === index;
+                  const transit = stop.trainTransit;
+
                   return (
                     <div
                       key={stop.leadId}
                       onClick={() => handleSelectStop(index)}
                       className={`group relative cursor-pointer rounded-2xl border p-4 transition-all duration-200 ${
                         isSelected
-                          ? "border-blue-600 bg-blue-50/50 shadow-md ring-2 ring-blue-600/20"
+                          ? "border-blue-600 bg-blue-50/40 shadow-md ring-2 ring-blue-600/20"
                           : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80"
                       }`}
                     >
@@ -497,9 +625,19 @@ export default function TodayFollowUpsRouteModal({
                         </div>
 
                         <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
-                          <FiNavigation className="text-blue-600 h-3 w-3" />
-                          <span>{stop.distanceFromPrevKm} km</span>
-                          <span className="text-slate-400 font-normal">({stop.estDriveMin}m)</span>
+                          {travelMode === "TRANSIT" ? (
+                            <>
+                              <span className="text-purple-600 font-bold">🚆</span>
+                              <span>~{transit?.totalTransitTimeMin || stop.estDriveMin}m</span>
+                              <span className="text-slate-400 font-normal">transit</span>
+                            </>
+                          ) : (
+                            <>
+                              <FiNavigation className="text-blue-600 h-3 w-3" />
+                              <span>{stop.distanceFromPrevKm} km</span>
+                              <span className="text-slate-400 font-normal">({stop.estDriveMin}m drive)</span>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -514,8 +652,8 @@ export default function TodayFollowUpsRouteModal({
                           </span>
                         </div>
 
-                        <p className="text-xs text-slate-600 line-clamp-1 flex items-center gap-1">
-                          <FiMapPin className="h-3 w-3 text-rose-500 shrink-0" />
+                        <p className="text-xs text-slate-600 line-clamp-2 flex items-start gap-1">
+                          <FiMapPin className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
                           <span>{stop.address}</span>
                         </p>
 
@@ -532,6 +670,49 @@ export default function TodayFollowUpsRouteModal({
                         {stop.followUpNotes && (
                           <div className="mt-2 rounded-lg bg-slate-100/80 p-2 text-[11px] text-slate-700 font-medium">
                             <b>Note:</b> {stop.followUpNotes}
+                          </div>
+                        )}
+
+                        {/* Train & Transit Route Recommendation Card */}
+                        {travelMode === "TRANSIT" && transit && (
+                          <div className="mt-3 rounded-xl border border-purple-200 bg-purple-50/70 p-3 text-xs space-y-2">
+                            <div className="flex items-center justify-between border-b border-purple-200/60 pb-1.5">
+                              <span className="font-black text-purple-900 flex items-center gap-1">
+                                🚆 Train Route Guide
+                              </span>
+                              <span className="text-[10px] font-bold text-purple-700 bg-purple-200/60 px-2 py-0.5 rounded-full">
+                                {transit.trainLineName}
+                              </span>
+                            </div>
+
+                            <div className="space-y-1.5 text-[11px] text-purple-950 font-medium">
+                              {/* Step 1: First Mile */}
+                              <div className="flex items-start gap-1.5">
+                                <span className="text-emerald-600 font-bold shrink-0">1.</span>
+                                <div>
+                                  <b className="text-slate-900">Reach {transit.startStation.name} Station:</b>{" "}
+                                  ~{transit.startStation.distanceKm} km ({transit.firstMileTimeMin}m via Auto/Walk)
+                                </div>
+                              </div>
+
+                              {/* Step 2: Train Journey */}
+                              <div className="flex items-start gap-1.5">
+                                <span className="text-purple-700 font-bold shrink-0">2.</span>
+                                <div>
+                                  <b className="text-purple-900">Board {transit.startStation.line}:</b>{" "}
+                                  {transit.startStation.name} ➔ <b className="text-purple-900">{transit.destStation.name}</b> (~{transit.trainTimeMin} mins, {transit.stationDistanceKm} km)
+                                </div>
+                              </div>
+
+                              {/* Step 3: Last Mile */}
+                              <div className="flex items-start gap-1.5">
+                                <span className="text-orange-600 font-bold shrink-0">3.</span>
+                                <div>
+                                  <b className="text-slate-900">{transit.destStation.name} Station (East/West) to Location:</b>{" "}
+                                  Take auto ~{transit.destStation.distanceKm} km ({transit.lastMileTimeMin} mins) to customer address.
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -555,10 +736,14 @@ export default function TodayFollowUpsRouteModal({
                             e.stopPropagation();
                             handleOpenGoogleMapsRoute(stop);
                           }}
-                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-blue-700 active:scale-95"
+                          className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-white transition-all active:scale-95 ${
+                            travelMode === "TRANSIT"
+                              ? "bg-purple-600 hover:bg-purple-700"
+                              : "bg-blue-600 hover:bg-blue-700"
+                          }`}
                         >
                           <FiNavigation className="h-3 w-3" />
-                          Navigate
+                          {travelMode === "TRANSIT" ? "Train Map" : "Navigate"}
                         </button>
 
                         <button
@@ -586,29 +771,55 @@ export default function TodayFollowUpsRouteModal({
             {/* Map Canvas */}
             <div ref={mapContainerRef} className="h-full w-full z-10" />
 
-            {/* Floating Legend Overlay */}
-            <div className="absolute bottom-4 left-4 z-20 rounded-2xl bg-white/95 p-3.5 shadow-xl backdrop-blur-md border border-slate-200 text-xs text-slate-800 space-y-1.5 hidden sm:block">
-              <div className="font-extrabold text-slate-900 mb-1 flex items-center gap-1.5">
-                <FiLayers className="text-blue-600" />
-                Route Sequence Legend
+            {/* Dynamic Floating Legend Overlay */}
+            {routePlan && routePlan.orderedStops.length > 0 && (
+              <div className="absolute bottom-4 left-4 z-20 rounded-2xl bg-white/95 p-3.5 shadow-xl backdrop-blur-md border border-slate-200 text-xs text-slate-800 space-y-1.5 hidden sm:block max-w-sm">
+                <div className="font-extrabold text-slate-900 mb-1 flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <FiLayers className="text-blue-600" />
+                    Route Plan ({routePlan.orderedStops.length} {routePlan.orderedStops.length === 1 ? "Stop" : "Stops"})
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                    {travelMode === "TRANSIT" ? "Train Mode" : "Road Mode"}
+                  </span>
+                </div>
+
+                {/* Start Point */}
+                <div className="flex items-center gap-2">
+                  <span className="h-3 w-3 shrink-0 rounded-full bg-emerald-600 inline-block ring-2 ring-emerald-200" />
+                  <span className="font-medium text-slate-700 truncate">
+                    Start: {routePlan.startPoint.customerName}
+                  </span>
+                </div>
+
+                {/* Dynamically mapped stops */}
+                {routePlan.orderedStops.map((stop) => {
+                  const colors = [
+                    "bg-blue-600 ring-blue-200",
+                    "bg-purple-600 ring-purple-200",
+                    "bg-orange-600 ring-orange-200",
+                    "bg-teal-600 ring-teal-200",
+                  ];
+                  const c = colors[(stop.stopNumber - 1) % colors.length];
+                  return (
+                    <div key={stop.leadId} className="flex items-center gap-2">
+                      <span className={`h-3 w-3 shrink-0 rounded-full ${c} inline-block ring-2`} />
+                      <span className="font-medium text-slate-800 truncate">
+                        Stop {stop.stopNumber} ({stop.sequenceRankLabel}): {stop.customerName}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {/* Train Transit stations indicator */}
+                {travelMode === "TRANSIT" && (
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center gap-2 text-[11px] text-purple-700 font-bold">
+                    <span>🚆</span>
+                    <span>Railway Stations & Transit Lines Active</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-emerald-600 inline-block ring-2 ring-emerald-200" />
-                <span>Start Point (Live RM Location)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-blue-600 inline-block ring-2 ring-blue-200" />
-                <span>Stop 1 (1st Nearest)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-purple-600 inline-block ring-2 ring-purple-200" />
-                <span>Stop 2 (2nd Nearest)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-orange-600 inline-block ring-2 ring-orange-200" />
-                <span>Stop 3 (3rd Nearest)</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -616,7 +827,7 @@ export default function TodayFollowUpsRouteModal({
         <div className="border-t border-slate-200 bg-white px-6 py-3 flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <FiShield className="text-blue-600" />
-            <span>Smart Follow-up Route Engine with GPS Tracking</span>
+            <span>Smart Follow-up Route Engine with GPS & Mumbai Local Train Route Guide</span>
           </div>
           <button
             type="button"

@@ -3,6 +3,7 @@
  */
 
 const addressCache = new Map();
+const forwardGeoCache = new Map();
 
 /**
  * Reverse geocode latitude and longitude to a human-readable address.
@@ -316,84 +317,394 @@ export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
   return parseFloat((R * c).toFixed(2));
 }
 
-const forwardGeoCache = new Map();
+// Built-in Indian Postal Code & Locality Geo-Coordinate Database
+export const PINCODE_LOCALITY_DICT = {
+  // Palghar / Vasai-Virar region (Western Line)
+  "401208": { name: "Naigaon East / Juchandra, Vasai-Virar", lat: 19.3522, lng: 72.8488, station: "Naigaon", line: "Western Line" },
+  "401202": { name: "Vasai West, Vasai-Virar", lat: 19.3664, lng: 72.8157, station: "Vasai Road", line: "Western Line" },
+  "401201": { name: "Vasai East, Vasai-Virar", lat: 19.3837, lng: 72.8335, station: "Vasai Road", line: "Western Line" },
+  "401203": { name: "Nalasopara West, Vasai-Virar", lat: 19.4182, lng: 72.7983, station: "Nallasopara", line: "Western Line" },
+  "401209": { name: "Nalasopara East, Vasai-Virar", lat: 19.4230, lng: 72.8190, station: "Nallasopara", line: "Western Line" },
+  "401303": { name: "Virar West, Vasai-Virar", lat: 19.4674, lng: 72.8055, station: "Virar", line: "Western Line" },
+  "401305": { name: "Virar East, Vasai-Virar", lat: 19.4620, lng: 72.8220, station: "Virar", line: "Western Line" },
+  "401404": { name: "Palghar", lat: 19.6967, lng: 72.7699, station: "Palghar", line: "Western Line" },
+  "401602": { name: "Dahanu Road", lat: 19.9723, lng: 72.7317, station: "Dahanu Road", line: "Western Line" },
+  "401501": { name: "Boisar", lat: 19.8000, lng: 72.7500, station: "Boisar", line: "Western Line" },
+
+  // Thane / Mira-Bhayandar
+  "401107": { name: "Mira Road", lat: 19.2812, lng: 72.8561, station: "Mira Road", line: "Western Line" },
+  "401105": { name: "Bhayandar West", lat: 19.2952, lng: 72.8532, station: "Bhayandar", line: "Western Line" },
+  "401101": { name: "Bhayandar East", lat: 19.3033, lng: 72.8610, station: "Bhayandar", line: "Western Line" },
+  "400601": { name: "Thane West / Naupada", lat: 19.1860, lng: 72.9754, station: "Thane", line: "Central Line" },
+  "400602": { name: "Thane East / Kopri", lat: 19.1790, lng: 72.9780, station: "Thane", line: "Central Line" },
+  "400604": { name: "Wagle Estate, Thane", lat: 19.1980, lng: 72.9520, station: "Mulund", line: "Central Line" },
+  "400607": { name: "Ghodbunder Road, Thane", lat: 19.2630, lng: 72.9630, station: "Thane", line: "Central Line" },
+  "400615": { name: "Kavesar / Brahmand, Thane", lat: 19.2550, lng: 72.9800, station: "Thane", line: "Central Line" },
+  "421301": { name: "Kalyan West", lat: 19.2403, lng: 73.1305, station: "Kalyan", line: "Central Line" },
+  "421306": { name: "Kalyan East", lat: 19.2320, lng: 73.1410, station: "Kalyan", line: "Central Line" },
+  "421201": { name: "Dombivli East", lat: 19.2184, lng: 73.0867, station: "Dombivli", line: "Central Line" },
+  "421202": { name: "Dombivli West", lat: 19.2160, lng: 73.0780, station: "Dombivli", line: "Central Line" },
+
+  // Mumbai Suburbs (Western Line)
+  "400068": { name: "Dahisar West", lat: 19.2570, lng: 72.8590, station: "Dahisar", line: "Western Line" },
+  "400092": { name: "Borivali West", lat: 19.2307, lng: 72.8567, station: "Borivali", line: "Western Line" },
+  "400066": { name: "Borivali East", lat: 19.2280, lng: 72.8680, station: "Borivali", line: "Western Line" },
+  "400067": { name: "Kandivali West", lat: 19.2062, lng: 72.8530, station: "Kandivali", line: "Western Line" },
+  "400101": { name: "Kandivali East / Lokhandwala", lat: 19.2100, lng: 72.8710, station: "Kandivali", line: "Western Line" },
+  "400097": { name: "Malad East", lat: 19.1874, lng: 72.8610, station: "Malad", line: "Western Line" },
+  "400064": { name: "Malad West", lat: 19.1840, lng: 72.8450, station: "Malad", line: "Western Line" },
+  "400063": { name: "Goregaon East", lat: 19.1663, lng: 72.8620, station: "Goregaon", line: "Western Line" },
+  "400104": { name: "Goregaon West", lat: 19.1610, lng: 72.8430, station: "Goregaon", line: "Western Line" },
+  "400060": { name: "Jogeshwari East", lat: 19.1384, lng: 72.8610, station: "Jogeshwari", line: "Western Line" },
+  "400102": { name: "Jogeshwari West", lat: 19.1350, lng: 72.8420, station: "Jogeshwari", line: "Western Line" },
+  "400058": { name: "Andheri West", lat: 19.1197, lng: 72.8464, station: "Andheri", line: "Western Line" },
+  "400069": { name: "Andheri East", lat: 19.1150, lng: 72.8690, station: "Andheri", line: "Western Line" },
+  "400099": { name: "Chakala / Airport Area, Andheri", lat: 19.1120, lng: 72.8620, station: "Andheri", line: "Western Line" },
+  "400057": { name: "Vile Parle East", lat: 19.0998, lng: 72.8540, station: "Vile Parle", line: "Western Line" },
+  "400056": { name: "Vile Parle West", lat: 19.1020, lng: 72.8390, station: "Vile Parle", line: "Western Line" },
+  "400054": { name: "Santacruz West", lat: 19.0818, lng: 72.8416, station: "Santacruz", line: "Western Line" },
+  "400055": { name: "Santacruz East", lat: 19.0800, lng: 72.8550, station: "Santacruz", line: "Western Line" },
+  "400052": { name: "Khar West", lat: 19.0700, lng: 72.8338, station: "Khar Road", line: "Western Line" },
+  "400050": { name: "Bandra West", lat: 19.0596, lng: 72.8295, station: "Bandra", line: "Western Line" },
+  "400051": { name: "Bandra East / BKC", lat: 19.0620, lng: 72.8550, station: "Bandra", line: "Western Line" },
+
+  // South / Central Mumbai
+  "400016": { name: "Mahim", lat: 19.0400, lng: 72.8400, station: "Mahim", line: "Western Line" },
+  "400019": { name: "Matunga", lat: 19.0270, lng: 72.8530, station: "Matunga", line: "Central Line" },
+  "400028": { name: "Dadar West", lat: 19.0178, lng: 72.8478, station: "Dadar", line: "Western / Central Line" },
+  "400014": { name: "Dadar East", lat: 19.0180, lng: 72.8530, station: "Dadar", line: "Western / Central Line" },
+  "400013": { name: "Lower Parel / Delisle Road", lat: 18.9953, lng: 72.8302, station: "Lower Parel", line: "Western Line" },
+  "400011": { name: "Mahalaxmi / Jacob Circle", lat: 18.9827, lng: 72.8242, station: "Mahalaxmi", line: "Western Line" },
+  "400008": { name: "Mumbai Central", lat: 18.9696, lng: 72.8193, station: "Mumbai Central", line: "Western Line" },
+  "400007": { name: "Grant Road / Lamington Road", lat: 18.9629, lng: 72.8143, station: "Grant Road", line: "Western Line" },
+  "400004": { name: "Girgaon / Charni Road", lat: 18.9559, lng: 72.8152, station: "Charni Road", line: "Western Line" },
+  "400002": { name: "Marine Lines / Kalbadevi", lat: 18.9447, lng: 72.8242, station: "Marine Lines", line: "Western Line" },
+  "400020": { name: "Churchgate / Marine Drive", lat: 18.9322, lng: 72.8264, station: "Churchgate", line: "Western Line" },
+  "400001": { name: "Fort / Colaba / CSMT", lat: 18.9400, lng: 72.8350, station: "CSMT", line: "Central Line" },
+
+  // Navi Mumbai
+  "400703": { name: "Vashi, Navi Mumbai", lat: 19.0771, lng: 72.9986, station: "Vashi", line: "Harbour Line" },
+  "400705": { name: "Sanpada, Navi Mumbai", lat: 19.0640, lng: 73.0110, station: "Sanpada", line: "Harbour Line" },
+  "400706": { name: "Nerul, Navi Mumbai", lat: 19.0330, lng: 73.0182, station: "Nerul", line: "Harbour Line" },
+  "400614": { name: "CBD Belapur, Navi Mumbai", lat: 19.0190, lng: 73.0400, station: "CBD Belapur", line: "Harbour Line" },
+  "410210": { name: "Kharghar, Navi Mumbai", lat: 19.0430, lng: 73.0680, station: "Kharghar", line: "Harbour Line" },
+  "410206": { name: "Panvel, Navi Mumbai", lat: 18.9894, lng: 73.1175, station: "Panvel", line: "Harbour Line" },
+  "400708": { name: "Airoli, Navi Mumbai", lat: 19.1579, lng: 72.9935, station: "Airoli", line: "Trans-Harbour Line" },
+  "400709": { name: "Ghansoli / Kopar Khairane", lat: 19.1245, lng: 73.0039, station: "Ghansoli", line: "Trans-Harbour Line" },
+
+  // Major Regional Hubs across India
+  "411001": { name: "Pune Station / Camp", lat: 18.5289, lng: 73.8744, station: "Pune Junction", line: "Central Railway" },
+  "411014": { name: "Viman Nagar / Kharadi, Pune", lat: 18.5679, lng: 73.9143, station: "Hadapsar", line: "Central Railway" },
+  "411038": { name: "Kothrud, Pune", lat: 18.5074, lng: 73.8077, station: "Shivajinagar", line: "Central Railway" },
+  "411057": { name: "Hinjawadi IT Park, Pune", lat: 18.5913, lng: 73.7389, station: "Pimpri", line: "Central Railway" },
+  "380001": { name: "Ahmedabad City", lat: 23.0225, lng: 72.5714, station: "Ahmedabad Junction", line: "Western Railway" },
+  "395001": { name: "Surat City", lat: 21.1702, lng: 72.8311, station: "Surat", line: "Western Railway" },
+  "110001": { name: "Connaught Place, New Delhi", lat: 28.6304, lng: 77.2177, station: "New Delhi", line: "Northern Railway / Delhi Metro" },
+  "560001": { name: "MG Road, Bengaluru", lat: 12.9756, lng: 77.6066, station: "KSR Bengaluru", line: "South Western / Namma Metro" },
+  "600001": { name: "George Town, Chennai", lat: 13.0878, lng: 80.2785, station: "Chennai Central", line: "Southern Railway" },
+  "500001": { name: "Abids, Hyderabad", lat: 17.3916, lng: 78.4747, station: "Hyderabad Deccan", line: "South Central Railway" },
+  "700001": { name: "BBD Bagh, Kolkata", lat: 22.5726, lng: 88.3496, station: "Howrah", line: "Eastern Railway / Kolkata Metro" },
+};
+
+// Major Suburban Railway Stations List
+export const MUMBAI_SUBURBAN_STATIONS = [
+  // Western Line (South to North)
+  { name: "Churchgate", line: "Western Line", lat: 18.9322, lng: 72.8264 },
+  { name: "Marine Lines", line: "Western Line", lat: 18.9447, lng: 72.8242 },
+  { name: "Charni Road", line: "Western Line", lat: 18.9515, lng: 72.8183 },
+  { name: "Grant Road", line: "Western Line", lat: 18.9629, lng: 72.8143 },
+  { name: "Mumbai Central", line: "Western Line", lat: 18.9696, lng: 72.8193 },
+  { name: "Mahalaxmi", line: "Western Line", lat: 18.9827, lng: 72.8242 },
+  { name: "Lower Parel", line: "Western Line", lat: 18.9953, lng: 72.8302 },
+  { name: "Prabhadevi", line: "Western Line", lat: 19.0060, lng: 72.8350 },
+  { name: "Dadar (Western)", line: "Western Line", lat: 19.0178, lng: 72.8428 },
+  { name: "Matunga Road", line: "Western Line", lat: 19.0300, lng: 72.8420 },
+  { name: "Mahim", line: "Western Line", lat: 19.0400, lng: 72.8400 },
+  { name: "Bandra", line: "Western Line", lat: 19.0596, lng: 72.8400 },
+  { name: "Khar Road", line: "Western Line", lat: 19.0700, lng: 72.8390 },
+  { name: "Santacruz", line: "Western Line", lat: 19.0818, lng: 72.8416 },
+  { name: "Vile Parle", line: "Western Line", lat: 19.0998, lng: 72.8438 },
+  { name: "Andheri", line: "Western Line / Metro Line 1", lat: 19.1197, lng: 72.8464 },
+  { name: "Jogeshwari", line: "Western Line", lat: 19.1384, lng: 72.8504 },
+  { name: "Ram Mandir", line: "Western Line", lat: 19.1530, lng: 72.8510 },
+  { name: "Goregaon", line: "Western Line", lat: 19.1663, lng: 72.8526 },
+  { name: "Malad", line: "Western Line", lat: 19.1874, lng: 72.8484 },
+  { name: "Kandivali", line: "Western Line", lat: 19.2062, lng: 72.8530 },
+  { name: "Borivali", line: "Western Line", lat: 19.2307, lng: 72.8567 },
+  { name: "Dahisar", line: "Western Line", lat: 19.2570, lng: 72.8590 },
+  { name: "Mira Road", line: "Western Line", lat: 19.2812, lng: 72.8561 },
+  { name: "Bhayandar", line: "Western Line", lat: 19.2952, lng: 72.8532 },
+  { name: "Naigaon", line: "Western Line", lat: 19.3522, lng: 72.8488 },
+  { name: "Vasai Road", line: "Western Line", lat: 19.3810, lng: 72.8315 },
+  { name: "Nallasopara", line: "Western Line", lat: 19.4182, lng: 72.8183 },
+  { name: "Virar", line: "Western Line", lat: 19.4674, lng: 72.8155 },
+  { name: "Saphale", line: "Western Line", lat: 19.5760, lng: 72.8230 },
+  { name: "Palghar", line: "Western Line", lat: 19.6967, lng: 72.7699 },
+  { name: "Boisar", line: "Western Line", lat: 19.8000, lng: 72.7500 },
+  { name: "Dahanu Road", line: "Western Line", lat: 19.9723, lng: 72.7317 },
+
+  // Central Line (Main)
+  { name: "CSMT", line: "Central Line", lat: 18.9400, lng: 72.8350 },
+  { name: "Masjid", line: "Central Line", lat: 18.9520, lng: 72.8380 },
+  { name: "Sandhurst Road", line: "Central Line", lat: 18.9610, lng: 72.8390 },
+  { name: "Byculla", line: "Central Line", lat: 18.9770, lng: 72.8330 },
+  { name: "Chinchpokli", line: "Central Line", lat: 18.9880, lng: 72.8320 },
+  { name: "Currey Road", line: "Central Line", lat: 18.9960, lng: 72.8330 },
+  { name: "Parel", line: "Central Line", lat: 19.0080, lng: 72.8360 },
+  { name: "Dadar (Central)", line: "Central Line", lat: 19.0180, lng: 72.8430 },
+  { name: "Matunga (Central)", line: "Central Line", lat: 19.0270, lng: 72.8530 },
+  { name: "Sion", line: "Central Line", lat: 19.0400, lng: 72.8620 },
+  { name: "Kurla", line: "Central Line / Harbour", lat: 19.0650, lng: 72.8790 },
+  { name: "Vidyavihar", line: "Central Line", lat: 19.0800, lng: 72.8950 },
+  { name: "Ghatkopar", line: "Central Line / Metro Line 1", lat: 19.0860, lng: 72.9080 },
+  { name: "Vikhroli", line: "Central Line", lat: 19.1100, lng: 72.9280 },
+  { name: "Kanjurmarg", line: "Central Line", lat: 19.1300, lng: 72.9360 },
+  { name: "Bhandup", line: "Central Line", lat: 19.1450, lng: 72.9370 },
+  { name: "Nahur", line: "Central Line", lat: 19.1580, lng: 72.9460 },
+  { name: "Mulund", line: "Central Line", lat: 19.1720, lng: 72.9560 },
+  { name: "Thane", line: "Central Line / Trans-Harbour", lat: 19.1860, lng: 72.9754 },
+  { name: "Kalwa", line: "Central Line", lat: 19.1990, lng: 72.9970 },
+  { name: "Mumbra", line: "Central Line", lat: 19.1800, lng: 73.0230 },
+  { name: "Diva", line: "Central Line", lat: 19.1890, lng: 73.0420 },
+  { name: "Kopar", line: "Central Line", lat: 19.2130, lng: 73.0760 },
+  { name: "Dombivli", line: "Central Line", lat: 19.2184, lng: 73.0867 },
+  { name: "Thakurli", line: "Central Line", lat: 19.2250, lng: 73.1020 },
+  { name: "Kalyan", line: "Central Line Junction", lat: 19.2403, lng: 73.1305 },
+
+  // Harbour Line
+  { name: "Vadala Road", line: "Harbour Line", lat: 19.0170, lng: 72.8590 },
+  { name: "GTB Nagar", line: "Harbour Line", lat: 19.0370, lng: 72.8660 },
+  { name: "Chunabhatti", line: "Harbour Line", lat: 19.0520, lng: 72.8710 },
+  { name: "Tilak Nagar", line: "Harbour Line", lat: 19.0700, lng: 72.8940 },
+  { name: "Chembur", line: "Harbour Line", lat: 19.0620, lng: 72.9010 },
+  { name: "Govandi", line: "Harbour Line", lat: 19.0550, lng: 72.9150 },
+  { name: "Mankhurd", line: "Harbour Line", lat: 19.0480, lng: 72.9320 },
+  { name: "Vashi", line: "Harbour Line", lat: 19.0771, lng: 72.9986 },
+  { name: "Sanpada", line: "Harbour Line", lat: 19.0640, lng: 73.0110 },
+  { name: "Juinagar", line: "Harbour Line", lat: 19.0550, lng: 73.0170 },
+  { name: "Nerul", line: "Harbour Line", lat: 19.0330, lng: 73.0182 },
+  { name: "Seawoods-Darave", line: "Harbour Line", lat: 19.0190, lng: 73.0190 },
+  { name: "Belapur CBD", line: "Harbour Line", lat: 19.0190, lng: 73.0400 },
+  { name: "Kharghar", line: "Harbour Line", lat: 19.0430, lng: 73.0680 },
+  { name: "Mansarovar", line: "Harbour Line", lat: 19.0270, lng: 73.0900 },
+  { name: "Khandeshwar", line: "Harbour Line", lat: 19.0110, lng: 73.1030 },
+  { name: "Panvel", line: "Harbour Line", lat: 18.9894, lng: 73.1175 },
+];
 
 /**
- * Forward geocode an address string (e.g., street, city, pin code) into { lat, lng } coordinates.
- * Includes caching and sensible fallbacks.
+ * Find the nearest suburban railway station to given coordinates
+ */
+export function findNearestRailwayStation(lat, lng) {
+  if (!lat || !lng) return null;
+  let nearestStation = null;
+  let shortestDist = Infinity;
+
+  MUMBAI_SUBURBAN_STATIONS.forEach((stn) => {
+    const dist = calculateDistanceKm(lat, lng, stn.lat, stn.lng);
+    if (dist < shortestDist) {
+      shortestDist = dist;
+      nearestStation = { ...stn, distanceKm: parseFloat(dist.toFixed(2)) };
+    }
+  });
+
+  return nearestStation;
+}
+
+/**
+ * Calculate recommended local train / transit itinerary between origin and destination
+ */
+export function calculateTrainTransitGuide(originCoords, destCoords) {
+  if (!originCoords || !destCoords) return null;
+
+  const startStn = findNearestRailwayStation(originCoords.latitude || originCoords.lat, originCoords.longitude || originCoords.lng);
+  const destStn = findNearestRailwayStation(destCoords.latitude || destCoords.lat, destCoords.longitude || destCoords.lng);
+
+  if (!startStn || !destStn) return null;
+
+  const stationDistanceKm = calculateDistanceKm(startStn.lat, startStn.lng, destStn.lat, destStn.lng);
+  const isSameStation = startStn.name === destStn.name;
+
+  let trainLineName = startStn.line.split("/")[0].trim();
+  let trainTimeMin = Math.max(10, Math.round(stationDistanceKm * 1.3)); // average Mumbai suburban train speed ~45 km/h
+  let routeDescription = "";
+
+  if (isSameStation) {
+    routeDescription = `Both locations are near ${startStn.name} Station. Direct local auto / walking recommended.`;
+  } else if (startStn.line.includes("Western") && destStn.line.includes("Western")) {
+    trainLineName = "Western Line (Local Train)";
+    routeDescription = `Direct Western Line Slow/Fast train from ${startStn.name} to ${destStn.name}.`;
+  } else if (startStn.line.includes("Central") && destStn.line.includes("Central")) {
+    trainLineName = "Central Line (Local Train)";
+    routeDescription = `Direct Central Line Slow/Fast train from ${startStn.name} to ${destStn.name}.`;
+  } else if (startStn.line.includes("Harbour") && destStn.line.includes("Harbour")) {
+    trainLineName = "Harbour Line (Local Train)";
+    routeDescription = `Direct Harbour Line train from ${startStn.name} to ${destStn.name}.`;
+  } else if (startStn.line.includes("Western") && destStn.line.includes("Central")) {
+    trainLineName = "Western ➔ Dadar ➔ Central Line";
+    routeDescription = `Take Western Line to Dadar Station, change to Central Line platform for ${destStn.name}.`;
+    trainTimeMin += 12; // interchange buffer
+  } else if (startStn.line.includes("Central") && destStn.line.includes("Western")) {
+    trainLineName = "Central ➔ Dadar ➔ Western Line";
+    routeDescription = `Take Central Line to Dadar Station, change to Western Line platform for ${destStn.name}.`;
+    trainTimeMin += 12;
+  } else {
+    trainLineName = `${startStn.line} ➔ ${destStn.line}`;
+    routeDescription = `Train from ${startStn.name} with interchange at Dadar / Kurla to reach ${destStn.name}.`;
+    trainTimeMin += 15;
+  }
+
+  const firstMileTimeMin = Math.max(2, Math.round(startStn.distanceKm * 4));
+  const lastMileTimeMin = Math.max(3, Math.round(destStn.distanceKm * 4));
+  const totalTransitTimeMin = firstMileTimeMin + trainTimeMin + lastMileTimeMin;
+
+  return {
+    startStation: startStn,
+    destStation: destStn,
+    trainLineName,
+    stationDistanceKm,
+    trainTimeMin,
+    firstMileTimeMin,
+    lastMileTimeMin,
+    totalTransitTimeMin,
+    routeDescription,
+    steps: [
+      {
+        type: "FIRST_MILE",
+        title: `1. Reach ${startStn.name} Station`,
+        desc: `${startStn.distanceKm} km from start point • ~${firstMileTimeMin} mins via Auto/Walk`,
+        icon: "🚶",
+      },
+      {
+        type: "TRAIN_LEG",
+        title: `2. Board ${trainLineName}`,
+        desc: `Train journey from ${startStn.name} ➔ ${destStn.name} • ~${trainTimeMin} mins (${stationDistanceKm} km)`,
+        icon: "🚆",
+        note: routeDescription,
+      },
+      {
+        type: "LAST_MILE",
+        title: `3. ${destStn.name} Station to Destination`,
+        desc: `Take Auto / Cab ~${destStn.distanceKm} km to customer address • ~${lastMileTimeMin} mins`,
+        icon: "🛺",
+      },
+    ],
+  };
+}
+
+/**
+ * Robust Multi-Stage Forward Geocoder for Indian Addresses
+ * 1. Checks PIN Code dictionary & locality keywords first (100% accurate for known hubs/towns)
+ * 2. Queries Nominatim with stripped locality + city
+ * 3. Queries Nominatim by PIN Code
+ * 4. Fallback to dictionary locality
  */
 export async function forwardGeocodeAddress(addressStr, fallbackCoords = null) {
   if (!addressStr || typeof addressStr !== "string") {
     return fallbackCoords || null;
   }
 
-  const cleanQuery = addressStr.trim();
-  if (cleanQuery.length < 3) return fallbackCoords || null;
+  const rawAddress = addressStr.trim();
+  if (rawAddress.length < 2) return fallbackCoords || null;
 
-  if (forwardGeoCache.has(cleanQuery)) {
-    return forwardGeoCache.get(cleanQuery);
+  if (forwardGeoCache.has(rawAddress)) {
+    return forwardGeoCache.get(rawAddress);
   }
 
-  try {
-    const sessionKey = `lap_fwd_geo_${encodeURIComponent(cleanQuery.slice(0, 50))}`;
-    const cached = sessionStorage.getItem(sessionKey);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      forwardGeoCache.set(cleanQuery, parsed);
-      return parsed;
-    }
-  } catch (_) {}
+  // 1. Extract 6-digit PIN code (e.g. 401208 from "PIN: 401208" or "401208")
+  const pinMatch = rawAddress.match(/\b([1-9][0-9]{5})\b/);
+  const pinCode = pinMatch ? pinMatch[1] : null;
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
-
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-      cleanQuery
-    )}&limit=1&countrycodes=in`;
-
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: { Accept: "application/json" },
-    });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0 && data[0].lat && data[0].lon) {
-        const result = {
-          lat: parseFloat(Number(data[0].lat).toFixed(6)),
-          lng: parseFloat(Number(data[0].lon).toFixed(6)),
-          displayName: data[0].display_name || cleanQuery,
-        };
-        forwardGeoCache.set(cleanQuery, result);
-        try {
-          const sessionKey = `lap_fwd_geo_${encodeURIComponent(cleanQuery.slice(0, 50))}`;
-          sessionStorage.setItem(sessionKey, JSON.stringify(result));
-        } catch (_) {}
-        return result;
-      }
-    }
-  } catch (err) {
-    console.debug("Forward geocode fetch skipped:", err?.message);
-  }
-
-  // Deterministic local coordinate offset based on address text if external lookup is offline
-  if (fallbackCoords && fallbackCoords.lat && fallbackCoords.lng) {
-    let hash = 0;
-    for (let i = 0; i < cleanQuery.length; i++) {
-      hash = (hash << 5) - hash + cleanQuery.charCodeAt(i);
-      hash |= 0;
-    }
-    const offsetLat = ((hash % 100) / 10000) * 1.5;
-    const offsetLng = (((hash >> 2) % 100) / 10000) * 1.5;
-    const synthetic = {
-      lat: parseFloat((fallbackCoords.lat + offsetLat).toFixed(6)),
-      lng: parseFloat((fallbackCoords.lng + offsetLng).toFixed(6)),
-      displayName: cleanQuery,
+  // Check PIN Code in our comprehensive Indian dictionary
+  if (pinCode && PINCODE_LOCALITY_DICT[pinCode]) {
+    const dictEntry = PINCODE_LOCALITY_DICT[pinCode];
+    const resolved = {
+      lat: dictEntry.lat,
+      lng: dictEntry.lng,
+      displayName: `${dictEntry.name} (PIN ${pinCode})`,
+      station: dictEntry.station,
+      line: dictEntry.line,
+      fromDict: true,
     };
-    forwardGeoCache.set(cleanQuery, synthetic);
-    return synthetic;
+    forwardGeoCache.set(rawAddress, resolved);
+    return resolved;
+  }
+
+  // Check Locality Name keywords in Dictionary (e.g., "naigaon", "vasai", "virar", "borivali", "andheri", "thane", etc.)
+  const lowerAddr = rawAddress.toLowerCase();
+  for (const [pin, entry] of Object.entries(PINCODE_LOCALITY_DICT)) {
+    const locLower = entry.name.toLowerCase();
+    const stationLower = entry.station ? entry.station.toLowerCase() : "";
+    if (
+      (locLower && lowerAddr.includes(locLower.split(",")[0].trim())) ||
+      (stationLower && lowerAddr.includes(stationLower))
+    ) {
+      const resolved = {
+        lat: entry.lat,
+        lng: entry.lng,
+        displayName: entry.name,
+        station: entry.station,
+        line: entry.line,
+        fromDict: true,
+      };
+      forwardGeoCache.set(rawAddress, resolved);
+      return resolved;
+    }
+  }
+
+  // 2. Multi-tier Nominatim Queries
+  // Clean address for search (remove flat / shop / building details like "Reliable garden, chuchandra road")
+  const cleanTokens = rawAddress
+    .replace(/PIN\s*:\s*/gi, "")
+    .replace(/[#\/\-]/g, " ")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  // Queries to try from most specific clean tokens to broader
+  const candidateQueries = [];
+  if (cleanTokens.length >= 2) {
+    candidateQueries.push(cleanTokens.slice(-3).join(", "));
+    candidateQueries.push(cleanTokens.slice(-2).join(", "));
+  }
+  if (pinCode) {
+    candidateQueries.push(`${pinCode}, Maharashtra, India`);
+    candidateQueries.push(`${pinCode}, India`);
+  }
+  candidateQueries.push(rawAddress);
+
+  for (const queryStr of candidateQueries) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        queryStr
+      )}&limit=1&countrycodes=in`;
+
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0 && data[0].lat && data[0].lon) {
+          const result = {
+            lat: parseFloat(Number(data[0].lat).toFixed(6)),
+            lng: parseFloat(Number(data[0].lon).toFixed(6)),
+            displayName: data[0].display_name || rawAddress,
+          };
+          forwardGeoCache.set(rawAddress, result);
+          return result;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 3. Fallback: If fallbackCoords is available, return it
+  if (fallbackCoords && fallbackCoords.lat && fallbackCoords.lng) {
+    return fallbackCoords;
   }
 
   return null;
@@ -517,9 +828,20 @@ export async function calculateOptimalRouteSequence(startLocation, leadList = []
 
     const stopNumber = orderedStops.length + 1;
     let sequenceRankLabel = "1st Nearest";
-    if (stopNumber === 2) sequenceRankLabel = "2nd Nearest";
-    else if (stopNumber === 3) sequenceRankLabel = "3rd Nearest";
-    else if (stopNumber > 3) sequenceRankLabel = `${stopNumber}th Stop`;
+    if (leadList.length === 1) {
+      sequenceRankLabel = "Destination";
+    } else if (stopNumber === 2) {
+      sequenceRankLabel = "2nd Nearest";
+    } else if (stopNumber === 3) {
+      sequenceRankLabel = "3rd Nearest";
+    } else if (stopNumber > 3) {
+      sequenceRankLabel = `${stopNumber}th Stop`;
+    }
+
+    const trainTransit = calculateTrainTransitGuide(
+      { lat: currentPos.lat, lng: currentPos.lng },
+      { lat: nearestLead.lat, lng: nearestLead.lng }
+    );
 
     const stopObj = {
       ...nearestLead,
@@ -529,6 +851,7 @@ export async function calculateOptimalRouteSequence(startLocation, leadList = []
       estDriveMin,
       totalAccumulatedKm: parseFloat(accumulatedDistanceKm.toFixed(2)),
       prevStopName: currentPos.customerName,
+      trainTransit,
     };
 
     orderedStops.push(stopObj);
@@ -555,11 +878,15 @@ export async function calculateOptimalRouteSequence(startLocation, leadList = []
   const totalDistanceKm = roadRouteResult?.distanceKm || parseFloat(accumulatedDistanceKm.toFixed(2));
   const totalDurationMin = roadRouteResult?.durationMin || Math.round(totalDistanceKm * 3.5);
 
+  // Transit total time summary
+  const totalTransitTimeMin = orderedStops.reduce((sum, s) => sum + (s.trainTransit?.totalTransitTimeMin || 0), 0);
+
   return {
     startPoint,
     orderedStops,
     totalDistanceKm,
     totalDurationMin,
+    totalTransitTimeMin,
     routePolyline: finalPolyline,
   };
 }
