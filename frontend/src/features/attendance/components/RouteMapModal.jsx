@@ -164,7 +164,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
 
   // 1. Initialize Map Instance Once
   useEffect(() => {
-    if (activeView !== "map" || !mapContainerRef.current) return;
+    if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
       if (mapContainerRef.current._leaflet_id) {
@@ -197,10 +197,35 @@ export default function RouteMapModal({ attendanceId, onClose }) {
         clearTimeout(t2);
         clearTimeout(t3);
       };
-    } else {
-      mapInstanceRef.current.invalidateSize();
     }
-  }, [activeView]);
+  }, []);
+
+  // Invalidate map size and fit bounds when switching views or toggling stats
+  useEffect(() => {
+    if (activeView === "map" && mapInstanceRef.current) {
+      const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 50);
+      const t2 = setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize?.();
+        if (polylineRef.current) {
+          try {
+            mapInstanceRef.current?.fitBounds(polylineRef.current.getBounds(), {
+              padding: [45, 45],
+              maxZoom: 16,
+            });
+          } catch (e) {
+            // ignore
+          }
+        }
+      }, 200);
+      const t3 = setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 450);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    }
+  }, [activeView, showStats]);
 
   // Cleanup Map on modal unmount
   useEffect(() => {
@@ -214,7 +239,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
 
   // 2. Render and Update Layers (Markers, Polyline) without recreating the map
   useEffect(() => {
-    if (!routeData || activeView !== "map" || !mapInstanceRef.current || !routeLayerGroupRef.current) return;
+    if (!routeData || !mapInstanceRef.current || !routeLayerGroupRef.current) return;
 
     let isSubscribed = true;
     const map = mapInstanceRef.current;
@@ -430,18 +455,7 @@ export default function RouteMapModal({ attendanceId, onClose }) {
     return () => {
       isSubscribed = false;
     };
-  }, [routeData, activeView, travelMode]);
-
-
-  // Handle map resizing when stats collapsible toggles
-  useEffect(() => {
-    if (activeView === "map" && mapInstanceRef.current) {
-      const timer = setTimeout(() => {
-        mapInstanceRef.current?.invalidateSize?.();
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [showStats, activeView]);
+  }, [routeData, travelMode]);
 
   if (!attendanceId) return null;
 
@@ -668,117 +682,104 @@ export default function RouteMapModal({ attendanceId, onClose }) {
 
         {/* Main Content: Map or Timeline */}
         <div className="relative flex-1 w-full h-full min-h-0 overflow-hidden bg-slate-950">
-          {activeView === "map" ? (
-            <div className="relative h-full w-full">
-              {/* Floating Quick Action Controls on Map (Top-Right / Top-Left) with higher z-index */}
-              <div className="absolute top-3 left-3 z-[1001] flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={fitRouteBounds}
-                  className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-slate-900/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-md hover:bg-slate-800 active:scale-95 transition-all cursor-pointer touch-manipulation"
-                  title="Fit whole route to screen"
-                >
-                  <FiMaximize2 className="h-3.5 w-3.5 text-blue-400" />
-                  <span className="hidden xs:inline text-[11px]">Fit Route</span>
-                </button>
-              </div>
-
-              {/* Floating Mobile Exit Pill directly on the map */}
-              {/* <div className="absolute top-3 right-3 z-[1001] flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex items-center gap-1 rounded-xl border border-red-500/50 bg-slate-900/90 px-3 py-1.5 text-xs font-bold text-red-300 shadow-xl backdrop-blur-md hover:bg-red-500/20 active:scale-95 transition-all cursor-pointer touch-manipulation"
-                  title="Exit Map"
-                >
-                  <FiX className="h-4 w-4 text-red-400" />
-                  <span className="text-[11px]">Close</span>
-                </button>
-              </div> */}
-
-              {/* Leaflet Map Canvas */}
-              <div
-                ref={mapContainerRef}
-                className="h-full w-full z-10"
-              />
+          {/* Map View */}
+          <div className={`relative h-full w-full ${activeView === "map" ? "" : "hidden"}`}>
+            {/* Floating Quick Action Controls on Map (Top-Right / Top-Left) with higher z-index */}
+            <div className="absolute top-3 left-3 z-[1001] flex items-center gap-2">
+              <button
+                type="button"
+                onClick={fitRouteBounds}
+                className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-slate-900/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-md hover:bg-slate-800 active:scale-95 transition-all cursor-pointer touch-manipulation"
+                title="Fit whole route to screen"
+              >
+                <FiMaximize2 className="h-3.5 w-3.5 text-blue-400" />
+                <span className="hidden xs:inline text-[11px]">Fit Route</span>
+              </button>
             </div>
-          ) : (
-            <div className="h-full overflow-y-auto p-3 sm:p-6 space-y-2.5 sm:space-y-3">
-              {/* Start Point */}
-              <div className="flex items-start gap-2.5 sm:gap-3 rounded-2xl bg-white/5 p-3 sm:p-4 border border-emerald-500/30">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-bold shrink-0">
-                  🟢
-                </div>
-                <div className="flex-1 text-xs min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-emerald-400 text-xs sm:text-sm">Start Punch-In</span>
-                    <span className="font-mono text-slate-300 text-[11px] sm:text-xs shrink-0">{safeFormatTime(att.startTime || att.start_time)}</span>
-                  </div>
-                  <p className="text-slate-300 mt-1 truncate">{att.startLocation || att.start_location || "Office Workspace"}</p>
-                  {(att.startLatitude || att.start_latitude) && (
-                    <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono mt-0.5 truncate">
-                      Coords: {att.startLatitude || att.start_latitude}, {att.startLongitude || att.start_longitude}
-                    </p>
-                  )}
-                </div>
+
+            {/* Leaflet Map Canvas */}
+            <div
+              ref={mapContainerRef}
+              className="h-full w-full z-10"
+            />
+          </div>
+
+          {/* Timeline View */}
+          <div className={`h-full overflow-y-auto p-3 sm:p-6 space-y-2.5 sm:space-y-3 ${activeView === "timeline" ? "" : "hidden"}`}>
+            {/* Start Point */}
+            <div className="flex items-start gap-2.5 sm:gap-3 rounded-2xl bg-white/5 p-3 sm:p-4 border border-emerald-500/30">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-bold shrink-0">
+                🟢
               </div>
-
-              {/* Waypoints */}
-              {points.length === 0 ? (
-                <div className="rounded-xl border border-white/5 bg-white/5 p-4 text-center text-xs text-slate-400">
-                  No intermediate route checkpoints recorded for this work session.
+              <div className="flex-1 text-xs min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-emerald-400 text-xs sm:text-sm">Start Punch-In</span>
+                  <span className="font-mono text-slate-300 text-[11px] sm:text-xs shrink-0">{safeFormatTime(att.startTime || att.start_time)}</span>
                 </div>
-              ) : (
-                points.map((pt, i) => (
-                  <div
-                    key={pt.id || i}
-                    className="flex items-start gap-2.5 sm:gap-3 rounded-2xl bg-white/5 p-3 sm:p-4 border border-white/5 hover:border-indigo-500/40 transition-colors"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300 font-bold shrink-0 text-xs">
-                      #{i + 1}
-                    </div>
-                    <div className="flex-1 text-xs min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-indigo-300 truncate">
-                          {pt.locationName || pt.location_name || `Movement Checkpoint #${i + 1}`}
-                        </span>
-                        <span className="font-mono text-slate-400 text-[11px] sm:text-xs shrink-0">{safeFormatTime(pt.recordedAt || pt.recorded_at)}</span>
-                      </div>
-                      <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono mt-1 truncate">
-                        Lat: {pt.latitude}, Lng: {pt.longitude}
-                        {pt.speed ? ` • Speed: ${(pt.speed * 3.6).toFixed(1)} km/h` : ""}
-                        {pt.accuracy ? ` • GPS: ±${pt.accuracy.toFixed(0)}m` : ""}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
+                <p className="text-slate-300 mt-1 truncate">{att.startLocation || att.start_location || "Office Workspace"}</p>
+                {(att.startLatitude || att.start_latitude) && (
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono mt-0.5 truncate">
+                    Coords: {att.startLatitude || att.start_latitude}, {att.startLongitude || att.start_longitude}
+                  </p>
+                )}
+              </div>
+            </div>
 
-              {/* End Point */}
-              {(att.endLatitude || att.end_latitude || att.currentLatitude || att.current_latitude) && (
-                <div className="flex items-start gap-2.5 sm:gap-3 rounded-2xl bg-white/5 p-3 sm:p-4 border border-red-500/30">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-500/20 text-red-400 font-bold shrink-0">
-                    {att.status === "COMPLETED" ? "🔴" : "📡"}
+            {/* Waypoints */}
+            {points.length === 0 ? (
+              <div className="rounded-xl border border-white/5 bg-white/5 p-4 text-center text-xs text-slate-400">
+                No intermediate route checkpoints recorded for this work session.
+              </div>
+            ) : (
+              points.map((pt, i) => (
+                <div
+                  key={pt.id || i}
+                  className="flex items-start gap-2.5 sm:gap-3 rounded-2xl bg-white/5 p-3 sm:p-4 border border-white/5 hover:border-indigo-500/40 transition-colors"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300 font-bold shrink-0 text-xs">
+                    #{i + 1}
                   </div>
                   <div className="flex-1 text-xs min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-red-400 text-xs sm:text-sm">
-                        {att.status === "COMPLETED" ? "Punch-Out Exit" : "Current Live Location"}
+                      <span className="font-semibold text-indigo-300 truncate">
+                        {pt.locationName || pt.location_name || `Movement Checkpoint #${i + 1}`}
                       </span>
-                      <span className="font-mono text-slate-300 text-[11px] sm:text-xs shrink-0">
-                        {safeFormatTime(att.endTime || att.end_time || att.lastTrackedAt || att.last_tracked_at)}
-                      </span>
+                      <span className="font-mono text-slate-400 text-[11px] sm:text-xs shrink-0">{safeFormatTime(pt.recordedAt || pt.recorded_at)}</span>
                     </div>
-                    <p className="text-slate-300 mt-1 truncate">{att.endLocation || att.end_location || att.currentLocation || att.current_location || "Location"}</p>
-                    <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono mt-0.5 truncate">
-                      Coords: {att.endLatitude || att.end_latitude || att.currentLatitude || att.current_latitude},{" "}
-                      {att.endLongitude || att.end_longitude || att.currentLongitude || att.current_longitude}
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono mt-1 truncate">
+                      Lat: {pt.latitude}, Lng: {pt.longitude}
+                      {pt.speed ? ` • Speed: ${(pt.speed * 3.6).toFixed(1)} km/h` : ""}
+                      {pt.accuracy ? ` • GPS: ±${pt.accuracy.toFixed(0)}m` : ""}
                     </p>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              ))
+            )}
+
+            {/* End Point */}
+            {(att.endLatitude || att.end_latitude || att.currentLatitude || att.current_latitude) && (
+              <div className="flex items-start gap-2.5 sm:gap-3 rounded-2xl bg-white/5 p-3 sm:p-4 border border-red-500/30">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-500/20 text-red-400 font-bold shrink-0">
+                  {att.status === "COMPLETED" ? "🔴" : "📡"}
+                </div>
+                <div className="flex-1 text-xs min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-red-400 text-xs sm:text-sm">
+                      {att.status === "COMPLETED" ? "Punch-Out Exit" : "Current Live Location"}
+                    </span>
+                    <span className="font-mono text-slate-300 text-[11px] sm:text-xs shrink-0">
+                      {safeFormatTime(att.endTime || att.end_time || att.lastTrackedAt || att.last_tracked_at)}
+                    </span>
+                  </div>
+                  <p className="text-slate-300 mt-1 truncate">{att.endLocation || att.end_location || att.currentLocation || att.current_location || "Location"}</p>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono mt-0.5 truncate">
+                    Coords: {att.endLatitude || att.end_latitude || att.currentLatitude || att.current_latitude},{" "}
+                    {att.endLongitude || att.end_longitude || att.currentLongitude || att.current_longitude}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
