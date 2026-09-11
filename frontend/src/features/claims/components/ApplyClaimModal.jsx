@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   FiCamera,
   FiCheckCircle,
@@ -54,6 +54,42 @@ export default function ApplyClaimModal({ isOpen, onClose, onSuccess }) {
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      category: "OTHER",
+      amount: "",
+      taxAmount: "",
+      expenseDate: new Date().toISOString().split("T")[0],
+      merchantName: "",
+      invoiceNumber: "",
+      gstNumber: "",
+      description: "",
+    });
+    setReceiptFile(null);
+    setReceiptPreview(null);
+    setOcrScanning(false);
+    setOcrProgress(0);
+    setOcrStatusText("");
+    setOcrRawText("");
+    setExtractedSummary(null);
+    setSubmitting(false);
+    setIsCameraOpen(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -201,6 +237,7 @@ export default function ApplyClaimModal({ isOpen, onClose, onSuccess }) {
       const res = await claimsApi.applyClaim(payload);
       toast.success(res.data?.message || "Expense claim submitted successfully!");
 
+      resetForm();
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
@@ -235,7 +272,7 @@ export default function ApplyClaimModal({ isOpen, onClose, onSuccess }) {
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-full p-2 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition cursor-pointer"
           >
             <FiX className="h-5 w-5" />
@@ -511,7 +548,7 @@ export default function ApplyClaimModal({ isOpen, onClose, onSuccess }) {
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={submitting}
               className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
             >
