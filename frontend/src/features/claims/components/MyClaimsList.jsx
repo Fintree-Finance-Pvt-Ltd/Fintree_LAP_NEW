@@ -19,16 +19,16 @@ import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";
 import ReceiptViewerModal from "./ReceiptViewerModal.jsx";
 
-const CATEGORY_ICONS = {
-  TRAVEL: "🚕",
-  FUEL: "⛽",
-  FOOD: "🍔",
-  HOTEL: "🏨",
-  OFFICE_SUPPLIES: "📎",
-  CLIENT_ENTERTAINMENT: "🤝",
-  INTERNET_PHONE: "📱",
-  MEDICAL: "💊",
-  OTHER: "📝",
+const CATEGORY_META = {
+  TRAVEL: { icon: "🚕", label: "Travel & Commute", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  FUEL: { icon: "⛽", label: "Fuel / Petrol", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  FOOD: { icon: "🍔", label: "Food & Meals", color: "bg-orange-50 text-orange-700 border-orange-200" },
+  HOTEL: { icon: "🏨", label: "Hotel & Stay", color: "bg-purple-50 text-purple-700 border-purple-200" },
+  OFFICE_SUPPLIES: { icon: "📎", label: "Office Supplies", color: "bg-slate-100 text-slate-700 border-slate-200" },
+  CLIENT_ENTERTAINMENT: { icon: "🤝", label: "Client Meeting", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  INTERNET_PHONE: { icon: "📱", label: "Telecom / Wifi", color: "bg-cyan-50 text-cyan-700 border-cyan-200" },
+  MEDICAL: { icon: "💊", label: "Medical & Health", color: "bg-rose-50 text-rose-700 border-rose-200" },
+  OTHER: { icon: "📝", label: "Miscellaneous", color: "bg-slate-100 text-slate-700 border-slate-200" },
 };
 
 export default function MyClaimsList({
@@ -90,29 +90,30 @@ export default function MyClaimsList({
     switch (status) {
       case "APPROVED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
-            <FiCheckCircle className="h-3 w-3" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 text-[11px] font-bold text-emerald-700 shadow-2xs whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Approved
           </span>
         );
       case "REJECTED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-bold text-rose-800">
-            <FiXCircle className="h-3 w-3" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/80 px-2.5 py-1 text-[11px] font-bold text-rose-700 shadow-2xs whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
             Rejected
           </span>
         );
       case "CANCELLED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600 whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
             Cancelled
           </span>
         );
       case "PENDING":
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
-            <FiClock className="h-3 w-3" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-1 text-[11px] font-bold text-amber-700 shadow-2xs whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
             Pending Approval
           </span>
         );
@@ -122,7 +123,7 @@ export default function MyClaimsList({
   return (
     <div className="space-y-4">
       {/* Search & Filter Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
           <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
@@ -131,13 +132,13 @@ export default function MyClaimsList({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search my claims, title, merchant..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-9 pr-3.5 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-8 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               <FiX className="h-3.5 w-3.5" />
             </button>
@@ -151,9 +152,9 @@ export default function MyClaimsList({
               key={st}
               type="button"
               onClick={() => setStatusFilter(st)}
-              className={`rounded-lg px-3 py-1 text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                 statusFilter === st
-                  ? "bg-white text-blue-700 shadow-2xs"
+                  ? "bg-white text-blue-700 shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -170,17 +171,17 @@ export default function MyClaimsList({
       </div>
 
       {/* Claims Content */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center p-12 text-slate-400">
+          <div className="flex flex-col items-center justify-center p-14 text-slate-400">
             <FiLoader className="h-8 w-8 animate-spin text-blue-600" />
             <p className="mt-3 text-xs font-semibold text-slate-600">
               Loading your claims...
             </p>
           </div>
         ) : filteredClaims.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+          <div className="flex flex-col items-center justify-center p-14 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-200">
               <FiFileText className="h-7 w-7" />
             </div>
             <h3 className="mt-3 text-sm font-bold text-slate-800">
@@ -193,7 +194,7 @@ export default function MyClaimsList({
               <button
                 type="button"
                 onClick={onOpenApplyModal}
-                className="mt-4 flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition cursor-pointer"
+                className="mt-4 flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition cursor-pointer"
               >
                 <FiPlus className="h-4 w-4" />
                 <span>Submit Your First Claim</span>
@@ -202,125 +203,121 @@ export default function MyClaimsList({
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {filteredClaims.map((claim) => (
-              <div
-                key={claim.id}
-                className="p-4 sm:p-5 hover:bg-slate-50/60 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-              >
-                {/* Left details */}
-                <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-lg border border-slate-200/60">
-                    {CATEGORY_ICONS[claim.category] || "📝"}
-                  </div>
-
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-blue-700">
-                        {claim.claimNumber}
-                      </span>
-                      {getStatusBadge(claim.status)}
-                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                        <FiCalendar className="h-3 w-3" />
-                        {claim.expenseDate}
-                      </span>
+            {filteredClaims.map((claim) => {
+              const catMeta = CATEGORY_META[claim.category] || CATEGORY_META.OTHER;
+              return (
+                <div
+                  key={claim.id}
+                  className="p-4 sm:p-5 hover:bg-slate-50/70 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                >
+                  {/* Left details */}
+                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-lg border border-slate-200">
+                      {catMeta.icon}
                     </div>
 
-                    <h4 className="text-sm font-bold text-slate-900 truncate">
-                      {claim.title}
-                    </h4>
-
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                      <span>
-                        Category:{" "}
-                        <strong className="text-slate-700">
-                          {claim.category.replace("_", " ")}
-                        </strong>
-                      </span>
-                      {claim.merchantName && (
-                        <span>
-                          Merchant:{" "}
-                          <strong className="text-slate-700">
-                            {claim.merchantName}
-                          </strong>
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-blue-600">
+                          {claim.claimNumber}
                         </span>
-                      )}
-                      {claim.invoiceNumber && (
-                        <span>
-                          Bill#:{" "}
-                          <strong className="text-slate-700">
-                            {claim.invoiceNumber}
-                          </strong>
+                        {getStatusBadge(claim.status)}
+                        <span className="text-slate-300">•</span>
+                        <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                          <FiCalendar className="h-3 w-3 text-slate-400" />
+                          {claim.expenseDate}
                         </span>
-                      )}
-                    </div>
-
-                    {/* Admin remarks / status reason */}
-                    {claim.adminRemarks && (
-                      <div
-                        className={`text-xs p-2 rounded-xl border mt-2 ${
-                          claim.status === "REJECTED"
-                            ? "bg-rose-50 border-rose-200 text-rose-800"
-                            : "bg-emerald-50 border-emerald-200 text-emerald-800"
-                        }`}
-                      >
-                        <strong>
-                          {claim.status === "REJECTED"
-                            ? "Rejection Reason:"
-                            : "Admin Remarks:"}
-                        </strong>{" "}
-                        {claim.adminRemarks}
                       </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Right Amount & Actions */}
-                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 gap-2">
-                  <div className="text-left sm:text-right">
-                    <div className="text-base sm:text-lg font-black text-slate-900 font-mono">
-                      ₹{Number(claim.amount).toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </div>
-                    {Number(claim.taxAmount) > 0 && (
-                      <div className="text-[10px] text-slate-400">
-                        Tax: ₹{Number(claim.taxAmount).toFixed(2)}
-                      </div>
-                    )}
-                  </div>
+                      <h4 className="text-sm font-bold text-slate-900 truncate">
+                        {claim.title}
+                      </h4>
 
-                  <div className="flex items-center gap-2">
-                    {claim.receiptUrl && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedReceiptClaim(claim)}
-                        className="flex items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
-                      >
-                        <FiEye className="h-3.5 w-3.5" />
-                        <span>View Bill</span>
-                      </button>
-                    )}
-
-                    {claim.status === "PENDING" && (
-                      <button
-                        type="button"
-                        onClick={() => handleCancelClaim(claim.id, claim.claimNumber)}
-                        disabled={cancellingId === claim.id}
-                        className="flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
-                        title="Cancel Pending Claim"
-                      >
-                        {cancellingId === claim.id ? (
-                          <FiLoader className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <FiTrash2 className="h-3.5 w-3.5" />
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                        <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.2 text-[10px] font-bold border ${catMeta.color}`}>
+                          <span>{catMeta.icon}</span>
+                          <span>{catMeta.label}</span>
+                        </span>
+                        {claim.merchantName && (
+                          <span>
+                            Merchant: <strong className="text-slate-700">{claim.merchantName}</strong>
+                          </span>
                         )}
-                        <span>Cancel</span>
-                      </button>
-                    )}
+                        {claim.invoiceNumber && (
+                          <span className="font-mono">
+                            Bill#: <strong className="text-slate-700">{claim.invoiceNumber}</strong>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Admin remarks / status reason */}
+                      {claim.adminRemarks && (
+                        <div
+                          className={`text-xs p-2.5 rounded-xl border mt-2 ${
+                            claim.status === "REJECTED"
+                              ? "bg-rose-50 border-rose-200/80 text-rose-800"
+                              : "bg-emerald-50 border-emerald-200/80 text-emerald-800"
+                          }`}
+                        >
+                          <strong>
+                            {claim.status === "REJECTED"
+                              ? "Rejection Reason:"
+                              : "Admin Remarks:"}
+                          </strong>{" "}
+                          {claim.adminRemarks}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Amount & Actions */}
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 gap-2.5">
+                    <div className="text-left sm:text-right">
+                      <div className="text-base sm:text-lg font-black text-slate-900 font-mono tracking-tight">
+                        ₹{Number(claim.amount).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </div>
+                      {Number(claim.taxAmount) > 0 && (
+                        <div className="text-[10px] font-medium text-slate-400">
+                          Incl. Tax: ₹{Number(claim.taxAmount).toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {claim.receiptUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedReceiptClaim(claim)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition cursor-pointer"
+                        >
+                          <FiEye className="h-3.5 w-3.5" />
+                          <span>View Bill</span>
+                        </button>
+                      )}
+
+                      {claim.status === "PENDING" && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelClaim(claim.id, claim.claimNumber)}
+                          disabled={cancellingId === claim.id}
+                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition cursor-pointer"
+                          title="Cancel Pending Claim"
+                        >
+                          {cancellingId === claim.id ? (
+                            <FiLoader className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <FiTrash2 className="h-3.5 w-3.5" />
+                          )}
+                          <span>Cancel</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
