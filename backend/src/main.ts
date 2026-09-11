@@ -73,22 +73,23 @@ async function bootstrap() {
 
   const express = (await import("express")).default;
 
-  app.use(
-    "/uploads",
-    express.static(
-      path.join(process.cwd(), uploadDir),
-      {
-        etag: true,
-        lastModified: true,
-        setHeaders: (res) => {
-          res.setHeader(
-            "Cache-Control",
-            "public, max-age=86400",
-          );
-        },
+  const staticUploadsMiddleware = express.static(
+    path.join(process.cwd(), uploadDir),
+    {
+      etag: true,
+      lastModified: true,
+      setHeaders: (res) => {
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
       },
-    ),
+    },
   );
+
+  app.use("/uploads", staticUploadsMiddleware);
+  if (apiPrefix) {
+    app.use(`/${apiPrefix.replace(/^\/+|\/+$/g, '')}/uploads`, staticUploadsMiddleware);
+  }
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("LAP Documentation API")

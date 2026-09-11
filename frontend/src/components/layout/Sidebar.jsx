@@ -31,6 +31,7 @@ import {
   FaTachometerAlt,
   FaClock,
   FaCalendarCheck,
+  FaFileInvoiceDollar,
 } from "react-icons/fa";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -485,6 +486,16 @@ const rolesConfig = {
       ],
     },
     {
+      category: "CLAIMS",
+      items: [
+        {
+          to: "/claims",
+          label: "Claim & Expenses",
+          Icon: FaFileInvoiceDollar,
+        },
+      ],
+    },
+    {
       category: "REFERENCE",
       items: [
         {
@@ -502,6 +513,7 @@ const rolesConfig = {
 const groupOrder = [
   "PRIMARY",
   "ATTENDANCE",
+  "CLAIMS",
   "MODULES",
   "REFERENCE",
   "LEGAL_PAYMENT_MODULES",

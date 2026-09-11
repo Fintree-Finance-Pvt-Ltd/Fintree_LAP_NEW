@@ -47,6 +47,7 @@ import { HubModule } from './modules/admin/hub/hub.module';
 import { SpokesModule } from './modules/admin/spokes/spokes.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { LeavesModule } from './modules/leaves/leaves.module';
+import { ClaimsModule } from './modules/claims/claims.module';
 
 
 @Module({
@@ -100,6 +101,7 @@ import { LeavesModule } from './modules/leaves/leaves.module';
     SpokesModule,
     AttendanceModule,
     LeavesModule,
+    ClaimsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: RateLimitGuard },
