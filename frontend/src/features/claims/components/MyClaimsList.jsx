@@ -278,11 +278,11 @@ export default function MyClaimsList({
                           minimumFractionDigits: 2,
                         })}
                       </div>
-                      {Number(claim.taxAmount) > 0 && (
+                      {/* {Number(claim.taxAmount) > 0 && (
                         <div className="text-[10px] font-medium text-slate-400">
                           Incl. Tax: ₹{Number(claim.taxAmount).toFixed(2)}
                         </div>
-                      )}
+                      )} */}
                     </div>
 
                     <div className="flex items-center gap-2">

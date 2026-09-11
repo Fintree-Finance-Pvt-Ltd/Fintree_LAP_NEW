@@ -53,6 +53,17 @@ function normalizeDate(day, month, year) {
   return null;
 }
 
+/**
+ * Helper to clean and parse numeric amount strings
+ */
+function parseCleanAmount(str) {
+  if (!str) return null;
+  // Replace comma separators, keep digits and dots
+  const clean = str.replace(/,/g, '').replace(/[^\d.]/g, '').trim();
+  const parsed = parseFloat(clean);
+  return !isNaN(parsed) && parsed > 0 && parsed < 10000000 ? parsed : null;
+}
+
 export function extractDetailsFromOcr(text) {
   if (!text || typeof text !== 'string') {
     return {
@@ -87,9 +98,9 @@ export function extractDetailsFromOcr(text) {
   // 2. EXTRACT INVOICE / BILL NUMBER
   let invoiceNumber = '';
   const invoicePatterns = [
-    /(?:invoice|bill|receipt|tax\s*inv|memo|inv|order|trip|booking)\s*(?:no|num|number|#|id)?\s*[:\-\.]?\s*([A-Za-z0-9\-\/]{3,30})/i,
-    /(?:inv|bill|rcpt)\s*#\s*([A-Za-z0-9\-\/]{3,30})/i,
-    /#\s*([A-Za-z0-9\-\/]{4,25})/,
+    /(?:invoice|bill|receipt|tax\s*inv|memo|inv|order|trip|booking)\s*(?:no|num|number|#|id)?\s*[:\-.]?\s*([A-Za-z0-9\-/]{3,35})/i,
+    /(?:inv|bill|rcpt)\s*#\s*([A-Za-z0-9\-/]{3,35})/i,
+    /#\s*([A-Za-z0-9\-/]{4,30})/,
   ];
   for (const pattern of invoicePatterns) {
     const match = cleanText.match(pattern);
@@ -106,11 +117,11 @@ export function extractDetailsFromOcr(text) {
   let date = '';
   const datePatterns = [
     // DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
-    /\b(0?[1-9]|[12][0-9]|3[01])[\/\-\.](0?[1-9]|1[012])[\/\-\.](20\d\d|\d\d)\b/,
+    /\b(0?[1-9]|[12][0-9]|3[01])[\/\-.](0?[1-9]|1[012])[\/\-.](20\d\d|\d\d)\b/,
     // YYYY-MM-DD or YYYY/MM/DD
-    /\b(20\d\d)[\/\-\.](0?[1-9]|1[012])[\/\-\.](0?[1-9]|[12][0-9]|3[01])\b/,
+    /\b(20\d\d)[\/\-.](0?[1-9]|1[012])[\/\-.](0?[1-9]|[12][0-9]|3[01])\b/,
     // DD Mon YYYY (e.g. 15 Jan 2026, 04-Aug-2025)
-    /\b(0?[1-9]|[12][0-9]|3[01])[\s\-\.](Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\-\.](20\d\d|\d\d)\b/i,
+    /\b(0?[1-9]|[12][0-9]|3[01])[\s\-.](Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\-.](20\d\d|\d\d)\b/i,
   ];
 
   for (const pattern of datePatterns) {
@@ -127,43 +138,109 @@ export function extractDetailsFromOcr(text) {
     }
   }
 
-  // 4. EXTRACT TOTAL AMOUNT & TAX
+  // 4. EXTRACT TOTAL / NET AMOUNT (WITH STRICT HIERARCHICAL PRECEDENCE)
   let amount = '';
-  let taxAmount = '';
 
-  const amountNumberCleaner = (str) => {
-    if (!str) return null;
-    const clean = str.replace(/[^\d\.]/g, '').trim();
-    const parsed = parseFloat(clean);
-    return !isNaN(parsed) && parsed > 0 && parsed < 10000000 ? parsed : null;
-  };
-
-  // High priority keywords for Grand Total
-  const totalRegexes = [
-    /(?:grand\s*total|net\s*amount|final\s*amount|total\s*payable|amount\s*payable|amount\s*due|total\s*amount|total\s*bill|total\s*inr|balance\s*due)\s*[:\-\.]?\s*(?:rs\.?|inr|₹)?\s*([0-9,]+\.?[0-9]*)/i,
-    /(?:total|amount)\s*[:\-\.]?\s*(?:rs\.?|inr|₹)\s*([0-9,]+\.?[0-9]*)/i,
-    /(?:rs\.?|inr|₹)\s*([0-9,]+\.?[0-9]*)\s*(?:total|only)?/i,
+  // Tier 1 Keywords: Final Net Payable / Grand Total / Settlement Amount (Highest Priority)
+  const tier1Patterns = [
+    /(?:net\s*amount|net\s*amt|net\s*payable|grand\s*total|total\s*payable|amount\s*payable|final\s*amount|final\s*total|balance\s*due|total\s*due|net\s*total|settlement\s*amount|paid\s*amount|amount\s*paid|total\s*bill\s*amount|bill\s*total)\s*[:\-.]?\s*(?:rs\.?|inr|₹)?\s*([0-9,]+\.?[0-9]*)/gi,
   ];
 
-  for (const pattern of totalRegexes) {
-    const match = cleanText.match(pattern);
-    if (match && match[1]) {
-      const parsed = amountNumberCleaner(match[1]);
-      if (parsed) {
-        amount = parsed.toFixed(2);
-        break;
+  // Search all matches for Tier 1 across lines (if multiple, pick the last one near bottom)
+  let tier1Matches = [];
+  for (const pattern of tier1Patterns) {
+    let m;
+    while ((m = pattern.exec(cleanText)) !== null) {
+      if (m[1]) {
+        const val = parseCleanAmount(m[1]);
+        if (val) tier1Matches.push(val);
       }
     }
   }
 
-  // Fallback: search line-by-line for lines containing 'total'
+  // Check line-by-line for Tier 1 keywords (handles multi-column or OCR split lines)
+  if (tier1Matches.length === 0) {
+    const tier1Keywords = [
+      'net amount',
+      'net amt',
+      'net payable',
+      'grand total',
+      'total payable',
+      'amount payable',
+      'final amount',
+      'final total',
+      'balance due',
+      'total due',
+      'net total',
+      'settlement amount',
+      'paid amount',
+      'amount paid',
+      'bill total',
+    ];
+
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
+      const lowerLine = line.toLowerCase();
+      if (tier1Keywords.some((kw) => lowerLine.includes(kw))) {
+        // Extract numbers from this line
+        const nums = line.match(/\b\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?\b|\b\d+(?:\.\d{1,2})?\b/g);
+        if (nums && nums.length > 0) {
+          const lastNum = parseCleanAmount(nums[nums.length - 1]);
+          if (lastNum) {
+            tier1Matches.push(lastNum);
+            break;
+          }
+        }
+        // If no number on this line, check next line
+        if (i + 1 < lines.length) {
+          const nextNums = lines[i + 1].match(/\b\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?\b|\b\d+(?:\.\d{1,2})?\b/g);
+          if (nextNums && nextNums.length > 0) {
+            const nextNum = parseCleanAmount(nextNums[0]);
+            if (nextNum) {
+              tier1Matches.push(nextNum);
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (tier1Matches.length > 0) {
+    amount = tier1Matches[tier1Matches.length - 1].toFixed(2);
+  }
+
+  // Tier 2: Total Amount / Total Bill / Gross Amount (if no Tier 1 Net Amount found)
+  if (!amount) {
+    const tier2Patterns = [
+      /(?:total\s*amount|total\s*bill|total\s*value|gross\s*amount|gross\s*total)\s*[:\-.]?\s*(?:rs\.?|inr|₹)?\s*([0-9,]+\.?[0-9]*)/gi,
+      /(?:total|amount)\s*[:\-.]?\s*(?:rs\.?|inr|₹)\s*([0-9,]+\.?[0-9]*)/gi,
+    ];
+
+    let tier2Matches = [];
+    for (const pattern of tier2Patterns) {
+      let m;
+      while ((m = pattern.exec(cleanText)) !== null) {
+        if (m[1]) {
+          const val = parseCleanAmount(m[1]);
+          if (val) tier2Matches.push(val);
+        }
+      }
+    }
+
+    if (tier2Matches.length > 0) {
+      amount = tier2Matches[tier2Matches.length - 1].toFixed(2);
+    }
+  }
+
+  // Tier 3 Fallback: search line-by-line from bottom to top for lines containing 'total'
   if (!amount) {
     for (let i = lines.length - 1; i >= 0; i--) {
       const line = lines[i];
-      if (/total/i.test(line) && !/sub\s*total/i.test(line)) {
-        const nums = line.match(/\b\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?\b/g);
+      if (/total/i.test(line) && !/sub\s*total|items?\s*total/i.test(line)) {
+        const nums = line.match(/\b\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?\b|\b\d+(?:\.\d{1,2})?\b/g);
         if (nums && nums.length > 0) {
-          const lastNum = amountNumberCleaner(nums[nums.length - 1]);
+          const lastNum = parseCleanAmount(nums[nums.length - 1]);
           if (lastNum) {
             amount = lastNum.toFixed(2);
             break;
@@ -173,14 +250,17 @@ export function extractDetailsFromOcr(text) {
     }
   }
 
-  // Tax amount search
-  const taxPatterns = [
-    /(?:gst|cgst\s*\+\s*sgst|igst|tax\s*amount|total\s*tax|vat)\s*[:\-\.]?\s*(?:rs\.?|inr|₹)?\s*([0-9,]+\.?[0-9]*)/i,
+  // 5. EXTRACT TAX AMOUNT (GST / CGST + SGST / IGST / VAT)
+  let taxAmount = '';
+  // Check for combined or specific tax lines
+  const singleTaxPatterns = [
+    /(?:total\s*tax|gst\s*amount|tax\s*amount|igst|vat)\s*[:\-.]?\s*(?:rs\.?|inr|₹)?\s*([0-9,]+\.?[0-9]*)/i,
   ];
-  for (const pattern of taxPatterns) {
+
+  for (const pattern of singleTaxPatterns) {
     const match = cleanText.match(pattern);
     if (match && match[1]) {
-      const parsed = amountNumberCleaner(match[1]);
+      const parsed = parseCleanAmount(match[1]);
       if (parsed) {
         taxAmount = parsed.toFixed(2);
         break;
@@ -188,7 +268,28 @@ export function extractDetailsFromOcr(text) {
     }
   }
 
-  // 5. EXTRACT MERCHANT / VENDOR NAME
+  // If no single total tax line, look for SGST/CGST or State/Central GST and sum them
+  if (!taxAmount) {
+    let cgstVal = 0;
+    let sgstVal = 0;
+
+    const cgstMatch = cleanText.match(/(?:central\s*gst|cgst)(?:\s*@\s*[\d.]+%)?\s*[:\-.]?\s*(?:rs\.?|inr|₹)?\s*([0-9,]+\.?[0-9]*)/i);
+    if (cgstMatch && cgstMatch[1]) {
+      cgstVal = parseCleanAmount(cgstMatch[1]) || 0;
+    }
+
+    const sgstMatch = cleanText.match(/(?:state\s*gst|sgst)(?:\s*@\s*[\d.]+%)?\s*[:\-.]?\s*(?:rs\.?|inr|₹)?\s*([0-9,]+\.?[0-9]*)/i);
+    if (sgstMatch && sgstMatch[1]) {
+      sgstVal = parseCleanAmount(sgstMatch[1]) || 0;
+    }
+
+    if (cgstVal > 0 || sgstVal > 0) {
+      const totalTaxVal = cgstVal + sgstVal;
+      taxAmount = totalTaxVal.toFixed(2);
+    }
+  }
+
+  // 6. EXTRACT MERCHANT / VENDOR NAME
   let merchantName = '';
   // Check known brands first
   const knownMerchants = [
@@ -261,23 +362,23 @@ export function extractDetailsFromOcr(text) {
     }
   }
 
-  // 6. CATEGORY AUTO-CLASSIFICATION
+  // 7. CATEGORY AUTO-CLASSIFICATION (USING ACCURATE WORD BOUNDARIES & PLURAL SUPPORT)
   let category = 'OTHER';
-  if (/petrol|diesel|fuel|cng|hpcl|bpcl|ioc|iocl|shell|speed|filling\s*station|fuel\s*pump/i.test(lowerText)) {
+  if (/\b(?:petrol|diesel|fuel|cng|hpcl|bpcl|ioc|iocl|shell|speed|filling\s*station|fuel\s*pump)s?\b/i.test(lowerText)) {
     category = 'FUEL';
-  } else if (/uber|ola|rapido|taxi|cab|flight|airline|indigo|air\s*india|irctc|train|bus|redbus|toll|fastag|auto\s*fare|fare|travel|boarding\s*pass/i.test(lowerText)) {
+  } else if (/\b(?:uber|ola|rapido|taxi|cabs?|flight|airline|indigo|air\s*india|irctc|train|bus|redbus|toll|fastag|auto\s*fare|fare|travel|boarding\s*pass)s?\b/i.test(lowerText)) {
     category = 'TRAVEL';
-  } else if (/hotel|lodge|resort|inn|oyo|stay|room\s*rent|accommodation|check\s*in|check\s*out|guest\s*house/i.test(lowerText)) {
+  } else if (/\b(?:hotels?|lodges?|resorts?|inns?|oyo|stay|stays|room\s*rent|room\s*charges?|room|accommodation|check\s*in|check\s*out|guest\s*house)s?\b/i.test(lowerText)) {
     category = 'HOTEL';
-  } else if (/swiggy|zomato|restaurant|cafe|food|meal|dining|lunch|dinner|breakfast|snack|burger|pizza|coffee|tea|chai|bakery|bar\b|beverage/i.test(lowerText)) {
+  } else if (/\b(?:hospitality|swiggy|zomato|restaurants?|cafes?|food|meals?|dining|lunch|dinner|breakfast|snacks?|burgers?|pizzas?|coffee|tea|chai|bakery|bars?|beverages?|kot|ale|brownie|fries)\b/i.test(lowerText)) {
     category = 'FOOD';
-  } else if (/stationery|print|photocopy|xerox|paper|pen|notebook|courier|blue\s*dart|dtdc|dhl|cartridge|toner/i.test(lowerText)) {
+  } else if (/\b(?:stationery|print|printing|photocopy|xerox|paper|pens?|notebooks?|courier|blue\s*dart|dtdc|dhl|cartridges?|toners?)\b/i.test(lowerText)) {
     category = 'OFFICE_SUPPLIES';
-  } else if (/client|entertainment|gift|guest\s*lunch|client\s*meeting/i.test(lowerText)) {
+  } else if (/\b(?:client|entertainment|gifts?|guest\s*lunch|client\s*meeting)\b/i.test(lowerText)) {
     category = 'CLIENT_ENTERTAINMENT';
-  } else if (/airtel|jio|vodafone|vi\b|broadband|internet|mobile\s*recharge|wifi|telecom|phone\s*bill/i.test(lowerText)) {
+  } else if (/\b(?:airtel|jio|vodafone|vi|broadband|internet|mobile\s*recharge|wifi|telecom|phone\s*bills?)\b/i.test(lowerText)) {
     category = 'INTERNET_PHONE';
-  } else if (/pharmacy|chemist|medicine|hospital|clinic|doctor|medical|lab\s*test/i.test(lowerText)) {
+  } else if (/\b(?:pharmacy|chemist|medicines?|hospitals?|clinics?|doctors?|medical|lab\s*tests?)\b/i.test(lowerText)) {
     category = 'MEDICAL';
   }
 
@@ -299,3 +400,4 @@ export function extractDetailsFromOcr(text) {
     },
   };
 }
+
