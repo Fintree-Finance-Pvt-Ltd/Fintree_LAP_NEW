@@ -16,6 +16,7 @@ import {
   FiRefreshCw,
   FiSearch,
   FiTag,
+  FiTrash2,
   FiUser,
   FiUsers,
   FiX,
@@ -25,6 +26,8 @@ import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";
 import ClaimDetailsModal from "./ClaimDetailsModal.jsx";
 import ReceiptViewerModal from "./ReceiptViewerModal.jsx";
+import { FaRupeeSign } from "react-icons/fa";
+
 
 export const CATEGORY_META = {
   TRAVEL: { icon: "🚕", label: "Travel & Commute", color: "bg-blue-50 text-blue-700 border-blue-200" },
@@ -177,28 +180,39 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
     search,
   ]);
 
-  // Dynamic Totals computed on the filtered subset (without tax stats)
+  // Dynamic Totals computed on the filtered subset (excluding CANCELLED from total expenses)
   const filteredSummary = useMemo(() => {
-    let totalAmount = 0;
     let approvedAmount = 0;
     let pendingAmount = 0;
     let rejectedAmount = 0;
+    let approvedCount = 0;
+    let pendingCount = 0;
+    let rejectedCount = 0;
 
     filteredClaims.forEach((c) => {
       const amt = Number(c.amount) || 0;
-      totalAmount += amt;
 
-      if (c.status === "APPROVED") approvedAmount += amt;
-      else if (c.status === "PENDING") pendingAmount += amt;
-      else if (c.status === "REJECTED") rejectedAmount += amt;
+      if (c.status === "APPROVED") {
+        approvedAmount += amt;
+        approvedCount += 1;
+      } else if (c.status === "PENDING") {
+        pendingAmount += amt;
+        pendingCount += 1;
+      } else if (c.status === "REJECTED") {
+        rejectedAmount += amt;
+        rejectedCount += 1;
+      }
     });
 
-    const pendingClaimsList = filteredClaims.filter((c) => c.status === "PENDING");
-    const avgAmount = filteredClaims.length > 0 ? totalAmount / filteredClaims.length : 0;
+    const activeCount = approvedCount + pendingCount + rejectedCount;
+    const totalAmount = approvedAmount + pendingAmount + rejectedAmount;
+    const avgAmount = activeCount > 0 ? totalAmount / activeCount : 0;
 
     return {
-      count: filteredClaims.length,
-      pendingCount: pendingClaimsList.length,
+      count: activeCount,
+      approvedCount,
+      pendingCount,
+      rejectedCount,
       totalAmount: Math.round(totalAmount * 100) / 100,
       approvedAmount: Math.round(approvedAmount * 100) / 100,
       pendingAmount: Math.round(pendingAmount * 100) / 100,
@@ -283,6 +297,23 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
         `Failed to ${type} claim.`;
       toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
       setActionModal((prev) => ({ ...prev, submitting: false }));
+    }
+  };
+
+  const handleDeleteClaim = async (id, claimNumber) => {
+    if (!window.confirm(`Are you sure you want to permanently delete claim ${claimNumber}?`)) {
+      return;
+    }
+    try {
+      await claimsApi.deleteClaim(id);
+      toast.success(`Claim ${claimNumber} deleted successfully.`);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to delete claim.";
+      toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
     }
   };
 
@@ -448,13 +479,13 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
           </div>
 
           {/* Status Tabs */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/60 shrink-0">
-            {["PENDING", "APPROVED", "REJECTED", "ALL"].map((st) => (
+          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/60 shrink-0 overflow-x-auto">
+            {["PENDING", "APPROVED", "REJECTED", "CANCELLED", "ALL"].map((st) => (
               <button
                 key={st}
                 type="button"
                 onClick={() => setStatusFilter(st)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                   statusFilter === st
                     ? "bg-white text-blue-700 shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
@@ -466,6 +497,8 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
                   ? "Approved"
                   : st === "REJECTED"
                   ? "Rejected"
+                  : st === "CANCELLED"
+                  ? "Cancelled"
                   : "All Status"}
               </button>
             ))}
@@ -604,7 +637,7 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20">
-              <FiDollarSign className="h-5 w-5" />
+              <FaRupeeSign className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -630,7 +663,9 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
                 Approved Reimbursable
               </span>
               <span className="font-mono font-bold text-emerald-900 text-sm">
-                ₹{Number(filteredSummary.approvedAmount).toLocaleString("en-IN")}
+                ₹{Number(filteredSummary.approvedAmount).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                })} ({filteredSummary.approvedCount})
               </span>
             </div>
 
@@ -639,7 +674,20 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
                 Pending Approval
               </span>
               <span className="font-mono font-bold text-amber-900 text-sm">
-                ₹{Number(filteredSummary.pendingAmount).toLocaleString("en-IN")} ({filteredSummary.pendingCount})
+                ₹{Number(filteredSummary.pendingAmount).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                })} ({filteredSummary.pendingCount})
+              </span>
+            </div>
+
+            <div className="bg-white/80 border border-rose-200 rounded-xl px-3 py-1.5 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">
+                Rejected Claims
+              </span>
+              <span className="font-mono font-bold text-rose-900 text-sm">
+                ₹{Number(filteredSummary.rejectedAmount).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                })} ({filteredSummary.rejectedCount})
               </span>
             </div>
           </div>
@@ -944,13 +992,25 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
                                 </button>
                               </>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => setInspectingClaim(claim)}
-                                className="text-xs font-semibold text-blue-600 hover:underline px-2 py-1"
-                              >
-                                View Details
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setInspectingClaim(claim)}
+                                  className="text-xs font-semibold text-blue-600 hover:underline px-2 py-1 cursor-pointer"
+                                >
+                                  View Details
+                                </button>
+                                {claim.status === "CANCELLED" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteClaim(claim.id, claim.claimNumber)}
+                                    className="p-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-2xs transition cursor-pointer"
+                                    title="Delete Cancelled Claim"
+                                  >
+                                    <FiTrash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
                         </td>
@@ -1072,10 +1132,20 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
                         <button
                           type="button"
                           onClick={() => setInspectingClaim(claim)}
-                          className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                          className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                         >
                           Details
                         </button>
+                        {claim.status === "CANCELLED" && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteClaim(claim.id, claim.claimNumber)}
+                            className="p-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-2xs transition cursor-pointer"
+                            title="Delete Cancelled Claim"
+                          >
+                            <FiTrash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
 
                       {claim.status === "PENDING" && (

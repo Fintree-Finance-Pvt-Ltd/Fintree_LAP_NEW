@@ -31,6 +31,7 @@ export default function ClaimsManagementPage() {
     totalClaimedAmount: 0,
     approvedAmount: 0,
     pendingAmount: 0,
+    rejectedAmount: 0,
   });
 
   // Check if Admin
@@ -104,32 +105,34 @@ export default function ClaimsManagementPage() {
     return allClaims.filter((c) => c.status === "PENDING").length;
   }, [allClaims]);
 
-  // Dynamically compute stats based on tab & role
+  // Dynamically compute stats based on tab & role (excluding CANCELLED from total expenses)
   const currentStats = useMemo(() => {
     if (isAdmin && activeTab === "approvals") {
       const pending = allClaims.filter((c) => c.status === "PENDING").length;
       const approved = allClaims.filter((c) => c.status === "APPROVED").length;
       const rejected = allClaims.filter((c) => c.status === "REJECTED").length;
 
-      const totalClaimedAmount = allClaims.reduce(
-        (sum, c) => sum + (Number(c.amount) || 0),
-        0
-      );
       const approvedAmount = allClaims
         .filter((c) => c.status === "APPROVED")
         .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
       const pendingAmount = allClaims
         .filter((c) => c.status === "PENDING")
         .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+      const rejectedAmount = allClaims
+        .filter((c) => c.status === "REJECTED")
+        .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+      const totalClaimedAmount = approvedAmount + pendingAmount + rejectedAmount;
+      const total = pending + approved + rejected;
 
       return {
-        total: allClaims.length,
+        total,
         pending,
         approved,
         rejected,
         totalClaimedAmount: Math.round(totalClaimedAmount * 100) / 100,
         approvedAmount: Math.round(approvedAmount * 100) / 100,
         pendingAmount: Math.round(pendingAmount * 100) / 100,
+        rejectedAmount: Math.round(rejectedAmount * 100) / 100,
         isOrgLevel: true,
       };
     }
@@ -138,25 +141,27 @@ export default function ClaimsManagementPage() {
     const approved = myClaims.filter((c) => c.status === "APPROVED").length;
     const rejected = myClaims.filter((c) => c.status === "REJECTED").length;
 
-    const totalClaimedAmount = myClaims.reduce(
-      (sum, c) => sum + (Number(c.amount) || 0),
-      0
-    );
     const approvedAmount = myClaims
       .filter((c) => c.status === "APPROVED")
       .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
     const pendingAmount = myClaims
       .filter((c) => c.status === "PENDING")
       .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const rejectedAmount = myClaims
+      .filter((c) => c.status === "REJECTED")
+      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const totalClaimedAmount = approvedAmount + pendingAmount + rejectedAmount;
+    const total = pending + approved + rejected;
 
     return {
-      total: myClaims.length,
+      total: stats.total ?? total,
       pending: stats.pending ?? pending,
       approved: stats.approved ?? approved,
       rejected: stats.rejected ?? rejected,
       totalClaimedAmount: stats.totalClaimedAmount ?? Math.round(totalClaimedAmount * 100) / 100,
       approvedAmount: stats.approvedAmount ?? Math.round(approvedAmount * 100) / 100,
       pendingAmount: stats.pendingAmount ?? Math.round(pendingAmount * 100) / 100,
+      rejectedAmount: stats.rejectedAmount ?? Math.round(rejectedAmount * 100) / 100,
       isOrgLevel: false,
     };
   }, [isAdmin, activeTab, allClaims, myClaims, stats]);
@@ -264,8 +269,8 @@ export default function ClaimsManagementPage() {
           <div className="mt-2 text-2xl font-black text-rose-900">
             {currentStats.rejected}
           </div>
-          <p className="text-[10px] font-medium text-rose-700 mt-0.5">
-            Declined expense requests
+          <p className="text-[10px] font-semibold text-rose-700 mt-0.5">
+            Rejected: ₹{Number(currentStats.rejectedAmount || 0).toLocaleString("en-IN")}
           </p>
         </div>
       </div>

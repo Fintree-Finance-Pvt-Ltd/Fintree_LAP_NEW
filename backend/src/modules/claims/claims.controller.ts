@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -148,6 +149,17 @@ export class ClaimsController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.claimsService.cancelClaim(id, user.id);
+  }
+
+  /**
+   * Delete claim (User if pending/cancelled, or Admin)
+   */
+  @Delete(':id')
+  async deleteClaim(
+    @CurrentUser() user: { id: number; email: string; roles: string[] },
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.claimsService.deleteClaim(id, user.id, user.roles || []);
   }
 
   /**

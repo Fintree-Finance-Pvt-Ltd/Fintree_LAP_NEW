@@ -7,7 +7,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, Like, Between, In } from 'typeorm';
+import { DataSource, Repository, In } from 'typeorm';
 import {
   ApproveClaimDto,
   BulkApproveClaimsDto,
@@ -456,12 +456,58 @@ export class ClaimsService implements OnModuleInit {
   }
 
   /**
-   * Get KPI statistics (user-level or org-wide)
+   * Delete an expense claim (User if pending/cancelled, or Admin)
    */
-  async getClaimStats(userId?: number, month?: string) {
+  async deleteClaim(
+    id: number,
+    userId: number,
+    roles: string[] = [],
+  ): Promise<{ success: boolean; message: string }> {
+    const claim = await this.getClaimById(id);
+    const isAdmin = roles.some(
+      (r) => typeof r === 'string' && r.toUpperCase() === 'ADMIN',
+    );
+
+    if (!isAdmin && Number(claim.userId) !== Number(userId)) {
+      throw new ForbiddenException('You are not authorized to delete this claim.');
+    }
+
+    if (
+      !isAdmin &&
+      claim.status !== ClaimStatus.PENDING &&
+      claim.status !== ClaimStatus.CANCELLED
+    ) {
+      throw new BadRequestException(
+        `Cannot delete a claim with status ${claim.status}.`,
+      );
+    }
+
+    await this.claimRepo.remove(claim);
+    return {
+      success: true,
+      message: `Claim ${claim.claimNumber} deleted successfully.`,
+    };
+  }
+
+  /**
+   * Get stats / KPI counts & totals (Excludes CANCELLED claims from total expenses)
+   */
+  async getClaimStats(
+    userId?: number,
+    month?: string,
+  ): Promise<{
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    totalClaimedAmount: number;
+    approvedAmount: number;
+    pendingAmount: number;
+    rejectedAmount: number;
+  }> {
     const qb = this.claimRepo.createQueryBuilder('claim');
 
-    if (userId !== undefined) {
+    if (userId) {
       qb.andWhere('claim.userId = :userId', { userId });
     }
 
@@ -473,18 +519,21 @@ export class ClaimsService implements OnModuleInit {
 
     const claims = await qb.getMany();
 
-    const total = claims.length;
+    const activeClaims = claims.filter((c) => c.status !== ClaimStatus.CANCELLED);
+    const total = activeClaims.length;
     const pending = claims.filter((c) => c.status === ClaimStatus.PENDING).length;
     const approved = claims.filter((c) => c.status === ClaimStatus.APPROVED).length;
     const rejected = claims.filter((c) => c.status === ClaimStatus.REJECTED).length;
-    const cancelled = claims.filter((c) => c.status === ClaimStatus.CANCELLED).length;
 
-    const totalClaimedAmount = claims.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const totalClaimedAmount = activeClaims.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
     const approvedAmount = claims
       .filter((c) => c.status === ClaimStatus.APPROVED)
       .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
     const pendingAmount = claims
       .filter((c) => c.status === ClaimStatus.PENDING)
+      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const rejectedAmount = claims
+      .filter((c) => c.status === ClaimStatus.REJECTED)
       .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
     return {
@@ -492,10 +541,10 @@ export class ClaimsService implements OnModuleInit {
       pending,
       approved,
       rejected,
-      cancelled,
       totalClaimedAmount: Math.round(totalClaimedAmount * 100) / 100,
       approvedAmount: Math.round(approvedAmount * 100) / 100,
       pendingAmount: Math.round(pendingAmount * 100) / 100,
+      rejectedAmount: Math.round(rejectedAmount * 100) / 100,
     };
   }
 }

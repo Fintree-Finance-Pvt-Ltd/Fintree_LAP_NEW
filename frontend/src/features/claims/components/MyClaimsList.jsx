@@ -45,6 +45,7 @@ export default function MyClaimsList({
   const [inspectingClaim, setInspectingClaim] = useState(null);
   const [selectedReceiptClaim, setSelectedReceiptClaim] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const filteredClaims = useMemo(() => {
     return claims.filter((claim) => {
@@ -90,6 +91,27 @@ export default function MyClaimsList({
       toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const handleDeleteClaim = async (id, claimNumber) => {
+    if (!window.confirm(`Are you sure you want to permanently delete claim ${claimNumber}?`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      await claimsApi.deleteClaim(id);
+      toast.success(`Claim ${claimNumber} deleted successfully.`);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to delete claim.";
+      toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -155,7 +177,7 @@ export default function MyClaimsList({
 
           {/* Filter Pills */}
           <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/60 overflow-x-auto">
-            {["ALL", "PENDING", "APPROVED", "REJECTED"].map((st) => (
+            {["ALL", "PENDING", "APPROVED", "REJECTED", "CANCELLED"].map((st) => (
               <button
                 key={st}
                 type="button"
@@ -172,7 +194,9 @@ export default function MyClaimsList({
                   ? "Pending"
                   : st === "APPROVED"
                   ? "Approved"
-                  : "Rejected"}
+                  : st === "REJECTED"
+                  ? "Rejected"
+                  : "Cancelled"}
               </button>
             ))}
           </div>
@@ -355,15 +379,32 @@ export default function MyClaimsList({
                           type="button"
                           onClick={() => handleCancelClaim(claim.id, claim.claimNumber)}
                           disabled={cancellingId === claim.id}
-                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-100 transition cursor-pointer"
                           title="Cancel Pending Claim"
                         >
                           {cancellingId === claim.id ? (
                             <FiLoader className="h-3.5 w-3.5 animate-spin" />
                           ) : (
-                            <FiTrash2 className="h-3.5 w-3.5" />
+                            <FiXCircle className="h-3.5 w-3.5" />
                           )}
                           <span>Cancel</span>
+                        </button>
+                      )}
+
+                      {(claim.status === "CANCELLED" || claim.status === "PENDING") && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteClaim(claim.id, claim.claimNumber)}
+                          disabled={deletingId === claim.id}
+                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
+                          title="Delete Claim"
+                        >
+                          {deletingId === claim.id ? (
+                            <FiLoader className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <FiTrash2 className="h-3.5 w-3.5" />
+                          )}
+                          <span>Delete</span>
                         </button>
                       )}
                     </div>

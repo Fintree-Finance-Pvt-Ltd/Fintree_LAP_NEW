@@ -65,6 +65,11 @@ export const claimsApi = {
   cancelClaim: (id) => apiClient.post(`/claims/${id}/cancel`),
 
   /**
+   * Delete claim
+   */
+  deleteClaim: (id) => apiClient.delete(`/claims/${id}`),
+
+  /**
    * Get claim details by ID
    */
   getClaimById: (id) => apiClient.get(`/claims/${id}`),
