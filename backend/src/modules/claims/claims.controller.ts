@@ -22,6 +22,8 @@ import { RoleCode } from '../../common/enums/role.enum';
 import { ClaimsService } from './claims.service';
 import {
   ApproveClaimDto,
+  BulkApproveClaimsDto,
+  BulkRejectClaimsDto,
   CreateClaimDto,
   QueryClaimsDto,
   RejectClaimDto,
@@ -196,6 +198,18 @@ export class ClaimsController {
   }
 
   /**
+   * Admin: Bulk approve claims
+   */
+  @Post('admin/bulk-approve')
+  @Roles(RoleCode.ADMIN)
+  async bulkApproveClaims(
+    @CurrentUser() user: { id: number; email: string; roles: string[] },
+    @Body() dto: BulkApproveClaimsDto,
+  ) {
+    return this.claimsService.bulkApproveClaims(user.id, dto);
+  }
+
+  /**
    * Admin: Reject claim
    */
   @Post('admin/:id/reject')
@@ -206,6 +220,18 @@ export class ClaimsController {
     @Body() dto: RejectClaimDto,
   ) {
     return this.claimsService.rejectClaim(id, user.id, dto);
+  }
+
+  /**
+   * Admin: Bulk reject claims
+   */
+  @Post('admin/bulk-reject')
+  @Roles(RoleCode.ADMIN)
+  async bulkRejectClaims(
+    @CurrentUser() user: { id: number; email: string; roles: string[] },
+    @Body() dto: BulkRejectClaimsDto,
+  ) {
+    return this.claimsService.bulkRejectClaims(user.id, dto);
   }
 
   /**

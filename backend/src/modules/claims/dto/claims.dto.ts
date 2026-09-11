@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -93,6 +94,26 @@ export class RejectClaimDto {
   adminRemarks: string;
 }
 
+export class BulkApproveClaimsDto {
+  @IsNotEmpty()
+  @IsArray()
+  claimIds: number[];
+
+  @IsOptional()
+  @IsString()
+  adminRemarks?: string;
+}
+
+export class BulkRejectClaimsDto {
+  @IsNotEmpty()
+  @IsArray()
+  claimIds: number[];
+
+  @IsNotEmpty()
+  @IsString()
+  adminRemarks: string;
+}
+
 export class UpdatePaymentStatusDto {
   @IsNotEmpty()
   @IsEnum(PaymentStatus)
@@ -111,6 +132,10 @@ export class QueryClaimsDto {
   @IsOptional()
   @IsEnum(ClaimStatus)
   status?: ClaimStatus;
+
+  @IsOptional()
+  @IsEnum(PaymentStatus)
+  paymentStatus?: PaymentStatus;
 
   @IsOptional()
   @IsEnum(ClaimCategory)
@@ -142,3 +167,4 @@ export class QueryClaimsDto {
   @IsNumber()
   limit?: number = 50;
 }
+

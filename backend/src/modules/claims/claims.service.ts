@@ -10,6 +10,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, Like, Between, In } from 'typeorm';
 import {
   ApproveClaimDto,
+  BulkApproveClaimsDto,
+  BulkRejectClaimsDto,
   CreateClaimDto,
   QueryClaimsDto,
   RejectClaimDto,
@@ -18,8 +20,8 @@ import {
 import {
   ClaimCategory,
   ClaimStatus,
-  LapClaim,
   PaymentStatus,
+  LapClaim,
 } from './entities/lap-claim.entity';
 import { User } from '../users/entities/user.entity';
 
@@ -189,6 +191,12 @@ export class ClaimsService implements OnModuleInit {
       qb.andWhere('claim.status = :status', { status: query.status });
     }
 
+    if (query.paymentStatus) {
+      qb.andWhere('claim.paymentStatus = :paymentStatus', {
+        paymentStatus: query.paymentStatus,
+      });
+    }
+
     if (query.category) {
       qb.andWhere('claim.category = :category', { category: query.category });
     }
@@ -299,6 +307,94 @@ export class ClaimsService implements OnModuleInit {
       success: true,
       data: saved,
       message: `Claim ${claim.claimNumber} has been rejected.`,
+    };
+  }
+
+  /**
+   * Admin: Bulk approve pending claims
+   */
+  async bulkApproveClaims(
+    adminId: number,
+    dto: BulkApproveClaimsDto,
+  ): Promise<{ success: boolean; updatedCount: number; message: string }> {
+    if (!dto.claimIds || !dto.claimIds.length) {
+      throw new BadRequestException('Please provide at least one claim ID to approve.');
+    }
+
+    const pendingClaims = await this.claimRepo.find({
+      where: {
+        id: In(dto.claimIds),
+        status: ClaimStatus.PENDING,
+      },
+    });
+
+    if (pendingClaims.length === 0) {
+      throw new BadRequestException('No eligible pending claims found to approve.');
+    }
+
+    const remarks = dto.adminRemarks?.trim() || 'Bulk Approved by Admin';
+    const now = new Date();
+
+    for (const claim of pendingClaims) {
+      claim.status = ClaimStatus.APPROVED;
+      claim.adminRemarks = remarks;
+      claim.approvedBy = adminId;
+      claim.approvedAt = now;
+      claim.updatedBy = adminId;
+    }
+
+    await this.claimRepo.save(pendingClaims);
+
+    return {
+      success: true,
+      updatedCount: pendingClaims.length,
+      message: `Successfully approved ${pendingClaims.length} expense claim(s).`,
+    };
+  }
+
+  /**
+   * Admin: Bulk reject pending claims
+   */
+  async bulkRejectClaims(
+    adminId: number,
+    dto: BulkRejectClaimsDto,
+  ): Promise<{ success: boolean; updatedCount: number; message: string }> {
+    if (!dto.claimIds || !dto.claimIds.length) {
+      throw new BadRequestException('Please provide at least one claim ID to reject.');
+    }
+
+    if (!dto.adminRemarks || !dto.adminRemarks.trim()) {
+      throw new BadRequestException('Rejection reason is required for bulk rejection.');
+    }
+
+    const pendingClaims = await this.claimRepo.find({
+      where: {
+        id: In(dto.claimIds),
+        status: ClaimStatus.PENDING,
+      },
+    });
+
+    if (pendingClaims.length === 0) {
+      throw new BadRequestException('No eligible pending claims found to reject.');
+    }
+
+    const remarks = dto.adminRemarks.trim();
+    const now = new Date();
+
+    for (const claim of pendingClaims) {
+      claim.status = ClaimStatus.REJECTED;
+      claim.adminRemarks = remarks;
+      claim.rejectedBy = adminId;
+      claim.rejectedAt = now;
+      claim.updatedBy = adminId;
+    }
+
+    await this.claimRepo.save(pendingClaims);
+
+    return {
+      success: true,
+      updatedCount: pendingClaims.length,
+      message: `Successfully rejected ${pendingClaims.length} expense claim(s).`,
     };
   }
 

@@ -11,12 +11,14 @@ import {
   FiLoader,
   FiPlus,
   FiSearch,
+  FiTag,
   FiTrash2,
   FiX,
   FiXCircle,
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";
+import ClaimDetailsModal from "./ClaimDetailsModal.jsx";
 import ReceiptViewerModal from "./ReceiptViewerModal.jsx";
 
 const CATEGORY_META = {
@@ -39,12 +41,17 @@ export default function MyClaimsList({
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [inspectingClaim, setInspectingClaim] = useState(null);
   const [selectedReceiptClaim, setSelectedReceiptClaim] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
 
   const filteredClaims = useMemo(() => {
     return claims.filter((claim) => {
       if (statusFilter !== "ALL" && claim.status !== statusFilter) {
+        return false;
+      }
+      if (categoryFilter !== "ALL" && claim.category !== categoryFilter) {
         return false;
       }
       if (search.trim()) {
@@ -63,7 +70,7 @@ export default function MyClaimsList({
       }
       return true;
     });
-  }, [claims, statusFilter, search]);
+  }, [claims, statusFilter, categoryFilter, search]);
 
   const handleCancelClaim = async (id, claimNumber) => {
     if (!window.confirm(`Are you sure you want to cancel claim ${claimNumber}?`)) {
@@ -123,50 +130,85 @@ export default function MyClaimsList({
   return (
     <div className="space-y-4">
       {/* Search & Filter Header */}
-      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search my claims, title, merchant..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-8 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-            >
-              <FiX className="h-3.5 w-3.5" />
-            </button>
-          )}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search my claims, title, merchant..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-8 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <FiX className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/60 overflow-x-auto">
+            {["ALL", "PENDING", "APPROVED", "REJECTED"].map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setStatusFilter(st)}
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                  statusFilter === st
+                    ? "bg-white text-blue-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {st === "ALL"
+                  ? "All Claims"
+                  : st === "PENDING"
+                  ? "Pending"
+                  : st === "APPROVED"
+                  ? "Approved"
+                  : "Rejected"}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/60 overflow-x-auto">
-          {["ALL", "PENDING", "APPROVED", "REJECTED"].map((st) => (
-            <button
-              key={st}
-              type="button"
-              onClick={() => setStatusFilter(st)}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-                statusFilter === st
-                  ? "bg-white text-blue-700 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+        {/* Category Dropdown */}
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-1.5">
+            <FiTag className="h-3.5 w-3.5 text-slate-400" />
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-hidden shadow-2xs cursor-pointer"
             >
-              {st === "ALL"
-                ? "All Claims"
-                : st === "PENDING"
-                ? "Pending"
-                : st === "APPROVED"
-                ? "Approved"
-                : "Rejected"}
+              <option value="ALL">All Expense Categories</option>
+              {Object.keys(CATEGORY_META).map((catKey) => (
+                <option key={catKey} value={catKey}>
+                  {CATEGORY_META[catKey].icon} {CATEGORY_META[catKey].label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(search || statusFilter !== "ALL" || categoryFilter !== "ALL") && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("ALL");
+                setCategoryFilter("ALL");
+              }}
+              className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline ml-auto cursor-pointer"
+            >
+              Reset Filters
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -218,9 +260,13 @@ export default function MyClaimsList({
 
                     <div className="space-y-1.5 min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-blue-600">
+                        <button
+                          type="button"
+                          onClick={() => setInspectingClaim(claim)}
+                          className="font-mono text-xs font-bold text-blue-600 hover:underline"
+                        >
                           {claim.claimNumber}
-                        </span>
+                        </button>
                         {getStatusBadge(claim.status)}
                         <span className="text-slate-300">•</span>
                         <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
@@ -229,7 +275,10 @@ export default function MyClaimsList({
                         </span>
                       </div>
 
-                      <h4 className="text-sm font-bold text-slate-900 truncate">
+                      <h4
+                        onClick={() => setInspectingClaim(claim)}
+                        className="text-sm font-bold text-slate-900 truncate hover:text-blue-600 cursor-pointer"
+                      >
                         {claim.title}
                       </h4>
 
@@ -250,7 +299,7 @@ export default function MyClaimsList({
                         )}
                       </div>
 
-                      {/* Admin remarks / status reason */}
+                      {/* Admin remarks */}
                       {claim.adminRemarks && (
                         <div
                           className={`text-xs p-2.5 rounded-xl border mt-2 ${
@@ -278,22 +327,26 @@ export default function MyClaimsList({
                           minimumFractionDigits: 2,
                         })}
                       </div>
-                      {/* {Number(claim.taxAmount) > 0 && (
-                        <div className="text-[10px] font-medium text-slate-400">
-                          Incl. Tax: ₹{Number(claim.taxAmount).toFixed(2)}
-                        </div>
-                      )} */}
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setInspectingClaim(claim)}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition cursor-pointer"
+                      >
+                        <FiEye className="h-3.5 w-3.5" />
+                        <span>Details</span>
+                      </button>
+
                       {claim.receiptUrl && (
                         <button
                           type="button"
                           onClick={() => setSelectedReceiptClaim(claim)}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition cursor-pointer"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
                         >
-                          <FiEye className="h-3.5 w-3.5" />
-                          <span>View Bill</span>
+                          <FiFileText className="h-3.5 w-3.5" />
+                          <span>Bill</span>
                         </button>
                       )}
 
@@ -302,7 +355,7 @@ export default function MyClaimsList({
                           type="button"
                           onClick={() => handleCancelClaim(claim.id, claim.claimNumber)}
                           disabled={cancellingId === claim.id}
-                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
                           title="Cancel Pending Claim"
                         >
                           {cancellingId === claim.id ? (
@@ -321,6 +374,17 @@ export default function MyClaimsList({
           </div>
         )}
       </div>
+
+      {/* Inspect Single Claim Details Modal */}
+      {inspectingClaim && (
+        <ClaimDetailsModal
+          isOpen={!!inspectingClaim}
+          onClose={() => setInspectingClaim(null)}
+          claim={inspectingClaim}
+          onRefresh={onRefresh}
+          isAdmin={false}
+        />
+      )}
 
       {/* Receipt Preview Modal */}
       {selectedReceiptClaim && (

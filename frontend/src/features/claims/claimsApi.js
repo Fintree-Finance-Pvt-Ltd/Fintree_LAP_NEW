@@ -42,6 +42,18 @@ export const claimsApi = {
     apiClient.post(`/claims/admin/${id}/reject`, payload),
 
   /**
+   * Admin: Bulk approve claims
+   */
+  bulkApproveClaims: (payload) =>
+    apiClient.post("/claims/admin/bulk-approve", payload),
+
+  /**
+   * Admin: Bulk reject claims
+   */
+  bulkRejectClaims: (payload) =>
+    apiClient.post("/claims/admin/bulk-reject", payload),
+
+  /**
    * Admin: Update payment disbursement status
    */
   updatePaymentStatus: (id, payload) =>
@@ -57,3 +69,4 @@ export const claimsApi = {
    */
   getClaimById: (id) => apiClient.get(`/claims/${id}`),
 };
+
