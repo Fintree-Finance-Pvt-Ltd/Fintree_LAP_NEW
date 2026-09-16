@@ -23,6 +23,11 @@ import {
   getLastKnownCoords,
   reverseGeocodeCoords,
 } from "../../../utils/geoUtils.js";
+import {
+  hasGoogleMapsKey,
+  isGoogleMapsLoaded,
+  loadGoogleMapsScript,
+} from "../../../utils/googleMapsLoader.js";
 import { formatCurrency } from "../rmUtils.js";
 
 // Custom Leaflet Icons Generator
@@ -105,6 +110,12 @@ export default function TodayFollowUpsRouteModal({
   const hasFittedBoundsRef = useRef(false);
   const hasResolvedGpsRef = useRef(false);
 
+  // Google Maps instances & refs
+  const [mapProvider, setMapProvider] = useState("checking");
+  const googleMapInstanceRef = useRef(null);
+  const googleMarkersRef = useRef([]);
+  const googlePolylinesRef = useRef([]);
+
   const [travelMode, setTravelMode] = useState("DRIVING"); // "DRIVING" | "TRANSIT"
   const [loadingRoute, setLoadingRoute] = useState(true);
   const [routePlan, setRoutePlan] = useState(null);
@@ -119,6 +130,25 @@ export default function TodayFollowUpsRouteModal({
       hasFittedBoundsRef.current = false;
       setRoutePlan(null);
       setUserGps(null);
+    }
+  }, [isOpen]);
+
+  // Provider detection (Google Maps vs Leaflet)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (hasGoogleMapsKey()) {
+      loadGoogleMapsScript()
+        .then((gMaps) => {
+          if (gMaps && isGoogleMapsLoaded()) {
+            setMapProvider("google");
+          } else {
+            setMapProvider("leaflet");
+          }
+        })
+        .catch(() => setMapProvider("leaflet"));
+    } else {
+      setMapProvider("leaflet");
     }
   }, [isOpen]);
 
@@ -216,9 +246,202 @@ export default function TodayFollowUpsRouteModal({
     };
   }, [isOpen, userGps, todayLeads, refreshTrigger]);
 
-  // 3. Initialize Map Instance Once
+  // 3a. Initialize & Update GOOGLE MAPS
   useEffect(() => {
-    if (!isOpen || !mapContainerRef.current) return;
+    if (!isOpen || mapProvider !== "google" || !mapContainerRef.current || !isGoogleMapsLoaded()) return;
+
+    // Cleanup Leaflet if active
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+      layerGroupRef.current = null;
+    }
+
+    if (!googleMapInstanceRef.current) {
+      const defaultPos = userGps
+        ? { lat: userGps.latitude, lng: userGps.longitude }
+        : { lat: 19.076, lng: 72.8777 };
+
+      const gMap = new window.google.maps.Map(mapContainerRef.current, {
+        center: defaultPos,
+        zoom: 13,
+        zoomControl: true,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: true,
+        styles: [
+          { featureType: "poi", elementType: "labels", stylers: [{ visibility: "simplified" }] },
+        ],
+      });
+      googleMapInstanceRef.current = gMap;
+    }
+
+    if (!routePlan) return;
+
+    const gMap = googleMapInstanceRef.current;
+
+    // Clear old Google elements
+    googleMarkersRef.current.forEach((m) => m.setMap(null));
+    googleMarkersRef.current = [];
+    googlePolylinesRef.current.forEach((p) => p.setMap(null));
+    googlePolylinesRef.current = [];
+
+    const bounds = new window.google.maps.LatLngBounds();
+    let hasPoints = false;
+
+    // 1. Add Start RM Marker
+    const startPt = routePlan.startPoint;
+    if (startPt && startPt.lat && startPt.lng) {
+      const startPos = { lat: startPt.lat, lng: startPt.lng };
+      bounds.extend(startPos);
+      hasPoints = true;
+
+      const startMarker = new window.google.maps.Marker({
+        position: startPos,
+        map: gMap,
+        title: "Start Location (RM Live)",
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: "#059669",
+          fillOpacity: 1,
+          strokeWeight: 3,
+          strokeColor: "#ffffff",
+        },
+      });
+
+      const infoWindow = new window.google.maps.InfoWindow({
+        content: `
+          <div style="font-family: system-ui, sans-serif; font-size: 12px; line-height: 1.4; color: #0f172a; padding: 4px;">
+            <b style="color: #059669; font-size: 13px;">🟢 Start Location (RM Live)</b><br/>
+            <span style="font-weight: 600;">${startPt.customerName || "Your Location"}</span><br/>
+            <span style="color: #64748b;">${startPt.address || ""}</span>
+          </div>
+        `,
+      });
+
+      startMarker.addListener("click", () => {
+        infoWindow.open(gMap, startMarker);
+      });
+
+      googleMarkersRef.current.push(startMarker);
+    }
+
+    // 2. Add Stop Markers
+    const stopColors = ["#2563eb", "#7c3aed", "#ea580c", "#0d9488"];
+    routePlan.orderedStops.forEach((stop, index) => {
+      const pos = { lat: stop.lat, lng: stop.lng };
+      bounds.extend(pos);
+      hasPoints = true;
+
+      const c = stopColors[index % stopColors.length];
+      const stopMarker = new window.google.maps.Marker({
+        position: pos,
+        map: gMap,
+        title: `#${stop.stopNumber} ${stop.sequenceRankLabel}: ${stop.customerName}`,
+        label: {
+          text: String(stop.stopNumber),
+          color: "#ffffff",
+          fontWeight: "bold",
+          fontSize: "12px",
+        },
+        icon: {
+          path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+          fillColor: c,
+          fillOpacity: 1,
+          strokeWeight: 2,
+          strokeColor: "#ffffff",
+          scale: 1.8,
+          anchor: new window.google.maps.Point(12, 22),
+          labelOrigin: new window.google.maps.Point(12, 9),
+        },
+      });
+
+      const infoWindow = new window.google.maps.InfoWindow({
+        content: `
+          <div style="font-family: system-ui, sans-serif; font-size: 12px; line-height: 1.4; color: #0f172a; padding: 4px; max-width: 240px;">
+            <div style="font-weight: 800; color: ${c}; font-size: 13px;">#${stop.stopNumber} ${stop.sequenceRankLabel}</div>
+            <b style="font-size: 13px; color: #0f172a;">${stop.customerName}</b><br/>
+            <span style="color: #64748b; font-size: 11px;">${stop.address}</span><br/>
+            <div style="margin-top: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 600;">
+              <span>🕒 ${stop.followUpTime}</span>
+              <span style="color: #2563eb;">${formatCurrency(stop.requestedAmount)}</span>
+            </div>
+          </div>
+        `,
+      });
+
+      stopMarker.addListener("click", () => {
+        infoWindow.open(gMap, stopMarker);
+        handleSelectStop(index);
+      });
+
+      googleMarkersRef.current.push(stopMarker);
+    });
+
+    // 3. Render Route Polylines
+    if (travelMode === "DRIVING" && routePlan.routePolyline && routePlan.routePolyline.length > 1) {
+      const path = routePlan.routePolyline.map((pt) =>
+        Array.isArray(pt)
+          ? { lat: Number(pt[0]), lng: Number(pt[1]) }
+          : { lat: Number(pt.lat), lng: Number(pt.lng) }
+      );
+
+      const glowPoly = new window.google.maps.Polyline({
+        path,
+        geodesic: true,
+        strokeColor: "#3b82f6",
+        strokeOpacity: 0.35,
+        strokeWeight: 8,
+        map: gMap,
+      });
+      googlePolylinesRef.current.push(glowPoly);
+
+      const roadPoly = new window.google.maps.Polyline({
+        path,
+        geodesic: true,
+        strokeColor: "#2563eb",
+        strokeOpacity: 0.95,
+        strokeWeight: 4,
+        map: gMap,
+      });
+      googlePolylinesRef.current.push(roadPoly);
+    } else if (travelMode === "TRANSIT") {
+      routePlan.orderedStops.forEach((stop) => {
+        const transit = stop.trainTransit;
+        if (transit?.startStation && transit?.destStation) {
+          const startStnPos = { lat: transit.startStation.lat, lng: transit.startStation.lng };
+          const destStnPos = { lat: transit.destStation.lat, lng: transit.destStation.lng };
+          bounds.extend(startStnPos);
+          bounds.extend(destStnPos);
+
+          const trainPoly = new window.google.maps.Polyline({
+            path: [startStnPos, destStnPos],
+            geodesic: true,
+            strokeColor: "#7c3aed",
+            strokeOpacity: 0.9,
+            strokeWeight: 5,
+            map: gMap,
+          });
+          googlePolylinesRef.current.push(trainPoly);
+        }
+      });
+    }
+
+    if (hasPoints && !hasFittedBoundsRef.current) {
+      gMap.fitBounds(bounds, { top: 45, right: 45, bottom: 45, left: 45 });
+      hasFittedBoundsRef.current = true;
+    }
+  }, [isOpen, mapProvider, routePlan, travelMode]);
+
+  // 3b. Initialize & Update LEAFLET (Fallback)
+  useEffect(() => {
+    if (!isOpen || mapProvider !== "leaflet" || !mapContainerRef.current) return;
+
+    // Cleanup Google Map if active
+    if (googleMapInstanceRef.current) {
+      googleMapInstanceRef.current = null;
+    }
 
     if (!mapInstanceRef.current) {
       if (mapContainerRef.current._leaflet_id) {
@@ -253,21 +476,27 @@ export default function TodayFollowUpsRouteModal({
       const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize?.(), 200);
       return () => clearTimeout(t1);
     }
-  }, [isOpen]);
+  }, [isOpen, mapProvider]);
 
   // Cleanup Map on modal close
   useEffect(() => {
-    if (!isOpen && mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-      layerGroupRef.current = null;
+    if (!isOpen) {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        layerGroupRef.current = null;
+      }
+      if (googleMapInstanceRef.current) {
+        googleMapInstanceRef.current = null;
+      }
     }
   }, [isOpen]);
 
-  // 4. Render and Update Layers (Markers & Polylines) without recreating the map
+  // 4. Render and Update Leaflet Layers
   useEffect(() => {
     if (
       !isOpen ||
+      mapProvider !== "leaflet" ||
       !routePlan ||
       !mapInstanceRef.current ||
       !layerGroupRef.current
@@ -317,7 +546,6 @@ export default function TodayFollowUpsRouteModal({
     // 3. Render Route Polylines based on Travel Mode
     if (travelMode === "DRIVING") {
       if (routePlan.routePolyline && routePlan.routePolyline.length > 1) {
-        // Shadow/glow line
         const glow = L.polyline(routePlan.routePolyline, {
           color: "#3b82f6",
           weight: 7,
@@ -325,7 +553,6 @@ export default function TodayFollowUpsRouteModal({
         });
         layerGroup.addLayer(glow);
 
-        // Main road polyline
         const polyline = L.polyline(routePlan.routePolyline, {
           color: "#2563eb",
           weight: 4,
@@ -336,11 +563,9 @@ export default function TodayFollowUpsRouteModal({
         layerGroup.addLayer(polyline);
       }
     } else if (travelMode === "TRANSIT") {
-      // Draw railway stations & transit lines for stops
       routePlan.orderedStops.forEach((stop) => {
         const transit = stop.trainTransit;
         if (transit && transit.startStation && transit.destStation) {
-          // Start Station Marker
           const startStnMarker = L.marker(
             [transit.startStation.lat, transit.startStation.lng],
             {
@@ -353,7 +578,6 @@ export default function TodayFollowUpsRouteModal({
             transit.startStation.lng,
           ]);
 
-          // Destination Station Marker
           const destStnMarker = L.marker(
             [transit.destStation.lat, transit.destStation.lng],
             {
@@ -363,7 +587,6 @@ export default function TodayFollowUpsRouteModal({
           layerGroup.addLayer(destStnMarker);
           boundsGroup.push([transit.destStation.lat, transit.destStation.lng]);
 
-          // First-Mile Leg: Start Point -> Start Station
           const firstLeg = L.polyline(
             [
               [startPt.lat, startPt.lng],
@@ -378,7 +601,6 @@ export default function TodayFollowUpsRouteModal({
           );
           layerGroup.addLayer(firstLeg);
 
-          // Train Line Track
           const trainTrack = L.polyline(
             [
               [transit.startStation.lat, transit.startStation.lng],
@@ -392,7 +614,6 @@ export default function TodayFollowUpsRouteModal({
           );
           layerGroup.addLayer(trainTrack);
 
-          // Last-Mile Leg
           const lastLeg = L.polyline(
             [
               [transit.destStation.lat, transit.destStation.lng],
@@ -410,7 +631,6 @@ export default function TodayFollowUpsRouteModal({
       });
     }
 
-    // Fit map bounds only on initial load or manual refresh
     if (boundsGroup.length > 0 && !hasFittedBoundsRef.current) {
       try {
         map.fitBounds(boundsGroup, { padding: [45, 45], maxZoom: 14 });
@@ -419,18 +639,21 @@ export default function TodayFollowUpsRouteModal({
         console.warn("fitBounds warning:", err);
       }
     }
-  }, [isOpen, routePlan, travelMode]);
+  }, [isOpen, mapProvider, routePlan, travelMode]);
 
   // Focus map on selected stop with smooth scroll to map on mobile
   const handleSelectStop = (index) => {
     setSelectedStopIndex(index);
-    if (!mapInstanceRef.current || !routePlan?.orderedStops?.[index]) return;
+    if (!routePlan?.orderedStops?.[index]) return;
     const stop = routePlan.orderedStops[index];
-    
-    // Pan & zoom to stop on the map
-    mapInstanceRef.current.flyTo([stop.lat, stop.lng], 15, { duration: 0.8 });
 
-    // On mobile devices, smoothly scroll up to the map so the user clearly sees the focused route/stop
+    if (mapProvider === "google" && googleMapInstanceRef.current) {
+      googleMapInstanceRef.current.panTo({ lat: stop.lat, lng: stop.lng });
+      googleMapInstanceRef.current.setZoom(15);
+    } else if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([stop.lat, stop.lng], 15, { duration: 0.8 });
+    }
+
     if (typeof window !== "undefined" && window.innerWidth < 1024 && mapSectionRef.current) {
       mapSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -439,11 +662,11 @@ export default function TodayFollowUpsRouteModal({
   const handleOpenGoogleMapsRoute = (stop) => {
     if (!stop || !userGps) return;
     const origin = `${userGps.latitude},${userGps.longitude}`;
-    const destination = `${stop.lat},${stop.lng}`;
+    const destination = stop.lat && stop.lng ? `${stop.lat},${stop.lng}` : encodeURIComponent(stop.address);
     const mode = travelMode === "TRANSIT" ? "transit" : "driving";
     const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
       origin,
-    )}&destination=${encodeURIComponent(destination)}&travelmode=${mode}`;
+    )}&destination=${destination}&travelmode=${mode}&dir_action=navigate`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -467,7 +690,7 @@ export default function TodayFollowUpsRouteModal({
 
     let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
       origin,
-    )}&destination=${encodeURIComponent(destination)}&travelmode=${mode}`;
+    )}&destination=${encodeURIComponent(destination)}&travelmode=${mode}&dir_action=navigate`;
     if (waypoints && mode !== "transit") {
       url += `&waypoints=${encodeURIComponent(waypoints)}`;
     }
@@ -635,6 +858,27 @@ export default function TodayFollowUpsRouteModal({
           <div ref={mapSectionRef} className="relative h-64 sm:h-80 lg:h-full w-full lg:col-span-7 xl:col-span-7 shrink-0 bg-slate-100 order-1 lg:order-2">
             {/* Map Canvas */}
             <div ref={mapContainerRef} className="h-full w-full z-10" />
+
+            {/* Map Provider Badge */}
+            <div className="absolute top-3 right-3 z-[1001] flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-xs border border-slate-200 shadow-sm text-xs font-semibold select-none">
+              {hasGoogleMapsKey() ? (
+                <span className="flex items-center gap-1.5 text-slate-800">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.27 21.37 7.34 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.27 2.63 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                  </svg>
+                  Google Maps
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-slate-700">
+                  <span className="text-emerald-600 font-black">🍃</span>
+                  Leaflet (OSM)
+                </span>
+              )}
+            </div>
 
             {/* Active focused stop indicator badge on map */}
             {routePlan?.orderedStops?.[selectedStopIndex] && (

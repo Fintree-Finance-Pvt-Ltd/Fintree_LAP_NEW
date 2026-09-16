@@ -11,6 +11,7 @@ import {
 } from "../rmUtils.js";
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
 import ScheduleFollowUpModal from "../components/ScheduleFollowUpModal.jsx";
+import PropertyAddressAutocomplete from "../components/PropertyAddressAutocomplete.jsx";
 
 
 
@@ -3610,34 +3611,17 @@ setLocalAadhaarStatus("INITIATED");
             onChange={handleInputChange}
           />
 
-          <Field
-            label="Property Address *"
-            name="propertyAddress"
-            value={formData.propertyAddress}
-            onChange={handleInputChange}
-          />
-
-          <Field
-            label="City"
-            name="city"
-            value={formData.city}
-            onChange={handleInputChange}
-          />
-
-          <Field
-            label="State"
-            name="state"
-            value={formData.state}
-            onChange={handleInputChange}
-          />
-
-          <Field
-            label="PIN Code"
-            name="pinCode"
-            value={formData.pinCode}
-            onChange={handleInputChange}
-            maxLength={6}
-            inputMode="numeric"
+          <PropertyAddressAutocomplete
+            propertyAddress={formData.propertyAddress}
+            city={formData.city}
+            state={formData.state}
+            pinCode={formData.pinCode}
+            onChange={(updatedFields) => {
+              setFormData((previous) => ({
+                ...previous,
+                ...updatedFields,
+              }));
+            }}
           />
         </Section>
 

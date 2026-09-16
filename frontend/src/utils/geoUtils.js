@@ -33,6 +33,32 @@ export async function reverseGeocodeCoords(lat, lng) {
     }
   } catch (_) {}
 
+  // Try Google Geocoder if available on window
+  if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
+    try {
+      const googleAddr = await new Promise((resolve) => {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode(
+          { location: { lat: numLat, lng: numLng } },
+          (results, status) => {
+            if (status === "OK" && results && results.length > 0) {
+              resolve(results[0].formatted_address || "");
+            } else {
+              resolve("");
+            }
+          }
+        );
+      });
+      if (googleAddr) {
+        addressCache.set(cacheKey, googleAddr);
+        try {
+          sessionStorage.setItem(`lap_geo_${cacheKey}`, googleAddr);
+        } catch (_) {}
+        return googleAddr;
+      }
+    } catch (_) {}
+  }
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
@@ -883,6 +909,40 @@ export async function forwardGeocodeAddress(addressStr, fallbackCoords = null) {
   }
 
   const lowerAddr = rawAddress.toLowerCase();
+
+  // Step 0: Try Google Geocoder if available on window for 100% pinpoint building/society precision
+  if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
+    try {
+      const googleResult = await new Promise((resolve) => {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode(
+          { address: rawAddress, componentRestrictions: { country: "IN" } },
+          (results, status) => {
+            if (status === "OK" && results && results.length > 0) {
+              const r = results[0];
+              const lat = r.geometry.location.lat();
+              const lng = r.geometry.location.lng();
+              resolve({
+                lat: parseFloat(lat.toFixed(6)),
+                lng: parseFloat(lng.toFixed(6)),
+                displayName: r.formatted_address || rawAddress,
+                fromGoogle: true,
+              });
+            } else {
+              resolve(null);
+            }
+          }
+        );
+      });
+
+      if (googleResult) {
+        forwardGeoCache.set(rawAddress, googleResult);
+        return googleResult;
+      }
+    } catch (err) {
+      console.debug("Google geocoder note:", err?.message);
+    }
+  }
 
   // Step 1: Check Known Specific Landmarks & Societies (100% exact GPS Coordinates)
   for (const item of KNOWN_LANDMARKS_DICT) {
