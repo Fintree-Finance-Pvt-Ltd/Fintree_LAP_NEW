@@ -413,11 +413,7 @@ export default function PropertyAddressAutocomplete({
       <div className="relative">
         <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-blue-900">
-            <FiSearch className="w-3.5 h-3.5 text-blue-600" />
             Search Property Address / Locality / Landmark
-          </span>
-          <span className="text-[11px] font-normal text-slate-500 normal-case">
-            Powered by Google Maps & OSM
           </span>
         </label>
 
@@ -516,36 +512,102 @@ export default function PropertyAddressAutocomplete({
         )}
       </div>
 
-      {/* 3. Interactive Map Pin & Fine-tuning Picker */}
-      <div className="bg-slate-50/60 rounded-xl p-3 border border-slate-200 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-            <span className="w-2 h-2 rounded-full bg-blue-600" />
-            Property Location Pin (Drag marker to adjust exact position)
+      {/* Main 2-Column Split: Left = Address Form Fields, Right = Location Pin Map */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch pt-1">
+        {/* Left Side: Property Address, City, State, PIN Code */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3.5 flex flex-col justify-between">
+          <div className="flex items-center gap-1.5 border-b border-slate-200/80 pb-2">
+            <FiMapPin className="w-4 h-4 text-blue-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+              Address Details
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowMap(!showMap)}
-            className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-          >
-            {showMap ? (
-              <>
-                Hide Map <FiChevronUp className="w-3 h-3" />
-              </>
-            ) : (
-              <>
-                Show Map <FiChevronDown className="w-3 h-3" />
-              </>
-            )}
-          </button>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                Property Address <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                rows={2}
+                name="propertyAddress"
+                value={propertyAddress}
+                onChange={(e) => onChange({ propertyAddress: e.target.value })}
+                disabled={disabled}
+                placeholder="Flat / House / Building, Road, Locality"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                City <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="city"
+                value={city}
+                onChange={(e) => onChange({ city: e.target.value })}
+                disabled={disabled}
+                placeholder="e.g. Mumbai, Vasai"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                State <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="state"
+                value={state}
+                onChange={(e) => onChange({ state: e.target.value })}
+                disabled={disabled}
+                placeholder="e.g. Maharashtra"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                PIN Code <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="pinCode"
+                maxLength={6}
+                inputMode="numeric"
+                value={pinCode}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  onChange({ pinCode: val });
+                }}
+                disabled={disabled}
+                placeholder="6-digit PIN code (e.g. 400001)"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
+              />
+            </div>
+          </div>
         </div>
 
-        {showMap && (
-          <div className="space-y-1.5">
+        {/* Right Side: Property Location Pin Map */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+              Property Location Pin
+            </div>
+            <span className="text-[11px] font-medium text-slate-500">
+              Drag marker to adjust exact position
+            </span>
+          </div>
+
+          <div className="flex-1 rounded-lg overflow-hidden border border-slate-200 shadow-2xs min-h-[310px]">
             <UniversalMapView
               center={coords}
               zoom={15}
-              height="240px"
+              height="320px"
               interactive={!disabled}
               onMapClick={handleMapPinMove}
               onMarkerDragEnd={(_, newPos) => handleMapPinMove(newPos)}
@@ -568,82 +630,15 @@ export default function PropertyAddressAutocomplete({
                 },
               ]}
             />
-            <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
-              <span>
-                Lat: <b className="text-slate-700">{coords.lat.toFixed(5)}</b>, Lng:{" "}
-                <b className="text-slate-700">{coords.lng.toFixed(5)}</b>
-              </span>
-              <span className="text-blue-600">💡 Click map or drag pin to update</span>
-            </div>
           </div>
-        )}
-      </div>
 
-      {/* 4. Structured Address Fields (Editable) */}
-      <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4 pt-1">
-        <div className="sm:col-span-2">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-            Property Address <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="propertyAddress"
-            value={propertyAddress}
-            onChange={(e) => onChange({ propertyAddress: e.target.value })}
-            disabled={disabled}
-            placeholder="Flat / Building, Road, Locality"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-            City <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="city"
-            value={city}
-            onChange={(e) => onChange({ city: e.target.value })}
-            disabled={disabled}
-            placeholder="e.g. Mumbai, Vasai"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-            State <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="state"
-            value={state}
-            onChange={(e) => onChange({ state: e.target.value })}
-            disabled={disabled}
-            placeholder="e.g. Maharashtra"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-            PIN Code <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="pinCode"
-            maxLength={6}
-            inputMode="numeric"
-            value={pinCode}
-            onChange={(e) => {
-              const val = e.target.value.replace(/\D/g, "");
-              onChange({ pinCode: val });
-            }}
-            disabled={disabled}
-            placeholder="6-digit PIN"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
-          />
+          <div className="flex items-center justify-between text-[11px] text-slate-500 px-1 pt-0.5">
+            <span>
+              Lat: <b className="text-slate-700">{coords.lat.toFixed(5)}</b>, Lng:{" "}
+              <b className="text-slate-700">{coords.lng.toFixed(5)}</b>
+            </span>
+            <span className="text-blue-600 font-medium">💡 Click map or drag pin</span>
+          </div>
         </div>
       </div>
     </div>
