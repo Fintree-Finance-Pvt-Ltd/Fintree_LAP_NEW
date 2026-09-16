@@ -986,7 +986,7 @@ export default function TodayFollowUpsRouteModal({
               <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
                 {/* Starting Point Banner */}
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex items-start gap-3 shadow-2xs">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-sm">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-sm">
                     START
                   </div>
                   <div className="flex-1 min-w-0">
@@ -998,7 +998,7 @@ export default function TodayFollowUpsRouteModal({
                         Origin (Punch In)
                       </span>
                     </div>
-                    <p className="text-xs text-emerald-800/80 truncate mt-0.5">
+                    <p className="text-xs text-emerald-800/80 mt-0.5">
                       {routePlan.startPoint.address}
                     </p>
                   </div>

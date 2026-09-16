@@ -529,7 +529,7 @@ export default function PropertyAddressAutocomplete({
                 Property Address <span className="text-rose-500">*</span>
               </label>
               <textarea
-                rows={2}
+                rows={3}
                 name="propertyAddress"
                 value={propertyAddress}
                 onChange={(e) => onChange({ propertyAddress: e.target.value })}
