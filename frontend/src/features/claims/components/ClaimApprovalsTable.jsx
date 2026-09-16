@@ -41,15 +41,19 @@ export const CATEGORY_META = {
   OTHER: { icon: "📝", label: "Miscellaneous", color: "bg-slate-100 text-slate-700 border-slate-200" },
 };
 
-export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh }) {
+export default function ClaimApprovalsTable({
+  claims = [],
+  allClaimsRaw = [],
+  selectedMonth = "ALL",
+  onMonthChange,
+  isLoading,
+  onRefresh,
+}) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL"); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [employeeFilter, setEmployeeFilter] = useState("ALL");
   const [paymentFilter, setPaymentFilter] = useState("ALL");
-  const [dateRangePreset, setDateRangePreset] = useState("ALL"); // 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'LAST_MONTH' | 'CUSTOM'
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
 
   // Selected Claims for Inspection Modal or Receipt Viewer
   const [inspectingClaim, setInspectingClaim] = useState(null);
@@ -91,35 +95,6 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
 
   // Filter Claims
   const filteredClaims = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
-
-    // Compute start & end dates for presets
-    let filterStart = "";
-    let filterEnd = "";
-
-    if (dateRangePreset === "TODAY") {
-      filterStart = todayStr;
-      filterEnd = todayStr;
-    } else if (dateRangePreset === "THIS_WEEK") {
-      const now = new Date();
-      const firstDay = new Date(now.setDate(now.getDate() - now.getDay() + 1));
-      filterStart = firstDay.toISOString().slice(0, 10);
-      filterEnd = todayStr;
-    } else if (dateRangePreset === "THIS_MONTH") {
-      const now = new Date();
-      filterStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-      filterEnd = todayStr;
-    } else if (dateRangePreset === "LAST_MONTH") {
-      const now = new Date();
-      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-      filterStart = prevMonth.toISOString().slice(0, 10);
-      filterEnd = lastDayOfPrevMonth.toISOString().slice(0, 10);
-    } else if (dateRangePreset === "CUSTOM") {
-      filterStart = customStartDate;
-      filterEnd = customEndDate;
-    }
-
     return claims.filter((claim) => {
       // Status filter
       if (statusFilter !== "ALL" && claim.status !== statusFilter) {
@@ -137,13 +112,6 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
       if (employeeFilter !== "ALL") {
         const uid = String(claim.userId || claim.user?.id);
         if (uid !== String(employeeFilter)) return false;
-      }
-      // Date range filter
-      if (filterStart && claim.expenseDate < filterStart) {
-        return false;
-      }
-      if (filterEnd && claim.expenseDate > filterEnd) {
-        return false;
       }
       // Search term
       if (search.trim()) {
@@ -174,9 +142,6 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
     paymentFilter,
     categoryFilter,
     employeeFilter,
-    dateRangePreset,
-    customStartDate,
-    customEndDate,
     search,
   ]);
 
@@ -552,44 +517,6 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
             </select>
           </div>
 
-          {/* Date Range Preset */}
-          <div className="flex items-center gap-1.5">
-            <FiCalendar className="h-3.5 w-3.5 text-slate-400" />
-            <select
-              value={dateRangePreset}
-              onChange={(e) => setDateRangePreset(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-hidden shadow-2xs cursor-pointer"
-            >
-              <option value="ALL">All Dates</option>
-              <option value="TODAY">Today</option>
-              <option value="THIS_WEEK">This Week</option>
-              <option value="THIS_MONTH">This Month</option>
-              <option value="LAST_MONTH">Last Month</option>
-              <option value="CUSTOM">Custom Date Range...</option>
-            </select>
-          </div>
-
-          {/* Custom Date Pickers */}
-          {dateRangePreset === "CUSTOM" && (
-            <div className="flex items-center gap-1.5">
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                placeholder="From"
-                className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700"
-              />
-              <span className="text-slate-400 text-xs">to</span>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                placeholder="To"
-                className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700"
-              />
-            </div>
-          )}
-
           {/* Payment Status Filter */}
           <div className="flex items-center gap-1.5">
             <FiCreditCard className="h-3.5 w-3.5 text-slate-400" />
@@ -610,8 +537,7 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
             statusFilter !== "ALL" ||
             categoryFilter !== "ALL" ||
             employeeFilter !== "ALL" ||
-            paymentFilter !== "ALL" ||
-            dateRangePreset !== "ALL") && (
+            paymentFilter !== "ALL") && (
             <button
               type="button"
               onClick={() => {
@@ -620,9 +546,6 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
                 setCategoryFilter("ALL");
                 setEmployeeFilter("ALL");
                 setPaymentFilter("ALL");
-                setDateRangePreset("ALL");
-                setCustomStartDate("");
-                setCustomEndDate("");
               }}
               className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline ml-auto cursor-pointer"
             >
@@ -771,7 +694,7 @@ export default function ClaimApprovalsTable({ claims = [], isLoading, onRefresh 
               No expense claims found
             </h3>
             <p className="mt-1 text-xs text-slate-500 max-w-sm">
-              {search || statusFilter !== "ALL" || categoryFilter !== "ALL" || employeeFilter !== "ALL" || dateRangePreset !== "ALL"
+              {search || statusFilter !== "ALL" || categoryFilter !== "ALL" || employeeFilter !== "ALL" || paymentFilter !== "ALL"
                 ? "Try clearing your search query or adjusting your filters."
                 : "There are currently no employee expense claims in this queue."}
             </p>

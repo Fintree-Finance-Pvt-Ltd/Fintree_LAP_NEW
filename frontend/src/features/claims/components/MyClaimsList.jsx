@@ -35,6 +35,9 @@ const CATEGORY_META = {
 
 export default function MyClaimsList({
   claims = [],
+  allClaimsRaw = [],
+  selectedMonth = "ALL",
+  onMonthChange,
   isLoading,
   onRefresh,
   onOpenApplyModal,
@@ -72,6 +75,26 @@ export default function MyClaimsList({
       return true;
     });
   }, [claims, statusFilter, categoryFilter, search]);
+
+  // Compute live expense metrics for currently filtered claims
+  const listMetrics = useMemo(() => {
+    const totalAmount = filteredClaims
+      .filter((c) => c.status !== "CANCELLED")
+      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const approvedAmount = filteredClaims
+      .filter((c) => c.status === "APPROVED")
+      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const pendingAmount = filteredClaims
+      .filter((c) => c.status === "PENDING")
+      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+    return {
+      count: filteredClaims.length,
+      totalAmount: Math.round(totalAmount * 100) / 100,
+      approvedAmount: Math.round(approvedAmount * 100) / 100,
+      pendingAmount: Math.round(pendingAmount * 100) / 100,
+    };
+  }, [filteredClaims]);
 
   const handleCancelClaim = async (id, claimNumber) => {
     if (!window.confirm(`Are you sure you want to cancel claim ${claimNumber}?`)) {
@@ -202,8 +225,9 @@ export default function MyClaimsList({
           </div>
         </div>
 
-        {/* Category Dropdown */}
-        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+        {/* Secondary Filters: Category, Month & Reset */}
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
+          {/* Category Dropdown */}
           <div className="flex items-center gap-1.5">
             <FiTag className="h-3.5 w-3.5 text-slate-400" />
             <select
@@ -220,6 +244,7 @@ export default function MyClaimsList({
             </select>
           </div>
 
+          {/* Reset Filters */}
           {(search || statusFilter !== "ALL" || categoryFilter !== "ALL") && (
             <button
               type="button"
@@ -233,6 +258,32 @@ export default function MyClaimsList({
               Reset Filters
             </button>
           )}
+        </div>
+
+        {/* Live List Expense Metric Header */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100/80 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-700">
+              Showing {listMetrics.count} {listMetrics.count === 1 ? "claim" : "claims"}
+            </span>
+            {selectedMonth !== "ALL" && (
+              <span className="rounded-md bg-blue-100/70 px-2 py-0.5 text-[11px] font-extrabold text-blue-800">
+                Month: {selectedMonth}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-slate-500 font-medium">
+              Total Expenses: <strong className="text-slate-900 font-mono">₹{listMetrics.totalAmount.toLocaleString("en-IN")}</strong>
+            </span>
+            <span className="text-emerald-700 font-medium">
+              Approved: <strong className="font-mono">₹{listMetrics.approvedAmount.toLocaleString("en-IN")}</strong>
+            </span>
+            <span className="text-amber-700 font-medium">
+              Pending: <strong className="font-mono">₹{listMetrics.pendingAmount.toLocaleString("en-IN")}</strong>
+            </span>
+          </div>
         </div>
       </div>
 
