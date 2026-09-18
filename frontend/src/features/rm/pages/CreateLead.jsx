@@ -2444,7 +2444,7 @@ setLocalAadhaarStatus("INITIATED");
             </div>
 
             <div className="p-6 space-y-5">
-              <div className="flex gap-2 justify-between">
+              <div className="flex gap-1.5 sm:gap-2 justify-between">
                 {Array.from({ length: 6 }).map((_, idx) => (
                   <input
                     key={idx}
@@ -2490,7 +2490,7 @@ setLocalAadhaarStatus("INITIATED");
                       setOtpCode(code);
                       otpInputRefs.current[5]?.focus();
                     }}
-                    className="w-12 h-12 rounded-lg border border-slate-300 bg-slate-50 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                    className="h-10 w-10 sm:h-12 sm:w-12 flex-1 max-w-[48px] rounded-lg border border-slate-300 bg-slate-50 text-center text-base sm:text-lg font-bold text-slate-900 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
                     aria-label={`Digit ${idx + 1}`}
                   />
                 ))}
@@ -2675,7 +2675,7 @@ setLocalAadhaarStatus("INITIATED");
             </div>
 
             <div className="space-y-5 p-6">
-              <div className="flex justify-between gap-2">
+              <div className="flex justify-between gap-1.5 sm:gap-2">
                 {Array.from({ length: 6 }).map(
                   (_, index) => (
                     <input
@@ -2780,7 +2780,7 @@ setLocalAadhaarStatus("INITIATED");
                           focusIndex
                         ]?.focus();
                       }}
-                      className="h-12 w-12 rounded-lg border border-slate-300 bg-slate-50 text-center text-lg font-bold text-slate-900 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                      className="h-10 w-10 sm:h-12 sm:w-12 flex-1 max-w-[48px] rounded-lg border border-slate-300 bg-slate-50 text-center text-base sm:text-lg font-bold text-slate-900 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
                       aria-label={`Email OTP digit ${index + 1
                         }`}
                     />
@@ -2922,13 +2922,13 @@ setLocalAadhaarStatus("INITIATED");
   </div>
 
   {/* Row 2: Contact Validations Grid */}
-  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 col-span-full">
+  <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
     {/* Mobile Number Block */}
-    <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+    <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
       <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
         Mobile Number *
       </label>
-      <div className="flex gap-2.5">
+      <div className="flex items-center gap-2 sm:gap-2.5">
         <input
           name="mobileNumber"
           value={formData.mobileNumber}
@@ -2938,7 +2938,7 @@ setLocalAadhaarStatus("INITIATED");
           required
           disabled={otpVerified}
           placeholder="Enter 10-digit number"
-          className={`flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+          className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
             otpVerified ? "bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200" : ""
           }`}
         />
@@ -2946,7 +2946,7 @@ setLocalAadhaarStatus("INITIATED");
           type="button"
           onClick={handleSendOtp}
           disabled={otpVerified || sendOtpMutation.isPending}
-          className={`rounded-xl px-5 text-xs font-extrabold uppercase tracking-wider transition-all border whitespace-nowrap shadow-2xs ${
+          className={`shrink-0 rounded-xl px-3.5 sm:px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider transition-all border whitespace-nowrap shadow-2xs ${
             otpVerified
               ? "bg-emerald-50 border-emerald-200 text-emerald-600 cursor-not-allowed"
               : "bg-slate-900 border-slate-900 text-white hover:bg-slate-800 active:scale-98"
@@ -2965,11 +2965,11 @@ setLocalAadhaarStatus("INITIATED");
     </div>
 
     {/* Email Block */}
-    <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+    <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
       <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
         Email Id *
       </label>
-      <div className="flex gap-2.5">
+      <div className="flex items-center gap-2 sm:gap-2.5">
         <input
           type="email"
           name="emailId"
@@ -2980,7 +2980,7 @@ setLocalAadhaarStatus("INITIATED");
           placeholder="name@domain.com"
           required
           disabled={emailOtpVerified}
-          className={`flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+          className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
             emailOtpVerified ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : ""
           }`}
         />
@@ -2988,7 +2988,7 @@ setLocalAadhaarStatus("INITIATED");
           type="button"
           onClick={handleSendEmailOtp}
           disabled={emailOtpVerified || sendEmailOtpMutation.isPending}
-          className={`rounded-xl px-5 text-xs font-extrabold uppercase tracking-wider transition-all border whitespace-nowrap shadow-2xs ${
+          className={`shrink-0 rounded-xl px-3.5 sm:px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider transition-all border whitespace-nowrap shadow-2xs ${
             emailOtpVerified
               ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
               : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
@@ -3007,14 +3007,14 @@ setLocalAadhaarStatus("INITIATED");
   </div>
 
   {/* Row 3: Identity Verification (PAN & Aadhaar + Compact Photo Block) */}
-  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 col-span-full">
+  <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
     {/* Left Side Column: PAN Block */}
-    <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
       <div>
         <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
           PAN Number *
         </label>
-        <div className="flex gap-2.5 mt-1.5">
+        <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
           <input
             name="panNumber"
             value={formData.panNumber}
@@ -3022,7 +3022,7 @@ setLocalAadhaarStatus("INITIATED");
             maxLength={10}
             placeholder="ABCDE1234F"
             disabled={panVerified}
-            className={`flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+            className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
               panVerified ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-600" : ""
             }`}
           />
@@ -3031,7 +3031,7 @@ setLocalAadhaarStatus("INITIATED");
               type="button"
               onClick={handleVerifyPan}
               disabled={panVerified || verifyPanMutation.isPending}
-              className={`rounded-xl px-5 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
+              className={`shrink-0 rounded-xl px-3.5 sm:px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
                 panVerified
                   ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
                   : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
@@ -3090,92 +3090,92 @@ setLocalAadhaarStatus("INITIATED");
     </div>
 
     {/* Right Side Column: Aadhaar Box + Compact Photo Block */}
-    <div className="flex flex-col gap-4 self-start">
-{/* Aadhaar KYC Link Dispatcher Box */}
-<div
-  className={`rounded-2xl border p-3.5 shadow-2xs flex flex-row items-center justify-between gap-4 h-fit ${aadhaarStatusMeta.boxClass}`}
->
-  <div className="flex flex-col gap-1">
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="inline-flex self-start rounded-md bg-blue-600/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
-        DigiLocker KYC
-      </span>
-
-      <span
-        className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${aadhaarStatusMeta.badgeClass}`}
+    <div className="flex flex-col gap-4 w-full self-start">
+      {/* Aadhaar KYC Link Dispatcher Box */}
+      <div
+        className={`rounded-2xl border p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 h-fit ${aadhaarStatusMeta.boxClass}`}
       >
-        {aadhaarStatusQuery.isFetching && isAadhaarInitiated
-          ? "Refreshing..."
-          : aadhaarStatusMeta.label}
-      </span>
-    </div>
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex self-start rounded-md bg-blue-600/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+              DigiLocker KYC
+            </span>
 
-    <h4 className="text-sm font-bold text-slate-800">
-      Aadhaar Verification Link
-    </h4>
+            <span
+              className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${aadhaarStatusMeta.badgeClass}`}
+            >
+              {aadhaarStatusQuery.isFetching && isAadhaarInitiated
+                ? "Refreshing..."
+                : aadhaarStatusMeta.label}
+            </span>
+          </div>
 
-    <p className="max-w-md text-[11px] font-semibold text-slate-500">
-      {aadhaarStatusMeta.helper}
-    </p>
-  </div>
+          <h4 className="text-sm font-bold text-slate-800">
+            Aadhaar Verification Link
+          </h4>
 
-  <div className="shrink-0 min-w-[160px]">
-    <button
-      type="button"
-      onClick={handleInitAadhaar}
-      disabled={
-        aadhaarLinkSending ||
-        isAadhaarCooldownActive ||
-        isAadhaarVerified ||
-        !currentApplicationId
-      }
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/10 transition-all hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-    >
-      {aadhaarLinkSending ? (
-        "Sending..."
-      ) : isAadhaarVerified ? (
-        "✓ Verified"
-      ) : isAadhaarCooldownActive ? (
-        `Wait ${formatCooldown(aadhaarCooldownSeconds)}`
-      ) : !currentApplicationId ? (
-        "Save Draft First"
-      ) : aadhaarKycStatus === "FAILED" ? (
-        "Resend Link"
-      ) : isAadhaarInitiated ? (
-        "Resend Link"
-      ) : (
-        <>
-          <svg
-            className="h-3.5 w-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2.5}
+          <p className="max-w-md text-[11px] font-semibold text-slate-500">
+            {aadhaarStatusMeta.helper}
+          </p>
+        </div>
+
+        <div className="w-full sm:w-auto sm:shrink-0 sm:min-w-[150px]">
+          <button
+            type="button"
+            onClick={handleInitAadhaar}
+            disabled={
+              aadhaarLinkSending ||
+              isAadhaarCooldownActive ||
+              isAadhaarVerified ||
+              !currentApplicationId
+            }
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 sm:py-2 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/10 transition-all hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M13.5 6H5.25A2.25 2.25 0 003 8.25v7.5A2.25 2.25 0 005.25 18h13.5A2.25 2.25 0 0021 15.75v-4.5M13.5 6L21 3m0 0v7.5M21 3l-7.5 7.5"
-            />
-          </svg>
-          Send Link
-        </>
-      )}
-    </button>
-  </div>
-</div>
+            {aadhaarLinkSending ? (
+              "Sending..."
+            ) : isAadhaarVerified ? (
+              "✓ Verified"
+            ) : isAadhaarCooldownActive ? (
+              `Wait ${formatCooldown(aadhaarCooldownSeconds)}`
+            ) : !currentApplicationId ? (
+              "Save Draft First"
+            ) : aadhaarKycStatus === "FAILED" ? (
+              "Resend Link"
+            ) : isAadhaarInitiated ? (
+              "Resend Link"
+            ) : (
+              <>
+                <svg
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.5 6H5.25A2.25 2.25 0 003 8.25v7.5A2.25 2.25 0 005.25 18h13.5A2.25 2.25 0 0021 15.75v-4.5M13.5 6L21 3m0 0v7.5M21 3l-7.5 7.5"
+                  />
+                </svg>
+                Send Link
+              </>
+            )}
+          </button>
+        </div>
+      </div>
 
       {/* Compact Profile Photo Management Panel */}
-      <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 shadow-3xs">
             <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
               IMG
             </span>
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 min-w-0">
             <h4 className="text-xs font-bold text-slate-800">Biometric Photo</h4>
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {isApplicantPhotoUploaded ? (
                 <>
                   <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
@@ -3198,8 +3198,8 @@ setLocalAadhaarStatus("INITIATED");
           </div>
         </div>
 
-        <div className="flex items-center gap-2 min-w-[210px]">
-          <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors whitespace-nowrap">
+        <div className="flex items-center gap-2 w-full sm:w-auto sm:min-w-[210px]">
+          <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 sm:py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors whitespace-nowrap">
             {customerPhotoFile ? "Change" : "Choose File"}
             <input
               type="file"
@@ -3213,7 +3213,7 @@ setLocalAadhaarStatus("INITIATED");
             type="button"
             disabled={!customerPhotoFile || uploadCustomerPhotoMutation.isPending || !(createdApplicationId ?? applicationId)}
             onClick={() => uploadCustomerPhotoMutation.mutate()}
-            className="flex-1 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"
+            className="flex-1 rounded-xl bg-blue-600 px-3 py-2.5 sm:py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"
           >
             {uploadCustomerPhotoMutation.isPending ? "Uploading..." : "Upload"}
           </button>
@@ -3221,7 +3221,7 @@ setLocalAadhaarStatus("INITIATED");
       </div>
       
       {customerPhotoFile && (
-        <div className="rounded-xl bg-blue-50/50 px-3 py-1.5 border border-blue-100 text-[11px] font-medium text-blue-700 truncate max-w-sm">
+        <div className="rounded-xl bg-blue-50/50 px-3 py-1.5 border border-blue-100 text-[11px] font-medium text-blue-700 truncate w-full sm:max-w-sm">
           Staged: <span className="font-bold">{customerPhotoFile.name}</span>
         </div>
       )}
@@ -3257,7 +3257,7 @@ setLocalAadhaarStatus("INITIATED");
       <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
         GST Number
       </label>
-      <div className="flex gap-2.5">
+      <div className="flex items-center gap-2 sm:gap-2.5">
         <input
           name="gstNumber"
           value={formData.gstNumber}
@@ -3265,7 +3265,7 @@ setLocalAadhaarStatus("INITIATED");
           maxLength={15}
           placeholder="22AAAAA0000A1Z5"
           disabled={gstVerified}
-          className={`flex-1 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm uppercase font-semibold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+          className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm uppercase font-semibold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
             gstVerified ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-600" : ""
           }`}
         />
@@ -3275,7 +3275,7 @@ setLocalAadhaarStatus("INITIATED");
             type="button"
             onClick={handleVerifyGst}
             disabled={gstVerified || verifyGstMutation.isPending}
-            className={`rounded-xl px-4 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
+            className={`shrink-0 rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
               gstVerified
                 ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
                 : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
@@ -3299,7 +3299,7 @@ setLocalAadhaarStatus("INITIATED");
 
         {/* Co-Applicants Multi-Card Management Workspace */}
         <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3 mt-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
             <div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
                 Co-Applicant Details
@@ -3312,7 +3312,7 @@ setLocalAadhaarStatus("INITIATED");
               type="button"
               onClick={handleAddCoApplicant}
               disabled={coApplicants.length >= 3}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+              className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -3471,7 +3471,7 @@ setLocalAadhaarStatus("INITIATED");
 
         {/* Contact Persons Multi-Card Management Workspace */}
         <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3 mt-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
             <div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
                 Reference / Contact Persons
@@ -3483,7 +3483,7 @@ setLocalAadhaarStatus("INITIATED");
             <button
               type="button"
               onClick={handleAddContactPerson}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
+              className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
