@@ -625,7 +625,7 @@ export function SidebarNavLinks({ onNavigate }) {
 
 export default function Sidebar() {
   return (
-    <aside className="hidden h-screen w-64 shrink-0 select-none flex-col overflow-y-auto border-r border-slate-800/40 bg-[#0b1426] p-5 text-slate-400 lg:flex lg:w-72">
+    <aside className="sidebar-scroll hidden h-screen w-64 shrink-0 select-none flex-col overflow-y-auto border-r border-slate-800/40 bg-[#0b1426] p-5 text-slate-400 lg:flex lg:w-72">
       <div className="mb-8 px-2">
         <div className="bg-gradient-to-r from-white to-slate-300 bg-clip-text text-xl font-bold tracking-wider text-transparent text-white">
           Fintree LAP

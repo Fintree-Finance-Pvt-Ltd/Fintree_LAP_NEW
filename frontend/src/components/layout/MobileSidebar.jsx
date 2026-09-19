@@ -39,7 +39,7 @@ export default function MobileSidebar() {
       />
 
       <aside
-        className={`absolute inset-y-0 left-0 flex h-full w-[min(20rem,88vw)] flex-col overflow-y-auto border-r border-slate-800/40 bg-[#0b1426] p-5 text-slate-400 shadow-2xl transition-transform duration-200 ${
+        className={`sidebar-scroll absolute inset-y-0 left-0 flex h-full w-[min(20rem,88vw)] flex-col overflow-y-auto border-r border-slate-800/40 bg-[#0b1426] p-5 text-slate-400 shadow-2xl transition-transform duration-200 ${
           mobileNavOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
