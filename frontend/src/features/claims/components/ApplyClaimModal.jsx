@@ -1,15 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FiCamera,
   FiCheckCircle,
-  FiDollarSign,
-  FiFileText,
-  FiHelpCircle,
-  FiInfo,
   FiLoader,
   FiUploadCloud,
   FiX,
-  FiZap,
+  FiZap
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { createWorker } from "tesseract.js";

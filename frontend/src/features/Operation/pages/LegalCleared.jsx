@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { applicationsApi } from "../../applications/applicationsApi.js";
+import { useEffect, useMemo, useState } from "react";
 import {
-  FaArrowRight,
   FaBalanceScale,
   FaBuilding,
   FaCheck,
@@ -15,15 +13,15 @@ import {
   FaFileAlt,
   FaFilter,
   FaPaperPlane,
-  FaPrint,
   FaSave,
   FaSearch,
   FaShieldAlt,
   FaStopwatch,
   FaTimes,
   FaUndo,
-  FaUserTie,
+  FaUserTie
 } from "react-icons/fa";
+import { applicationsApi } from "../../applications/applicationsApi.js";
 
 function firstValue(...values) {
   return values.find(

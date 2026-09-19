@@ -10,7 +10,6 @@ import {
   FaEye,
   FaFileAlt,
   FaFilter,
-  FaLandmark,
   FaMoneyCheckAlt,
   FaPaperPlane,
   FaPrint,
@@ -18,7 +17,7 @@ import {
   FaShieldAlt,
   FaTimes,
   FaUniversity,
-  FaUserTie,
+  FaUserTie
 } from "react-icons/fa";
 
 import { operationApi } from "../operationapi.js";

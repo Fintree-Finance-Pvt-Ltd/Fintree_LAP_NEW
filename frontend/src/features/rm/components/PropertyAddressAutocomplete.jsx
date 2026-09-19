@@ -1,15 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import {
-  FiCompass,
-  FiMapPin,
-  FiNavigation,
-  FiSearch,
-  FiX,
-  FiCheck,
-  FiAlertCircle,
-  FiChevronDown,
-  FiChevronUp,
-} from "react-icons/fi";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FiMapPin, FiNavigation, FiSearch, FiX } from "react-icons/fi";
+import UniversalMapView from "../../../components/common/UniversalMapView.jsx";
 import {
   KNOWN_LANDMARKS_DICT,
   PINCODE_LOCALITY_DICT,
@@ -23,7 +14,6 @@ import {
   loadGoogleMapsScript,
   reverseGeocodeGoogle,
 } from "../../../utils/googleMapsLoader.js";
-import UniversalMapView from "../../../components/common/UniversalMapView.jsx";
 
 export default function PropertyAddressAutocomplete({
   propertyAddress = "",
@@ -41,7 +31,11 @@ export default function PropertyAddressAutocomplete({
   const [showMap, setShowMap] = useState(true);
 
   // Map Coordinates state (default to Mumbai Region)
-  const [coords, setCoords] = useState({ lat: 19.076, lng: 72.8777, isResolved: false });
+  const [coords, setCoords] = useState({
+    lat: 19.076,
+    lng: 72.8777,
+    isResolved: false,
+  });
 
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -55,14 +49,24 @@ export default function PropertyAddressAutocomplete({
     if (hasGoogleMapsKey()) {
       loadGoogleMapsScript().then((gMaps) => {
         if (gMaps && isGoogleMapsLoaded()) {
-          if (!autocompleteServiceRef.current && window.google?.maps?.places?.AutocompleteService) {
-            autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+          if (
+            !autocompleteServiceRef.current &&
+            window.google?.maps?.places?.AutocompleteService
+          ) {
+            autocompleteServiceRef.current =
+              new window.google.maps.places.AutocompleteService();
           }
-          if (!placesServiceRef.current && window.google?.maps?.places?.PlacesService) {
+          if (
+            !placesServiceRef.current &&
+            window.google?.maps?.places?.PlacesService
+          ) {
             if (!placesDummyDivRef.current) {
               placesDummyDivRef.current = document.createElement("div");
             }
-            placesServiceRef.current = new window.google.maps.places.PlacesService(placesDummyDivRef.current);
+            placesServiceRef.current =
+              new window.google.maps.places.PlacesService(
+                placesDummyDivRef.current,
+              );
           }
         }
       });
@@ -72,10 +76,16 @@ export default function PropertyAddressAutocomplete({
   // Sync initial coordinates if address or pincode already exists
   useEffect(() => {
     if (!coords.isResolved && (propertyAddress || pinCode || city)) {
-      const fullText = [propertyAddress, city, state, pinCode].filter(Boolean).join(", ");
+      const fullText = [propertyAddress, city, state, pinCode]
+        .filter(Boolean)
+        .join(", ");
       forwardGeocodeAddress(fullText).then((resolved) => {
         if (resolved?.lat && resolved?.lng) {
-          setCoords({ lat: Number(resolved.lat), lng: Number(resolved.lng), isResolved: true });
+          setCoords({
+            lat: Number(resolved.lat),
+            lng: Number(resolved.lng),
+            isResolved: true,
+          });
         }
       });
     }
@@ -120,10 +130,14 @@ export default function PropertyAddressAutocomplete({
           },
           (results, status) => {
             setIsSearching(false);
-            if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+            if (
+              status === window.google.maps.places.PlacesServiceStatus.OK &&
+              results
+            ) {
               const formattedList = results.map((item) => ({
                 id: item.place_id,
-                title: item.structured_formatting?.main_text || item.description,
+                title:
+                  item.structured_formatting?.main_text || item.description,
                 subtitle: item.structured_formatting?.secondary_text || "",
                 fullDescription: item.description,
                 source: "google",
@@ -134,7 +148,7 @@ export default function PropertyAddressAutocomplete({
             } else {
               fallbackSearch(trimmed);
             }
-          }
+          },
         );
         return;
       } catch (err) {
@@ -157,7 +171,8 @@ export default function PropertyAddressAutocomplete({
         results.push({
           id: `landmark_${idx}`,
           title: item.name.split(",")[0].trim(),
-          subtitle: item.name.split(",").slice(1).join(",").trim() || "Landmark",
+          subtitle:
+            item.name.split(",").slice(1).join(",").trim() || "Landmark",
           fullDescription: item.name,
           source: "landmark",
           lat: item.lat,
@@ -187,10 +202,13 @@ export default function PropertyAddressAutocomplete({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-        trimmed
+        trimmed,
       )}&limit=5&countrycodes=in&addressdetails=1`;
 
-      const res = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
       clearTimeout(timeoutId);
 
       if (res.ok) {
@@ -199,7 +217,11 @@ export default function PropertyAddressAutocomplete({
           data.forEach((item, idx) => {
             const addr = item.address || {};
             const title = item.name || item.display_name.split(",")[0].trim();
-            const subtitle = item.display_name.split(",").slice(1, 4).join(",").trim();
+            const subtitle = item.display_name
+              .split(",")
+              .slice(1, 4)
+              .join(",")
+              .trim();
             results.push({
               id: `osm_${item.place_id || idx}`,
               title,
@@ -213,7 +235,9 @@ export default function PropertyAddressAutocomplete({
           });
         }
       }
-    } catch (_) {}
+    } catch (error) {
+      console.warn("OpenStreetMap search failed", error.message);
+    }
 
     setIsSearching(false);
     setPredictions(results.slice(0, 7));
@@ -245,10 +269,18 @@ export default function PropertyAddressAutocomplete({
         placesServiceRef.current.getDetails(
           {
             placeId: prediction.placeId,
-            fields: ["address_components", "formatted_address", "geometry", "name"],
+            fields: [
+              "address_components",
+              "formatted_address",
+              "geometry",
+              "name",
+            ],
           },
           (place, status) => {
-            if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
+            if (
+              status === window.google.maps.places.PlacesServiceStatus.OK &&
+              place
+            ) {
               let route = "";
               let sublocality = "";
               let cityVal = "";
@@ -258,18 +290,29 @@ export default function PropertyAddressAutocomplete({
 
               (place.address_components || []).forEach((comp) => {
                 const types = comp.types || [];
-                if (types.includes("premise") || types.includes("subpremise") || types.includes("street_number")) {
+                if (
+                  types.includes("premise") ||
+                  types.includes("subpremise") ||
+                  types.includes("street_number")
+                ) {
                   premise = comp.long_name;
                 }
                 if (types.includes("route")) {
                   route = comp.long_name;
                 }
-                if (types.includes("sublocality") || types.includes("sublocality_level_1") || types.includes("neighborhood")) {
+                if (
+                  types.includes("sublocality") ||
+                  types.includes("sublocality_level_1") ||
+                  types.includes("neighborhood")
+                ) {
                   sublocality = comp.long_name;
                 }
                 if (types.includes("locality")) {
                   cityVal = comp.long_name;
-                } else if (!cityVal && types.includes("administrative_area_level_2")) {
+                } else if (
+                  !cityVal &&
+                  types.includes("administrative_area_level_2")
+                ) {
                   cityVal = comp.long_name;
                 }
                 if (types.includes("administrative_area_level_1")) {
@@ -280,10 +323,16 @@ export default function PropertyAddressAutocomplete({
                 }
               });
 
-              const streetParts = [place.name, premise, route, sublocality].filter(
-                (item, pos, arr) => item && arr.indexOf(item) === pos
-              );
-              const formattedStreet = streetParts.join(", ") || place.formatted_address || prediction.fullDescription;
+              const streetParts = [
+                place.name,
+                premise,
+                route,
+                sublocality,
+              ].filter((item, pos, arr) => item && arr.indexOf(item) === pos);
+              const formattedStreet =
+                streetParts.join(", ") ||
+                place.formatted_address ||
+                prediction.fullDescription;
 
               const lat = place.geometry?.location?.lat() || 19.076;
               const lng = place.geometry?.location?.lng() || 72.8777;
@@ -298,7 +347,7 @@ export default function PropertyAddressAutocomplete({
               });
               return;
             }
-          }
+          },
         );
       }
     }
@@ -314,9 +363,14 @@ export default function PropertyAddressAutocomplete({
       newCity = d.city || d.town || d.village || d.suburb || d.county || "";
       newState = d.state || "";
       newPin = d.postcode || "";
-      newAddress = [d.road || d.neighbourhood || prediction.title, d.suburb, d.city_district]
-        .filter(Boolean)
-        .join(", ") || prediction.fullDescription;
+      newAddress =
+        [
+          d.road || d.neighbourhood || prediction.title,
+          d.suburb,
+          d.city_district,
+        ]
+          .filter(Boolean)
+          .join(", ") || prediction.fullDescription;
     }
 
     if (prediction.lat && prediction.lng) {
@@ -498,7 +552,9 @@ export default function PropertyAddressAutocomplete({
                     {item.title}
                   </div>
                   {item.subtitle && (
-                    <div className="text-xs text-slate-500 truncate mt-0.5">{item.subtitle}</div>
+                    <div className="text-xs text-slate-500 truncate mt-0.5">
+                      {item.subtitle}
+                    </div>
                   )}
                 </div>
                 {item.source === "google" && (
@@ -634,10 +690,12 @@ export default function PropertyAddressAutocomplete({
 
           <div className="flex items-center justify-between text-[11px] text-slate-500 px-1 pt-0.5">
             <span>
-              Lat: <b className="text-slate-700">{coords.lat.toFixed(5)}</b>, Lng:{" "}
-              <b className="text-slate-700">{coords.lng.toFixed(5)}</b>
+              Lat: <b className="text-slate-700">{coords.lat.toFixed(5)}</b>,
+              Lng: <b className="text-slate-700">{coords.lng.toFixed(5)}</b>
             </span>
-            <span className="text-blue-600 font-medium">💡 Click map or drag pin</span>
+            <span className="text-blue-600 font-medium">
+              💡 Click map or drag pin
+            </span>
           </div>
         </div>
       </div>

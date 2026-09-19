@@ -1,12 +1,17 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Cron } from '@nestjs/schedule';
-import { Repository } from 'typeorm';
-import { EndWorkDto } from './dto/end-work.dto';
-import { StartWorkDto } from './dto/start-work.dto';
-import { TrackLocationDto } from './dto/track-location.dto';
-import { LapAttendance } from './entities/lap-attendance.entity';
-import { LapAttendanceLocation } from './entities/lap-attendance-location.entity';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Cron } from "@nestjs/schedule";
+import { Repository } from "typeorm";
+import { EndWorkDto } from "./dto/end-work.dto";
+import { StartWorkDto } from "./dto/start-work.dto";
+import { TrackLocationDto } from "./dto/track-location.dto";
+import { LapAttendance } from "./entities/lap-attendance.entity";
+import { LapAttendanceLocation } from "./entities/lap-attendance-location.entity";
 
 @Injectable()
 export class AttendanceService {
@@ -21,27 +26,40 @@ export class AttendanceService {
   ) {}
 
   private cleanLocationName(name?: string | null): string {
-    if (!name) return '';
+    if (!name) return "";
     const trimmed = String(name).trim();
-    if (trimmed.includes('° N') || trimmed.includes('° E') || /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(trimmed)) {
+    if (
+      trimmed.includes("° N") ||
+      trimmed.includes("° E") ||
+      /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(trimmed)
+    ) {
       const match = trimmed.match(/\(([^)]+)\)/);
       if (match && match[1]) {
         return match[1].trim();
       }
-      return '';
+      return "";
     }
     return trimmed;
   }
 
-  async reverseGeocode(lat?: number | null, lng?: number | null, fallback?: string): Promise<string> {
-    if (lat === null || lat === undefined || lng === null || lng === undefined) {
-      return this.cleanLocationName(fallback) || 'Office Workspace';
+  async reverseGeocode(
+    lat?: number | null,
+    lng?: number | null,
+    fallback?: string,
+  ): Promise<string> {
+    if (
+      lat === null ||
+      lat === undefined ||
+      lng === null ||
+      lng === undefined
+    ) {
+      return this.cleanLocationName(fallback) || "Office Workspace";
     }
 
     const numLat = Number(lat);
     const numLng = Number(lng);
     if (isNaN(numLat) || isNaN(numLng)) {
-      return this.cleanLocationName(fallback) || 'Office Workspace';
+      return this.cleanLocationName(fallback) || "Office Workspace";
     }
 
     const cacheKey = `${numLat.toFixed(3)},${numLng.toFixed(3)}`;
@@ -60,8 +78,8 @@ export class AttendanceService {
       const response = await fetch(url, {
         signal: controller.signal,
         headers: {
-          'User-Agent': 'FintreeLAP-AttendanceService/1.0',
-          Accept: 'application/json',
+          "User-Agent": "FintreeLAP-AttendanceService/1.0",
+          Accept: "application/json",
         },
       });
       clearTimeout(timeoutId);
@@ -70,16 +88,32 @@ export class AttendanceService {
         const data = (await response.json()) as any;
         if (data) {
           const addr = data.address || {};
-          const road = addr.road || addr.pedestrian || addr.suburb || addr.neighbourhood || '';
-          const suburb = addr.suburb || addr.neighbourhood || addr.city_district || '';
-          const city = addr.city || addr.town || addr.village || addr.county || '';
-          const state = addr.state || '';
+          const road =
+            addr.road ||
+            addr.pedestrian ||
+            addr.suburb ||
+            addr.neighbourhood ||
+            "";
+          const suburb =
+            addr.suburb || addr.neighbourhood || addr.city_district || "";
+          const city =
+            addr.city || addr.town || addr.village || addr.county || "";
+          const state = addr.state || "";
 
-          const parts = [road, suburb !== road ? suburb : '', city, state].filter(Boolean);
-          let placeName = parts.slice(0, 3).join(', ');
+          const parts = [
+            road,
+            suburb !== road ? suburb : "",
+            city,
+            state,
+          ].filter(Boolean);
+          let placeName = parts.slice(0, 3).join(", ");
 
           if (!placeName && data.display_name) {
-            placeName = data.display_name.split(',').slice(0, 3).join(',').trim();
+            placeName = data.display_name
+              .split(",")
+              .slice(0, 3)
+              .join(",")
+              .trim();
           }
 
           if (placeName) {
@@ -89,19 +123,21 @@ export class AttendanceService {
         }
       }
     } catch (err: any) {
-      this.logger.debug(`Reverse geocode fetch skipped for (${lat}, ${lng}): ${err?.message}`);
+      this.logger.debug(
+        `Reverse geocode fetch skipped for (${lat}, ${lng}): ${err?.message}`,
+      );
     }
 
     const cleaned = this.cleanLocationName(fallback);
-    return cleaned || 'Office Workspace';
+    return cleaned || "Office Workspace";
   }
 
   private getTodayDateString(dateObj: Date = new Date()): string {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
     return formatter.format(dateObj);
   }
@@ -111,13 +147,18 @@ export class AttendanceService {
     const hrs = Math.floor(minutes / 60);
     const mins = minutes % 60;
     if (hrs === 0) {
-      return `${mins} min${mins === 1 ? '' : 's'}`;
+      return `${mins} min${mins === 1 ? "" : "s"}`;
     }
-    return `${hrs} hr${hrs === 1 ? '' : 's'} ${mins} min${mins === 1 ? '' : 's'}`;
+    return `${hrs} hr${hrs === 1 ? "" : "s"} ${mins} min${mins === 1 ? "" : "s"}`;
   }
 
   // Haversine formula to compute distance in KM between two coordinates
-  private calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  private calculateDistanceKm(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
     const R = 6371; // Earth's radius in KM
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -135,12 +176,14 @@ export class AttendanceService {
    * Daily Cron at 10:00 PM (22:00 IST):
    * Auto-ends open work sessions for users who forgot to click "End Work".
    */
-  @Cron('0 0 22 * * *', {
-    name: 'auto-end-attendance-10pm',
-    timeZone: 'Asia/Kolkata',
+  @Cron("0 0 22 * * *", {
+    name: "auto-end-attendance-10pm",
+    timeZone: "Asia/Kolkata",
   })
   async handleAutoEndWorkCron() {
-    this.logger.log('⏰ Running daily 10:00 PM IST Auto-End Attendance Cron...');
+    this.logger.log(
+      "⏰ Running daily 10:00 PM IST Auto-End Attendance Cron...",
+    );
     try {
       const result = await this.autoEndForgottenSessions();
       this.logger.log(
@@ -160,11 +203,11 @@ export class AttendanceService {
   async autoCloseSingleRecord(record: LapAttendance): Promise<LapAttendance> {
     if (
       !record ||
-      record.status === 'COMPLETED' ||
-      record.status === 'AUTO_END_WORK' ||
-      record.status === 'auto_end_work' ||
-      record.status === 'AUTO_ENDED' ||
-      record.status === 'END_WORK_HOUR'
+      record.status === "COMPLETED" ||
+      record.status === "AUTO_END_WORK" ||
+      record.status === "auto_end_work" ||
+      record.status === "AUTO_ENDED" ||
+      record.status === "END_WORK_HOUR"
     ) {
       return record;
     }
@@ -173,28 +216,41 @@ export class AttendanceService {
     // Set auto-end time to 10:00 PM (22:00:00) IST on that session's date
     const autoEndTime = new Date(`${targetDateStr}T22:00:00+05:30`);
 
-    const startMillis = record.startTime ? new Date(record.startTime).getTime() : autoEndTime.getTime();
+    const startMillis = record.startTime
+      ? new Date(record.startTime).getTime()
+      : autoEndTime.getTime();
     const endMillis = autoEndTime.getTime();
-    const diffMinutes = Math.max(0, Math.round((endMillis - startMillis) / (1000 * 60)));
+    const diffMinutes = Math.max(
+      0,
+      Math.round((endMillis - startMillis) / (1000 * 60)),
+    );
     const formattedDuration = this.formatDuration(diffMinutes);
 
     const endLat = record.currentLatitude ?? record.startLatitude ?? null;
     const endLng = record.currentLongitude ?? record.startLongitude ?? null;
 
-    let endLoc = this.cleanLocationName(record.currentLocation) || this.cleanLocationName(record.startLocation);
-    if (endLat && endLng && (!endLoc || endLoc === 'Office Workspace')) {
-      endLoc = await this.reverseGeocode(Number(endLat), Number(endLng), endLoc || 'Office Workspace');
+    let endLoc =
+      this.cleanLocationName(record.currentLocation) ||
+      this.cleanLocationName(record.startLocation);
+    if (endLat && endLng && (!endLoc || endLoc === "Office Workspace")) {
+      endLoc = await this.reverseGeocode(
+        Number(endLat),
+        Number(endLng),
+        endLoc || "Office Workspace",
+      );
     }
 
     record.endTime = autoEndTime;
-    record.endLocation = endLoc ? `${endLoc} (Auto Ended)` : 'Office Workspace (Auto Ended at 10 PM)';
+    record.endLocation = endLoc
+      ? `${endLoc} (Auto Ended)`
+      : "Office Workspace (Auto Ended at 10 PM)";
 
     if (endLat !== null) record.endLatitude = endLat;
     if (endLng !== null) record.endLongitude = endLng;
 
     record.totalMinutes = diffMinutes;
     record.totalHours = formattedDuration;
-    record.status = 'AUTO_END_WORK';
+    record.status = "AUTO_END_WORK";
     record.updatedBy = record.userId;
     record.updatedAt = new Date();
 
@@ -213,7 +269,9 @@ export class AttendanceService {
         });
         await this.locationRepo.save(finalLoc);
       } catch (locErr: any) {
-        this.logger.warn(`Could not save auto-end breadcrumb for session ${record.id}: ${locErr?.message}`);
+        this.logger.warn(
+          `Could not save auto-end breadcrumb for session ${record.id}: ${locErr?.message}`,
+        );
       }
     }
 
@@ -227,9 +285,9 @@ export class AttendanceService {
     const todayStr = targetDate || this.getTodayDateString();
 
     const openRecords = await this.attendanceRepo
-      .createQueryBuilder('att')
-      .where('att.status = :status', { status: 'IN_PROGRESS' })
-      .andWhere('att.date <= :todayStr', { todayStr })
+      .createQueryBuilder("att")
+      .where("att.status = :status", { status: "IN_PROGRESS" })
+      .andWhere("att.date <= :todayStr", { todayStr })
       .getMany();
 
     let affectedCount = 0;
@@ -245,7 +303,7 @@ export class AttendanceService {
     }
 
     return {
-      message: 'Auto-end check completed successfully',
+      message: "Auto-end check completed successfully",
       affectedCount,
     };
   }
@@ -254,13 +312,13 @@ export class AttendanceService {
     const todayStr = this.getTodayDateString();
     let record = await this.attendanceRepo.findOne({
       where: { userId, date: todayStr },
-      order: { id: 'DESC' },
+      order: { id: "DESC" },
     });
 
     const now = new Date();
-    const istHourStr = new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      hour: 'numeric',
+    const istHourStr = new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "numeric",
       hour12: false,
     }).format(now);
     const currentHour = parseInt(istHourStr, 10);
@@ -268,7 +326,7 @@ export class AttendanceService {
     const isPast10PM = currentHour >= 22;
 
     // Auto-close lazily if still IN_PROGRESS and past 10:00 PM
-    if (record && record.status === 'IN_PROGRESS' && isPast10PM) {
+    if (record && record.status === "IN_PROGRESS" && isPast10PM) {
       record = await this.autoCloseSingleRecord(record);
     }
 
@@ -286,11 +344,11 @@ export class AttendanceService {
     const isWorkStarted = Boolean(record.startTime);
     const isWorkEnded =
       Boolean(record.endTime) ||
-      record.status === 'COMPLETED' ||
-      record.status === 'AUTO_END_WORK' ||
-      record.status === 'auto_end_work' ||
-      record.status === 'AUTO_ENDED' ||
-      record.status === 'END_WORK_HOUR';
+      record.status === "COMPLETED" ||
+      record.status === "AUTO_END_WORK" ||
+      record.status === "auto_end_work" ||
+      record.status === "AUTO_ENDED" ||
+      record.status === "END_WORK_HOUR";
 
     return {
       isWorkStarted,
@@ -302,15 +360,19 @@ export class AttendanceService {
         id: record.id,
         date: record.date,
         startTime: record.startTime,
-        startLocation: this.cleanLocationName(record.startLocation) || 'Office Workspace',
+        startLocation:
+          this.cleanLocationName(record.startLocation) || "Office Workspace",
         startLatitude: record.startLatitude,
         startLongitude: record.startLongitude,
         currentLatitude: record.currentLatitude,
         currentLongitude: record.currentLongitude,
-        currentLocation: this.cleanLocationName(record.currentLocation) || 'Office Workspace',
+        currentLocation:
+          this.cleanLocationName(record.currentLocation) || "Office Workspace",
         lastTrackedAt: record.lastTrackedAt,
         endTime: record.endTime,
-        endLocation: record.endTime ? (this.cleanLocationName(record.endLocation) || 'Office Workspace') : null,
+        endLocation: record.endTime
+          ? this.cleanLocationName(record.endLocation) || "Office Workspace"
+          : null,
         endLatitude: record.endTime ? record.endLatitude : null,
         endLongitude: record.endTime ? record.endLongitude : null,
         totalHours: record.totalHours,
@@ -326,29 +388,48 @@ export class AttendanceService {
     const todayStr = this.getTodayDateString();
     const existing = await this.attendanceRepo.findOne({
       where: { userId, date: todayStr },
-      order: { id: 'DESC' },
+      order: { id: "DESC" },
     });
 
     if (existing && existing.startTime) {
       return {
-        message: 'Work already started for today',
+        message: "Work already started for today",
         data: existing,
       };
     }
 
     const now = new Date();
-    const lat = dto.latitude !== undefined && dto.latitude !== null ? Number(dto.latitude) : null;
-    const lng = dto.longitude !== undefined && dto.longitude !== null ? Number(dto.longitude) : null;
+    const lat =
+      dto.latitude !== undefined && dto.latitude !== null
+        ? Number(dto.latitude)
+        : null;
+    const lng =
+      dto.longitude !== undefined && dto.longitude !== null
+        ? Number(dto.longitude)
+        : null;
 
     if (lat === null || isNaN(lat) || lng === null || isNaN(lng)) {
-      throw new BadRequestException('GPS location coordinates (latitude and longitude) are mandatory to start work.');
+      throw new BadRequestException(
+        "GPS location coordinates (latitude and longitude) are mandatory to start work.",
+      );
     }
 
     let location = this.cleanLocationName(dto.location || dto.spoke);
-    if (lat && lng && (!location || location === 'Office Workspace' || location === 'Location detected' || location === 'Verified Location')) {
-      location = await this.reverseGeocode(lat, lng, location || dto.spoke || 'Office Workspace');
+    if (
+      lat &&
+      lng &&
+      (!location ||
+        location === "Office Workspace" ||
+        location === "Location detected" ||
+        location === "Verified Location")
+    ) {
+      location = await this.reverseGeocode(
+        lat,
+        lng,
+        location || dto.spoke || "Office Workspace",
+      );
     } else if (!location) {
-      location = dto.spoke || 'Office Workspace';
+      location = dto.spoke || "Office Workspace";
     }
 
     const attendance = this.attendanceRepo.create({
@@ -363,7 +444,7 @@ export class AttendanceService {
       currentLocation: location,
       lastTrackedAt: now,
       totalDistanceKm: 0,
-      status: 'IN_PROGRESS',
+      status: "IN_PROGRESS",
       createdAt: now,
       updatedAt: now,
       createdBy: userId,
@@ -385,7 +466,7 @@ export class AttendanceService {
     }
 
     return {
-      message: 'Work started successfully',
+      message: "Work started successfully",
       data: saved,
     };
   }
@@ -402,13 +483,13 @@ export class AttendanceService {
 
     if (!attendance) {
       attendance = await this.attendanceRepo.findOne({
-        where: { userId, date: todayStr, status: 'IN_PROGRESS' },
-        order: { id: 'DESC' },
+        where: { userId, date: todayStr, status: "IN_PROGRESS" },
+        order: { id: "DESC" },
       });
     }
 
     if (!attendance) {
-      return { message: 'No active attendance session to track' };
+      return { message: "No active attendance session to track" };
     }
 
     const now = new Date();
@@ -433,9 +514,13 @@ export class AttendanceService {
       }
     }
 
-    const currentTotalDist = Number(attendance.totalDistanceKm || 0) + distanceIncrement;
+    const currentTotalDist =
+      Number(attendance.totalDistanceKm || 0) + distanceIncrement;
 
-    let locName = this.cleanLocationName(dto.locationName) || attendance.currentLocation || 'Active Movement';
+    let locName =
+      this.cleanLocationName(dto.locationName) ||
+      attendance.currentLocation ||
+      "Active Movement";
 
     attendance.currentLatitude = lat;
     attendance.currentLongitude = lng;
@@ -445,10 +530,18 @@ export class AttendanceService {
     attendance.totalDistanceKm = parseFloat(currentTotalDist.toFixed(3));
 
     // If start latitude was missing when session started, backfill with first tracked coordinate
-    if (attendance.startLatitude === null || attendance.startLatitude === undefined || attendance.startLongitude === null) {
+    if (
+      attendance.startLatitude === null ||
+      attendance.startLatitude === undefined ||
+      attendance.startLongitude === null
+    ) {
       attendance.startLatitude = lat;
       attendance.startLongitude = lng;
-      if (!attendance.startLocation || attendance.startLocation.startsWith('Spoke') || attendance.startLocation === 'Office Workspace') {
+      if (
+        !attendance.startLocation ||
+        attendance.startLocation.startsWith("Spoke") ||
+        attendance.startLocation === "Office Workspace"
+      ) {
         attendance.startLocation = locName || attendance.startLocation;
       }
     }
@@ -469,7 +562,7 @@ export class AttendanceService {
     await this.locationRepo.save(locationPoint);
 
     return {
-      message: 'Location tracked successfully',
+      message: "Location tracked successfully",
       data: {
         attendanceId: attendance.id,
         latitude: lat,
@@ -485,31 +578,33 @@ export class AttendanceService {
     const todayStr = this.getTodayDateString();
 
     let record = await this.attendanceRepo.findOne({
-      where: { userId, date: todayStr, status: 'IN_PROGRESS' },
-      order: { id: 'DESC' },
+      where: { userId, date: todayStr, status: "IN_PROGRESS" },
+      order: { id: "DESC" },
     });
 
     if (!record) {
       record = await this.attendanceRepo.findOne({
         where: { userId, date: todayStr },
-        order: { id: 'DESC' },
+        order: { id: "DESC" },
       });
     }
 
     if (!record) {
-      throw new NotFoundException('No active work attendance record found for today.');
+      throw new NotFoundException(
+        "No active work attendance record found for today.",
+      );
     }
 
     if (
-      (record.status === 'COMPLETED' ||
-        record.status === 'AUTO_END_WORK' ||
-        record.status === 'auto_end_work' ||
-        record.status === 'AUTO_ENDED' ||
-        record.status === 'END_WORK_HOUR') &&
+      (record.status === "COMPLETED" ||
+        record.status === "AUTO_END_WORK" ||
+        record.status === "auto_end_work" ||
+        record.status === "AUTO_ENDED" ||
+        record.status === "END_WORK_HOUR") &&
       record.endTime
     ) {
       return {
-        message: 'Work was already completed or auto-ended today',
+        message: "Work was already completed or auto-ended today",
         data: record,
       };
     }
@@ -517,17 +612,33 @@ export class AttendanceService {
     const now = new Date();
     const startMillis = new Date(record.startTime).getTime();
     const endMillis = now.getTime();
-    const diffMinutes = Math.max(0, Math.round((endMillis - startMillis) / (1000 * 60)));
+    const diffMinutes = Math.max(
+      0,
+      Math.round((endMillis - startMillis) / (1000 * 60)),
+    );
     const formattedDuration = this.formatDuration(diffMinutes);
 
-    const endLat = dto.latitude ?? record.currentLatitude ?? record.startLatitude ?? null;
-    const endLng = dto.longitude ?? record.currentLongitude ?? record.startLongitude ?? null;
+    const endLat =
+      dto.latitude ?? record.currentLatitude ?? record.startLatitude ?? null;
+    const endLng =
+      dto.longitude ?? record.currentLongitude ?? record.startLongitude ?? null;
 
-    let endLocation = this.cleanLocationName(dto.location) || this.cleanLocationName(record.currentLocation) || this.cleanLocationName(record.startLocation);
-    if (endLat && endLng && (!endLocation || endLocation === 'Office Workspace')) {
-      endLocation = await this.reverseGeocode(Number(endLat), Number(endLng), endLocation || 'Office Workspace');
+    let endLocation =
+      this.cleanLocationName(dto.location) ||
+      this.cleanLocationName(record.currentLocation) ||
+      this.cleanLocationName(record.startLocation);
+    if (
+      endLat &&
+      endLng &&
+      (!endLocation || endLocation === "Office Workspace")
+    ) {
+      endLocation = await this.reverseGeocode(
+        Number(endLat),
+        Number(endLng),
+        endLocation || "Office Workspace",
+      );
     } else if (!endLocation) {
-      endLocation = 'Office Workspace';
+      endLocation = "Office Workspace";
     }
 
     record.endTime = now;
@@ -537,20 +648,35 @@ export class AttendanceService {
     if (endLng !== null) record.endLongitude = Number(endLng);
 
     // If start latitude was missing when session started, backfill with coordinate
-    if (record.startLatitude === null || record.startLatitude === undefined || record.startLongitude === null) {
-      const fallbackLat = record.currentLatitude ?? (endLat !== null ? Number(endLat) : null);
-      const fallbackLng = record.currentLongitude ?? (endLng !== null ? Number(endLng) : null);
+    if (
+      record.startLatitude === null ||
+      record.startLatitude === undefined ||
+      record.startLongitude === null
+    ) {
+      const fallbackLat =
+        record.currentLatitude ?? (endLat !== null ? Number(endLat) : null);
+      const fallbackLng =
+        record.currentLongitude ?? (endLng !== null ? Number(endLng) : null);
       if (fallbackLat !== null && fallbackLng !== null) {
         record.startLatitude = fallbackLat;
         record.startLongitude = fallbackLng;
-        if (!record.startLocation || record.startLocation.startsWith('Spoke') || record.startLocation === 'Office Workspace') {
+        if (
+          !record.startLocation ||
+          record.startLocation.startsWith("Spoke") ||
+          record.startLocation === "Office Workspace"
+        ) {
           record.startLocation = endLocation || record.startLocation;
         }
       }
     }
 
     // Add remaining distance if final coords provided and differ from current
-    if (dto.latitude && dto.longitude && record.currentLatitude && record.currentLongitude) {
+    if (
+      dto.latitude &&
+      dto.longitude &&
+      record.currentLatitude &&
+      record.currentLongitude
+    ) {
       const dist = this.calculateDistanceKm(
         Number(record.currentLatitude),
         Number(record.currentLongitude),
@@ -566,7 +692,7 @@ export class AttendanceService {
 
     record.totalMinutes = diffMinutes;
     record.totalHours = formattedDuration;
-    record.status = 'COMPLETED';
+    record.status = "COMPLETED";
     record.updatedBy = userId;
     record.updatedAt = now;
 
@@ -586,7 +712,7 @@ export class AttendanceService {
     const updated = await this.attendanceRepo.save(record);
 
     return {
-      message: 'Work ended successfully',
+      message: "Work ended successfully",
       data: updated,
     };
   }
@@ -594,20 +720,25 @@ export class AttendanceService {
   cleanAndRecalculateRecord(item: LapAttendance): LapAttendance {
     if (!item) return item;
 
-    if ((item.startLatitude === null || item.startLatitude === undefined) && (item.currentLatitude || item.endLatitude)) {
+    if (
+      (item.startLatitude === null || item.startLatitude === undefined) &&
+      (item.currentLatitude || item.endLatitude)
+    ) {
       item.startLatitude = item.currentLatitude ?? item.endLatitude ?? null;
       item.startLongitude = item.currentLongitude ?? item.endLongitude ?? null;
     }
 
-    item.startLocation = this.cleanLocationName(item.startLocation) || item.startLocation;
-    item.currentLocation = this.cleanLocationName(item.currentLocation) || item.currentLocation;
+    item.startLocation =
+      this.cleanLocationName(item.startLocation) || item.startLocation;
+    item.currentLocation =
+      this.cleanLocationName(item.currentLocation) || item.currentLocation;
 
     const isEnded =
-      item.status === 'COMPLETED' ||
-      item.status === 'AUTO_END_WORK' ||
-      item.status === 'auto_end_work' ||
-      item.status === 'AUTO_ENDED' ||
-      item.status === 'END_WORK_HOUR' ||
+      item.status === "COMPLETED" ||
+      item.status === "AUTO_END_WORK" ||
+      item.status === "auto_end_work" ||
+      item.status === "AUTO_ENDED" ||
+      item.status === "END_WORK_HOUR" ||
       Boolean(item.endTime);
 
     if (!isEnded) {
@@ -615,8 +746,13 @@ export class AttendanceService {
       item.endLatitude = null;
       item.endLongitude = null;
     } else {
-      item.endLocation = this.cleanLocationName(item.endLocation) || item.endLocation;
-      if ((!item.startLocation || item.startLocation.startsWith('Spoke')) && item.endLocation && !item.endLocation.startsWith('Spoke')) {
+      item.endLocation =
+        this.cleanLocationName(item.endLocation) || item.endLocation;
+      if (
+        (!item.startLocation || item.startLocation.startsWith("Spoke")) &&
+        item.endLocation &&
+        !item.endLocation.startsWith("Spoke")
+      ) {
         item.startLocation = item.endLocation;
       }
     }
@@ -630,10 +766,13 @@ export class AttendanceService {
         item.totalMinutes = diffMinutes;
         item.totalHours = this.formatDuration(diffMinutes);
       }
-    } else if (item.startTime && item.status === 'IN_PROGRESS') {
+    } else if (item.startTime && item.status === "IN_PROGRESS") {
       const startMs = new Date(item.startTime).getTime();
       if (!isNaN(startMs)) {
-        const diffMinutes = Math.max(0, Math.round((Date.now() - startMs) / 60000));
+        const diffMinutes = Math.max(
+          0,
+          Math.round((Date.now() - startMs) / 60000),
+        );
         item.totalMinutes = diffMinutes;
         item.totalHours = this.formatDuration(diffMinutes);
       }
@@ -645,18 +784,18 @@ export class AttendanceService {
   async getAttendanceRoute(attendanceId: number) {
     const attendance = await this.attendanceRepo.findOne({
       where: { id: attendanceId },
-      relations: ['user'],
+      relations: ["user"],
     });
 
     if (!attendance) {
-      throw new NotFoundException('Attendance record not found');
+      throw new NotFoundException("Attendance record not found");
     }
 
     const cleaned = this.cleanAndRecalculateRecord(attendance);
 
     const points = await this.locationRepo.find({
       where: { attendanceId },
-      order: { recordedAt: 'ASC' },
+      order: { recordedAt: "ASC" },
     });
 
     return {
@@ -665,10 +804,10 @@ export class AttendanceService {
           id: cleaned.id,
           userId: cleaned.userId,
           userName: cleaned.user?.name || `Employee #${cleaned.userId}`,
-          userEmail: cleaned.user?.email || '',
+          userEmail: cleaned.user?.email || "",
           date: cleaned.date,
           startTime: cleaned.startTime,
-          startLocation: cleaned.startLocation || 'Office Workspace',
+          startLocation: cleaned.startLocation || "Office Workspace",
           startLatitude: cleaned.startLatitude,
           startLongitude: cleaned.startLongitude,
           endTime: cleaned.endTime,
@@ -677,7 +816,7 @@ export class AttendanceService {
           endLongitude: cleaned.endLongitude,
           currentLatitude: cleaned.currentLatitude,
           currentLongitude: cleaned.currentLongitude,
-          currentLocation: cleaned.currentLocation || 'Office Workspace',
+          currentLocation: cleaned.currentLocation || "Office Workspace",
           lastTrackedAt: cleaned.lastTrackedAt,
           totalHours: cleaned.totalHours,
           totalMinutes: cleaned.totalMinutes,
@@ -700,13 +839,13 @@ export class AttendanceService {
 
   async getMyHistory(userId: number, limit = 60, month?: string) {
     const qb = this.attendanceRepo
-      .createQueryBuilder('att')
-      .where('att.userId = :userId', { userId })
-      .orderBy('att.date', 'DESC')
-      .addOrderBy('att.startTime', 'DESC');
+      .createQueryBuilder("att")
+      .where("att.userId = :userId", { userId })
+      .orderBy("att.date", "DESC")
+      .addOrderBy("att.startTime", "DESC");
 
     if (month) {
-      qb.andWhere('att.date LIKE :month', { month: `${month}%` });
+      qb.andWhere("att.date LIKE :month", { month: `${month}%` });
     }
 
     if (!month && limit) {
@@ -733,46 +872,49 @@ export class AttendanceService {
     const skip = (page - 1) * limit;
 
     const qb = this.attendanceRepo
-      .createQueryBuilder('att')
-      .leftJoinAndSelect('att.user', 'user')
-      .orderBy('att.date', 'DESC')
-      .addOrderBy('att.startTime', 'DESC')
+      .createQueryBuilder("att")
+      .leftJoinAndSelect("att.user", "user")
+      .orderBy("att.date", "DESC")
+      .addOrderBy("att.startTime", "DESC")
       .take(limit)
       .skip(skip);
 
     if (options?.userId) {
-      qb.andWhere('att.userId = :userId', { userId: options.userId });
+      qb.andWhere("att.userId = :userId", { userId: options.userId });
     }
 
     if (options?.date) {
-      qb.andWhere('att.date = :date', { date: options.date });
+      qb.andWhere("att.date = :date", { date: options.date });
     }
 
     if (options?.month) {
-      qb.andWhere('att.date LIKE :month', { month: `${options.month}%` });
+      qb.andWhere("att.date LIKE :month", { month: `${options.month}%` });
     }
 
-    if (options?.status && options.status !== 'ALL') {
+    if (options?.status && options.status !== "ALL") {
       if (
-        options.status === 'AUTO_END_WORK' ||
-        options.status === 'auto_end_work' ||
-        options.status === 'AUTO_ENDED' ||
-        options.status === 'END_WORK_HOUR'
+        options.status === "AUTO_END_WORK" ||
+        options.status === "auto_end_work" ||
+        options.status === "AUTO_ENDED" ||
+        options.status === "END_WORK_HOUR"
       ) {
-        qb.andWhere('(att.status = :s1 OR att.status = :s2 OR att.status = :s3 OR att.status = :s4)', {
-          s1: 'AUTO_END_WORK',
-          s2: 'auto_end_work',
-          s3: 'AUTO_ENDED',
-          s4: 'END_WORK_HOUR',
-        });
+        qb.andWhere(
+          "(att.status = :s1 OR att.status = :s2 OR att.status = :s3 OR att.status = :s4)",
+          {
+            s1: "AUTO_END_WORK",
+            s2: "auto_end_work",
+            s3: "AUTO_ENDED",
+            s4: "END_WORK_HOUR",
+          },
+        );
       } else {
-        qb.andWhere('att.status = :status', { status: options.status });
+        qb.andWhere("att.status = :status", { status: options.status });
       }
     }
 
     if (options?.search) {
       qb.andWhere(
-        '(user.name LIKE :search OR user.email LIKE :search OR att.startLocation LIKE :search OR att.endLocation LIKE :search)',
+        "(user.name LIKE :search OR user.email LIKE :search OR att.startLocation LIKE :search OR att.endLocation LIKE :search)",
         {
           search: `%${options.search}%`,
         },
@@ -780,7 +922,9 @@ export class AttendanceService {
     }
 
     const [items, total] = await qb.getManyAndCount();
-    const cleanedItems = items.map((item) => this.cleanAndRecalculateRecord(item));
+    const cleanedItems = items.map((item) =>
+      this.cleanAndRecalculateRecord(item),
+    );
 
     return {
       data: cleanedItems,
@@ -797,12 +941,12 @@ export class AttendanceService {
     const targetDate = date || this.getTodayDateString();
 
     const attendances = await this.attendanceRepo
-      .createQueryBuilder('att')
-      .leftJoinAndSelect('att.user', 'user')
-      .leftJoinAndSelect('att.locations', 'loc')
-      .where('att.date = :targetDate', { targetDate })
-      .orderBy('att.startTime', 'DESC')
-      .addOrderBy('loc.recordedAt', 'ASC')
+      .createQueryBuilder("att")
+      .leftJoinAndSelect("att.user", "user")
+      .leftJoinAndSelect("att.locations", "loc")
+      .where("att.date = :targetDate", { targetDate })
+      .orderBy("att.startTime", "DESC")
+      .addOrderBy("loc.recordedAt", "ASC")
       .getMany();
 
     const cleanedRecords = attendances.map((item) => {
@@ -818,16 +962,44 @@ export class AttendanceService {
         recordedAt: loc.recordedAt,
       }));
 
-      const startLat = cleaned.startLatitude !== null && cleaned.startLatitude !== undefined ? Number(cleaned.startLatitude) : null;
-      const startLng = cleaned.startLongitude !== null && cleaned.startLongitude !== undefined ? Number(cleaned.startLongitude) : null;
-      const currentLat = cleaned.currentLatitude !== null && cleaned.currentLatitude !== undefined ? Number(cleaned.currentLatitude) : null;
-      const currentLng = cleaned.currentLongitude !== null && cleaned.currentLongitude !== undefined ? Number(cleaned.currentLongitude) : null;
-      const endLat = cleaned.endLatitude !== null && cleaned.endLatitude !== undefined ? Number(cleaned.endLatitude) : null;
-      const endLng = cleaned.endLongitude !== null && cleaned.endLongitude !== undefined ? Number(cleaned.endLongitude) : null;
+      const startLat =
+        cleaned.startLatitude !== null && cleaned.startLatitude !== undefined
+          ? Number(cleaned.startLatitude)
+          : null;
+      const startLng =
+        cleaned.startLongitude !== null && cleaned.startLongitude !== undefined
+          ? Number(cleaned.startLongitude)
+          : null;
+      const currentLat =
+        cleaned.currentLatitude !== null &&
+        cleaned.currentLatitude !== undefined
+          ? Number(cleaned.currentLatitude)
+          : null;
+      const currentLng =
+        cleaned.currentLongitude !== null &&
+        cleaned.currentLongitude !== undefined
+          ? Number(cleaned.currentLongitude)
+          : null;
+      const endLat =
+        cleaned.endLatitude !== null && cleaned.endLatitude !== undefined
+          ? Number(cleaned.endLatitude)
+          : null;
+      const endLng =
+        cleaned.endLongitude !== null && cleaned.endLongitude !== undefined
+          ? Number(cleaned.endLongitude)
+          : null;
 
       // Determine the best latest/current location point
-      const latestLat = currentLat ?? endLat ?? startLat ?? (points.length > 0 ? points[points.length - 1].latitude : null);
-      const latestLng = currentLng ?? endLng ?? startLng ?? (points.length > 0 ? points[points.length - 1].longitude : null);
+      const latestLat =
+        currentLat ??
+        endLat ??
+        startLat ??
+        (points.length > 0 ? points[points.length - 1].latitude : null);
+      const latestLng =
+        currentLng ??
+        endLng ??
+        startLng ??
+        (points.length > 0 ? points[points.length - 1].longitude : null);
 
       return {
         id: cleaned.id,
@@ -837,18 +1009,21 @@ export class AttendanceService {
               id: cleaned.user.id,
               name: cleaned.user.name,
               email: cleaned.user.email,
-              role: (cleaned.user as any).role || (cleaned.user as any).roles || null,
+              role:
+                (cleaned.user as any).role ||
+                (cleaned.user as any).roles ||
+                null,
               phone: (cleaned.user as any).phone || null,
             }
           : null,
         date: cleaned.date,
         startTime: cleaned.startTime,
-        startLocation: cleaned.startLocation || 'Office Workspace',
+        startLocation: cleaned.startLocation || "Office Workspace",
         startLatitude: startLat,
         startLongitude: startLng,
         currentLatitude: currentLat,
         currentLongitude: currentLng,
-        currentLocation: cleaned.currentLocation || 'Office Workspace',
+        currentLocation: cleaned.currentLocation || "Office Workspace",
         lastTrackedAt: cleaned.lastTrackedAt,
         endTime: cleaned.endTime,
         endLocation: cleaned.endLocation,
@@ -865,14 +1040,18 @@ export class AttendanceService {
       };
     });
 
-    const activeCount = cleanedRecords.filter((r) => r.status === 'IN_PROGRESS').length;
-    const completedCount = cleanedRecords.filter((r) => r.status === 'COMPLETED').length;
+    const activeCount = cleanedRecords.filter(
+      (r) => r.status === "IN_PROGRESS",
+    ).length;
+    const completedCount = cleanedRecords.filter(
+      (r) => r.status === "COMPLETED",
+    ).length;
     const autoEndedCount = cleanedRecords.filter(
       (r) =>
-        r.status === 'AUTO_END_WORK' ||
-        r.status === 'auto_end_work' ||
-        r.status === 'AUTO_ENDED' ||
-        r.status === 'END_WORK_HOUR',
+        r.status === "AUTO_END_WORK" ||
+        r.status === "auto_end_work" ||
+        r.status === "AUTO_ENDED" ||
+        r.status === "END_WORK_HOUR",
     ).length;
     const totalDistanceKm = cleanedRecords.reduce(
       (sum, r) => sum + (Number(r.totalDistanceKm) || 0),

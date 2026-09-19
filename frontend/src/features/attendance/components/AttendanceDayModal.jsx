@@ -1,20 +1,17 @@
-import React from "react";
 import {
-  FiClock,
-  FiMapPin,
-  FiNavigation,
-  FiX,
-  FiCheckCircle,
   FiAlertCircle,
   FiCalendar,
+  FiCheckCircle,
+  FiClock,
   FiCompass,
+  FiMapPin,
+  FiNavigation,
   FiUser,
-  FiActivity,
+  FiX
 } from "react-icons/fi";
 import {
   calculateRecordDuration,
-  TARGET_WORKING_MINUTES,
-  TARGET_HOURS_LABEL,
+  TARGET_WORKING_MINUTES
 } from "../../../utils/attendanceUtils.js";
 
 export default function AttendanceDayModal({

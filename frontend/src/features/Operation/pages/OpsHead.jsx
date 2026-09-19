@@ -23,15 +23,15 @@ import { useLocation, useParams, useSearchParams } from "react-router-dom";
 
 import { operationApi } from "../operationapi.js";
 
-const workflowSteps = [
-  { id: 1, label: "Lead", state: "completed" },
-  { id: 2, label: "Verification", state: "completed" },
-  { id: 3, label: "Credit", state: "completed" },
-  { id: 4, label: "Legal", state: "completed" },
-  { id: 5, label: "Sanction", state: "completed" },
-  { id: 6, label: "Operations", state: "current" },
-  { id: 7, label: "Disbursement", state: "pending" },
-];
+// const workflowSteps = [
+//   { id: 1, label: "Lead", state: "completed" },
+//   { id: 2, label: "Verification", state: "completed" },
+//   { id: 3, label: "Credit", state: "completed" },
+//   { id: 4, label: "Legal", state: "completed" },
+//   { id: 5, label: "Sanction", state: "completed" },
+//   { id: 6, label: "Operations", state: "current" },
+//   { id: 7, label: "Disbursement", state: "pending" },
+// ];
 
 const initialVerificationItems = [
   {

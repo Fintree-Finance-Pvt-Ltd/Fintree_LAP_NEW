@@ -14,7 +14,7 @@ import {
   FiMaximize2,
   FiRefreshCw,
   FiSearch,
-  FiUsers
+  FiUsers,
 } from "react-icons/fi";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth.js";
@@ -158,7 +158,7 @@ const createNamedUserMarkerIcon = ({
   });
 };
 
-const createStartMarkerIcon = (userName, color = "#10b981") => {
+const createStartMarkerIcon = (userName /* , color = "#10b981" */) => {
   return L.divIcon({
     className: "custom-start-named-marker",
     html: `
@@ -201,27 +201,27 @@ const createStartMarkerIcon = (userName, color = "#10b981") => {
   });
 };
 
-const startIcon = L.divIcon({
-  className: "custom-start-pin",
-  html: `
-    <div style="
-      background: #10b981;
-      color: white;
-      border: 2px solid white;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-    ">🟢</div>
-  `,
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
-  popupAnchor: [0, -18],
-});
+// const startIcon = L.divIcon({
+//   className: "custom-start-pin",
+//   html: `
+//     <div style="
+//       background: #10b981;
+//       color: white;
+//       border: 2px solid white;
+//       box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+//       border-radius: 50%;
+//       width: 30px;
+//       height: 30px;
+//       display: flex;
+//       align-items: center;
+//       justify-content: center;
+//       font-size: 13px;
+//     ">🟢</div>
+//   `,
+//   iconSize: [30, 30],
+//   iconAnchor: [15, 15],
+//   popupAnchor: [0, -18],
+// });
 
 const waypointIcon = L.divIcon({
   className: "custom-waypoint-pin",
@@ -262,10 +262,10 @@ export default function TodaysMapPage() {
   const [travelMode, setTravelMode] = useState("exact"); // "exact" | "road"
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [mobileView, setMobileView] = useState("map"); // "map" | "list"
-  const [roadRouteStats, setRoadRouteStats] = useState({
-    distanceKm: 0,
-    isRoad: false,
-  });
+  // const [roadRouteStats, setRoadRouteStats] = useState({
+  //   distanceKm: 0,
+  //   isRoad: false,
+  // });
 
   // Refs for Leaflet
   const mapContainerRef = useRef(null);
@@ -573,7 +573,8 @@ export default function TodaysMapPage() {
     // SCENARIO 1: A specific employee is selected -> Draw their focused complete route!
     if (selectedUser) {
       const currentSelectedId = selectedUser.id || selectedUser.userId;
-      const isNewUserSelection = lastSelectedUserIdRef.current !== currentSelectedId;
+      const isNewUserSelection =
+        lastSelectedUserIdRef.current !== currentSelectedId;
       lastSelectedUserIdRef.current = currentSelectedId;
 
       const points = selectedUser.points || [];
@@ -722,7 +723,9 @@ export default function TodaysMapPage() {
                 padding: [50, 50],
                 maxZoom: 16,
               });
-            } catch (_) {}
+            } catch (error) {
+              console.warn(error);
+            }
           }
         } else {
           // Road snapped route via OSRM
@@ -732,10 +735,10 @@ export default function TodaysMapPage() {
               res.roadCoordinates?.length > 0
                 ? res.roadCoordinates
                 : routeCoords;
-            setRoadRouteStats({
-              distanceKm: res.distanceKm,
-              isRoad: res.isRoadRoute,
-            });
+            // setRoadRouteStats({
+            //   distanceKm: res.distanceKm,
+            //   isRoad: res.isRoadRoute,
+            // });
 
             const glow = L.polyline(roadPts, {
               color: userColor,
@@ -762,7 +765,9 @@ export default function TodaysMapPage() {
                   padding: [50, 50],
                   maxZoom: 16,
                 });
-              } catch (_) {}
+              } catch (error) {
+                console.warn(error);
+              }
             }
           });
         }
@@ -946,7 +951,9 @@ export default function TodaysMapPage() {
           const bounds = L.latLngBounds(allBoundsCoords);
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
           hasFittedOverviewBoundsRef.current = true;
-        } catch (_) {}
+        } catch (error) {
+          console.warn(error);
+        }
       }
     }
   }, [selectedUser, filteredRecords, travelMode, handleSelectUser]);
@@ -967,7 +974,9 @@ export default function TodaysMapPage() {
           padding: [50, 50],
           maxZoom: 16,
         });
-      } catch (_) {}
+      } catch (error) {
+        console.warn(error);
+      }
     } else {
       const coords = filteredRecords
         .map((r) => {
@@ -991,7 +1000,9 @@ export default function TodaysMapPage() {
             padding: [50, 50],
             maxZoom: 14,
           });
-        } catch (_) {}
+        } catch (error) {
+          console.warn(error);
+        }
       }
     }
   }, [selectedUser, filteredRecords]);

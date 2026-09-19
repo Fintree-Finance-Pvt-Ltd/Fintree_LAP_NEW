@@ -7,9 +7,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { useAuth } from "../hooks/useAuth.js";
 import { attendanceApi } from "../features/attendance/attendanceApi.js";
-import { reverseGeocodeCoords, saveLastKnownCoords } from "../utils/geoUtils.js";
+import { useAuth } from "../hooks/useAuth.js";
+import { saveLastKnownCoords } from "../utils/geoUtils.js";
 
 const AttendanceContext = createContext(null);
 
@@ -22,7 +22,10 @@ function getDistanceMeters(lat1, lon1, lat2, lon2) {
   const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
   const a =
     Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    Math.cos(phi1) *
+      Math.cos(phi2) *
+      Math.sin(deltaLambda / 2) *
+      Math.sin(deltaLambda / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -100,9 +103,12 @@ export function AttendanceProvider({ children }) {
       fetchStatus();
 
       // Check periodically (every 5 minutes) in case the clock crosses 8:00 AM or a new day begins
-      const interval = setInterval(() => {
-        fetchStatus();
-      }, 5 * 60 * 1000);
+      const interval = setInterval(
+        () => {
+          fetchStatus();
+        },
+        5 * 60 * 1000,
+      );
 
       return () => clearInterval(interval);
     } else {
@@ -114,7 +120,8 @@ export function AttendanceProvider({ children }) {
     }
   }, [isAuthenticated, user?.id, fetchStatus]);
 
-  const [isLocationDisabledDuringWork, setIsLocationDisabledDuringWork] = useState(false);
+  const [isLocationDisabledDuringWork, setIsLocationDisabledDuringWork] =
+    useState(false);
   const [locationErrorDetails, setLocationErrorDetails] = useState(null);
 
   const retryRequestLocationPermission = useCallback(() => {
@@ -130,50 +137,57 @@ export function AttendanceProvider({ children }) {
           err.code === 1
             ? "Location permission was denied in browser. Please enable location permission."
             : err.code === 2
-            ? "Device GPS/Location services are turned off. Please turn on GPS."
-            : "Location request timed out. Retrying...";
+              ? "Device GPS/Location services are turned off. Please turn on GPS."
+              : "Location request timed out. Retrying...";
         setLocationErrorDetails(msg);
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
     );
   }, []);
 
-// Background Keep-Alive for Mobile Browsers (prevents OS from pausing GPS when screen is in pocket)
-function startBackgroundKeepAlive() {
-  let audioContext = null;
-  let oscillator = null;
-  let wakeLock = null;
+  // Background Keep-Alive for Mobile Browsers (prevents OS from pausing GPS when screen is in pocket)
+  function startBackgroundKeepAlive() {
+    let audioContext = null;
+    let oscillator = null;
+    let wakeLock = null;
 
-  try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (AudioContextClass) {
-      audioContext = new AudioContextClass();
-      oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      gainNode.gain.value = 0.00001; // Inaudible silent sound
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.start();
-    }
-  } catch (e) {
-    console.debug("Background audio keepalive note:", e?.message);
-  }
-
-  // Request Screen WakeLock if supported
-  if (typeof navigator !== "undefined" && navigator.wakeLock) {
-    navigator.wakeLock.request("screen").then((lock) => {
-      wakeLock = lock;
-    }).catch(() => {});
-  }
-
-  return () => {
     try {
-      if (oscillator) oscillator.stop();
-      if (audioContext && audioContext.state !== "closed") audioContext.close();
-      if (wakeLock) wakeLock.release();
-    } catch (_) {}
-  };
-}
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        audioContext = new AudioContextClass();
+        oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = 0.00001; // Inaudible silent sound
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start();
+      }
+    } catch (e) {
+      console.debug("Background audio keepalive note:", e?.message);
+    }
+
+    // Request Screen WakeLock if supported
+    if (typeof navigator !== "undefined" && navigator.wakeLock) {
+      navigator.wakeLock
+        .request("screen")
+        .then((lock) => {
+          wakeLock = lock;
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      try {
+        if (oscillator) oscillator.stop();
+        if (audioContext && audioContext.state !== "closed")
+          audioContext.close();
+        if (wakeLock) wakeLock.release();
+      } catch (err) {
+        console.debug("Keep alive cleanup failed:", err.message);
+      }
+    };
+  }
 
   // Live Location Tracking during active work day
   useEffect(() => {
@@ -182,8 +196,16 @@ function startBackgroundKeepAlive() {
     let permissionPromptRetryTimer = null;
     let stopKeepAlive = null;
 
-    if (isAuthenticated && isWorkStarted && !isWorkEnded && typeof navigator !== "undefined" && navigator.geolocation) {
-      console.log("📍 Continuous GPS route tracking active for user work session (with pocket background keep-alive)...");
+    if (
+      isAuthenticated &&
+      isWorkStarted &&
+      !isWorkEnded &&
+      typeof navigator !== "undefined" &&
+      navigator.geolocation
+    ) {
+      console.log(
+        "📍 Continuous GPS route tracking active for user work session (with pocket background keep-alive)...",
+      );
 
       // Start background keepalive to keep GPS running when phone screen is locked
       stopKeepAlive = startBackgroundKeepAlive();
@@ -201,8 +223,8 @@ function startBackgroundKeepAlive() {
           err.code === 1
             ? "Location permission was denied. Please allow location access."
             : err.code === 2
-            ? "Device GPS/location services are turned off. Please enable GPS."
-            : "Location tracking error. Retrying...";
+              ? "Device GPS/location services are turned off. Please enable GPS."
+              : "Location tracking error. Retrying...";
         setLocationErrorDetails(msg);
       };
 
@@ -229,14 +251,20 @@ function startBackgroundKeepAlive() {
         let distanceMovedMeters = 0;
 
         if (last) {
-          distanceMovedMeters = getDistanceMeters(last.latitude, last.longitude, latitude, longitude);
+          distanceMovedMeters = getDistanceMeters(
+            last.latitude,
+            last.longitude,
+            latitude,
+            longitude,
+          );
         }
 
         // Send ping if:
         // 1. First ping (last === null)
         // 2. User moved >= 1 meter
         // 3. At least 5 seconds elapsed since last update
-        const shouldSend = !last || distanceMovedMeters >= 1 || timeSinceLastPing >= 5 * 1000;
+        const shouldSend =
+          !last || distanceMovedMeters >= 1 || timeSinceLastPing >= 5 * 1000;
 
         if (shouldSend) {
           isPingingRef.current = true;
@@ -246,22 +274,35 @@ function startBackgroundKeepAlive() {
           const lat = parseFloat(Number(latitude).toFixed(7));
           const lng = parseFloat(Number(longitude).toFixed(7));
 
-          console.log(`📡 [GPS Live Ping] Sending location to DB -> Lat: ${lat}, Lng: ${lng}, Moved: ${distanceMovedMeters.toFixed(1)}m, Time: ${(timeSinceLastPing / 1000).toFixed(1)}s`);
+          console.log(
+            `📡 [GPS Live Ping] Sending location to DB -> Lat: ${lat}, Lng: ${lng}, Moved: ${distanceMovedMeters.toFixed(1)}m, Time: ${(timeSinceLastPing / 1000).toFixed(1)}s`,
+          );
 
           try {
             const rawId = attendanceRecord?.id;
-            const attId = rawId !== undefined && rawId !== null && !isNaN(Number(rawId)) ? Number(rawId) : undefined;
+            const attId =
+              rawId !== undefined && rawId !== null && !isNaN(Number(rawId))
+                ? Number(rawId)
+                : undefined;
 
             const res = await attendanceApi.trackLocation({
               ...(attId !== undefined ? { attendanceId: attId } : {}),
               latitude: lat,
               longitude: lng,
               accuracy: accuracy ? parseFloat(accuracy.toFixed(1)) : undefined,
-              speed: speed !== null && speed !== undefined ? parseFloat(Number(speed).toFixed(2)) : undefined,
-              heading: heading !== null && heading !== undefined ? parseFloat(Number(heading).toFixed(1)) : undefined,
+              speed:
+                speed !== null && speed !== undefined
+                  ? parseFloat(Number(speed).toFixed(2))
+                  : undefined,
+              heading:
+                heading !== null && heading !== undefined
+                  ? parseFloat(Number(heading).toFixed(1))
+                  : undefined,
             });
 
-            console.log(`✅ [GPS Live Ping] Saved to lap_attendance_locations table! Attendance ID: ${attendanceRecord?.id}`);
+            console.log(
+              `✅ [GPS Live Ping] Saved to lap_attendance_locations table! Attendance ID: ${attendanceRecord?.id}`,
+            );
 
             // Update live attendance record with new coordinates and distance
             const trackData = res?.data?.data || res?.data;
@@ -272,9 +313,11 @@ function startBackgroundKeepAlive() {
                   ...prev,
                   currentLatitude: lat,
                   currentLongitude: lng,
-                  currentLocation: trackData.locationName || prev.currentLocation,
+                  currentLocation:
+                    trackData.locationName || prev.currentLocation,
                   lastTrackedAt: new Date().toISOString(),
-                  totalDistanceKm: trackData.totalDistanceKm ?? prev.totalDistanceKm,
+                  totalDistanceKm:
+                    trackData.totalDistanceKm ?? prev.totalDistanceKm,
                 };
               });
             }
@@ -294,7 +337,7 @@ function startBackgroundKeepAlive() {
         watchId = navigator.geolocation.watchPosition(
           handleLocationSuccess,
           handleLocationError,
-          { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
         );
 
         // Heartbeat interval (every 5 seconds) to ensure tracking stays active continuously
@@ -302,14 +345,16 @@ function startBackgroundKeepAlive() {
           navigator.geolocation.getCurrentPosition(
             handleLocationSuccess,
             handleLocationError,
-            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
           );
         }, 5 * 1000);
 
         // Persistent re-request loop: If location is turned off or denied, re-prompt every 5 seconds
         permissionPromptRetryTimer = setInterval(() => {
           if (isLocationDisabledDuringWork) {
-            console.log("🔄 Re-requesting location permission after location was turned off...");
+            console.log(
+              "🔄 Re-requesting location permission after location was turned off...",
+            );
             retryRequestLocationPermission();
           }
         }, 5000);
@@ -320,7 +365,7 @@ function startBackgroundKeepAlive() {
             navigator.geolocation.getCurrentPosition(
               handleLocationSuccess,
               handleLocationError,
-              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
             );
           }
         };
@@ -334,20 +379,34 @@ function startBackgroundKeepAlive() {
             navigator.geolocation.clearWatch(watchId);
           }
           if (heartbeatTimer) clearInterval(heartbeatTimer);
-          if (permissionPromptRetryTimer) clearInterval(permissionPromptRetryTimer);
-          document.removeEventListener("visibilitychange", handleVisibilityChange);
+          if (permissionPromptRetryTimer)
+            clearInterval(permissionPromptRetryTimer);
+          document.removeEventListener(
+            "visibilitychange",
+            handleVisibilityChange,
+          );
           window.removeEventListener("focus", handleVisibilityChange);
         };
       } catch (e) {
         console.warn("Geolocation watch error:", e);
       }
     }
-  }, [isAuthenticated, isWorkStarted, isWorkEnded, attendanceRecord?.id, isLocationDisabledDuringWork, retryRequestLocationPermission]);
+  }, [
+    isAuthenticated,
+    isWorkStarted,
+    isWorkEnded,
+    attendanceRecord?.id,
+    isLocationDisabledDuringWork,
+    retryRequestLocationPermission,
+  ]);
 
   const dismissStartModalForSession = () => {
     if (user?.id) {
       const todayStr = getTodayStr();
-      sessionStorage.setItem(`lap_attendance_dismissed_${todayStr}_${user.id}`, "true");
+      sessionStorage.setItem(
+        `lap_attendance_dismissed_${todayStr}_${user.id}`,
+        "true",
+      );
     }
     setShowStartModal(false);
   };
@@ -367,7 +426,10 @@ function startBackgroundKeepAlive() {
       console.error("Failed to start work:", error);
       return {
         success: false,
-        error: error?.response?.data?.message || error?.message || "Failed to start work",
+        error:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Failed to start work",
       };
     } finally {
       setIsSubmitting(false);
@@ -387,7 +449,10 @@ function startBackgroundKeepAlive() {
       console.error("Failed to end work:", error);
       return {
         success: false,
-        error: error?.response?.data?.message || error?.message || "Failed to end work",
+        error:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Failed to end work",
       };
     } finally {
       setIsSubmitting(false);
@@ -427,9 +492,8 @@ function startBackgroundKeepAlive() {
       locationErrorDetails,
       retryRequestLocationPermission,
       fetchStatus,
-    ]
+    ],
   );
-
 
   return (
     <AttendanceContext.Provider value={value}>

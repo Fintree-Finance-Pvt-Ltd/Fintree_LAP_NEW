@@ -1,14 +1,12 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   FiCalendar,
-  FiClock,
   FiCheckCircle,
-  FiXCircle,
-  FiX,
-  FiTrash2,
+  FiClock,
   FiMessageSquare,
   FiPlus,
-  FiAlertCircle,
+  FiTrash2,
+  FiXCircle
 } from "react-icons/fi";
 import { leavesApi } from "../leavesApi.js";
 

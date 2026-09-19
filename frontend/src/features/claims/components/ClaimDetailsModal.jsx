@@ -5,21 +5,14 @@ import {
   FiCheckCircle,
   FiClock,
   FiCreditCard,
-  FiDollarSign,
   FiDownload,
   FiExternalLink,
-  FiEye,
   FiFileText,
-  FiHelpCircle,
-  FiInfo,
   FiLoader,
   FiMail,
   FiPrinter,
-  FiTag,
-  FiUser,
   FiX,
-  FiXCircle,
-  FiZap,
+  FiXCircle
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";

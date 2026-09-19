@@ -25,11 +25,7 @@ const unwrapPayload = (response) => {
 };
 
 const unwrapArray = (response) => {
-  const payload =
-    response?.data?.data ??
-    response?.data ??
-    response ??
-    [];
+  const payload = response?.data?.data ?? response?.data ?? response ?? [];
 
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
@@ -47,11 +43,7 @@ const readValue = (row, keys) => {
   for (const key of keys) {
     const value = row?.[key];
 
-    if (
-      value !== undefined &&
-      value !== null &&
-      String(value).trim() !== ""
-    ) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
       return value;
     }
   }
@@ -60,11 +52,7 @@ const readValue = (row, keys) => {
 };
 
 const normalizeCoApplicant = (row) => ({
-  id: readValue(row, [
-    "id",
-    "coApplicantId",
-    "co_applicant_id",
-  ]),
+  id: readValue(row, ["id", "coApplicantId", "co_applicant_id"]),
   name: readValue(row, [
     "name",
     "fullName",
@@ -79,44 +67,25 @@ const normalizeCoApplicant = (row) => ({
     "phone",
     "phoneNumber",
   ]),
-  email: readValue(row, [
-    "email",
-    "emailId",
-    "email_id",
-  ]),
-  pan: readValue(row, [
-    "panNumber",
-    "pan_number",
-    "pan",
-  ]),
+  email: readValue(row, ["email", "emailId", "email_id"]),
+  pan: readValue(row, ["panNumber", "pan_number", "pan"]),
   aadhaar: readValue(row, [
     "aadhaarNumber",
     "aadhaar_number",
     "aadharNumber",
     "aadhar_number",
   ]),
-  relationship: readValue(row, [
-    "relationship",
-    "relation",
-  ]),
+  relationship: readValue(row, ["relationship", "relation"]),
   occupation: readValue(row, [
     "occupation",
     "occupationType",
     "occupation_type",
   ]),
-  monthlyIncome: readValue(row, [
-    "monthlyIncome",
-    "monthly_income",
-    "income",
-  ]),
+  monthlyIncome: readValue(row, ["monthlyIncome", "monthly_income", "income"]),
 });
 
 const normalizeContactPerson = (row) => ({
-  id: readValue(row, [
-    "id",
-    "contactPersonId",
-    "contact_person_id",
-  ]),
+  id: readValue(row, ["id", "contactPersonId", "contact_person_id"]),
   name: readValue(row, [
     "name",
     "fullName",
@@ -131,19 +100,9 @@ const normalizeContactPerson = (row) => ({
     "phone",
     "phoneNumber",
   ]),
-  email: readValue(row, [
-    "email",
-    "emailId",
-    "email_id",
-  ]),
-  designation: readValue(row, [
-    "designation",
-    "role",
-  ]),
-  relationship: readValue(row, [
-    "relationship",
-    "relation",
-  ]),
+  email: readValue(row, ["email", "emailId", "email_id"]),
+  designation: readValue(row, ["designation", "role"]),
+  relationship: readValue(row, ["relationship", "relation"]),
 });
 
 const valueOrDash = (value) => {
@@ -205,10 +164,7 @@ const getDocumentUrl = (document) => {
 
   if (directUrl) return directUrl;
 
-  const filePath =
-    document.filePath ||
-    document.file_path ||
-    "";
+  const filePath = document.filePath || document.file_path || "";
 
   if (!filePath) return "";
 
@@ -240,9 +196,7 @@ function SectionTitle({ title, subtitle }) {
       </h3>
 
       {subtitle && (
-        <p className="mt-1 text-xs font-medium text-slate-400">
-          {subtitle}
-        </p>
+        <p className="mt-1 text-xs font-medium text-slate-400">{subtitle}</p>
       )}
     </div>
   );
@@ -269,14 +223,12 @@ export default function ApplicationDetailsPage() {
   const [showAllDocuments, setShowAllDocuments] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
 
-
   const submitToBm = useMutation({
     mutationFn: () => rmApi.submitToBm(applicationId),
 
     onSuccess: async (response) => {
       setSubmitMessage(
-        response?.data?.message ||
-          "Application submitted to BM successfully.",
+        response?.data?.message || "Application submitted to BM successfully.",
       );
 
       await Promise.all([
@@ -378,22 +330,12 @@ export default function ApplicationDetailsPage() {
 
   const coApplicants = unwrapArray(coApplicantsQuery.data)
     .map(normalizeCoApplicant)
-    .filter(
-      (item) =>
-        item.name ||
-        item.mobile ||
-        item.pan ||
-        item.aadhaar,
-    );
+    .filter((item) => item.name || item.mobile || item.pan || item.aadhaar);
 
   const contactPersons = unwrapArray(contactPersonsQuery.data)
     .map(normalizeContactPerson)
     .filter(
-      (item) =>
-        item.name ||
-        item.mobile ||
-        item.email ||
-        item.designation,
+      (item) => item.name || item.mobile || item.email || item.designation,
     );
 
   const fieldVisits = unwrapArray(fieldVisitsQuery.data);
@@ -401,42 +343,26 @@ export default function ApplicationDetailsPage() {
   const charges = unwrapArray(chargesQuery.data);
   const historyItems = unwrapArray(historyQuery.data);
 
-  const visibleDocuments = showAllDocuments
-    ? documents
-    : documents.slice(0, 3);
+  const visibleDocuments = showAllDocuments ? documents : documents.slice(0, 3);
 
-  const hiddenDocumentCount = Math.max(
-    documents.length - 3,
-    0,
-  );
+  const hiddenDocumentCount = Math.max(documents.length - 3, 0);
 
-  const completedSteps = workflowSteps.filter(
-    (step) => step.completed,
-  ).length;
-
-  const progress = workflowSteps.length
-    ? Math.round((completedSteps / workflowSteps.length) * 100)
-    : 0;
+  // const completedSteps = workflowSteps.filter(
+  //   (step) => step.completed,
+  // ).length;
+  // const progress = workflowSteps.length
+  //   ? Math.round((completedSteps / workflowSteps.length) * 100)
+  //   : 0;
 
   const applicant = {
     name: application.customerName,
     mobile:
-      application.mobile ||
-      application.mobileNumber ||
-      application.phoneNumber,
-    email:
-      application.email ||
-      application.emailId,
-    pan:
-      application.pan ||
-      application.panNumber,
-    aadhaar:
-      application.aadhaarNumber,
-    occupation:
-      application.occupationType ||
-      application.occupation,
-    businessName:
-      application.businessName,
+      application.mobile || application.mobileNumber || application.phoneNumber,
+    email: application.email || application.emailId,
+    pan: application.pan || application.panNumber,
+    aadhaar: application.aadhaarNumber,
+    occupation: application.occupationType || application.occupation,
+    businessName: application.businessName,
   };
 
   return (
@@ -444,91 +370,93 @@ export default function ApplicationDetailsPage() {
       <div className="mx-auto max-w-[1600px] space-y-6">
         {/* Header */}
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 text-slate-900 shadow-sm transition-all">
-  <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-    
-    {/* Left Column: Details */}
-    <div className="space-y-4 max-w-xl">
-      <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-        <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
-        Live Case Profile
-      </div>
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            {/* Left Column: Details */}
+            <div className="space-y-4 max-w-xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
+                Live Case Profile
+              </div>
 
-      <PageHeader
-        title={
-          application.applicationNumber || `Application #${applicationId}`
-        }
-        subtitle={
-          application.customerName || "Applicant case details"
-        }
-        className="text-slate-900 text-2xl font-bold tracking-tight"
-      />
+              <PageHeader
+                title={
+                  application.applicationNumber ||
+                  `Application #${applicationId}`
+                }
+                subtitle={application.customerName || "Applicant case details"}
+                className="text-slate-900 text-2xl font-bold tracking-tight"
+              />
 
-      {/* Badges & Progress Bar */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600">
-            Stage: <strong className="text-slate-900 font-semibold">{formatLabel(application.stage)}</strong>
-          </span>
+              {/* Badges & Progress Bar */}
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600">
+                    Stage:{" "}
+                    <strong className="text-slate-900 font-semibold">
+                      {formatLabel(application.stage)}
+                    </strong>
+                  </span>
 
-          <span className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600">
-            Status: <strong className="text-slate-900 font-semibold">{formatLabel(application.status)}</strong>
-          </span>
+                  <span className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600">
+                    Status:{" "}
+                    <strong className="text-slate-900 font-semibold">
+                      {formatLabel(application.status)}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+
+              {isRM && (
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <button
+                    type="button"
+                    disabled={
+                      submitToBm.isPending ||
+                      String(application.status || "").toUpperCase() ===
+                        "BM_PENDING" ||
+                      String(application.stage || "").toUpperCase() !== "RM"
+                    }
+                    onClick={() => {
+                      setSubmitMessage("");
+                      submitToBm.mutate();
+                    }}
+                    className="inline-flex w-fit items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wide text-white shadow-sm transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {submitToBm.isPending ? "Submitting..." : "Submit to BM"}
+                  </button>
+
+                  {submitMessage && (
+                    <span className="text-xs font-bold text-blue-700">
+                      {submitMessage}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Key Metrics Grid */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-[480px] shrink-0">
+              {[
+                { label: "Documents", count: documents.length },
+                { label: "Co-Applicants", count: coApplicants.length },
+                { label: "Contacts", count: contactPersons.length },
+                { label: "Visits", count: fieldVisits.length },
+              ].map((metric, i) => (
+                <div
+                  key={i}
+                  className="group rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/30 hover:shadow-sm"
+                >
+                  <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+                    {metric.label}
+                  </p>
+                  <p className="mt-2 text-3xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    {metric.count}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-
-{isRM && (
-  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-    <button
-      type="button"
-      disabled={
-        submitToBm.isPending ||
-        String(application.status || "").toUpperCase() === "BM_PENDING" ||
-        String(application.stage || "").toUpperCase() !== "RM"
-      }
-      onClick={() => {
-        setSubmitMessage("");
-        submitToBm.mutate();
-      }}
-      className="inline-flex w-fit items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-wide text-white shadow-sm transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-    >
-      {submitToBm.isPending ? "Submitting..." : "Submit to BM"}
-    </button>
-
-    {submitMessage && (
-      <span className="text-xs font-bold text-blue-700">
-        {submitMessage}
-      </span>
-    )}
-  </div>
-)}
-
-
-    </div>
-
-    {/* Right Column: Key Metrics Grid */}
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-[480px] shrink-0">
-      {[
-        { label: "Documents", count: documents.length },
-        { label: "Co-Applicants", count: coApplicants.length },
-        { label: "Contacts", count: contactPersons.length },
-        { label: "Visits", count: fieldVisits.length },
-      ].map((metric, i) => (
-        <div
-          key={i}
-          className="group rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/30 hover:shadow-sm"
-        >
-          <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
-            {metric.label}
-          </p>
-          <p className="mt-2 text-3xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
-            {metric.count}
-          </p>
-        </div>
-      ))}
-    </div>
-
-  </div>
-</div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           {/* Left */}
@@ -540,26 +468,11 @@ export default function ApplicationDetailsPage() {
               />
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <InfoTile
-                  label="Applicant Name"
-                  value={applicant.name}
-                />
-                <InfoTile
-                  label="Mobile"
-                  value={applicant.mobile}
-                />
-                <InfoTile
-                  label="Email"
-                  value={applicant.email}
-                />
-                <InfoTile
-                  label="PAN"
-                  value={applicant.pan}
-                />
-                <InfoTile
-                  label="Aadhaar / OVD"
-                  value={applicant.aadhaar}
-                />
+                <InfoTile label="Applicant Name" value={applicant.name} />
+                <InfoTile label="Mobile" value={applicant.mobile} />
+                <InfoTile label="Email" value={applicant.email} />
+                <InfoTile label="PAN" value={applicant.pan} />
+                <InfoTile label="Aadhaar / OVD" value={applicant.aadhaar} />
                 <InfoTile
                   label="Occupation"
                   value={formatLabel(applicant.occupation)}
@@ -597,8 +510,7 @@ export default function ApplicationDetailsPage() {
                 <InfoTile
                   label="Property Value"
                   value={formatAmount(
-                    application.marketValue ||
-                      application.propertyValue,
+                    application.marketValue || application.propertyValue,
                   )}
                 />
                 <InfoTile
@@ -615,10 +527,7 @@ export default function ApplicationDetailsPage() {
                 />
                 <InfoTile
                   label="Pincode"
-                  value={
-                    application.propertyPincode ||
-                    application.pinCode
-                  }
+                  value={application.propertyPincode || application.pinCode}
                 />
               </div>
             </AppCard>
@@ -656,22 +565,10 @@ export default function ApplicationDetailsPage() {
                       </div>
 
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <InfoTile
-                          label="Mobile"
-                          value={item.mobile}
-                        />
-                        <InfoTile
-                          label="Email"
-                          value={item.email}
-                        />
-                        <InfoTile
-                          label="PAN"
-                          value={item.pan}
-                        />
-                        <InfoTile
-                          label="Aadhaar / OVD"
-                          value={item.aadhaar}
-                        />
+                        <InfoTile label="Mobile" value={item.mobile} />
+                        <InfoTile label="Email" value={item.email} />
+                        <InfoTile label="PAN" value={item.pan} />
+                        <InfoTile label="Aadhaar / OVD" value={item.aadhaar} />
                         <InfoTile
                           label="Occupation"
                           value={formatLabel(item.occupation)}
@@ -724,14 +621,8 @@ export default function ApplicationDetailsPage() {
                       </div>
 
                       <div className="grid grid-cols-1 gap-3">
-                        <InfoTile
-                          label="Mobile"
-                          value={item.mobile}
-                        />
-                        <InfoTile
-                          label="Email"
-                          value={item.email}
-                        />
+                        <InfoTile label="Mobile" value={item.mobile} />
+                        <InfoTile label="Email" value={item.email} />
                         <InfoTile
                           label="Designation"
                           value={item.designation}
@@ -754,18 +645,9 @@ export default function ApplicationDetailsPage() {
               />
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <InfoTile
-                  label="Field Visits"
-                  value={fieldVisits.length}
-                />
-                <InfoTile
-                  label="Geo Locations"
-                  value={geoLocations.length}
-                />
-                <InfoTile
-                  label="Charges / Receipts"
-                  value={charges.length}
-                />
+                <InfoTile label="Field Visits" value={fieldVisits.length} />
+                <InfoTile label="Geo Locations" value={geoLocations.length} />
+                <InfoTile label="Charges / Receipts" value={charges.length} />
               </div>
 
               {geoLocations.length > 0 && (
@@ -805,8 +687,8 @@ export default function ApplicationDetailsPage() {
                     Document Card
                   </h3>
                   <p className="mt-1 text-xs font-medium text-slate-400">
-                    Showing {visibleDocuments.length} of{" "}
-                    {documents.length} documents.
+                    Showing {visibleDocuments.length} of {documents.length}{" "}
+                    documents.
                   </p>
                 </div>
 
@@ -838,14 +720,9 @@ export default function ApplicationDetailsPage() {
 
                               <p
                                 className="mt-1 truncate text-xs font-semibold text-slate-400"
-                                title={
-                                  document.fileName ||
-                                  document.file_name
-                                }
+                                title={document.fileName || document.file_name}
                               >
-                                {document.fileName ||
-                                  document.file_name ||
-                                  "—"}
+                                {document.fileName || document.file_name || "—"}
                               </p>
 
                               <div className="mt-3 flex flex-wrap gap-2">
@@ -920,14 +797,10 @@ export default function ApplicationDetailsPage() {
                   );
 
                   const isCurrent =
-                    !item.completed &&
-                    index === firstPendingIndex;
+                    !item.completed && index === firstPendingIndex;
 
                   return (
-                    <div
-                      key={item.key || item.label}
-                      className="relative"
-                    >
+                    <div key={item.key || item.label} className="relative">
                       <span
                         className={`absolute -left-[27px] top-1 h-3 w-3 rounded-full border-2 border-white ${
                           item.completed

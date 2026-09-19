@@ -1,36 +1,24 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  FaArrowLeft,
-  FaArrowRight,
-  FaBan,
   FaBuilding,
-  FaCalendarAlt,
   FaCheck,
   FaCheckCircle,
   FaChevronDown,
-  FaChevronLeft,
-  FaChevronRight,
   FaClock,
   FaDownload,
   FaExclamationTriangle,
   FaEye,
   FaFileAlt,
-  FaHistory,
-  FaKey,
   FaLandmark,
   FaLock,
-  FaMoneyCheckAlt,
-  FaPaperPlane,
-  FaPrint,
-  FaRoute,
   FaSave,
   FaShieldAlt,
   FaTimes,
   FaUndo,
-  FaUpload,
   FaUniversity,
-  FaUserTie,
+  FaUpload,
+  FaUserTie
 } from "react-icons/fa";
 
 import {
@@ -40,15 +28,15 @@ import {
 } from "react-router-dom";
 
 import { operationApi } from "../operationapi.js";
-const workflowSteps = [
-  { id: 1, label: "Lead", state: "completed" },
-  { id: 2, label: "Verification", state: "completed" },
-  { id: 3, label: "Credit", state: "completed" },
-  { id: 4, label: "Legal", state: "completed" },
-  { id: 5, label: "Sanction", state: "completed" },
-  { id: 6, label: "Operations", state: "current" },
-  { id: 7, label: "Disbursement", state: "pending" },
-];
+// const workflowSteps = [
+//   { id: 1, label: "Lead", state: "completed" },
+//   { id: 2, label: "Verification", state: "completed" },
+//   { id: 3, label: "Credit", state: "completed" },
+//   { id: 4, label: "Legal", state: "completed" },
+//   { id: 5, label: "Sanction", state: "completed" },
+//   { id: 6, label: "Operations", state: "current" },
+//   { id: 7, label: "Disbursement", state: "pending" },
+// ];
 
 
 const initialVerificationItems = [
@@ -300,88 +288,88 @@ const charges = [
 //   },
 // ];
 
-const progressWidthClasses = {
-  0: "w-0",
-  1: "w-[8%]",
-  2: "w-[17%]",
-  3: "w-1/4",
-  4: "w-1/3",
-  5: "w-[42%]",
-  6: "w-1/2",
-  7: "w-[58%]",
-  8: "w-2/3",
-  9: "w-3/4",
-  10: "w-[83%]",
-  11: "w-[92%]",
-  12: "w-full",
-};
+// const progressWidthClasses = {
+//   0: "w-0",
+//   1: "w-[8%]",
+//   2: "w-[17%]",
+//   3: "w-1/4",
+//   4: "w-1/3",
+//   5: "w-[42%]",
+//   6: "w-1/2",
+//   7: "w-[58%]",
+//   8: "w-2/3",
+//   9: "w-3/4",
+//   10: "w-[83%]",
+//   11: "w-[92%]",
+//   12: "w-full",
+// };
 
-function SectionHeading({ eyebrow, title, rightContent }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        {eyebrow && (
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-            {eyebrow}
-          </p>
-        )}
+// function SectionHeading({ eyebrow, title, rightContent }) {
+//   return (
+//     <div className="flex items-start justify-between gap-4">
+//       <div>
+//         {eyebrow && (
+//           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+//             {eyebrow}
+//           </p>
+//         )}
 
-        <h2 className="mt-1 text-lg font-extrabold tracking-tight text-[#1c365f] sm:text-xl">
-          {title}
-        </h2>
+//         <h2 className="mt-1 text-lg font-extrabold tracking-tight text-[#1c365f] sm:text-xl">
+//           {title}
+//         </h2>
 
-        <div className="mt-3 h-1 w-12 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
-      </div>
+//         <div className="mt-3 h-1 w-12 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
+//       </div>
 
-      {rightContent}
-    </div>
-  );
-}
+//       {rightContent}
+//     </div>
+//   );
+// }
 
-function ReadOnlyField({
-  label,
-  value,
-  icon: Icon,
-  valueClass = "text-[#31476d]",
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-extrabold text-slate-600">
-        {label}
-      </span>
+// function ReadOnlyField({
+//   label,
+//   value,
+//   icon: Icon,
+//   valueClass = "text-[#31476d]",
+// }) {
+//   return (
+//     <label className="block">
+//       <span className="mb-2 block text-xs font-extrabold text-slate-600">
+//         {label}
+//       </span>
 
-      <div className="flex min-h-14 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
-        {Icon && (
-          <Icon className="shrink-0 text-slate-400" size={15} />
-        )}
+//       <div className="flex min-h-14 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
+//         {Icon && (
+//           <Icon className="shrink-0 text-slate-400" size={15} />
+//         )}
 
-        <span
-          className={`min-w-0 flex-1 truncate text-sm font-semibold ${valueClass}`}
-        >
-          {value}
-        </span>
+//         <span
+//           className={`min-w-0 flex-1 truncate text-sm font-semibold ${valueClass}`}
+//         >
+//           {value}
+//         </span>
 
-        <FaLock className="shrink-0 text-slate-300" size={11} />
-      </div>
-    </label>
-  );
-}
+//         <FaLock className="shrink-0 text-slate-300" size={11} />
+//       </div>
+//     </label>
+//   );
+// }
 
-function InfoRow({ label, value, children }) {
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(120px,1fr)] items-start gap-4 border-b border-slate-100 py-4 last:border-b-0">
-      <span className="text-xs font-medium leading-5 text-slate-500">
-        {label}
-      </span>
+// function InfoRow({ label, value, children }) {
+//   return (
+//     <div className="grid grid-cols-[minmax(0,1fr)_minmax(120px,1fr)] items-start gap-4 border-b border-slate-100 py-4 last:border-b-0">
+//       <span className="text-xs font-medium leading-5 text-slate-500">
+//         {label}
+//       </span>
 
-      {children || (
-        <strong className="text-right text-xs font-extrabold leading-5 text-[#243f6d]">
-          {value}
-        </strong>
-      )}
-    </div>
-  );
-}
+//       {children || (
+//         <strong className="text-right text-xs font-extrabold leading-5 text-[#243f6d]">
+//           {value}
+//         </strong>
+//       )}
+//     </div>
+//   );
+// }
 
 
 

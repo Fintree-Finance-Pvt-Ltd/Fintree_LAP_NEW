@@ -1,35 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
-  FiClock,
-  FiCalendar,
-  FiMapPin,
-  FiUser,
-  FiSearch,
-  FiFilter,
-  FiDownload,
-  FiRefreshCw,
-  FiCheckCircle,
-  FiStopCircle,
-  FiPlayCircle,
   FiActivity,
-  FiUsers,
-  FiNavigation,
+  FiCalendar,
+  FiCheckCircle,
+  FiClock,
   FiCompass,
-  FiEye,
+  FiDownload,
+  FiMapPin,
+  FiNavigation,
+  FiPlayCircle,
   FiPlus,
+  FiRefreshCw,
+  FiSearch,
+  FiStopCircle,
+  FiUser,
+  FiUsers
 } from "react-icons/fi";
-import { useAuth } from "../../../hooks/useAuth.js";
+import { useNavigate } from "react-router-dom";
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
-import { attendanceApi } from "../attendanceApi.js";
-import RouteMapModal from "../components/RouteMapModal.jsx";
-import AttendanceCalendar from "../components/AttendanceCalendar.jsx";
-import ApplyLeaveModal from "../../leaves/components/ApplyLeaveModal.jsx";
+import { useAuth } from "../../../hooks/useAuth.js";
+import { calculateRecordDuration } from "../../../utils/attendanceUtils.js";
 import {
   cleanLocationName,
   reverseGeocodeCoords,
 } from "../../../utils/geoUtils.js";
-import { calculateRecordDuration } from "../../../utils/attendanceUtils.js";
+import ApplyLeaveModal from "../../leaves/components/ApplyLeaveModal.jsx";
+import { attendanceApi } from "../attendanceApi.js";
+import AttendanceCalendar from "../components/AttendanceCalendar.jsx";
+import RouteMapModal from "../components/RouteMapModal.jsx";
 
 export default function AttendancePage() {
   const navigate = useNavigate();

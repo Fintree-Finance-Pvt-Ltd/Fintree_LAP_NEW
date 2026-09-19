@@ -1,25 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FiCalendar,
-  FiCheckCircle,
   FiChevronLeft,
   FiChevronRight,
-  FiClock,
   FiDollarSign,
   FiFileText,
-  FiFilter,
   FiPlus,
   FiRefreshCw,
   FiUserCheck,
   FiX,
-  FiXCircle,
   FiZap,
 } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth.js";
+import { claimsApi } from "../claimsApi.js";
 import ApplyClaimModal from "../components/ApplyClaimModal.jsx";
 import ClaimApprovalsTable from "../components/ClaimApprovalsTable.jsx";
 import MyClaimsList from "../components/MyClaimsList.jsx";
-import { claimsApi } from "../claimsApi.js";
 
 // Helper to get current YYYY-MM
 const getCurrentMonthKey = () => {
@@ -80,12 +76,14 @@ export default function ClaimsManagementPage() {
     }
   }, [isAdmin]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const promises = [
         claimsApi.getMyClaims({ limit: 100 }),
-        claimsApi.getStats(selectedMonth !== "ALL" ? { month: selectedMonth } : {}),
+        claimsApi.getStats(
+          selectedMonth !== "ALL" ? { month: selectedMonth } : {},
+        ),
       ];
 
       if (isAdmin) {
@@ -116,21 +114,25 @@ export default function ClaimsManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin, selectedMonth]);
 
   useEffect(() => {
     loadData();
-  }, [isAdmin, selectedMonth]);
+  }, [loadData]);
 
   // Month-filtered claim sets
   const monthFilteredAllClaims = useMemo(() => {
     if (selectedMonth === "ALL") return allClaims;
-    return allClaims.filter((c) => c.expenseDate && c.expenseDate.startsWith(selectedMonth));
+    return allClaims.filter(
+      (c) => c.expenseDate && c.expenseDate.startsWith(selectedMonth),
+    );
   }, [allClaims, selectedMonth]);
 
   const monthFilteredMyClaims = useMemo(() => {
     if (selectedMonth === "ALL") return myClaims;
-    return myClaims.filter((c) => c.expenseDate && c.expenseDate.startsWith(selectedMonth));
+    return myClaims.filter(
+      (c) => c.expenseDate && c.expenseDate.startsWith(selectedMonth),
+    );
   }, [myClaims, selectedMonth]);
 
   const pendingApprovalsCount = useMemo(() => {
@@ -139,17 +141,23 @@ export default function ClaimsManagementPage() {
 
   // Month navigation helpers
   const handlePrevMonth = () => {
-    const current = selectedMonth === "ALL" ? getCurrentMonthKey() : selectedMonth;
+    const current =
+      selectedMonth === "ALL" ? getCurrentMonthKey() : selectedMonth;
     const [y, m] = current.split("-").map(Number);
     const prevDate = new Date(y, m - 2, 1);
-    setSelectedMonth(`${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`);
+    setSelectedMonth(
+      `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`,
+    );
   };
 
   const handleNextMonth = () => {
-    const current = selectedMonth === "ALL" ? getCurrentMonthKey() : selectedMonth;
+    const current =
+      selectedMonth === "ALL" ? getCurrentMonthKey() : selectedMonth;
     const [y, m] = current.split("-").map(Number);
     const nextDate = new Date(y, m, 1);
-    setSelectedMonth(`${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`);
+    setSelectedMonth(
+      `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`,
+    );
   };
 
   const handleSetThisMonth = () => {
@@ -159,12 +167,17 @@ export default function ClaimsManagementPage() {
   const handleSetLastMonth = () => {
     const now = new Date();
     const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    setSelectedMonth(`${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`);
+    setSelectedMonth(
+      `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`,
+    );
   };
 
   // Dynamically compute stats based on tab & role & selected month (excluding CANCELLED from total expenses)
   const currentStats = useMemo(() => {
-    const targetClaims = isAdmin && activeTab === "approvals" ? monthFilteredAllClaims : monthFilteredMyClaims;
+    const targetClaims =
+      isAdmin && activeTab === "approvals"
+        ? monthFilteredAllClaims
+        : monthFilteredMyClaims;
     const pending = targetClaims.filter((c) => c.status === "PENDING").length;
     const approved = targetClaims.filter((c) => c.status === "APPROVED").length;
     const rejected = targetClaims.filter((c) => c.status === "REJECTED").length;
@@ -207,7 +220,8 @@ export default function ClaimsManagementPage() {
               Expense Claims & Reimbursements
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Submit expense bills with OCR auto-fill, view monthly expenses, and track approvals
+              Submit expense bills with OCR auto-fill, view monthly expenses,
+              and track approvals
             </p>
           </div>
         </div>
@@ -304,7 +318,9 @@ export default function ClaimsManagementPage() {
                 type="button"
                 onClick={handleSetLastMonth}
                 className={`px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer ${
-                  selectedMonth !== "ALL" && selectedMonth !== getCurrentMonthKey() && selectedMonth.startsWith(String(new Date().getFullYear()))
+                  selectedMonth !== "ALL" &&
+                  selectedMonth !== getCurrentMonthKey() &&
+                  selectedMonth.startsWith(String(new Date().getFullYear()))
                     ? "bg-blue-600 text-white shadow-2xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
@@ -315,7 +331,9 @@ export default function ClaimsManagementPage() {
 
             {/* Native Month Picker */}
             <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200/90 shadow-2xs">
-              <span className="text-[11px] font-semibold text-slate-500">Pick Month:</span>
+              <span className="text-[11px] font-semibold text-slate-500">
+                Pick Month:
+              </span>
               <input
                 type="month"
                 value={selectedMonth !== "ALL" ? selectedMonth : ""}
@@ -343,7 +361,9 @@ export default function ClaimsManagementPage() {
         <div className="rounded-2xl border border-amber-200/90 bg-amber-50/60 p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-              {currentStats.isOrgLevel ? "Pending Approvals" : "My Pending Claims"}
+              {currentStats.isOrgLevel
+                ? "Pending Approvals"
+                : "My Pending Claims"}
             </span>
             <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
           </div>
@@ -351,7 +371,8 @@ export default function ClaimsManagementPage() {
             {currentStats.pending}
           </div>
           <p className="text-[10px] font-semibold text-amber-700 mt-0.5">
-            Pending: ₹{Number(currentStats.pendingAmount).toLocaleString("en-IN")}
+            Pending: ₹
+            {Number(currentStats.pendingAmount).toLocaleString("en-IN")}
           </p>
         </div>
 
@@ -359,7 +380,9 @@ export default function ClaimsManagementPage() {
         <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-              {currentStats.isOrgLevel ? "Approved Claims" : "My Approved Claims"}
+              {currentStats.isOrgLevel
+                ? "Approved Claims"
+                : "My Approved Claims"}
             </span>
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           </div>
@@ -367,7 +390,8 @@ export default function ClaimsManagementPage() {
             {currentStats.approved}
           </div>
           <p className="text-[10px] font-semibold text-emerald-700 mt-0.5">
-            Approved: ₹{Number(currentStats.approvedAmount).toLocaleString("en-IN")}
+            Approved: ₹
+            {Number(currentStats.approvedAmount).toLocaleString("en-IN")}
           </p>
         </div>
 
@@ -375,7 +399,9 @@ export default function ClaimsManagementPage() {
         <div className="rounded-2xl border border-blue-200/90 bg-blue-50/60 p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
-              {currentStats.isOrgLevel ? "Total Claimed (Org)" : "My Total Claimed"}
+              {currentStats.isOrgLevel
+                ? "Total Claimed (Org)"
+                : "My Total Claimed"}
             </span>
             <FiDollarSign className="h-3.5 w-3.5 text-blue-600" />
           </div>
@@ -391,7 +417,9 @@ export default function ClaimsManagementPage() {
         <div className="rounded-2xl border border-rose-200/90 bg-rose-50/60 p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">
-              {currentStats.isOrgLevel ? "Rejected Claims" : "My Rejected Claims"}
+              {currentStats.isOrgLevel
+                ? "Rejected Claims"
+                : "My Rejected Claims"}
             </span>
             <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
           </div>
@@ -399,7 +427,8 @@ export default function ClaimsManagementPage() {
             {currentStats.rejected}
           </div>
           <p className="text-[10px] font-semibold text-rose-700 mt-0.5">
-            Rejected: ₹{Number(currentStats.rejectedAmount || 0).toLocaleString("en-IN")}
+            Rejected: ₹
+            {Number(currentStats.rejectedAmount || 0).toLocaleString("en-IN")}
           </p>
         </div>
       </div>

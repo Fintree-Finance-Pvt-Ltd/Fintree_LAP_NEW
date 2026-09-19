@@ -1,20 +1,15 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   FiCalendar,
-  FiCheckCircle,
-  FiClock,
-  FiDollarSign,
   FiEye,
   FiFileText,
-  FiFilter,
-  FiInfo,
   FiLoader,
   FiPlus,
   FiSearch,
   FiTag,
   FiTrash2,
   FiX,
-  FiXCircle,
+  FiXCircle
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";

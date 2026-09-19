@@ -1,17 +1,14 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-  FiCheckCircle,
-  FiXCircle,
-  FiClock,
-  FiUser,
-  FiCalendar,
-  FiSearch,
-  FiFilter,
-  FiMessageSquare,
-  FiInfo,
-  FiCheck,
-  FiX,
   FiAlertCircle,
+  FiCalendar,
+  FiCheck,
+  FiCheckCircle,
+  FiClock,
+  FiMessageSquare,
+  FiSearch,
+  FiX,
+  FiXCircle
 } from "react-icons/fi";
 import { leavesApi } from "../leavesApi.js";
 

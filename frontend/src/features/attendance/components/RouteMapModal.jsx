@@ -1,25 +1,22 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import {
-  FiX,
-  FiMapPin,
-  FiClock,
-  FiActivity,
-  FiUser,
-  FiRefreshCw,
-  FiNavigation,
-  FiCheckCircle,
-  FiCompass,
-  FiFlag,
-  FiMaximize2,
-  FiChevronDown,
-  FiChevronUp,
-  FiList,
-  FiMap,
-} from "react-icons/fi";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { attendanceApi } from "../attendanceApi.js";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  FiChevronDown,
+  FiChevronUp,
+  FiClock,
+  FiCompass,
+  FiFlag,
+  FiList,
+  FiMap,
+  FiMapPin,
+  FiMaximize2,
+  FiNavigation,
+  FiRefreshCw,
+  FiX
+} from "react-icons/fi";
 import { fetchRoadRoute } from "../../../utils/geoUtils.js";
+import { attendanceApi } from "../attendanceApi.js";
 
 // Custom Leaflet Icons
 const createCustomIcon = (color, label, emoji) => {

@@ -487,9 +487,9 @@ const applicationData =
     [checklist],
   );
 
-  const allCompleted =
-    checklist.length > 0 &&
-    completedCount === checklist.length;
+  // const allCompleted =
+  //   checklist.length > 0 &&
+  //   completedCount === checklist.length;
 
   const progress =
     checklist.length > 0

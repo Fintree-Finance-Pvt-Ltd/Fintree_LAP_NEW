@@ -1,32 +1,23 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import { FaRupeeSign } from "react-icons/fa";
 import {
-  FiCalendar,
   FiCheck,
-  FiCheckCircle,
   FiClock,
   FiCreditCard,
-  FiDollarSign,
   FiDownload,
   FiEye,
   FiFileText,
-  FiFilter,
-  FiInfo,
   FiLoader,
-  FiPlus,
-  FiRefreshCw,
   FiSearch,
   FiTag,
   FiTrash2,
   FiUser,
-  FiUsers,
-  FiX,
-  FiXCircle,
+  FiX
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";
 import ClaimDetailsModal from "./ClaimDetailsModal.jsx";
 import ReceiptViewerModal from "./ReceiptViewerModal.jsx";
-import { FaRupeeSign } from "react-icons/fa";
 
 
 export const CATEGORY_META = {

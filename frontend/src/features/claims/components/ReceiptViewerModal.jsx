@@ -1,13 +1,12 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   FiDownload,
   FiExternalLink,
   FiFileText,
-  FiMaximize2,
   FiRotateCw,
   FiX,
   FiZoomIn,
-  FiZoomOut,
+  FiZoomOut
 } from "react-icons/fi";
 
 function resolveReceiptUrl(rawUrl) {

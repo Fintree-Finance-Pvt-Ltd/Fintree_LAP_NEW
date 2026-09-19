@@ -1,19 +1,7 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { FaExternalLinkAlt } from "react-icons/fa";
-import {
-  Navigate,
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import { useAuth } from "../../../hooks/useAuth.js";
 import { rmApi } from "../rmApi.js";
@@ -118,7 +106,7 @@ const VALUATION_ALLOWED_STATUSES = [
 ];
 
 const unwrapResponse = (response) =>
-  response?.data !== undefined ? response.data : response ?? {};
+  response?.data !== undefined ? response.data : (response ?? {});
 
 const unwrapApplicationList = (response) => {
   const payload = response?.data?.data ?? response?.data ?? [];
@@ -154,9 +142,7 @@ const formatCapturedAt = (value) => {
 
   const date = new Date(value);
 
-  return Number.isNaN(date.getTime())
-    ? "Not captured"
-    : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? "Not captured" : date.toLocaleString();
 };
 
 const getLocationErrorMessage = (error) => {
@@ -214,10 +200,7 @@ export default function GeoVerification() {
   const queryClient = useQueryClient();
 
   const routeApplicationId =
-    params.applicationId ||
-    params.id ||
-    params.appId ||
-    "";
+    params.applicationId || params.id || params.appId || "";
 
   const { user } = useAuth();
 
@@ -225,9 +208,7 @@ export default function GeoVerification() {
 
   const isRM = roles.includes("RM");
 
-  const isValuation =
-    roles.includes("VALUATION") ||
-    roles.includes("VALUTION");
+  const isValuation = roles.includes("VALUATION") || roles.includes("VALUTION");
 
   const canSelectApplication = isRM || isValuation;
 
@@ -235,8 +216,7 @@ export default function GeoVerification() {
   const [messageType, setMessageType] = useState("success");
   const [activeTab, setActiveTab] = useState("residence");
   const [geoData, setGeoData] = useState(createEmptyGeoData);
-  const [capturingLocationType, setCapturingLocationType] =
-    useState("");
+  const [capturingLocationType, setCapturingLocationType] = useState("");
 
   const applicationsQuery = useQuery({
     queryKey: ["geo-application-list", roles.join("_")],
@@ -272,9 +252,7 @@ export default function GeoVerification() {
       }
     }
 
-    return applicationList?.[0]?.id
-      ? String(applicationList[0].id)
-      : "";
+    return applicationList?.[0]?.id ? String(applicationList[0].id) : "";
   }, [routeApplicationId, applicationList]);
 
   const numericApplicationId = Number(activeApplicationId);
@@ -341,7 +319,7 @@ export default function GeoVerification() {
   const workflowData = useQuery({
     queryKey: ["rm-workflow-status", activeApplicationId],
     queryFn: () => rmApi.workflowStatus(activeApplicationId),
-    enabled: Boolean(activeApplicationId),
+    enabled: !!activeApplicationId,
     retry: false,
   });
 
@@ -354,9 +332,8 @@ export default function GeoVerification() {
     {};
 
   const geoPrerequisitesMet =
-    !Boolean(activeApplicationId) ||
-    (Boolean(apiWorkflowFlags.customerVisit) &&
-      Boolean(apiWorkflowFlags.businessVisit));
+    !activeApplicationId ||
+    (apiWorkflowFlags.customerVisit && apiWorkflowFlags.businessVisit);
 
   const geoBlocked =
     !isValuation &&
@@ -403,14 +380,8 @@ export default function GeoVerification() {
 
         updated[tabKey] = {
           ...updated[tabKey],
-          lat:
-            location.latitude != null
-              ? String(location.latitude)
-              : "",
-          lng:
-            location.longitude != null
-              ? String(location.longitude)
-              : "",
+          lat: location.latitude != null ? String(location.latitude) : "",
+          lng: location.longitude != null ? String(location.longitude) : "",
           gpsAddress: location.gpsAddress || "",
           accuracyMeters:
             location.accuracyMeters != null
@@ -429,8 +400,7 @@ export default function GeoVerification() {
     mutationFn: async () =>
       rmApi.recordWorkflowStep(activeApplicationId, {
         action: "GEO_VERIFICATION_DONE",
-        remarks:
-          "Residence, business and property geo verification completed.",
+        remarks: "Residence, business and property geo verification completed.",
       }),
 
     onSuccess: async () => {
@@ -468,9 +438,7 @@ export default function GeoVerification() {
 
       setMessageType("error");
       setMessage(
-        Array.isArray(errorMessage)
-          ? errorMessage.join(", ")
-          : errorMessage,
+        Array.isArray(errorMessage) ? errorMessage.join(", ") : errorMessage,
       );
     },
   });
@@ -488,19 +456,11 @@ export default function GeoVerification() {
         ...geoData,
         [locationKey]: {
           ...geoData[locationKey],
-          lat:
-            saved?.latitude != null
-              ? String(saved.latitude)
-              : "",
-          lng:
-            saved?.longitude != null
-              ? String(saved.longitude)
-              : "",
+          lat: saved?.latitude != null ? String(saved.latitude) : "",
+          lng: saved?.longitude != null ? String(saved.longitude) : "",
           gpsAddress: saved?.gpsAddress || "",
           accuracyMeters:
-            saved?.accuracyMeters != null
-              ? String(saved.accuracyMeters)
-              : "",
+            saved?.accuracyMeters != null ? String(saved.accuracyMeters) : "",
           capturedAt: saved?.capturedAt || new Date().toISOString(),
           status: "Verified",
         },
@@ -509,9 +469,7 @@ export default function GeoVerification() {
       setGeoData(nextGeoData);
 
       setMessageType("success");
-      setMessage(
-        result?.message || "Live location captured successfully.",
-      );
+      setMessage(result?.message || "Live location captured successfully.");
 
       await Promise.all([
         queryClient.invalidateQueries({
@@ -532,10 +490,7 @@ export default function GeoVerification() {
         return;
       }
 
-      if (
-        locationKey === "property" &&
-        isAllGeoVerified(nextGeoData)
-      ) {
+      if (locationKey === "property" && isAllGeoVerified(nextGeoData)) {
         markGeoComplete.mutate();
       }
     },
@@ -548,9 +503,7 @@ export default function GeoVerification() {
 
       setMessageType("error");
       setMessage(
-        Array.isArray(errorMessage)
-          ? errorMessage.join(", ")
-          : errorMessage,
+        Array.isArray(errorMessage) ? errorMessage.join(", ") : errorMessage,
       );
     },
 
@@ -558,10 +511,7 @@ export default function GeoVerification() {
   });
 
   const handleCaptureLiveLocation = () => {
-    if (
-      !Number.isInteger(numericApplicationId) ||
-      numericApplicationId <= 0
-    ) {
+    if (!Number.isInteger(numericApplicationId) || numericApplicationId <= 0) {
       setMessageType("error");
       setMessage(
         "A valid application ID is required before capturing location.",
@@ -586,8 +536,7 @@ export default function GeoVerification() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude, accuracy } =
-          position.coords;
+        const { latitude, longitude, accuracy } = position.coords;
 
         const coordinateAddress = `Latitude ${latitude.toFixed(
           7,
@@ -618,8 +567,7 @@ export default function GeoVerification() {
     );
   };
 
-  const selectedGeoData =
-    geoData[activeTab] || geoData.residence;
+  const selectedGeoData = geoData[activeTab] || geoData.residence;
 
   const hasSelectedCoordinates =
     selectedGeoData?.lat !== "" &&
@@ -638,12 +586,10 @@ export default function GeoVerification() {
   };
 
   const currentTabLabel =
-    GEO_TABS.find((tab) => tab.key === activeTab)?.label ||
-    "Geo";
+    GEO_TABS.find((tab) => tab.key === activeTab)?.label || "Geo";
 
   const isCapturing =
-    Boolean(capturingLocationType) ||
-    saveGeoLocationMutation.isPending;
+    Boolean(capturingLocationType) || saveGeoLocationMutation.isPending;
 
   let contextActiveFound = false;
 
@@ -677,20 +623,18 @@ export default function GeoVerification() {
         <div className="relative z-10 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex-1">
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              {isValuation
-                ? "Valuation Geo Verification"
-                : "Geo Verification"}
+              {isValuation ? "Valuation Geo Verification" : "Geo Verification"}
             </h2>
 
             <p className="mt-1 text-xs font-medium text-blue-100/90">
-              Application #
-              {activeApplicationId || "Please select application"} •
-              Real-time field parameter checks.
+              Application #{activeApplicationId || "Please select application"}{" "}
+              • Real-time field parameter checks.
             </p>
 
             {isValuation && (
               <p className="mt-1 text-[11px] font-bold text-blue-50">
-                Valuation role loads BM Approved, CM, Credit Maker, Credit Checker and Valuation cases.
+                Valuation role loads BM Approved, CM, Credit Maker, Credit
+                Checker and Valuation cases.
               </p>
             )}
 
@@ -717,8 +661,7 @@ export default function GeoVerification() {
                 value={activeApplicationId || ""}
                 onChange={handleApplicationChange}
                 disabled={
-                  applicationsQuery.isLoading ||
-                  applicationList.length === 0
+                  applicationsQuery.isLoading || applicationList.length === 0
                 }
                 className="h-11 w-full rounded-xl border border-white/20 bg-white px-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-70"
               >
@@ -891,9 +834,7 @@ export default function GeoVerification() {
                     <div className="mx-2 mt-[-20px] h-[3px] min-w-[30px] flex-1 rounded-full bg-slate-100">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          step.isCompleted
-                            ? "w-full bg-emerald-500"
-                            : "w-0"
+                          step.isCompleted ? "w-full bg-emerald-500" : "w-0"
                         }`}
                       />
                     </div>
@@ -908,8 +849,7 @@ export default function GeoVerification() {
               <div className="flex gap-2 overflow-x-auto">
                 {GEO_TABS.map((tab) => {
                   const isActive = activeTab === tab.key;
-                  const isVerified =
-                    geoData[tab.key]?.status === "Verified";
+                  const isVerified = geoData[tab.key]?.status === "Verified";
 
                   return (
                     <button
@@ -926,9 +866,7 @@ export default function GeoVerification() {
 
                       <span
                         className={`h-1.5 w-1.5 rounded-full ${
-                          isVerified
-                            ? "bg-emerald-500"
-                            : "bg-slate-300"
+                          isVerified ? "bg-emerald-500" : "bg-slate-300"
                         }`}
                       />
 
@@ -949,7 +887,8 @@ export default function GeoVerification() {
                   </h3>
 
                   <p className="mt-0.5 text-xs text-slate-400">
-                    Capture the system geolocation coordinates for verification checks.
+                    Capture the system geolocation coordinates for verification
+                    checks.
                   </p>
                 </div>
 
@@ -965,15 +904,9 @@ export default function GeoVerification() {
               </div>
 
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <GeoField
-                  label="Latitude"
-                  value={selectedGeoData.lat}
-                />
+                <GeoField label="Latitude" value={selectedGeoData.lat} />
 
-                <GeoField
-                  label="Longitude"
-                  value={selectedGeoData.lng}
-                />
+                <GeoField label="Longitude" value={selectedGeoData.lng} />
 
                 <GeoField
                   label="Accuracy"
@@ -1080,7 +1013,8 @@ export default function GeoVerification() {
                     </p>
 
                     <p className="mt-1 text-xs text-slate-400">
-                      Please capture data using the browser action handlers above.
+                      Please capture data using the browser action handlers
+                      above.
                     </p>
                   </>
                 )}
