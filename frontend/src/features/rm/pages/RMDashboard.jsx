@@ -97,34 +97,35 @@ export default function RMDashboard() {
   ];
 
   return (
-    <div className="min-h-screen space-y-8 bg-slate-50 p-4 sm:p-6 lg:p-8 font-sans antialiased text-slate-800">
+    <div className="space-y-6 antialiased text-slate-800">
       
-{/* Premium Hero Banner - Vibrant Light */}
-<div className="overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50 p-6 sm:p-8 text-slate-900 shadow-sm">
-  <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-    <div className="space-y-3">
-      <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-600 shadow-2xl border border-blue-200/60">
-        Operational View • {user?.spoke || "Central Spoke"}
-      </span>
+      {/* Modern Professional Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-r from-white via-slate-50/70 to-blue-50/40 p-6 sm:p-7 shadow-xs">
+        <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2.5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/60 bg-blue-50/90 px-3 py-1 text-xs font-semibold text-blue-700 shadow-2xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+              <span>Operational View • {user?.spoke || "Central Spoke"}</span>
+            </div>
 
-      <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-        Welcome back, <span className="text-blue-600">{user?.name || "Relationship Manager"}</span>
-      </h2>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Welcome back, <span className="text-blue-600">{user?.name || "Relationship Manager"}</span>
+            </h2>
 
-      <p className="max-w-xl text-sm font-medium text-slate-600">
-        Monitor your pipeline performance, track live corporate application cycles, and clear processing hurdles instantly.
-      </p>
-    </div>
+            <p className="max-w-2xl text-xs sm:text-sm font-normal text-slate-500 leading-relaxed">
+              Monitor your pipeline performance, track live corporate application cycles, and clear processing hurdles instantly.
+            </p>
+          </div>
 
-    <Link 
-      to="/create-lead" 
-      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-slate-800 active:scale-95 shrink-0"
-    >
-      <FaPlus className="text-xs" />
-      Create New Lead
-    </Link>
-  </div>
-</div>
+          <Link 
+            to="/create-lead" 
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:shadow transition-all active:scale-95 shrink-0"
+          >
+            <FaPlus className="text-xs" />
+            <span>Create New Lead</span>
+          </Link>
+        </div>
+      </div>
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
