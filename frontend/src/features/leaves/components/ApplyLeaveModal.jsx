@@ -3,57 +3,22 @@ import {
   FiCalendar,
   FiX,
   FiClock,
-  FiFileText,
   FiPhone,
   FiCheckCircle,
   FiAlertCircle,
-  FiInfo,
+  FiSun,
+  FiSunset,
 } from "react-icons/fi";
 import { leavesApi } from "../leavesApi.js";
 
 const LEAVE_TYPES = [
-  {
-    id: "CASUAL",
-    label: "Casual Leave (CL)",
-    description: "For personal matters, events or short planned leaves",
-    color: "blue",
-  },
-  {
-    id: "SICK",
-    label: "Sick / Medical Leave (SL)",
-    description: "For illness, medical checkups or emergency recovery",
-    color: "rose",
-  },
-  {
-    id: "EARNED",
-    label: "Privilege / Earned Leave (EL)",
-    description: "Planned annual vacation or extended personal leaves",
-    color: "purple",
-  },
-  {
-    id: "MATERNITY",
-    label: "Maternity Leave",
-    description: "Maternity benefit leave",
-    color: "pink",
-  },
-  {
-    id: "PATERNITY",
-    label: "Paternity Leave",
-    description: "Paternity benefit leave",
-    color: "indigo",
-  },
-  {
-    id: "UNPAID",
-    label: "Leave Without Pay (LWP)",
-    description: "Unpaid leave when paid leave quotas are exhausted",
-    color: "amber",
-  },
-  {
-    id: "OTHER",
-    label: "Other Special Leave",
-    description: "Special circumstances or bereavement leave",
-    color: "slate",
-  },
+  { id: "CASUAL", label: "Casual Leave (CL)", description: "For personal appointments or short planned leaves" },
+  { id: "SICK", label: "Sick Leave (SL)", description: "For medical checkups, illness or recovery" },
+  { id: "EARNED", label: "Privilege / Earned Leave (EL)", description: "Planned annual vacation or extended breaks" },
+  { id: "MATERNITY", label: "Maternity Leave", description: "Maternity benefit leave" },
+  { id: "PATERNITY", label: "Paternity Leave", description: "Paternity benefit leave" },
+  { id: "UNPAID", label: "Leave Without Pay (LWP)", description: "Unpaid leave when quotas are exhausted" },
+  { id: "OTHER", label: "Special Leave", description: "Bereavement or special circumstances" },
 ];
 
 export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
@@ -136,7 +101,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/50 px-5 py-4">
           <div className="flex items-center gap-3">
@@ -148,7 +113,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
                 Apply for Leave
               </h2>
               <p className="text-xs text-slate-500">
-                Submit a leave request for Admin approval
+                Submit a leave request for administrative review
               </p>
             </div>
           </div>
@@ -182,7 +147,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
             >
               {LEAVE_TYPES.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.label}
+                  {t.label} — {t.description}
                 </option>
               ))}
             </select>
@@ -217,24 +182,26 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={() => setHalfDayType("FIRST_HALF")}
-                className={`rounded-xl border p-2.5 text-xs font-bold transition text-center cursor-pointer ${
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
                   halfDayType === "FIRST_HALF"
                     ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20"
                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                🌅 First Half (Morning)
+                <FiSun className="h-4 w-4 text-amber-500" />
+                <span>First Half (Morning)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setHalfDayType("SECOND_HALF")}
-                className={`rounded-xl border p-2.5 text-xs font-bold transition text-center cursor-pointer ${
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
                   halfDayType === "SECOND_HALF"
                     ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20"
                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                🌇 Second Half (Afternoon)
+                <FiSunset className="h-4 w-4 text-orange-500" />
+                <span>Second Half (Afternoon)</span>
               </button>
             </div>
           )}
