@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   FiActivity,
+  FiCalendar,
+  FiCheckCircle,
   FiChevronLeft,
   FiChevronRight,
   FiClock,
   FiCompass,
   FiInfo,
+  FiMapPin,
   FiRefreshCw,
-  FiUser
+  FiUser,
 } from "react-icons/fi";
 import {
   calculateRecordDuration,
@@ -52,7 +55,11 @@ function buildDateLeaveMap(leavesResponse) {
   const directMap =
     leavesResponse?.data?.dateMap ||
     leavesResponse?.dateMap ||
-    (leavesResponse?.data && typeof leavesResponse.data === "object" && !Array.isArray(leavesResponse.data) ? leavesResponse.data : null);
+    (leavesResponse?.data &&
+    typeof leavesResponse.data === "object" &&
+    !Array.isArray(leavesResponse.data)
+      ? leavesResponse.data
+      : null);
 
   if (directMap && typeof directMap === "object") {
     Object.keys(directMap).forEach((key) => {
@@ -67,10 +74,10 @@ function buildDateLeaveMap(leavesResponse) {
   const list = Array.isArray(leavesResponse?.data?.data)
     ? leavesResponse.data.data
     : Array.isArray(leavesResponse?.data)
-    ? leavesResponse.data
-    : Array.isArray(leavesResponse)
-    ? leavesResponse
-    : [];
+      ? leavesResponse.data
+      : Array.isArray(leavesResponse)
+        ? leavesResponse
+        : [];
 
   list.forEach((leave) => {
     if (!leave) return;
@@ -120,9 +127,10 @@ export default function AttendanceCalendar({
   onOpenRouteMap,
   isLoading = false,
   onRefresh,
-  approvedLeaves: externalApprovedLeaves = null,
 }) {
-  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+  const [currentYear, setCurrentYear] = useState(() =>
+    new Date().getFullYear(),
+  );
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth()); // 0-11
   const [selectedDayData, setSelectedDayData] = useState(null);
   const [liveElapsedMins, setLiveElapsedMins] = useState(0);
@@ -300,17 +308,6 @@ export default function AttendanceCalendar({
         record.status === "IN_PROGRESS" &&
         (isToday || !record.endTime);
 
-      // Determine Status Type according to exact business rules:
-      // 1. Total work target is 8.30 hours (510 minutes).
-      // 2. If user completed >= 8.30 hrs -> Green background.
-      // 3. If user worked but < 8.30 hrs -> Amber/Orange background.
-      // 4. If approved leave -> Purple background ("On Leave").
-      // 5. If absent on working day -> Red background.
-      // 6. If Sunday & no work -> Gray background.
-      // 7. If Sunday & user worked -> Green (if >= 8.30h) or Amber (if < 8.30h).
-      // 8. Today in progress -> Active live pulse.
-      // 9. Future dates -> Neutral.
-
       let statusType = "NEUTRAL";
       let badgeLabel = "";
       let bgClasses = "";
@@ -324,33 +321,33 @@ export default function AttendanceCalendar({
           if (totalMinutes >= TARGET_WORKING_MINUTES) {
             statusType = "SUNDAY_WORKED_FULL";
             badgeLabel = "Sunday (Full Day)";
-            bgClasses = "bg-emerald-50/90 dark:bg-emerald-950/30";
+            bgClasses = "bg-emerald-50/90";
             borderClasses = "border-emerald-300 ring-1 ring-emerald-400/50";
-            textClasses = "text-emerald-950 dark:text-emerald-100";
-            badgeClasses = "bg-emerald-500 text-white shadow-2xs";
+            textClasses = "text-emerald-950";
+            badgeClasses = "bg-emerald-600 text-white shadow-2xs";
             dotColor = "bg-emerald-500";
           } else {
             statusType = "SUNDAY_WORKED_PARTIAL";
             badgeLabel = "Sunday (Partial)";
-            bgClasses = "bg-amber-50/90 dark:bg-amber-950/30";
+            bgClasses = "bg-amber-50/90";
             borderClasses = "border-amber-300 ring-1 ring-amber-400/50";
-            textClasses = "text-amber-950 dark:text-amber-100";
+            textClasses = "text-amber-950";
             badgeClasses = "bg-amber-500 text-white shadow-2xs";
             dotColor = "bg-amber-500";
           }
         } else {
           statusType = "SUNDAY_OFF";
           badgeLabel = "Sunday Off";
-          bgClasses = "bg-slate-100/80 dark:bg-slate-800/40";
-          borderClasses = "border-slate-200 dark:border-slate-700/60";
-          textClasses = "text-slate-500 dark:text-slate-400";
+          bgClasses = "bg-slate-100/70";
+          borderClasses = "border-slate-200/80";
+          textClasses = "text-slate-500";
           badgeClasses = "bg-slate-200 text-slate-600 border border-slate-300";
           dotColor = "bg-slate-300";
         }
       } else if (isLiveActive) {
         statusType = "IN_PROGRESS";
         badgeLabel = "Live Tracking";
-        bgClasses = "bg-emerald-50/70 border-emerald-400 ring-2 ring-emerald-500/30 animate-pulse-subtle";
+        bgClasses = "bg-emerald-50/80 ring-2 ring-emerald-500/30";
         borderClasses = "border-emerald-400";
         textClasses = "text-emerald-950";
         badgeClasses = "bg-emerald-600 text-white animate-pulse";
@@ -359,54 +356,52 @@ export default function AttendanceCalendar({
         if (totalMinutes >= TARGET_WORKING_MINUTES) {
           statusType = "FULL_DAY";
           badgeLabel = "Full Day";
-          bgClasses = "bg-emerald-50/90 dark:bg-emerald-950/40";
+          bgClasses = "bg-emerald-50/90";
           borderClasses = "border-emerald-300 hover:border-emerald-500";
-          textClasses = "text-emerald-950 dark:text-emerald-100";
+          textClasses = "text-emerald-950";
           badgeClasses = "bg-emerald-600 text-white";
           dotColor = "bg-emerald-500";
         } else {
           statusType = "SHORT_DAY";
           badgeLabel = "Half Day";
-          bgClasses = "bg-amber-50/90 dark:bg-amber-950/40";
+          bgClasses = "bg-amber-50/90";
           borderClasses = "border-amber-300 hover:border-amber-500";
-          textClasses = "text-amber-950 dark:text-amber-100";
+          textClasses = "text-amber-950";
           badgeClasses = "bg-amber-500 text-white";
           dotColor = "bg-amber-500";
         }
       } else if (leaveInfo) {
-        // User has an approved leave on this date and did not punch in
         statusType = "ON_LEAVE";
         badgeLabel = leaveInfo.isHalfDay
           ? `Leave (${leaveInfo.halfDayType === "FIRST_HALF" ? "1st Half" : "2nd Half"})`
           : `On Leave (${leaveInfo.leaveType})`;
-        bgClasses = "bg-purple-50/90 dark:bg-purple-950/40";
-        borderClasses = "border-purple-300 ring-1 ring-purple-400/50 hover:border-purple-500";
-        textClasses = "text-purple-950 dark:text-purple-100";
+        bgClasses = "bg-purple-50/90";
+        borderClasses =
+          "border-purple-300 ring-1 ring-purple-400/50 hover:border-purple-500";
+        textClasses = "text-purple-950";
         badgeClasses = "bg-purple-600 text-white";
         dotColor = "bg-purple-600";
       } else if (isPast) {
-        // Past working day with no attendance & no leave
         statusType = "ABSENT";
         badgeLabel = "Absent";
-        bgClasses = "bg-rose-50/80 dark:bg-rose-950/40";
+        bgClasses = "bg-rose-50/80";
         borderClasses = "border-rose-200 hover:border-rose-400";
-        textClasses = "text-rose-900 dark:text-rose-200";
+        textClasses = "text-rose-900";
         badgeClasses = "bg-rose-500 text-white";
         dotColor = "bg-rose-500";
       } else if (isToday) {
         statusType = "TODAY_NOT_STARTED";
         badgeLabel = "Not Started";
-        bgClasses = "bg-blue-50/50 border-blue-300 ring-2 ring-blue-400/30";
+        bgClasses = "bg-blue-50/60 ring-2 ring-blue-400/30";
         borderClasses = "border-blue-300";
         textClasses = "text-blue-900";
         badgeClasses = "bg-blue-100 text-blue-700 border border-blue-200";
         dotColor = "bg-blue-500";
       } else {
-        // Future working day
         statusType = "FUTURE";
         badgeLabel = "";
-        bgClasses = "bg-white/60 dark:bg-slate-900/40";
-        borderClasses = "border-slate-100 dark:border-slate-800";
+        bgClasses = "bg-white/60";
+        borderClasses = "border-slate-100";
         textClasses = "text-slate-400";
         badgeClasses = "";
         dotColor = "";
@@ -418,8 +413,12 @@ export default function AttendanceCalendar({
       const endLat = record?.endLatitude ?? record?.end_latitude;
       const endLng = record?.endLongitude ?? record?.end_longitude;
 
-      const inTimeFormatted = formatTimeStr(record?.startTime || record?.start_time);
-      const outTimeFormatted = formatTimeStr(record?.endTime || record?.end_time);
+      const inTimeFormatted = formatTimeStr(
+        record?.startTime || record?.start_time,
+      );
+      const outTimeFormatted = formatTimeStr(
+        record?.endTime || record?.end_time,
+      );
 
       days.push({
         dateStr,
@@ -442,12 +441,31 @@ export default function AttendanceCalendar({
         totalMinutes,
         durationFormatted: durationInfo.formattedDuration,
         inTimeFormatted: record ? inTimeFormatted : "-",
-        outTimeFormatted: record ? (record.endTime ? outTimeFormatted : isLiveActive ? "In Progress" : "-") : "-",
-        startLocationName: cleanLocationName(record?.startLocation || record?.start_location, "Office Workspace"),
-        startCoords: startLat && startLng ? `${Number(startLat).toFixed(4)}, ${Number(startLng).toFixed(4)}` : null,
-        endLocationName: cleanLocationName(record?.endLocation || record?.end_location, "Office Workspace"),
-        endCoords: endLat && endLng ? `${Number(endLat).toFixed(4)}, ${Number(endLng).toFixed(4)}` : null,
-        distanceKm: record?.totalDistanceKm || record?.total_distance_km || "0.0",
+        outTimeFormatted: record
+          ? record.endTime
+            ? outTimeFormatted
+            : isLiveActive
+              ? "In Progress"
+              : "-"
+          : "-",
+        startLocationName: cleanLocationName(
+          record?.startLocation || record?.start_location,
+          "Office Workspace",
+        ),
+        startCoords:
+          startLat && startLng
+            ? `${Number(startLat).toFixed(4)}, ${Number(startLng).toFixed(4)}`
+            : null,
+        endLocationName: cleanLocationName(
+          record?.endLocation || record?.end_location,
+          "Office Workspace",
+        ),
+        endCoords:
+          endLat && endLng
+            ? `${Number(endLat).toFixed(4)}, ${Number(endLng).toFixed(4)}`
+            : null,
+        distanceKm:
+          record?.totalDistanceKm || record?.total_distance_km || "0.0",
       });
     }
 
@@ -544,7 +562,9 @@ export default function AttendanceCalendar({
   // Selected employee name
   const currentEmpName = useMemo(() => {
     if (selectedUserId && Array.isArray(allUsers)) {
-      const u = allUsers.find((user) => String(user.id) === String(selectedUserId));
+      const u = allUsers.find(
+        (user) => String(user.id) === String(selectedUserId),
+      );
       if (u) return u.name || u.email;
     }
     return currentUser?.name || "My Calendar";
@@ -553,28 +573,28 @@ export default function AttendanceCalendar({
   return (
     <div className="space-y-4 sm:space-y-5 animate-fadeIn">
       {/* Top Header Card: Month Navigation & Controls */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-5 shadow-xs">
+      <div className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs">
         <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
           {/* Month & Navigation Buttons */}
           <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2.5 sm:gap-3">
-            <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-2xs">
+            <div className="flex items-center rounded-2xl border border-slate-200 bg-slate-50/80 p-1 shadow-2xs">
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-white hover:text-[#0f2942] hover:shadow-2xs transition active:scale-95 cursor-pointer"
+                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-slate-600 hover:bg-white hover:text-[#0f2942] hover:shadow-2xs transition active:scale-95 cursor-pointer"
                 title="Previous Month"
               >
                 <FiChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
 
-              <div className="px-2 sm:px-4 font-bold text-xs sm:text-base text-[#0f2942] min-w-[125px] sm:min-w-[160px] text-center">
+              <div className="px-3 sm:px-5 font-bold text-sm sm:text-base text-[#0f2942] min-w-[130px] sm:min-w-[170px] text-center">
                 {MONTH_NAMES[currentMonth]} {currentYear}
               </div>
 
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-white hover:text-[#0f2942] hover:shadow-2xs transition active:scale-95 cursor-pointer"
+                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-slate-600 hover:bg-white hover:text-[#0f2942] hover:shadow-2xs transition active:scale-95 cursor-pointer"
                 title="Next Month"
               >
                 <FiChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -585,15 +605,17 @@ export default function AttendanceCalendar({
               <button
                 type="button"
                 onClick={handleJumpToToday}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 sm:py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition shadow-2xs cursor-pointer"
+                className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 active:scale-95 transition shadow-2xs cursor-pointer"
               >
                 Today
               </button>
 
               {/* Shift standard indicator */}
-              <div className="flex items-center gap-1.5 rounded-xl border border-blue-200/80 bg-blue-50/80 px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold text-blue-800 shadow-2xs">
-                <FiClock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-600 shrink-0" />
-                <span>Target: <strong>{TARGET_HOURS_LABEL}</strong></span>
+              <div className="flex items-center gap-1.5 rounded-xl border border-blue-200/90 bg-blue-50/80 px-3 py-2 text-xs font-semibold text-blue-800 shadow-2xs">
+                <FiClock className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                <span>
+                  Target: <strong>{TARGET_HOURS_LABEL}</strong>
+                </span>
               </div>
             </div>
           </div>
@@ -605,8 +627,10 @@ export default function AttendanceCalendar({
                 <FiUser className="h-4 w-4 text-slate-400 shrink-0" />
                 <select
                   value={selectedUserId || ""}
-                  onChange={(e) => onSelectUserId && onSelectUserId(e.target.value)}
-                  className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  onChange={(e) =>
+                    onSelectUserId && onSelectUserId(e.target.value)
+                  }
+                  className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
                 >
                   <option value="">👤 My Attendance Calendar</option>
                   <optgroup label="Team Members">
@@ -625,7 +649,7 @@ export default function AttendanceCalendar({
                 type="button"
                 onClick={onRefresh}
                 disabled={isLoading}
-                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 active:scale-95 transition cursor-pointer"
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 active:scale-95 transition cursor-pointer"
               >
                 <FiRefreshCw
                   className={`h-3.5 w-3.5 ${isLoading ? "animate-spin text-blue-600" : "text-slate-500"}`}
@@ -641,81 +665,81 @@ export default function AttendanceCalendar({
       {/* Monthly KPI Overview Bar */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7 sm:gap-3">
         {/* Full Day Card */}
-        <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-2.5 sm:p-3.5 shadow-2xs">
+        <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/70 p-3 sm:p-4 shadow-2xs transition-all hover:shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-800">
               Full Shift
             </span>
-            <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-emerald-500" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           </div>
-          <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-black text-emerald-900">
+          <div className="mt-2 text-2xl sm:text-3xl font-black text-emerald-950 font-mono">
             {monthlyStats.fullDays}
           </div>
-          <p className="text-[9px] sm:text-[10px] font-medium text-emerald-700 mt-0.5 truncate">
+          <p className="text-[10px] font-medium text-emerald-700 mt-0.5 truncate">
             ≥ 8.30 hrs completed
           </p>
         </div>
 
         {/* Short Hours Card */}
-        <div className="rounded-2xl border border-amber-200/90 bg-amber-50/60 p-2.5 sm:p-3.5 shadow-2xs">
+        <div className="rounded-2xl border border-amber-200/90 bg-amber-50/70 p-3 sm:p-4 shadow-2xs transition-all hover:shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-800">
               Short Shift
             </span>
-            <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-amber-500" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
           </div>
-          <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-black text-amber-900">
+          <div className="mt-2 text-2xl sm:text-3xl font-black text-amber-950 font-mono">
             {monthlyStats.shortDays}
           </div>
-          <p className="text-[9px] sm:text-[10px] font-medium text-amber-700 mt-0.5 truncate">
+          <p className="text-[10px] font-medium text-amber-700 mt-0.5 truncate">
             &lt; 8.30 hrs worked
           </p>
         </div>
 
         {/* Approved Leave Card */}
-        <div className="rounded-2xl border border-purple-200/90 bg-purple-50/60 p-2.5 sm:p-3.5 shadow-2xs">
+        <div className="rounded-2xl border border-purple-200/90 bg-purple-50/70 p-3 sm:p-4 shadow-2xs transition-all hover:shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-purple-800">
-              Leaves
+              Approved Leaves
             </span>
-            <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-purple-500" />
+            <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
           </div>
-          <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-black text-purple-900">
+          <div className="mt-2 text-2xl sm:text-3xl font-black text-purple-950 font-mono">
             {monthlyStats.leaveDays}
           </div>
-          <p className="text-[9px] sm:text-[10px] font-medium text-purple-700 mt-0.5 truncate">
-            Admin approved leaves
+          <p className="text-[10px] font-medium text-purple-700 mt-0.5 truncate">
+            Admin approved days
           </p>
         </div>
 
         {/* Absent Card */}
-        <div className="rounded-2xl border border-rose-200/90 bg-rose-50/60 p-2.5 sm:p-3.5 shadow-2xs">
+        <div className="rounded-2xl border border-rose-200/90 bg-rose-50/70 p-3 sm:p-4 shadow-2xs transition-all hover:shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-rose-800">
               Absent Days
             </span>
-            <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-rose-500" />
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
           </div>
-          <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-black text-rose-900">
+          <div className="mt-2 text-2xl sm:text-3xl font-black text-rose-950 font-mono">
             {monthlyStats.absentDays}
           </div>
-          <p className="text-[9px] sm:text-[10px] font-medium text-rose-700 mt-0.5 truncate">
+          <p className="text-[10px] font-medium text-rose-700 mt-0.5 truncate">
             Working days missed
           </p>
         </div>
 
         {/* Sunday Off Card */}
-        <div className="rounded-2xl border border-slate-200/90 bg-slate-100/70 p-2.5 sm:p-3.5 shadow-2xs">
+        <div className="rounded-2xl border border-slate-200/90 bg-slate-100/70 p-3 sm:p-4 shadow-2xs transition-all hover:shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-700">
               Sundays (Off)
             </span>
-            <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-slate-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-slate-400" />
           </div>
-          <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-black text-slate-800">
+          <div className="mt-2 text-2xl sm:text-3xl font-black text-slate-800 font-mono">
             {monthlyStats.sundaysOff}
           </div>
-          <p className="text-[9px] sm:text-[10px] font-medium text-slate-500 mt-0.5 truncate">
+          <p className="text-[10px] font-medium text-slate-500 mt-0.5 truncate">
             {monthlyStats.sundaysWorked > 0
               ? `+ ${monthlyStats.sundaysWorked} worked`
               : "Standard weekly off"}
@@ -723,46 +747,47 @@ export default function AttendanceCalendar({
         </div>
 
         {/* Total Monthly Hours Card */}
-        <div className="rounded-2xl border border-blue-200/90 bg-blue-50/60 p-2.5 sm:p-3.5 shadow-2xs">
+        <div className="rounded-2xl border border-blue-200/90 bg-blue-50/70 p-3 sm:p-4 shadow-2xs transition-all hover:shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-blue-800">
               Total Hours
             </span>
-            <FiClock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-600" />
+            <FiClock className="h-3.5 w-3.5 text-blue-600" />
           </div>
-          <div className="mt-1 sm:mt-2 text-xl sm:text-2xl font-black text-blue-950 font-mono">
-            {monthlyStats.totalHours} <span className="text-[10px] sm:text-xs font-bold text-blue-700">h</span>
+          <div className="mt-2 text-2xl sm:text-3xl font-black text-blue-950 font-mono">
+            <span>{monthlyStats.totalHours}</span>
+            <span className="text-xl font-bold">h</span>
           </div>
-          <p className="text-[9px] sm:text-[10px] font-medium text-blue-700 mt-0.5 truncate">
+          <p className="text-[10px] font-medium text-blue-700 mt-0.5 truncate">
             Monthly logged hours
           </p>
         </div>
 
         {/* Daily Average Card */}
-        <div className="rounded-2xl border border-indigo-200/90 bg-indigo-50/60 p-2.5 sm:p-3.5 shadow-2xs">
+        <div className="rounded-2xl border border-indigo-200/90 bg-indigo-50/70 p-3 sm:p-4 shadow-2xs transition-all hover:shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-indigo-800">
               Daily Avg
             </span>
-            <FiActivity className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-indigo-600" />
+            <FiActivity className="h-3.5 w-3.5 text-indigo-600" />
           </div>
-          <div className="mt-1 sm:mt-2 text-lg sm:text-2xl font-black text-indigo-950 font-mono">
+          <div className="mt-2 text-xl sm:text-2xl font-black text-indigo-950 font-mono">
             {monthlyStats.avgHoursFormatted}
           </div>
-          <p className="text-[9px] sm:text-[10px] font-medium text-indigo-700 mt-0.5 truncate">
+          <p className="text-[10px] font-medium text-indigo-700 mt-0.5 truncate">
             Per attended shift
           </p>
         </div>
       </div>
 
       {/* Visual Color Legend Bar */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-3 sm:p-3.5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-[11px]">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-3 sm:p-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
           <span className="font-bold uppercase tracking-wider text-slate-400 text-[10px]">
-            Color Guide:
+            Status Legend:
           </span>
 
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-4.5">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-4">
             {/* Green */}
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-md bg-emerald-500 border border-emerald-600 shrink-0" />
@@ -818,15 +843,15 @@ export default function AttendanceCalendar({
       </div>
 
       {/* Main Monthly Calendar Grid Card */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-2.5 sm:p-5 shadow-xs overflow-hidden">
+      <div className="rounded-3xl border border-slate-200/90 bg-white p-3 sm:p-5 shadow-xs overflow-hidden">
         {/* Weekday Column Headers */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2.5 text-center border-b border-slate-200/80 pb-2.5 mb-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2.5 text-center border-b border-slate-200/80 pb-3 mb-2.5">
           {WEEKDAY_NAMES.map((wd) => (
             <div
               key={wd.full}
-              className={`py-1 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider ${
+              className={`py-1.5 text-[11px] sm:text-xs font-black uppercase tracking-wider ${
                 wd.isWeekend
-                  ? "text-rose-600 bg-rose-50/60 rounded-md sm:rounded-lg"
+                  ? "text-rose-600 bg-rose-50/70 rounded-lg"
                   : "text-slate-600"
               }`}
             >
@@ -838,13 +863,13 @@ export default function AttendanceCalendar({
         </div>
 
         {/* Calendar Day Grid (7 columns) */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2.5">
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5">
           {calendarDays.map((day, idx) => {
             if (!day.isCurrentMonth) {
               return (
                 <div
                   key={`inactive-${idx}`}
-                  className="min-h-[56px] sm:min-h-[115px] rounded-lg sm:rounded-xl border border-dashed border-slate-100 bg-slate-50/30 p-1 sm:p-2 text-slate-300 select-none opacity-40 flex flex-col justify-start items-center sm:items-end"
+                  className="min-h-[60px] sm:min-h-[120px] rounded-xl sm:rounded-2xl border border-dashed border-slate-100 bg-slate-50/30 p-1.5 sm:p-2.5 text-slate-300 select-none opacity-40 flex flex-col justify-start items-center sm:items-end"
                 >
                   <div className="text-[10px] sm:text-xs font-bold font-mono">
                     {day.dayNum}
@@ -865,17 +890,19 @@ export default function AttendanceCalendar({
               <div
                 key={day.dateStr}
                 onClick={() => isClickable && setSelectedDayData(day)}
-                className={`group relative flex flex-col justify-between min-h-[56px] sm:min-h-[115px] rounded-lg sm:rounded-xl border p-1 sm:p-2.5 transition-all duration-200 shadow-2xs ${
+                className={`group relative flex flex-col justify-between min-h-[60px] sm:min-h-[120px] rounded-xl sm:rounded-2xl border p-1.5 sm:p-3 transition-all duration-200 shadow-2xs ${
                   day.bgClasses
                 } ${day.borderClasses} ${
-                  isClickable ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-95" : ""
+                  isClickable
+                    ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-95"
+                    : ""
                 }`}
               >
                 {/* Day Header: Day Number & Today indicator */}
                 <div className="flex items-center justify-center sm:justify-between w-full">
                   <div className="hidden sm:block">
                     {day.isToday && (
-                      <span className="rounded-md bg-blue-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white shadow-2xs">
+                      <span className="rounded-md bg-blue-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-2xs">
                         Today
                       </span>
                     )}
@@ -883,10 +910,10 @@ export default function AttendanceCalendar({
 
                   {/* Day Number (On mobile, Today is circled with blue) */}
                   <span
-                    className={`font-extrabold font-mono transition-transform ${
+                    className={`font-black font-mono transition-transform ${
                       day.isToday
-                        ? "flex h-5 w-5 sm:h-auto sm:w-auto items-center justify-center rounded-full sm:rounded-none bg-blue-600 sm:bg-transparent text-white sm:text-blue-700 text-[11px] sm:text-sm shadow-xs sm:shadow-none"
-                        : `text-[11px] sm:text-sm ${
+                        ? "flex h-5 w-5 sm:h-auto sm:w-auto items-center justify-center rounded-full sm:rounded-none bg-blue-600 sm:bg-transparent text-white sm:text-blue-700 text-xs sm:text-sm shadow-xs sm:shadow-none"
+                        : `text-xs sm:text-sm ${
                             day.isSunday && !hasRecord
                               ? "text-slate-400"
                               : "text-slate-800"
@@ -898,7 +925,7 @@ export default function AttendanceCalendar({
                 </div>
 
                 {/* Desktop Day Content (hidden on mobile) */}
-                <div className="hidden sm:block my-1.5 space-y-1">
+                <div className="hidden sm:block my-2 space-y-1.5">
                   {/* Status Badge */}
                   {day.badgeLabel && (
                     <div className="flex items-center justify-start">
@@ -917,12 +944,16 @@ export default function AttendanceCalendar({
                   {hasRecord && (
                     <div className="space-y-0.5 text-[10px] font-mono font-semibold">
                       <div className="flex items-center justify-between text-emerald-800">
-                        <span className="text-[9px] font-bold text-emerald-600">IN</span>
+                        <span className="text-[9px] font-bold text-emerald-600">
+                          IN
+                        </span>
                         <span>{day.inTimeFormatted}</span>
                       </div>
 
                       <div className="flex items-center justify-between text-slate-700">
-                        <span className="text-[9px] font-bold text-rose-500">OUT</span>
+                        <span className="text-[9px] font-bold text-rose-500">
+                          OUT
+                        </span>
                         <span className="truncate">{day.outTimeFormatted}</span>
                       </div>
                     </div>
@@ -953,7 +984,7 @@ export default function AttendanceCalendar({
                         }`}
                       />
                       <span
-                        className={`text-[8.5px] font-black font-mono leading-none truncate max-w-full text-center ${
+                        className={`text-[9px] font-black font-mono leading-none truncate max-w-full text-center ${
                           day.totalMinutes >= TARGET_WORKING_MINUTES
                             ? "text-emerald-800"
                             : "text-amber-800"
@@ -995,7 +1026,7 @@ export default function AttendanceCalendar({
                 </div>
 
                 {/* Desktop Day Footer (hidden on mobile) */}
-                <div className="hidden sm:flex items-center justify-between border-t border-black/5 pt-1 text-[10px]">
+                <div className="hidden sm:flex items-center justify-between border-t border-black/5 pt-1.5 text-[10px]">
                   {hasRecord || day.statusType === "IN_PROGRESS" ? (
                     <>
                       <div
@@ -1033,9 +1064,9 @@ export default function AttendanceCalendar({
         </div>
 
         {/* Mobile touch hint */}
-        <div className="sm:hidden mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-center gap-1 text-[10px] text-slate-400 font-medium">
-          <FiInfo className="h-3 w-3 text-blue-500" />
-          <span>Tap any day to view complete shift logs & route</span>
+        <div className="sm:hidden mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-500 font-medium">
+          <FiInfo className="h-3.5 w-3.5 text-blue-500" />
+          <span>Tap any day to view full shift details and route map</span>
         </div>
       </div>
 
