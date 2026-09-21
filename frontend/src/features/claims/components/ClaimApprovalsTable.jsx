@@ -1,47 +1,92 @@
 import { useMemo, useState } from "react";
-import { FaRupeeSign } from "react-icons/fa";
 import {
+  FiAlertTriangle,
+  FiCalendar,
   FiCheck,
+  FiCheckCircle,
   FiClock,
+  FiCopy,
   FiCreditCard,
+  FiDollarSign,
   FiDownload,
   FiEye,
   FiFileText,
+  FiFilter,
+  FiImage,
   FiLoader,
   FiSearch,
+  FiShoppingBag,
   FiTag,
   FiTrash2,
   FiUser,
-  FiX
+  FiX,
+  FiXCircle,
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";
 import ClaimDetailsModal from "./ClaimDetailsModal.jsx";
 import ReceiptViewerModal from "./ReceiptViewerModal.jsx";
 
-
 export const CATEGORY_META = {
-  TRAVEL: { icon: "🚕", label: "Travel & Commute", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  FUEL: { icon: "⛽", label: "Fuel / Petrol", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  FOOD: { icon: "🍔", label: "Food & Meals", color: "bg-orange-50 text-orange-700 border-orange-200" },
-  HOTEL: { icon: "🏨", label: "Hotel & Stay", color: "bg-purple-50 text-purple-700 border-purple-200" },
-  OFFICE_SUPPLIES: { icon: "📎", label: "Office Supplies", color: "bg-slate-100 text-slate-700 border-slate-200" },
-  CLIENT_ENTERTAINMENT: { icon: "🤝", label: "Client Meeting", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  INTERNET_PHONE: { icon: "📱", label: "Telecom / Wifi", color: "bg-cyan-50 text-cyan-700 border-cyan-200" },
-  MEDICAL: { icon: "💊", label: "Medical & Health", color: "bg-rose-50 text-rose-700 border-rose-200" },
-  OTHER: { icon: "📝", label: "Miscellaneous", color: "bg-slate-100 text-slate-700 border-slate-200" },
+  TRAVEL: {
+    icon: "🚕",
+    label: "Travel & Commute",
+    color: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+  FUEL: {
+    icon: "⛽",
+    label: "Fuel / Petrol",
+    color: "bg-amber-50 text-amber-700 border-amber-200",
+  },
+  FOOD: {
+    icon: "🍔",
+    label: "Food & Meals",
+    color: "bg-orange-50 text-orange-700 border-orange-200",
+  },
+  HOTEL: {
+    icon: "🏨",
+    label: "Hotel & Stay",
+    color: "bg-purple-50 text-purple-700 border-purple-200",
+  },
+  OFFICE_SUPPLIES: {
+    icon: "📎",
+    label: "Office Supplies",
+    color: "bg-slate-100 text-slate-700 border-slate-200",
+  },
+  CLIENT_ENTERTAINMENT: {
+    icon: "🤝",
+    label: "Client Meeting",
+    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  INTERNET_PHONE: {
+    icon: "📱",
+    label: "Telecom / Wifi",
+    color: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  },
+  MEDICAL: {
+    icon: "💊",
+    label: "Medical & Health",
+    color: "bg-rose-50 text-rose-700 border-rose-200",
+  },
+  OTHER: {
+    icon: "📝",
+    label: "Miscellaneous",
+    color: "bg-slate-100 text-slate-700 border-slate-200",
+  },
 };
 
 export default function ClaimApprovalsTable({
   claims = [],
   allClaimsRaw = [],
   selectedMonth = "ALL",
+  selectedCategory = "ALL",
+  onCategoryChange,
   onMonthChange,
   isLoading,
   onRefresh,
 }) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL"); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [employeeFilter, setEmployeeFilter] = useState("ALL");
   const [paymentFilter, setPaymentFilter] = useState("ALL");
@@ -68,6 +113,15 @@ export default function ClaimApprovalsTable({
     submitting: false,
   });
 
+  // Category sync
+  const activeCategory =
+    selectedCategory !== "ALL" ? selectedCategory : categoryFilter;
+
+  const handleCategorySelect = (val) => {
+    setCategoryFilter(val);
+    if (onCategoryChange) onCategoryChange(val);
+  };
+
   // Unique list of employees
   const employeeList = useMemo(() => {
     const map = new Map();
@@ -81,7 +135,9 @@ export default function ClaimApprovalsTable({
         });
       }
     });
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
   }, [claims]);
 
   // Filter Claims
@@ -96,7 +152,7 @@ export default function ClaimApprovalsTable({
         return false;
       }
       // Category filter
-      if (categoryFilter !== "ALL" && claim.category !== categoryFilter) {
+      if (activeCategory !== "ALL" && claim.category !== activeCategory) {
         return false;
       }
       // Employee filter
@@ -131,51 +187,10 @@ export default function ClaimApprovalsTable({
     claims,
     statusFilter,
     paymentFilter,
-    categoryFilter,
+    activeCategory,
     employeeFilter,
     search,
   ]);
-
-  // Dynamic Totals computed on the filtered subset (excluding CANCELLED from total expenses)
-  const filteredSummary = useMemo(() => {
-    let approvedAmount = 0;
-    let pendingAmount = 0;
-    let rejectedAmount = 0;
-    let approvedCount = 0;
-    let pendingCount = 0;
-    let rejectedCount = 0;
-
-    filteredClaims.forEach((c) => {
-      const amt = Number(c.amount) || 0;
-
-      if (c.status === "APPROVED") {
-        approvedAmount += amt;
-        approvedCount += 1;
-      } else if (c.status === "PENDING") {
-        pendingAmount += amt;
-        pendingCount += 1;
-      } else if (c.status === "REJECTED") {
-        rejectedAmount += amt;
-        rejectedCount += 1;
-      }
-    });
-
-    const activeCount = approvedCount + pendingCount + rejectedCount;
-    const totalAmount = approvedAmount + pendingAmount + rejectedAmount;
-    const avgAmount = activeCount > 0 ? totalAmount / activeCount : 0;
-
-    return {
-      count: activeCount,
-      approvedCount,
-      pendingCount,
-      rejectedCount,
-      totalAmount: Math.round(totalAmount * 100) / 100,
-      approvedAmount: Math.round(approvedAmount * 100) / 100,
-      pendingAmount: Math.round(pendingAmount * 100) / 100,
-      rejectedAmount: Math.round(rejectedAmount * 100) / 100,
-      avgAmount: Math.round(avgAmount * 100) / 100,
-    };
-  }, [filteredClaims]);
 
   // Multi-select helpers
   const pendingFilteredClaims = useMemo(() => {
@@ -196,7 +211,7 @@ export default function ClaimApprovalsTable({
 
   const toggleSelectClaim = (id) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
@@ -245,6 +260,9 @@ export default function ClaimApprovalsTable({
         submitting: false,
       });
 
+      // Remove from selected list if present
+      setSelectedIds((prev) => prev.filter((id) => id !== claim.id));
+
       if (onRefresh) onRefresh();
     } catch (err) {
       const msg =
@@ -252,35 +270,31 @@ export default function ClaimApprovalsTable({
         err.message ||
         `Failed to ${type} claim.`;
       toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
+    } finally {
       setActionModal((prev) => ({ ...prev, submitting: false }));
     }
   };
 
-  const handleDeleteClaim = async (id, claimNumber) => {
-    if (!window.confirm(`Are you sure you want to permanently delete claim ${claimNumber}?`)) {
+  // Bulk Action handlers
+  const handleOpenBulkModal = (type) => {
+    if (selectedIds.length === 0) {
+      toast.info("Please select at least one pending claim.");
       return;
     }
-    try {
-      await claimsApi.deleteClaim(id);
-      toast.success(`Claim ${claimNumber} deleted successfully.`);
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to delete claim.";
-      toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
-    }
+    setBulkModal({
+      isOpen: true,
+      type,
+      remarks: type === "approve" ? "Bulk approved by Admin" : "",
+      submitting: false,
+    });
   };
 
-  // Bulk Action handlers
   const handleConfirmBulkAction = async (e) => {
     e.preventDefault();
     const { type, remarks } = bulkModal;
-    if (!selectedIds.length) return;
 
     if (type === "reject" && !remarks.trim()) {
-      toast.error("Please provide remarks for bulk rejection.");
+      toast.error("Please provide a rejection reason for selected claims.");
       return;
     }
 
@@ -289,110 +303,64 @@ export default function ClaimApprovalsTable({
       if (type === "approve") {
         await claimsApi.bulkApproveClaims({
           claimIds: selectedIds,
-          adminRemarks: remarks.trim() || "Bulk Approved by Admin",
+          adminRemarks: remarks.trim() || "Bulk approved by Admin",
         });
-        toast.success(`Approved ${selectedIds.length} expense claims!`);
+        toast.success(
+          `Successfully approved ${selectedIds.length} expense claims!`,
+        );
       } else {
         await claimsApi.bulkRejectClaims({
           claimIds: selectedIds,
           adminRemarks: remarks.trim(),
         });
-        toast.success(`Rejected ${selectedIds.length} expense claims.`);
+        toast.success(`Rejected ${selectedIds.length} claims.`);
       }
 
+      setSelectedIds([]);
       setBulkModal({
         isOpen: false,
         type: "approve",
         remarks: "",
         submitting: false,
       });
-      setSelectedIds([]);
+
       if (onRefresh) onRefresh();
     } catch (err) {
       const msg =
         err.response?.data?.message ||
         err.message ||
-        `Bulk ${type} failed.`;
+        "Bulk operation failed. Please try again.";
       toast.error(Array.isArray(msg) ? msg.join(", ") : msg);
+    } finally {
       setBulkModal((prev) => ({ ...prev, submitting: false }));
     }
   };
 
-  // Export to CSV
-  const handleExportCSV = () => {
-    if (!filteredClaims.length) {
-      toast.info("No claims to export.");
-      return;
-    }
-
-    const headers = [
-      "Claim Number",
-      "Employee Name",
-      "Employee Email",
-      "Expense Date",
-      "Category",
-      "Title / Purpose",
-      "Merchant Name",
-      "Invoice Number",
-      "GST Number",
-      "Amount (INR)",
-      "Status",
-      "Payment Status",
-      "Admin Remarks",
-    ];
-
-    const rows = filteredClaims.map((c) => [
-      `"${c.claimNumber || ""}"`,
-      `"${c.user?.name || ""}"`,
-      `"${c.user?.email || ""}"`,
-      `"${c.expenseDate || ""}"`,
-      `"${c.category || ""}"`,
-      `"${(c.title || "").replace(/"/g, '""')}"`,
-      `"${(c.merchantName || "").replace(/"/g, '""')}"`,
-      `"${c.invoiceNumber || ""}"`,
-      `"${c.gstNumber || ""}"`,
-      c.amount || 0,
-      `"${c.status || ""}"`,
-      `"${c.paymentStatus || ""}"`,
-      `"${(c.adminRemarks || "").replace(/"/g, '""')}"`,
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `claims_report_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Claims report CSV exported successfully.");
+  const handleCopyClaimNo = (claimNumber) => {
+    if (!claimNumber) return;
+    navigator.clipboard.writeText(claimNumber);
+    toast.info(`Claim ID copied: ${claimNumber}`);
   };
 
   const getStatusBadge = (status) => {
     switch (status) {
       case "APPROVED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 text-[11px] font-bold text-emerald-700 shadow-2xs whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/90 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 shadow-2xs whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Approved
           </span>
         );
       case "REJECTED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/80 px-2.5 py-1 text-[11px] font-bold text-rose-700 shadow-2xs whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/90 px-2.5 py-0.5 text-[11px] font-bold text-rose-700 shadow-2xs whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
             Rejected
           </span>
         );
       case "CANCELLED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
             Cancelled
           </span>
@@ -400,7 +368,7 @@ export default function ClaimApprovalsTable({
       case "PENDING":
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-1 text-[11px] font-bold text-amber-700 shadow-2xs whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/90 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 shadow-2xs whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
             Pending Review
           </span>
@@ -408,19 +376,52 @@ export default function ClaimApprovalsTable({
     }
   };
 
+  const getPaymentBadge = (status) => {
+    switch (status) {
+      case "PAID":
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100/70 border border-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+            ✓ Disbursed
+          </span>
+        );
+      case "IN_PROCESS":
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+            Processing Payout
+          </span>
+        );
+      case "UNPAID":
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+            Unpaid
+          </span>
+        );
+    }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return "EM";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
   return (
     <div className="space-y-4">
-      {/* 1. Search, Status, Category, Employee, Date Range & Action Controls */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
+      {/* Control Bar: Filters & Search */}
+      <div className="space-y-3 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Search Box */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 max-w-md">
             <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search employee, claim#, merchant, invoice, title..."
+              placeholder="Search employee, claim ID, purpose, merchant, bill#..."
               className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-8 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
             />
             {search && (
@@ -434,194 +435,125 @@ export default function ClaimApprovalsTable({
             )}
           </div>
 
-          {/* Status Tabs */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/60 shrink-0 overflow-x-auto">
-            {["PENDING", "APPROVED", "REJECTED", "CANCELLED", "ALL"].map((st) => (
+          {/* Status Filter Buttons */}
+          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/60 overflow-x-auto">
+            {["ALL", "PENDING", "APPROVED", "REJECTED"].map((st) => (
               <button
                 key={st}
                 type="button"
                 onClick={() => setStatusFilter(st)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                   statusFilter === st
                     ? "bg-white text-blue-700 shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                {st === "PENDING"
+                {st === "ALL"
+                  ? "All Status"
+                  : st === "PENDING"
                   ? "Pending Review"
                   : st === "APPROVED"
                   ? "Approved"
-                  : st === "REJECTED"
-                  ? "Rejected"
-                  : st === "CANCELLED"
-                  ? "Cancelled"
-                  : "All Status"}
+                  : "Rejected"}
               </button>
             ))}
           </div>
-
-          {/* Export CSV Button */}
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition cursor-pointer shrink-0"
-            title="Export filtered claims to CSV"
-          >
-            <FiDownload className="h-3.5 w-3.5 text-slate-500" />
-            <span>Export CSV</span>
-          </button>
         </div>
 
-        {/* Secondary Filters: Category, Employee, Date Range, Payment */}
-        <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-slate-100">
-          {/* Category Dropdown Filter */}
-          <div className="flex items-center gap-1.5">
-            <FiTag className="h-3.5 w-3.5 text-slate-400" />
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-hidden shadow-2xs cursor-pointer"
-            >
-              <option value="ALL">All Expense Categories</option>
-              {Object.keys(CATEGORY_META).map((catKey) => (
-                <option key={catKey} value={catKey}>
-                  {CATEGORY_META[catKey].icon} {CATEGORY_META[catKey].label}
-                </option>
-              ))}
-            </select>
+        {/* Multi Dropdowns Row: Employee, Category, Payment & Reset */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Employee Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/80">
+              <FiUser className="h-3.5 w-3.5 text-slate-500" />
+              <select
+                value={employeeFilter}
+                onChange={(e) => setEmployeeFilter(e.target.value)}
+                className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer max-w-[150px] sm:max-w-xs truncate"
+              >
+                <option value="ALL">All Employees ({employeeList.length})</option>
+                {employeeList.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name} {emp.email ? `(${emp.email})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category Dropdown */}
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/80">
+              <FiTag className="h-3.5 w-3.5 text-slate-500" />
+              <select
+                value={activeCategory}
+                onChange={(e) => handleCategorySelect(e.target.value)}
+                className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
+              >
+                <option value="ALL">All Categories</option>
+                {Object.keys(CATEGORY_META).map((catKey) => (
+                  <option key={catKey} value={catKey}>
+                    {CATEGORY_META[catKey].icon} {CATEGORY_META[catKey].label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Payment Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/80">
+              <FiCreditCard className="h-3.5 w-3.5 text-slate-500" />
+              <select
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value)}
+                className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
+              >
+                <option value="ALL">All Payment Statuses</option>
+                <option value="UNPAID">Unpaid / Pending Payout</option>
+                <option value="IN_PROCESS">In Process</option>
+                <option value="PAID">Disbursed / Paid</option>
+              </select>
+            </div>
+
+            {/* Reset All Filters */}
+            {(search ||
+              statusFilter !== "ALL" ||
+              activeCategory !== "ALL" ||
+              employeeFilter !== "ALL" ||
+              paymentFilter !== "ALL") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("ALL");
+                  handleCategorySelect("ALL");
+                  setEmployeeFilter("ALL");
+                  setPaymentFilter("ALL");
+                }}
+                className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer ml-1"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
 
-          {/* Employee Filter */}
-          <div className="flex items-center gap-1.5">
-            <FiUser className="h-3.5 w-3.5 text-slate-400" />
-            <select
-              value={employeeFilter}
-              onChange={(e) => setEmployeeFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-hidden shadow-2xs cursor-pointer"
-            >
-              <option value="ALL">All Employees ({employeeList.length})</option>
-              {employeeList.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name} ({emp.email || `#${emp.id}`})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Payment Status Filter */}
-          <div className="flex items-center gap-1.5">
-            <FiCreditCard className="h-3.5 w-3.5 text-slate-400" />
-            <select
-              value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-hidden shadow-2xs cursor-pointer"
-            >
-              <option value="ALL">All Payment Statuses</option>
-              <option value="UNPAID">Unpaid Payouts</option>
-              <option value="PROCESSING">Processing Payouts</option>
-              <option value="PAID">Paid / Disbursed</option>
-            </select>
-          </div>
-
-          {/* Reset Filters button if any filter active */}
-          {(search ||
-            statusFilter !== "ALL" ||
-            categoryFilter !== "ALL" ||
-            employeeFilter !== "ALL" ||
-            paymentFilter !== "ALL") && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearch("");
-                setStatusFilter("ALL");
-                setCategoryFilter("ALL");
-                setEmployeeFilter("ALL");
-                setPaymentFilter("ALL");
-              }}
-              className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline ml-auto cursor-pointer"
-            >
-              Reset Filters
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 2. Dynamic Financial Totals & Summary Bar (Without Tax Stats) */}
-      <div className="rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/80 via-indigo-50/70 to-blue-50/80 p-4 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20">
-              <FaRupeeSign className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-900">
-                  Total Filtered Expenses
-                </span>
-                <span className="rounded-full bg-blue-200/80 px-2 py-0.2 text-[10px] font-bold text-blue-900">
-                  {filteredSummary.count} claims
-                </span>
-              </div>
-              <div className="text-2xl font-black text-blue-950 font-mono tracking-tight mt-0.5">
-                ₹{Number(filteredSummary.totalAmount).toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Detailed Financial Breakdown Badges */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
-            <div className="bg-white/80 border border-emerald-200 rounded-xl px-3 py-1.5 shadow-2xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
-                Approved Reimbursable
-              </span>
-              <span className="font-mono font-bold text-emerald-900 text-sm">
-                ₹{Number(filteredSummary.approvedAmount).toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })} ({filteredSummary.approvedCount})
-              </span>
-            </div>
-
-            <div className="bg-white/80 border border-amber-200 rounded-xl px-3 py-1.5 shadow-2xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">
-                Pending Approval
-              </span>
-              <span className="font-mono font-bold text-amber-900 text-sm">
-                ₹{Number(filteredSummary.pendingAmount).toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })} ({filteredSummary.pendingCount})
-              </span>
-            </div>
-
-            <div className="bg-white/80 border border-rose-200 rounded-xl px-3 py-1.5 shadow-2xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">
-                Rejected Claims
-              </span>
-              <span className="font-mono font-bold text-rose-900 text-sm">
-                ₹{Number(filteredSummary.rejectedAmount).toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })} ({filteredSummary.rejectedCount})
-              </span>
-            </div>
+          <div className="text-xs font-semibold text-slate-600">
+            Showing <strong className="text-slate-900">{filteredClaims.length}</strong> claims
           </div>
         </div>
       </div>
 
-      {/* 3. Bulk Action Floating Bar (When items selected) */}
+      {/* Floating Multi-Select Bulk Actions Toolbar */}
       {selectedIds.length > 0 && (
-        <div className="sticky top-4 z-20 flex items-center justify-between rounded-2xl bg-slate-900 text-white p-3.5 shadow-xl border border-slate-800 animate-fadeIn">
+        <div className="sticky top-4 z-30 flex items-center justify-between gap-3 rounded-2xl border border-blue-300 bg-slate-900 text-white p-3.5 sm:p-4 shadow-xl animate-fadeIn">
           <div className="flex items-center gap-3">
-            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-600 font-black text-xs">
+            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-600 text-xs font-black">
               {selectedIds.length}
             </span>
             <div>
-              <span className="text-xs font-bold">
-                {selectedIds.length} pending claims selected
-              </span>
-              <span className="text-xs text-slate-400 block font-mono">
-                Total: ₹{Number(selectedClaimsTotalAmount).toLocaleString("en-IN")}
-              </span>
+              <p className="text-xs font-bold">
+                {selectedIds.length} Pending {selectedIds.length === 1 ? "claim" : "claims"} selected
+              </p>
+              <p className="text-[11px] text-slate-300 font-mono">
+                Total sum: ₹{Number(selectedClaimsTotalAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </p>
             </div>
           </div>
 
@@ -629,514 +561,293 @@ export default function ClaimApprovalsTable({
             <button
               type="button"
               onClick={() => setSelectedIds([])}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer"
+              className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-300 hover:bg-slate-700 transition cursor-pointer"
             >
-              Clear
+              Deselect All
             </button>
+
             <button
               type="button"
-              onClick={() =>
-                setBulkModal({
-                  isOpen: true,
-                  type: "approve",
-                  remarks: "Bulk approved by Admin",
-                  submitting: false,
-                })
-              }
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer"
-            >
-              <FiCheck className="h-3.5 w-3.5" />
-              <span>Approve All Selected</span>
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setBulkModal({
-                  isOpen: true,
-                  type: "reject",
-                  remarks: "",
-                  submitting: false,
-                })
-              }
-              className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-rose-700 active:scale-95 transition cursor-pointer"
+              onClick={() => handleOpenBulkModal("reject")}
+              className="flex items-center gap-1 rounded-xl bg-rose-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-600/30 hover:bg-rose-700 transition cursor-pointer"
             >
               <FiX className="h-3.5 w-3.5" />
-              <span>Reject All Selected</span>
+              <span>Reject Selected</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOpenBulkModal("approve")}
+              className="flex items-center gap-1 rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-600/30 hover:bg-emerald-700 transition cursor-pointer"
+            >
+              <FiCheck className="h-3.5 w-3.5" />
+              <span>Approve Selected</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* 4. Main Table / Cards View */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
+      {/* Main Approvals Table */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center p-14 text-slate-400">
-            <FiLoader className="h-8 w-8 animate-spin text-blue-600" />
-            <p className="mt-3 text-xs font-semibold text-slate-600">
-              Loading claims approvals queue...
+          <div className="flex flex-col items-center justify-center p-16 text-slate-400">
+            <FiLoader className="h-9 w-9 animate-spin text-blue-600" />
+            <p className="mt-3 text-xs font-bold text-slate-600">
+              Loading approvals queue...
             </p>
           </div>
         ) : filteredClaims.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-14 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 border border-slate-200">
-              <FiFileText className="h-7 w-7" />
+          <div className="flex flex-col items-center justify-center p-16 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-50 text-slate-400 border border-slate-200">
+              <FiCheckCircle className="h-8 w-8 text-emerald-500" />
             </div>
-            <h3 className="mt-3 text-sm font-bold text-slate-800">
-              No expense claims found
+            <h3 className="mt-4 text-base font-black text-slate-900">
+              Approvals Queue is Clear!
             </h3>
             <p className="mt-1 text-xs text-slate-500 max-w-sm">
-              {search || statusFilter !== "ALL" || categoryFilter !== "ALL" || employeeFilter !== "ALL" || paymentFilter !== "ALL"
-                ? "Try clearing your search query or adjusting your filters."
-                : "There are currently no employee expense claims in this queue."}
+              There are no pending claims matching your filter criteria.
             </p>
           </div>
         ) : (
-          <>
-            {/* Desktop Table View */}
-            <div className="hidden xl:block overflow-x-auto">
-              <table className="w-full min-w-[1150px] text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                    <th className="py-3.5 px-3 w-10 text-center">
-                      <input
-                        type="checkbox"
-                        checked={allPendingSelected}
-                        onChange={toggleSelectAllPending}
-                        disabled={pendingFilteredClaims.length === 0}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        title="Select all pending claims"
-                      />
-                    </th>
-                    <th className="py-3.5 px-4 w-40 whitespace-nowrap">Claim ID & Date</th>
-                    <th className="py-3.5 px-4 w-48 whitespace-nowrap">Employee</th>
-                    <th className="py-3.5 px-4 min-w-[220px]">Expense & Purpose</th>
-                    <th className="py-3.5 px-4 min-w-[200px]">Merchant / Bill Details</th>
-                    <th className="py-3.5 px-4 w-36 whitespace-nowrap text-right">Total Amount (₹)</th>
-                    <th className="py-3.5 px-4 w-28 whitespace-nowrap text-center">Bill / Receipt</th>
-                    <th className="py-3.5 px-4 w-36 whitespace-nowrap text-center">Status</th>
-                    <th className="py-3.5 px-4 w-48 whitespace-nowrap text-right">Admin Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                  {filteredClaims.map((claim) => {
-                    const catMeta = CATEGORY_META[claim.category] || CATEGORY_META.OTHER;
-                    const isSelected = selectedIds.includes(claim.id);
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3.5 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allPendingSelected}
+                      onChange={toggleSelectAllPending}
+                      disabled={pendingFilteredClaims.length === 0}
+                      title="Select all pending claims in view"
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
+                    />
+                  </th>
+                  <th className="px-4 py-3.5">Employee</th>
+                  <th className="px-4 py-3.5">Claim ID & Category</th>
+                  <th className="px-4 py-3.5">Purpose & Merchant</th>
+                  <th className="px-4 py-3.5">Expense Date</th>
+                  <th className="px-4 py-3.5">Amount (INR)</th>
+                  <th className="px-4 py-3.5">Bill Receipt</th>
+                  <th className="px-4 py-3.5">Status</th>
+                  <th className="px-4 py-3.5">Disbursement</th>
+                  <th className="px-4 py-3.5 text-right">Audit Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredClaims.map((claim) => {
+                  const catMeta =
+                    CATEGORY_META[claim.category] || CATEGORY_META.OTHER;
+                  const isSelected = selectedIds.includes(claim.id);
+                  const isPending = claim.status === "PENDING";
+                  const empName = claim.user?.name || "Employee";
+                  const empEmail = claim.user?.email || "";
 
-                    return (
-                      <tr
-                        key={claim.id}
-                        className={`transition duration-150 ${
-                          isSelected
-                            ? "bg-blue-50/50 hover:bg-blue-50/80"
-                            : "hover:bg-slate-50/80"
-                        }`}
-                      >
-                        {/* Checkbox */}
-                        <td className="py-4 px-3 text-center">
-                          {claim.status === "PENDING" ? (
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleSelectClaim(claim.id)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            />
-                          ) : (
-                            <span className="text-slate-300">•</span>
-                          )}
-                        </td>
+                  return (
+                    <tr
+                      key={claim.id}
+                      className={`hover:bg-slate-50/80 transition ${
+                        isSelected ? "bg-blue-50/50" : ""
+                      }`}
+                    >
+                      {/* Checkbox */}
+                      <td className="px-4 py-3.5">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectClaim(claim.id)}
+                          disabled={!isPending}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4 disabled:opacity-30"
+                        />
+                      </td>
 
-                        {/* Claim # & Date */}
-                        <td className="py-4 px-4 whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => setInspectingClaim(claim)}
-                            className="font-mono font-bold text-blue-600 hover:text-blue-800 hover:underline text-[13px] tracking-tight text-left cursor-pointer"
-                          >
-                            {claim.claimNumber}
-                          </button>
-                          <div className="text-[11px] font-medium text-slate-500 flex items-center gap-1.5 mt-0.5">
-                            <FiClock className="h-3 w-3 text-slate-400" />
-                            <span>{claim.expenseDate}</span>
+                      {/* Employee Profile */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-slate-700 to-slate-900 text-[11px] font-black text-white shadow-2xs">
+                            {getInitials(empName)}
                           </div>
-                        </td>
-
-                        {/* Employee */}
-                        <td className="py-4 px-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2.5">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-100/80 text-blue-700 font-black text-xs border border-blue-200">
-                              {claim.user?.name
-                                ? claim.user.name[0].toUpperCase()
-                                : "U"}
+                          <div className="min-w-0 max-w-[140px]">
+                            <div className="font-bold text-slate-900 truncate">
+                              {empName}
                             </div>
-                            <div className="min-w-0">
-                              <div className="font-bold text-slate-900 truncate">
-                                {claim.user?.name || "Employee"}
-                              </div>
-                              <div className="text-[11px] text-slate-400 truncate">
-                                {claim.user?.email || `#${claim.userId}`}
-                              </div>
+                            <div className="text-[10px] text-slate-500 truncate">
+                              {empEmail || "—"}
                             </div>
                           </div>
-                        </td>
-
-                        {/* Expense Title & Category */}
-                        <td className="py-4 px-4">
-                          <div className="flex flex-col items-start gap-1">
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${catMeta.color}`}
-                            >
-                              <span>{catMeta.icon}</span>
-                              <span>{catMeta.label}</span>
-                            </span>
-                            <div
-                              onClick={() => setInspectingClaim(claim)}
-                              className="font-semibold text-slate-900 hover:text-blue-600 line-clamp-2 leading-snug cursor-pointer"
-                              title={claim.title}
-                            >
-                              {claim.title}
-                            </div>
-                            {claim.description && (
-                              <div
-                                className="text-[11px] text-slate-500 line-clamp-1"
-                                title={claim.description}
-                              >
-                                {claim.description}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Merchant / Bill Details */}
-                        <td className="py-4 px-4">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-slate-800 line-clamp-1" title={claim.merchantName || "—"}>
-                              {claim.merchantName || "—"}
-                            </span>
-                            <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2">
-                              {claim.invoiceNumber && (
-                                <span className="font-mono text-slate-600">
-                                  Bill#: <strong>{claim.invoiceNumber}</strong>
-                                </span>
-                              )}
-                              {claim.gstNumber && (
-                                <span className="font-mono text-[10px] text-slate-400">
-                                  GST: {claim.gstNumber}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Amount */}
-                        <td className="py-4 px-4 whitespace-nowrap text-right">
-                          <div className="text-sm font-black text-slate-900 font-mono tracking-tight">
-                            ₹{Number(claim.amount).toLocaleString("en-IN", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </div>
-                        </td>
-
-                        {/* Receipt */}
-                        <td className="py-4 px-4 whitespace-nowrap text-center">
-                          {claim.receiptUrl ? (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedReceiptClaim(claim)}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-1.5 text-xs font-bold text-blue-700 shadow-2xs hover:bg-blue-100 hover:border-blue-300 transition cursor-pointer"
-                            >
-                              <FiEye className="h-3.5 w-3.5" />
-                              <span>View Bill</span>
-                            </button>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">
-                              No Bill
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-4 px-4 whitespace-nowrap text-center">
-                          {getStatusBadge(claim.status)}
-                          {claim.paymentStatus && claim.status === "APPROVED" && (
-                            <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wider">
-                              Pay: {claim.paymentStatus}
-                            </div>
-                          )}
-                          {claim.adminRemarks && (
-                            <div
-                              className="text-[10px] text-slate-500 mt-0.5 max-w-[140px] mx-auto truncate italic"
-                              title={claim.adminRemarks}
-                            >
-                              &quot;{claim.adminRemarks}&quot;
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-4 px-4 whitespace-nowrap text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setInspectingClaim(claim)}
-                              className="p-1.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 shadow-2xs transition cursor-pointer"
-                              title="Inspect Full Details"
-                            >
-                              <FiEye className="h-3.5 w-3.5" />
-                            </button>
-
-                            {claim.status === "PENDING" ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenAction(claim, "approve")}
-                                  className="flex items-center gap-1 rounded-xl bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer"
-                                  title="Approve Claim"
-                                >
-                                  <FiCheck className="h-3.5 w-3.5" />
-                                  <span>Approve</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenAction(claim, "reject")}
-                                  className="flex items-center gap-1 rounded-xl bg-rose-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-rose-700 active:scale-95 transition cursor-pointer"
-                                  title="Reject Claim"
-                                >
-                                  <FiX className="h-3.5 w-3.5" />
-                                  <span>Reject</span>
-                                </button>
-                              </>
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => setInspectingClaim(claim)}
-                                  className="text-xs font-semibold text-blue-600 hover:underline px-2 py-1 cursor-pointer"
-                                >
-                                  View Details
-                                </button>
-                                {claim.status === "CANCELLED" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteClaim(claim.id, claim.claimNumber)}
-                                    className="p-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-2xs transition cursor-pointer"
-                                    title="Delete Cancelled Claim"
-                                  >
-                                    <FiTrash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile & Tablet Card View */}
-            <div className="block xl:hidden divide-y divide-slate-100">
-              {filteredClaims.map((claim) => {
-                const catMeta = CATEGORY_META[claim.category] || CATEGORY_META.OTHER;
-                const isSelected = selectedIds.includes(claim.id);
-
-                return (
-                  <div
-                    key={claim.id}
-                    className={`p-4 sm:p-5 space-y-3.5 transition ${
-                      isSelected ? "bg-blue-50/50" : "hover:bg-slate-50/60"
-                    }`}
-                  >
-                    {/* Header Row */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {claim.status === "PENDING" && (
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelectClaim(claim.id)}
-                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                          />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setInspectingClaim(claim)}
-                          className="text-xs font-bold font-mono text-blue-600 hover:underline"
-                        >
-                          {claim.claimNumber}
-                        </button>
-                        <span className="text-slate-300">•</span>
-                        <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
-                          <FiClock className="h-3 w-3 text-slate-400" />
-                          {claim.expenseDate}
-                        </span>
-                      </div>
-                      {getStatusBadge(claim.status)}
-                    </div>
-
-                    {/* Employee & Amount Row */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 text-blue-700 font-bold text-[10px]">
-                            {claim.user?.name ? claim.user.name[0].toUpperCase() : "U"}
-                          </div>
-                          <span className="font-bold text-slate-900 text-sm truncate">
-                            {claim.user?.name || "Employee"}
-                          </span>
                         </div>
-                        <h4
+                      </td>
+
+                      {/* Claim ID & Category */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{catMeta.icon}</span>
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => setInspectingClaim(claim)}
+                              className="font-mono font-black text-blue-600 hover:underline block"
+                            >
+                              {claim.claimNumber}
+                            </button>
+                            <span className="text-[10px] text-slate-500 font-semibold">
+                              {catMeta.label}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Purpose & Merchant */}
+                      <td className="px-4 py-3.5 max-w-xs">
+                        <div
                           onClick={() => setInspectingClaim(claim)}
-                          className="text-xs font-semibold text-slate-800 pt-1 line-clamp-2 cursor-pointer hover:text-blue-600"
+                          className="font-bold text-slate-900 hover:text-blue-600 truncate cursor-pointer"
                         >
                           {claim.title}
-                        </h4>
-                      </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 truncate mt-0.5">
+                          {claim.merchantName && (
+                            <span className="truncate">
+                              🏪 {claim.merchantName}
+                            </span>
+                          )}
+                          {claim.invoiceNumber && (
+                            <span className="font-mono text-slate-400">
+                              #{claim.invoiceNumber}
+                            </span>
+                          )}
+                        </div>
+                      </td>
 
-                      <div className="text-right shrink-0">
-                        <div className="text-base font-black text-slate-900 font-mono tracking-tight">
+                      {/* Expense Date */}
+                      <td className="px-4 py-3.5 whitespace-nowrap text-slate-600 font-medium">
+                        {claim.expenseDate}
+                      </td>
+
+                      {/* Amount */}
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span className="font-mono font-black text-slate-900 text-sm">
                           ₹{Number(claim.amount).toLocaleString("en-IN", {
                             minimumFractionDigits: 2,
                           })}
-                        </div>
-                        <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.2 text-[10px] font-bold border mt-0.5 ${catMeta.color}`}>
-                          <span>{catMeta.icon}</span>
-                          <span>{catMeta.label}</span>
                         </span>
-                      </div>
-                    </div>
-
-                    {/* Merchant & Bill Info */}
-                    {(claim.merchantName || claim.invoiceNumber) && (
-                      <div className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 flex flex-wrap items-center justify-between gap-2">
-                        <span>
-                          <strong className="text-slate-500">Merchant:</strong> {claim.merchantName || "—"}
-                        </span>
-                        {claim.invoiceNumber && (
-                          <span className="font-mono">
-                            <strong className="text-slate-500">Bill#:</strong> {claim.invoiceNumber}
-                          </span>
+                        {claim.taxAmount > 0 && (
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            incl. ₹{claim.taxAmount} GST
+                          </div>
                         )}
-                      </div>
-                    )}
+                      </td>
 
-                    {/* Admin remarks */}
-                    {claim.adminRemarks && (
-                      <p className="text-xs text-slate-700 italic bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/70">
-                        <strong>Admin Remarks:</strong> {claim.adminRemarks}
-                      </p>
-                    )}
-
-                    {/* Mobile Action Bar */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
-                      <div className="flex items-center gap-2">
+                      {/* Receipt */}
+                      <td className="px-4 py-3.5 whitespace-nowrap">
                         {claim.receiptUrl ? (
                           <button
                             type="button"
                             onClick={() => setSelectedReceiptClaim(claim)}
-                            className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
+                            className="inline-flex items-center gap-1 rounded-lg bg-blue-50 border border-blue-200 px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100 cursor-pointer"
                           >
-                            <FiEye className="h-3.5 w-3.5" />
+                            <FiFileText className="h-3 w-3" />
                             <span>View Bill</span>
                           </button>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">No Bill</span>
+                          <span className="text-slate-400 text-[11px]">No Receipt</span>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => setInspectingClaim(claim)}
-                          className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-                        >
-                          Details
-                        </button>
-                        {claim.status === "CANCELLED" && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteClaim(claim.id, claim.claimNumber)}
-                            className="p-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 shadow-2xs transition cursor-pointer"
-                            title="Delete Cancelled Claim"
-                          >
-                            <FiTrash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
+                      </td>
 
-                      {claim.status === "PENDING" && (
-                        <div className="flex items-center gap-2">
+                      {/* Status */}
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        {getStatusBadge(claim.status)}
+                      </td>
+
+                      {/* Payment Status */}
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        {getPaymentBadge(claim.paymentStatus)}
+                      </td>
+
+                      {/* Audit Actions */}
+                      <td className="px-4 py-3.5 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {isPending && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAction(claim, "approve")}
+                                className="flex items-center gap-1 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition cursor-pointer shadow-2xs"
+                                title="Approve Claim"
+                              >
+                                <FiCheck className="h-3.5 w-3.5" />
+                                <span>Approve</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAction(claim, "reject")}
+                                className="flex items-center gap-1 rounded-lg bg-rose-50 border border-rose-200 px-2 py-1 text-[11px] font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer shadow-2xs"
+                                title="Reject Claim"
+                              >
+                                <FiX className="h-3.5 w-3.5" />
+                                <span>Reject</span>
+                              </button>
+                            </>
+                          )}
+
                           <button
                             type="button"
-                            onClick={() => handleOpenAction(claim, "approve")}
-                            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer"
+                            onClick={() => setInspectingClaim(claim)}
+                            className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                            title="Inspect Detailed Voucher"
                           >
-                            <FiCheck className="h-3.5 w-3.5" />
-                            <span>Approve</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenAction(claim, "reject")}
-                            className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-rose-700 active:scale-95 transition cursor-pointer"
-                          >
-                            <FiX className="h-3.5 w-3.5" />
-                            <span>Reject</span>
+                            <FiEye className="h-4 w-4" />
                           </button>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Inspect Single Claim Details Modal */}
-      {inspectingClaim && (
-        <ClaimDetailsModal
-          isOpen={!!inspectingClaim}
-          onClose={() => setInspectingClaim(null)}
-          claim={inspectingClaim}
-          onRefresh={onRefresh}
-          isAdmin={true}
-        />
-      )}
-
-      {/* Bill Receipt Viewer Modal */}
-      {selectedReceiptClaim && (
-        <ReceiptViewerModal
-          isOpen={!!selectedReceiptClaim}
-          onClose={() => setSelectedReceiptClaim(null)}
-          receiptUrl={selectedReceiptClaim.receiptUrl}
-          originalName={selectedReceiptClaim.receiptOriginalName}
-          claimNumber={selectedReceiptClaim.claimNumber}
-          ocrRawText={selectedReceiptClaim.ocrRawText}
-          amount={selectedReceiptClaim.amount}
-          merchantName={selectedReceiptClaim.merchantName}
-        />
-      )}
-
-      {/* Single Approve / Reject Dialog Modal */}
+      {/* Single Action Modal (Approve / Reject) */}
       {actionModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50">
-              <div className="flex items-center gap-2">
-                {actionModal.type === "approve" ? (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                    <FiCheck className="h-4 w-4" />
-                  </div>
-                ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
-                    <FiX className="h-4 w-4" />
-                  </div>
-                )}
-                <h3 className="text-sm font-bold text-slate-900">
-                  {actionModal.type === "approve"
-                    ? "Approve Expense Claim"
-                    : "Reject Expense Claim"}
-                </h3>
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-slate-800">
+            <div
+              className={`px-6 py-4 border-b flex items-center justify-between ${
+                actionModal.type === "approve"
+                  ? "bg-emerald-50/80 border-emerald-100"
+                  : "bg-rose-50/80 border-rose-100"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl text-white ${
+                    actionModal.type === "approve"
+                      ? "bg-emerald-600"
+                      : "bg-rose-600"
+                  }`}
+                >
+                  {actionModal.type === "approve" ? (
+                    <FiCheck className="h-5 w-5" />
+                  ) : (
+                    <FiX className="h-5 w-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">
+                    {actionModal.type === "approve"
+                      ? "Approve Expense Claim"
+                      : "Reject Expense Claim"}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-mono">
+                    {actionModal.claim?.claimNumber} • ₹
+                    {Number(actionModal.claim?.amount).toLocaleString("en-IN")}
+                  </p>
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={() =>
@@ -1148,49 +859,21 @@ export default function ClaimApprovalsTable({
                     submitting: false,
                   })
                 }
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                <FiX className="h-5 w-5" />
+                <FiX className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleConfirmAction} className="p-5 space-y-4">
-              <div className="rounded-2xl bg-slate-50 p-3.5 text-xs text-slate-700 space-y-1.5 border border-slate-200/60">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Claim Number:</span>
-                  <span className="font-bold font-mono text-slate-900">
-                    {actionModal.claim?.claimNumber}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Employee:</span>
-                  <span className="font-bold text-slate-900">
-                    {actionModal.claim?.user?.name || "Employee"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Expense:</span>
-                  <span className="font-bold text-slate-900">
-                    {actionModal.claim?.category} • {actionModal.claim?.title}
-                  </span>
-                </div>
-                <div className="flex justify-between pt-1 border-t border-slate-200/80">
-                  <span className="font-bold text-slate-700">Total Claim Amount:</span>
-                  <span className="font-black text-sm text-blue-900 font-mono">
-                    ₹{Number(actionModal.claim?.amount).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              </div>
-
+            <form onSubmit={handleConfirmAction} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   {actionModal.type === "approve"
-                    ? "Approval Remarks (Optional)"
-                    : "Reason for Rejection (Mandatory)"}
+                    ? "Approval Remarks / Notes (Optional)"
+                    : "Rejection Reason (Required)"}
                 </label>
                 <textarea
                   rows={3}
-                  required={actionModal.type === "reject"}
                   value={actionModal.remarks}
                   onChange={(e) =>
                     setActionModal((prev) => ({
@@ -1198,12 +881,13 @@ export default function ClaimApprovalsTable({
                       remarks: e.target.value,
                     }))
                   }
+                  required={actionModal.type === "reject"}
                   placeholder={
                     actionModal.type === "approve"
-                      ? "e.g. Approved as per travel policy"
-                      : "Please specify why this claim is being declined..."
+                      ? "E.g. Approved as per company travel policy."
+                      : "E.g. Bill receipt is unclear or exceeds daily allowance limit."
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
                 />
               </div>
 
@@ -1219,26 +903,26 @@ export default function ClaimApprovalsTable({
                       submitting: false,
                     })
                   }
-                  className="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={actionModal.submitting}
-                  className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold text-white shadow-md active:scale-95 transition cursor-pointer ${
+                  className={`flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-bold text-white shadow-md transition cursor-pointer ${
                     actionModal.type === "approve"
                       ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
                       : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20"
                   }`}
                 >
                   {actionModal.submitting && (
-                    <FiLoader className="h-4 w-4 animate-spin" />
+                    <FiLoader className="h-3.5 w-3.5 animate-spin" />
                   )}
                   <span>
-                    {actionModal.type === "approve"
-                      ? "Confirm Approval"
-                      : "Confirm Rejection"}
+                    Confirm{" "}
+                    {actionModal.type === "approve" ? "Approval" : "Rejection"}
                   </span>
                 </button>
               </div>
@@ -1247,27 +931,43 @@ export default function ClaimApprovalsTable({
         </div>
       )}
 
-      {/* Bulk Approval / Rejection Modal */}
+      {/* Bulk Action Modal */}
       {bulkModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-fadeIn">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50">
-              <div className="flex items-center gap-2">
-                {bulkModal.type === "approve" ? (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                    <FiCheck className="h-4 w-4" />
-                  </div>
-                ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
-                    <FiX className="h-4 w-4" />
-                  </div>
-                )}
-                <h3 className="text-sm font-bold text-slate-900">
-                  {bulkModal.type === "approve"
-                    ? `Bulk Approve (${selectedIds.length} Claims)`
-                    : `Bulk Reject (${selectedIds.length} Claims)`}
-                </h3>
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-slate-800">
+            <div
+              className={`px-6 py-4 border-b flex items-center justify-between ${
+                bulkModal.type === "approve"
+                  ? "bg-emerald-50/80 border-emerald-100"
+                  : "bg-rose-50/80 border-rose-100"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl text-white ${
+                    bulkModal.type === "approve"
+                      ? "bg-emerald-600"
+                      : "bg-rose-600"
+                  }`}
+                >
+                  {bulkModal.type === "approve" ? (
+                    <FiCheck className="h-5 w-5" />
+                  ) : (
+                    <FiX className="h-5 w-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">
+                    Bulk {bulkModal.type === "approve" ? "Approve" : "Reject"}{" "}
+                    {selectedIds.length} Claims
+                  </h3>
+                  <p className="text-xs text-slate-500 font-mono">
+                    Total: ₹
+                    {Number(selectedClaimsTotalAmount).toLocaleString("en-IN")}
+                  </p>
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={() =>
@@ -1278,37 +978,21 @@ export default function ClaimApprovalsTable({
                     submitting: false,
                   })
                 }
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                <FiX className="h-5 w-5" />
+                <FiX className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleConfirmBulkAction} className="p-5 space-y-4">
-              <div className="rounded-2xl bg-blue-50/70 p-4 border border-blue-200/80 text-xs text-blue-900 space-y-1">
-                <div className="flex justify-between">
-                  <span>Selected Claims Count:</span>
-                  <strong>{selectedIds.length} claims</strong>
-                </div>
-                <div className="flex justify-between text-sm font-black pt-1 border-t border-blue-200">
-                  <span>Combined Total:</span>
-                  <span className="font-mono">
-                    ₹{Number(selectedClaimsTotalAmount).toLocaleString("en-IN", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
-              </div>
-
+            <form onSubmit={handleConfirmBulkAction} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   {bulkModal.type === "approve"
-                    ? "Common Approval Remarks (Optional)"
-                    : "Reason for Bulk Rejection (Mandatory)"}
+                    ? "Bulk Approval Remarks (Optional)"
+                    : "Bulk Rejection Reason (Required)"}
                 </label>
                 <textarea
                   rows={3}
-                  required={bulkModal.type === "reject"}
                   value={bulkModal.remarks}
                   onChange={(e) =>
                     setBulkModal((prev) => ({
@@ -1316,12 +1000,13 @@ export default function ClaimApprovalsTable({
                       remarks: e.target.value,
                     }))
                   }
+                  required={bulkModal.type === "reject"}
                   placeholder={
                     bulkModal.type === "approve"
-                      ? "e.g. Bulk approved verified travel expenses"
-                      : "State the reason for rejecting these claims..."
+                      ? "E.g. Approved all selected items during monthly audit."
+                      : "E.g. Duplicate entries or missing GST invoices."
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
                 />
               </div>
 
@@ -1336,32 +1021,58 @@ export default function ClaimApprovalsTable({
                       submitting: false,
                     })
                   }
-                  className="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={bulkModal.submitting}
-                  className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold text-white shadow-md active:scale-95 transition cursor-pointer ${
+                  className={`flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-bold text-white shadow-md transition cursor-pointer ${
                     bulkModal.type === "approve"
                       ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
                       : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20"
                   }`}
                 >
                   {bulkModal.submitting && (
-                    <FiLoader className="h-4 w-4 animate-spin" />
+                    <FiLoader className="h-3.5 w-3.5 animate-spin" />
                   )}
                   <span>
-                    {bulkModal.type === "approve"
-                      ? `Approve ${selectedIds.length} Claims`
-                      : `Reject ${selectedIds.length} Claims`}
+                    Confirm{" "}
+                    {bulkModal.type === "approve" ? "Approval" : "Rejection"} (
+                    {selectedIds.length})
                   </span>
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Inspect Single Claim Details Modal */}
+      {inspectingClaim && (
+        <ClaimDetailsModal
+          isOpen={!!inspectingClaim}
+          onClose={() => setInspectingClaim(null)}
+          claim={inspectingClaim}
+          onRefresh={onRefresh}
+          isAdmin={true}
+        />
+      )}
+
+      {/* Receipt Preview Modal */}
+      {selectedReceiptClaim && (
+        <ReceiptViewerModal
+          isOpen={!!selectedReceiptClaim}
+          onClose={() => setSelectedReceiptClaim(null)}
+          receiptUrl={selectedReceiptClaim.receiptUrl}
+          originalName={selectedReceiptClaim.receiptOriginalName}
+          claimNumber={selectedReceiptClaim.claimNumber}
+          ocrRawText={selectedReceiptClaim.ocrRawText}
+          amount={selectedReceiptClaim.amount}
+          merchantName={selectedReceiptClaim.merchantName}
+        />
       )}
     </div>
   );

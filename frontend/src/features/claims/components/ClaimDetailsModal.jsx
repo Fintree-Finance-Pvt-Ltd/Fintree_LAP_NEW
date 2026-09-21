@@ -4,35 +4,35 @@ import {
   FiCheck,
   FiCheckCircle,
   FiClock,
+  FiCopy,
   FiCreditCard,
   FiDownload,
   FiExternalLink,
   FiFileText,
+  FiHash,
   FiLoader,
   FiMail,
   FiPrinter,
+  FiShoppingBag,
+  FiTag,
+  FiUser,
   FiX,
-  FiXCircle
+  FiXCircle,
+  FiZap,
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";
-
-const CATEGORY_META = {
-  TRAVEL: { icon: "🚕", label: "Travel & Commute", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  FUEL: { icon: "⛽", label: "Fuel / Petrol", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  FOOD: { icon: "🍔", label: "Food & Meals", color: "bg-orange-50 text-orange-700 border-orange-200" },
-  HOTEL: { icon: "🏨", label: "Hotel & Stay", color: "bg-purple-50 text-purple-700 border-purple-200" },
-  OFFICE_SUPPLIES: { icon: "📎", label: "Office Supplies", color: "bg-slate-100 text-slate-700 border-slate-200" },
-  CLIENT_ENTERTAINMENT: { icon: "🤝", label: "Client Meeting", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  INTERNET_PHONE: { icon: "📱", label: "Telecom / Wifi", color: "bg-cyan-50 text-cyan-700 border-cyan-200" },
-  MEDICAL: { icon: "💊", label: "Medical & Health", color: "bg-rose-50 text-rose-700 border-rose-200" },
-  OTHER: { icon: "📝", label: "Miscellaneous", color: "bg-slate-100 text-slate-700 border-slate-200" },
-};
+import { CATEGORY_META } from "./ClaimApprovalsTable.jsx";
 
 function resolveReceiptUrl(rawUrl) {
   if (!rawUrl) return "";
   const str = String(rawUrl).trim();
-  if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("blob:") || str.startsWith("data:")) {
+  if (
+    str.startsWith("http://") ||
+    str.startsWith("https://") ||
+    str.startsWith("blob:") ||
+    str.startsWith("data:")
+  ) {
     return str;
   }
   const apiBase = import.meta.env.VITE_API_BASE_URL || "";
@@ -117,7 +117,7 @@ export default function ClaimDetailsModal({
     try {
       await claimsApi.updatePaymentStatus(claim.id, paymentForm);
       toast.success(
-        `Payment status updated to ${paymentForm.paymentStatus} for ${claim.claimNumber}.`
+        `Payment status updated to ${paymentForm.paymentStatus} for ${claim.claimNumber}.`,
       );
       if (onRefresh) onRefresh();
       onClose();
@@ -132,6 +132,12 @@ export default function ClaimDetailsModal({
     }
   };
 
+  const handleCopyText = (text, label) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    toast.info(`${label} copied to clipboard!`);
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -139,10 +145,10 @@ export default function ClaimDetailsModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-3 sm:p-5 animate-fadeIn">
       <div className="relative flex flex-col w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-slate-800">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/80">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
               <FiFileText className="h-5 w-5" />
             </div>
             <div>
@@ -158,16 +164,7 @@ export default function ClaimDetailsModal({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Submitted on{" "}
-                {claim.createdAt
-                  ? new Date(claim.createdAt).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "—"}
+                Submitted on {claim.createdAt ? new Date(claim.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
               </p>
             </div>
           </div>
@@ -176,308 +173,270 @@ export default function ClaimDetailsModal({
             <button
               type="button"
               onClick={handlePrint}
-              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 transition shadow-2xs cursor-pointer"
-              title="Print Expense Details"
+              className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              title="Print Expense Voucher"
             >
               <FiPrinter className="h-4 w-4" />
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shadow-2xs cursor-pointer"
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             >
-              <FiX className="h-4 w-4" />
+              <FiX className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        {/* Status Strip */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-2.5 bg-slate-100/70 border-b border-slate-200/80 text-xs">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-slate-500">Approval Status:</span>
-              {claim.status === "APPROVED" ? (
-                <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
-                  <FiCheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                  Approved
-                </span>
-              ) : claim.status === "REJECTED" ? (
-                <span className="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md">
-                  <FiXCircle className="h-3.5 w-3.5 text-rose-600" />
-                  Rejected
-                </span>
-              ) : claim.status === "CANCELLED" ? (
-                <span className="inline-flex items-center gap-1 font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-md">
-                  Cancelled
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
-                  <FiClock className="h-3.5 w-3.5 text-amber-600 animate-pulse" />
-                  Pending Review
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-slate-500">Payment:</span>
-              <span
-                className={`font-bold px-2 py-0.5 rounded-md uppercase text-[11px] ${
-                  claim.paymentStatus === "PAID"
-                    ? "bg-emerald-100 text-emerald-800"
-                    : claim.paymentStatus === "PROCESSING"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-slate-200 text-slate-700"
-                }`}
-              >
-                {claim.paymentStatus || "UNPAID"}
-              </span>
-            </div>
-          </div>
-
-          <div className="text-right font-mono font-black text-slate-900 text-sm">
-            Total: ₹{Number(claim.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-          </div>
-        </div>
-
-        {/* Sub-tabs Navigation */}
-        <div className="flex items-center gap-4 px-6 border-b border-slate-200 bg-white">
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-2 border-b border-slate-100 bg-white px-6 pt-2">
           <button
             type="button"
             onClick={() => setActiveSubTab("overview")}
-            className={`py-3 text-xs font-bold border-b-2 transition cursor-pointer ${
+            className={`border-b-2 px-4 py-2.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === "overview"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
-            Expense Overview & Particulars
+            <FiFileText className="h-3.5 w-3.5" />
+            <span>Voucher Breakdown</span>
           </button>
+
           {claim.receiptUrl && (
             <button
               type="button"
               onClick={() => setActiveSubTab("receipt")}
-              className={`flex items-center gap-1.5 py-3 text-xs font-bold border-b-2 transition cursor-pointer ${
+              className={`border-b-2 px-4 py-2.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                 activeSubTab === "receipt"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
-              <span>Bill Receipt & OCR</span>
-              <span className="rounded-full bg-blue-100 text-blue-700 px-1.5 py-0.2 text-[10px]">
-                Attached
-              </span>
+              <FiDownload className="h-3.5 w-3.5" />
+              <span>Bill Attachment & OCR</span>
             </button>
           )}
-          {isAdmin && claim.status === "APPROVED" && (
+
+          {isAdmin && (
             <button
               type="button"
               onClick={() => setActiveSubTab("payment")}
-              className={`flex items-center gap-1.5 py-3 text-xs font-bold border-b-2 transition cursor-pointer ${
+              className={`border-b-2 px-4 py-2.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                 activeSubTab === "payment"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
               <FiCreditCard className="h-3.5 w-3.5" />
-              <span>Disbursement & Payment</span>
+              <span>Disbursement & Settlement</span>
             </button>
           )}
         </div>
 
-        {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 bg-slate-50/40">
+        {/* Tab Content Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {activeSubTab === "overview" && (
-            <div className="space-y-5">
-              {/* Row 1: Employee Information & Expense Purpose */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Employee Card */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    Employee Details
+            <div className="space-y-6">
+              {/* Employee & Financial Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Employee Profile */}
+                <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 space-y-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Claimant Details
                   </span>
-                  <div className="mt-3 flex items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 font-black text-sm border border-blue-200">
-                      {claim.user?.name ? claim.user.name[0].toUpperCase() : "U"}
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white font-bold text-xs">
+                      {claim.user?.name ? claim.user.name.slice(0, 2).toUpperCase() : "EM"}
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-slate-900 text-sm truncate">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">
                         {claim.user?.name || "Employee"}
                       </h4>
-                      <div className="flex items-center gap-1 text-xs text-slate-500 truncate mt-0.5">
-                        <FiMail className="h-3 w-3 text-slate-400" />
-                        <span>{claim.user?.email || "—"}</span>
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-400 mt-0.5">
-                        Employee ID: #{claim.userId}
-                      </div>
+                      <p className="text-xs text-slate-500 flex items-center gap-1">
+                        <FiMail className="h-3 w-3" />
+                        {claim.user?.email || "—"}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Amount & Date Card */}
-                <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/60 to-indigo-50/60 p-4 shadow-2xs">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
-                    Financial Summary
-                  </span>
-                  <div className="mt-2 flex items-baseline justify-between">
-                    <div>
-                      <div className="text-2xl font-black text-blue-950 font-mono tracking-tight">
-                        ₹{Number(claim.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                      </div>
-                      <p className="text-[11px] text-blue-700 font-medium mt-0.5 flex items-center gap-1">
-                        <FiCalendar className="h-3 w-3" />
-                        Expense Date: <strong>{claim.expenseDate}</strong>
-                      </p>
-                    </div>
-                    {Number(claim.taxAmount) > 0 && (
-                      <div className="text-right text-xs">
-                        <span className="text-slate-500 block">GST / Tax:</span>
-                        <span className="font-mono font-bold text-slate-800">
-                          ₹{Number(claim.taxAmount).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
+                {/* Amount Highlight */}
+                <div className="rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/60 to-indigo-50/30 p-4 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider">
+                      Reimbursement Amount
+                    </span>
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-800">
+                      INR
+                    </span>
                   </div>
+                  <div className="text-2xl font-black text-slate-900 font-mono tracking-tight mt-2">
+                    ₹{Number(claim.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                  {claim.taxAmount > 0 && (
+                    <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                      Base: ₹{(Number(claim.amount) - Number(claim.taxAmount)).toFixed(2)} + GST: ₹{claim.taxAmount}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Row 2: Particular Expense Title & Description */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    Expense Purpose / Title
+              {/* Itemized Claim Breakdown Table */}
+              <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                    <tr>
+                      <th className="px-4 py-3">Expense Item</th>
+                      <th className="px-4 py-3">Expense Date</th>
+                      <th className="px-4 py-3">Merchant</th>
+                      <th className="px-4 py-3">Bill / Invoice#</th>
+                      <th className="px-4 py-3 text-right">Net Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr>
+                      <td className="px-4 py-3.5">
+                        <div className="font-bold text-slate-900">{claim.title}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Category: {catMeta.label}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 font-medium text-slate-700">
+                        {claim.expenseDate}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-700">
+                        {claim.merchantName || "—"}
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-700">
+                        {claim.invoiceNumber || "—"}
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900 text-sm">
+                        ₹{Number(claim.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Description & Business Justification */}
+              {claim.description && (
+                <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Business Justification / Description
                   </span>
-                  <h3 className="text-base font-black text-slate-900 mt-1">
-                    {claim.title}
-                  </h3>
+                  <p className="text-xs text-slate-700 leading-relaxed">
+                    {claim.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Audit Status & Remarks */}
+              <div className="rounded-2xl border border-slate-200/80 p-4 space-y-3">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Audit Trail & Status
+                </span>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-700">
+                      Approval Status:
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold border ${
+                        claim.status === "APPROVED"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : claim.status === "REJECTED"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}
+                    >
+                      {claim.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-700">
+                      Payment Settlement:
+                    </span>
+                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">
+                      {claim.paymentStatus || "UNPAID"}
+                    </span>
+                  </div>
                 </div>
 
-                {claim.description && (
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                      Description & Context
-                    </span>
-                    <p className="text-xs text-slate-700 mt-1 bg-slate-50 p-3 rounded-xl border border-slate-200/60 leading-relaxed">
-                      {claim.description}
-                    </p>
+                {claim.adminRemarks && (
+                  <div
+                    className={`mt-2 p-3 rounded-xl border text-xs ${
+                      claim.status === "REJECTED"
+                        ? "bg-rose-50 border-rose-200 text-rose-800"
+                        : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    }`}
+                  >
+                    <strong>
+                      {claim.status === "REJECTED"
+                        ? "Rejection Reason:"
+                        : "Admin Remarks:"}
+                    </strong>{" "}
+                    {claim.adminRemarks}
                   </div>
                 )}
               </div>
-
-              {/* Row 3: Merchant & Bill Details */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Vendor & Tax Invoice Details
-                </span>
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-                    <span className="text-slate-400 block text-[11px]">Merchant / Vendor</span>
-                    <strong className="text-slate-800 text-sm mt-0.5 block truncate">
-                      {claim.merchantName || "—"}
-                    </strong>
-                  </div>
-
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-                    <span className="text-slate-400 block text-[11px]">Invoice / Bill Number</span>
-                    <strong className="text-slate-800 font-mono text-sm mt-0.5 block truncate">
-                      {claim.invoiceNumber || "—"}
-                    </strong>
-                  </div>
-
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-                    <span className="text-slate-400 block text-[11px]">Vendor GSTIN</span>
-                    <strong className="text-slate-800 font-mono text-sm mt-0.5 block truncate">
-                      {claim.gstNumber || "—"}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 4: Admin Remarks & Workflow Trail */}
-              {(claim.adminRemarks || claim.approvedAt || claim.rejectedAt) && (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 shadow-2xs space-y-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                    Admin Approval Notes & History
-                  </span>
-                  {claim.adminRemarks && (
-                    <p className="text-xs font-semibold text-amber-950 italic bg-white/80 p-3 rounded-xl border border-amber-200/60">
-                      &quot;{claim.adminRemarks}&quot;
-                    </p>
-                  )}
-                  <div className="flex items-center gap-4 text-[11px] text-amber-800 mt-2">
-                    {claim.approvedAt && (
-                      <span>
-                        Approved on: {new Date(claim.approvedAt).toLocaleDateString("en-IN")}
-                      </span>
-                    )}
-                    {claim.rejectedAt && (
-                      <span>
-                        Rejected on: {new Date(claim.rejectedAt).toLocaleDateString("en-IN")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
-          {/* Sub-tab 2: Receipt & OCR */}
           {activeSubTab === "receipt" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700">
-                  Attached Invoice / Bill Document
+                  Uploaded Document: {claim.receiptOriginalName || "Receipt"}
                 </span>
                 <div className="flex items-center gap-2">
                   <a
                     href={fullReceiptUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-blue-600 hover:bg-slate-50 transition shadow-2xs"
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                   >
                     <FiExternalLink className="h-3.5 w-3.5" />
-                    <span>Open in Tab</span>
-                  </a>
-                  <a
-                    href={fullReceiptUrl}
-                    download={claim.receiptOriginalName || "receipt"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
-                  >
-                    <FiDownload className="h-3.5 w-3.5" />
-                    <span>Download</span>
+                    <span>Open in New Tab</span>
                   </a>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-900 p-3 flex items-center justify-center min-h-[350px]">
+              {/* Receipt Image / PDF Frame */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-900 p-2 overflow-hidden flex items-center justify-center min-h-[300px]">
                 {isPdf ? (
                   <iframe
-                    src={`${fullReceiptUrl}#toolbar=0`}
+                    src={fullReceiptUrl}
                     title="Receipt PDF"
-                    className="w-full h-[400px] rounded-xl bg-white"
+                    className="h-[450px] w-full rounded-xl bg-white"
                   />
                 ) : (
                   <img
                     src={fullReceiptUrl}
-                    alt="Expense Bill"
-                    className="max-h-[420px] max-w-full object-contain rounded-xl shadow-md"
+                    alt="Receipt Attachment"
+                    className="max-h-[450px] w-auto object-contain rounded-xl"
                   />
                 )}
               </div>
 
+              {/* OCR Text Drawer if available */}
               {claim.ocrRawText && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-2">
+                <div className="rounded-2xl border border-slate-200 p-4 space-y-2 bg-slate-50/50">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      OCR Extracted Raw Content
+                    <span className="text-xs font-bold text-slate-700">
+                      AI OCR Raw Extracted Text
                     </span>
-                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                      AI Extracted
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(claim.ocrRawText, "OCR text")}
+                      className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <FiCopy className="h-3 w-3" />
+                      <span>Copy Text</span>
+                    </button>
                   </div>
-                  <pre className="text-xs font-mono text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200/80 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                  <pre className="text-[11px] font-mono bg-white p-3 rounded-xl border border-slate-200 text-slate-700 max-h-40 overflow-y-auto whitespace-pre-wrap">
                     {claim.ocrRawText}
                   </pre>
                 </div>
@@ -485,179 +444,151 @@ export default function ClaimDetailsModal({
             </div>
           )}
 
-          {/* Sub-tab 3: Payment Disbursement (Admin Only) */}
           {activeSubTab === "payment" && isAdmin && (
-            <form onSubmit={handleSavePaymentStatus} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
-              <div>
-                <h4 className="font-bold text-sm text-slate-900">
-                  Update Payment Disbursement Status
+            <form onSubmit={handleSavePaymentStatus} className="space-y-4 max-w-md mx-auto">
+              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Update Payout & Settlement
                 </h4>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Record reimbursement transaction reference (NEFT/UPI/Cheque) and payment date for employee accounts.
-                </p>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                     Disbursement Status
                   </label>
                   <select
                     value={paymentForm.paymentStatus}
                     onChange={(e) =>
-                      setPaymentForm({ ...paymentForm, paymentStatus: e.target.value })
+                      setPaymentForm((prev) => ({
+                        ...prev,
+                        paymentStatus: e.target.value,
+                      }))
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-hidden"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-hidden cursor-pointer"
                   >
-                    <option value="UNPAID">UNPAID (Pending Payout)</option>
-                    <option value="PROCESSING">PROCESSING (Initiated)</option>
-                    <option value="PAID">PAID (Completed Reimbursement)</option>
+                    <option value="UNPAID">UNPAID (Pending)</option>
+                    <option value="IN_PROCESS">IN_PROCESS (Bank Transfer Queued)</option>
+                    <option value="PAID">PAID (Disbursed to Employee)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Payment Date
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Disbursement Date
                   </label>
                   <input
                     type="date"
                     value={paymentForm.paymentDate}
                     onChange={(e) =>
-                      setPaymentForm({ ...paymentForm, paymentDate: e.target.value })
+                      setPaymentForm((prev) => ({
+                        ...prev,
+                        paymentDate: e.target.value,
+                      }))
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-hidden"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-hidden cursor-pointer"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Payment Reference / UTR / Transaction ID
-                </label>
-                <input
-                  type="text"
-                  value={paymentForm.paymentReference}
-                  onChange={(e) =>
-                    setPaymentForm({
-                      ...paymentForm,
-                      paymentReference: e.target.value,
-                    })
-                  }
-                  placeholder="e.g. UTR123456789, Bank Ref #, Cheque #004321"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-mono text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-hidden"
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Bank Reference / UTR / Transaction ID
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentForm.paymentReference}
+                    onChange={(e) =>
+                      setPaymentForm((prev) => ({
+                        ...prev,
+                        paymentReference: e.target.value,
+                      }))
+                    }
+                    placeholder="E.g. UTR-9827104928"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-mono font-semibold text-slate-800 focus:border-blue-500 focus:outline-hidden"
+                  />
+                </div>
 
-              <div className="flex justify-end pt-2">
                 <button
                   type="submit"
                   disabled={isUpdatingPayment}
-                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition cursor-pointer"
+                  className="w-full mt-2 flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition cursor-pointer"
                 >
-                  {isUpdatingPayment ? (
-                    <FiLoader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FiCheck className="h-4 w-4" />
+                  {isUpdatingPayment && (
+                    <FiLoader className="h-3.5 w-3.5 animate-spin" />
                   )}
-                  <span>Save Payment Details</span>
+                  <span>Save Disbursement Details</span>
                 </button>
               </div>
             </form>
           )}
-
-          {/* Action Approval Bar if Pending & Admin */}
-          {isAdmin && claim.status === "PENDING" && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800">
-                  Admin Decision on this Expense
-                </span>
-                <span className="text-[11px] font-semibold text-amber-600">
-                  Awaiting your approval
-                </span>
-              </div>
-
-              {adminAction === null ? (
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setAdminAction("approve")}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-700 active:scale-95 transition cursor-pointer"
-                  >
-                    <FiCheck className="h-4 w-4" />
-                    <span>Approve Claim (₹{Number(claim.amount).toLocaleString("en-IN")})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAdminAction("reject")}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-600/20 hover:bg-rose-700 active:scale-95 transition cursor-pointer"
-                  >
-                    <FiX className="h-4 w-4" />
-                    <span>Reject Claim</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">
-                      {adminAction === "approve"
-                        ? "Confirm Approval"
-                        : "Reason for Rejection (Required)"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setAdminAction(null)}
-                      className="text-xs text-slate-500 hover:text-slate-800"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-
-                  <textarea
-                    rows={2}
-                    value={actionRemarks}
-                    onChange={(e) => setActionRemarks(e.target.value)}
-                    placeholder={
-                      adminAction === "approve"
-                        ? "Optional approval remarks (e.g. Verified with client travel schedule)"
-                        : "State the reason for declining this reimbursement..."
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs font-medium text-slate-800 focus:border-blue-500 focus:outline-hidden"
-                  />
-
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAdminAction(null)}
-                      className="px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      disabled={actionSubmitting}
-                      onClick={() => handleApproveOrReject(adminAction)}
-                      className={`flex items-center gap-2 rounded-xl px-5 py-2 text-xs font-bold text-white shadow-md transition cursor-pointer ${
-                        adminAction === "approve"
-                          ? "bg-emerald-600 hover:bg-emerald-700"
-                          : "bg-rose-600 hover:bg-rose-700"
-                      }`}
-                    >
-                      {actionSubmitting && (
-                        <FiLoader className="h-3.5 w-3.5 animate-spin" />
-                      )}
-                      <span>
-                        {adminAction === "approve"
-                          ? "Confirm & Approve"
-                          : "Confirm & Reject"}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
+
+        {/* Modal Footer with Actions for Admin */}
+        {isAdmin && claim.status === "PENDING" && (
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+            <div className="text-xs text-slate-500 font-medium">
+              Admin Action Required for this claim
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setAdminAction("reject")}
+                className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
+              >
+                <FiX className="h-3.5 w-3.5" />
+                <span>Reject Claim</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleApproveOrReject("approve")}
+                disabled={actionSubmitting}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-700 transition cursor-pointer"
+              >
+                {actionSubmitting ? (
+                  <FiLoader className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FiCheck className="h-3.5 w-3.5" />
+                )}
+                <span>Approve Claim</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Reject Remarks Sub-Dialog */}
+        {adminAction === "reject" && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-fadeIn">
+            <div className="w-full max-w-md bg-white rounded-3xl p-6 space-y-4 shadow-2xl border border-slate-200">
+              <h3 className="font-bold text-sm text-slate-900">
+                Provide Reason for Rejection
+              </h3>
+              <textarea
+                rows={3}
+                value={actionRemarks}
+                onChange={(e) => setActionRemarks(e.target.value)}
+                placeholder="E.g. Attached bill does not match the expense amount..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAdminAction(null)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApproveOrReject("reject")}
+                  disabled={actionSubmitting}
+                  className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white hover:bg-rose-700"
+                >
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
