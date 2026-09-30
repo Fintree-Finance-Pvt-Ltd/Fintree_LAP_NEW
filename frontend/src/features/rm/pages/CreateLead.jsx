@@ -1,19 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-
 import { rmApi } from "../rmApi.js";
 import {
   buildWorkflowTimeline,
-  formatCurrency,
   PROPERTY_CATEGORY,
   PROPERTY_TYPE,
 } from "../rmUtils.js";
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
 import ScheduleFollowUpModal from "../components/ScheduleFollowUpModal.jsx";
 import PropertyAddressAutocomplete from "../components/PropertyAddressAutocomplete.jsx";
-
-
 
 const AADHAAR_LINK_COOLDOWN_SECONDS = 5 * 60;
 
@@ -23,7 +19,6 @@ const formatCooldown = (seconds) => {
 
   return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
 };
-
 
 const normalizeAadhaarKycStatus = (value) => {
   const status = String(value || "")
@@ -66,20 +61,17 @@ const getAadhaarStatusMeta = (status) => {
   if (status === "VERIFIED") {
     return {
       label: "Verified",
-      badgeClass:
-        "border-emerald-200 bg-emerald-50 text-emerald-700",
+      badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
       boxClass:
         "border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-slate-50",
-      helper:
-        "Aadhaar KYC completed successfully.",
+      helper: "Aadhaar KYC completed successfully.",
     };
   }
 
   if (status === "INITIATED") {
     return {
       label: "Link Sent / Pending",
-      badgeClass:
-        "border-blue-200 bg-blue-50 text-blue-700",
+      badgeClass: "border-blue-200 bg-blue-50 text-blue-700",
       boxClass:
         "border-blue-200 bg-gradient-to-br from-blue-50/70 via-white to-slate-50",
       helper:
@@ -90,23 +82,19 @@ const getAadhaarStatusMeta = (status) => {
   if (status === "FAILED") {
     return {
       label: "Failed / Expired",
-      badgeClass:
-        "border-rose-200 bg-rose-50 text-rose-700",
+      badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
       boxClass:
         "border-rose-200 bg-gradient-to-br from-rose-50/70 via-white to-slate-50",
-      helper:
-        "Aadhaar verification failed or expired. You can resend link.",
+      helper: "Aadhaar verification failed or expired. You can resend link.",
     };
   }
 
   return {
     label: "Not Initiated",
-    badgeClass:
-      "border-slate-200 bg-slate-50 text-slate-600",
+    badgeClass: "border-slate-200 bg-slate-50 text-slate-600",
     boxClass:
       "border-blue-100 bg-gradient-to-br from-blue-50/60 via-white to-slate-50/50",
-    helper:
-      "Send Aadhaar DigiLocker KYC link to customer.",
+    helper: "Send Aadhaar DigiLocker KYC link to customer.",
   };
 };
 
@@ -170,7 +158,6 @@ const emptyCoApplicantForm = {
   identityStatus: "NOT_INITIATED",
 };
 
-
 const CONSENT_TEXT =
   "I hereby provide my consent to Fintree Finance Private Limited to verify my mobile number and process my information for the loan application.";
 
@@ -188,7 +175,9 @@ const toBoolean = (value) =>
   String(value).toLowerCase() === "true";
 
 const normalizePropertyCategory = (value) => {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   const categories = {
     residential: "Residential",
     commercial: "Commercial",
@@ -206,8 +195,13 @@ const normalizePropertyType = (value, category) => {
   if (!propertyType) {
     return PROPERTY_TYPE[category]?.[0] || "";
   }
-  const escapedCategory = String(category).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return propertyType.replace(new RegExp(`^${escapedCategory}\\s*-\\s*`, "i"), "").trim();
+  const escapedCategory = String(category).replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
+  return propertyType
+    .replace(new RegExp(`^${escapedCategory}\\s*-\\s*`, "i"), "")
+    .trim();
 };
 
 function Section({ title, children }) {
@@ -231,9 +225,7 @@ function Section({ title, children }) {
 function Field({ label, children, ...props }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold text-slate-700">
-        {label}
-      </label>
+      <label className="text-xs font-semibold text-slate-700">{label}</label>
       {children ? (
         children
       ) : (
@@ -265,12 +257,12 @@ export default function CreateLead() {
 
   const [createdApplicationId, setCreatedApplicationId] = useState(null);
 
-const currentApplicationId = createdApplicationId ?? applicationId;
-const photoApplicationId = currentApplicationId;
+  const currentApplicationId = createdApplicationId ?? applicationId;
+  const photoApplicationId = currentApplicationId;
 
-const aadhaarCooldownKey = currentApplicationId
-  ? `aadhaar_link_cooldown_${currentApplicationId}`
-  : null;
+  const aadhaarCooldownKey = currentApplicationId
+    ? `aadhaar_link_cooldown_${currentApplicationId}`
+    : null;
 
   const applicantDocumentsQuery = useQuery({
     queryKey: ["rm-documents", photoApplicationId],
@@ -351,10 +343,7 @@ const aadhaarCooldownKey = currentApplicationId
   const getDocumentImageUrl = (document) => {
     if (!document) return "";
 
-    const directUrl =
-      document.fileUrl ||
-      document.documentUrl ||
-      document.url;
+    const directUrl = document.fileUrl || document.documentUrl || document.url;
 
     if (directUrl) {
       return directUrl;
@@ -414,31 +403,31 @@ const aadhaarCooldownKey = currentApplicationId
   };
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
-const [aadhaarCooldownUntil, setAadhaarCooldownUntil] = useState(0);
-const [aadhaarCooldownSeconds, setAadhaarCooldownSeconds] = useState(0);
-const [localAadhaarStatus, setLocalAadhaarStatus] = useState("");
+  const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
+  const [aadhaarCooldownUntil, setAadhaarCooldownUntil] = useState(0);
+  const [aadhaarCooldownSeconds, setAadhaarCooldownSeconds] = useState(0);
+  const [localAadhaarStatus, setLocalAadhaarStatus] = useState("");
 
-const isAadhaarCooldownActive = aadhaarCooldownSeconds > 0;
+  const isAadhaarCooldownActive = aadhaarCooldownSeconds > 0;
 
-const startAadhaarCooldown = () => {
-  const until = Date.now() + AADHAAR_LINK_COOLDOWN_SECONDS * 1000;
+  const startAadhaarCooldown = () => {
+    const until = Date.now() + AADHAAR_LINK_COOLDOWN_SECONDS * 1000;
 
-  setAadhaarCooldownUntil(until);
+    setAadhaarCooldownUntil(until);
 
-  if (aadhaarCooldownKey) {
-    localStorage.setItem(aadhaarCooldownKey, String(until));
-  }
-};
+    if (aadhaarCooldownKey) {
+      localStorage.setItem(aadhaarCooldownKey, String(until));
+    }
+  };
   const [applicationNumber, setApplicationNumber] = useState("");
   const [formData, setFormData] = useState(
-    location?.state?.formData ? { ...emptyForm, ...location.state.formData } : emptyForm,
+    location?.state?.formData
+      ? { ...emptyForm, ...location.state.formData }
+      : emptyForm,
   );
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("error");
-  const [emailOtpCode, setEmailOtpCode] = useState(
-    Array(6).fill(""),
-  );
+  const [emailOtpCode, setEmailOtpCode] = useState(Array(6).fill(""));
 
   const [emailOtpError, setEmailOtpError] = useState("");
 
@@ -491,57 +480,55 @@ const startAadhaarCooldown = () => {
     resendAfterSeconds: 0,
   });
 
-useEffect(() => {
-  if (!aadhaarCooldownKey) {
-    setAadhaarCooldownUntil(0);
-    setAadhaarCooldownSeconds(0);
-    return;
-  }
-
-  const savedUntil = Number(
-    localStorage.getItem(aadhaarCooldownKey) || 0,
-  );
-
-  if (savedUntil > Date.now()) {
-    setAadhaarCooldownUntil(savedUntil);
-  } else {
-    localStorage.removeItem(aadhaarCooldownKey);
-    setAadhaarCooldownUntil(0);
-    setAadhaarCooldownSeconds(0);
-  }
-}, [aadhaarCooldownKey]);
-
-useEffect(() => {
-  if (!aadhaarCooldownUntil) {
-    setAadhaarCooldownSeconds(0);
-    return;
-  }
-
-  const updateRemaining = () => {
-    const remaining = Math.max(
-      0,
-      Math.ceil((aadhaarCooldownUntil - Date.now()) / 1000),
-    );
-
-    setAadhaarCooldownSeconds(remaining);
-
-    if (remaining <= 0) {
+  useEffect(() => {
+    if (!aadhaarCooldownKey) {
       setAadhaarCooldownUntil(0);
-
-      if (aadhaarCooldownKey) {
-        localStorage.removeItem(aadhaarCooldownKey);
-      }
+      setAadhaarCooldownSeconds(0);
+      return;
     }
-  };
 
-  updateRemaining();
+    const savedUntil = Number(localStorage.getItem(aadhaarCooldownKey) || 0);
 
-  const interval = window.setInterval(updateRemaining, 1000);
+    if (savedUntil > Date.now()) {
+      setAadhaarCooldownUntil(savedUntil);
+    } else {
+      localStorage.removeItem(aadhaarCooldownKey);
+      setAadhaarCooldownUntil(0);
+      setAadhaarCooldownSeconds(0);
+    }
+  }, [aadhaarCooldownKey]);
+ 
+  useEffect(() => {
+    if (!aadhaarCooldownUntil) {
+      setAadhaarCooldownSeconds(0);
+      return;
+    }
 
-  return () => {
-    window.clearInterval(interval);
-  };
-}, [aadhaarCooldownUntil, aadhaarCooldownKey]);
+    const updateRemaining = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((aadhaarCooldownUntil - Date.now()) / 1000),
+      );
+
+      setAadhaarCooldownSeconds(remaining);
+
+      if (remaining <= 0) {
+        setAadhaarCooldownUntil(0);
+
+        if (aadhaarCooldownKey) {
+          localStorage.removeItem(aadhaarCooldownKey);
+        }
+      }
+    };
+
+    updateRemaining();
+
+    const interval = window.setInterval(updateRemaining, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [aadhaarCooldownUntil, aadhaarCooldownKey]);
 
   const uploadCustomerPhotoMutation = useMutation({
     mutationFn: async () => {
@@ -586,8 +573,8 @@ useEffect(() => {
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-        error?.message ||
-        "Unable to upload customer photo.",
+          error?.message ||
+          "Unable to upload customer photo.",
       );
     },
   });
@@ -626,10 +613,10 @@ useEffect(() => {
   // Handler to update specific fields inside a specific co-applicant's index
   const handleCoApplicantChange = (index, event) => {
     const { name, value } = event.target;
-   const nextValue =
-  name === "panNumber" || name === "gstNumber"
-    ? value.toUpperCase()
-    : value;
+    const nextValue =
+      name === "panNumber" || name === "gstNumber"
+        ? value.toUpperCase()
+        : value;
 
     const resetVerification =
       name === "mobile"
@@ -641,14 +628,19 @@ useEffect(() => {
             : {};
     setCoApplicants((prev) =>
       prev.map((coApp, idx) =>
-        idx === index ? { ...coApp, [name]: nextValue, ...resetVerification } : coApp
-      )
+        idx === index
+          ? { ...coApp, [name]: nextValue, ...resetVerification }
+          : coApp,
+      ),
     );
   };
 
   const updateCoApplicant = (index, patch) => {
-    setCoApplicants((previous) => previous.map((item, itemIndex) =>
-      itemIndex === index ? { ...item, ...patch } : item));
+    setCoApplicants((previous) =>
+      previous.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...patch } : item,
+      ),
+    );
   };
 
   const ensureCoApplicantIsSaved = async (index) => {
@@ -657,11 +649,16 @@ useEffect(() => {
 
     let targetApplicationId = createdApplicationId ?? applicationId;
     if (!targetApplicationId) {
-      const draftResponse = unwrapResponse(await rmApi.saveDraft(buildPayload(false)));
+      const draftResponse = unwrapResponse(
+        await rmApi.saveDraft(buildPayload(false)),
+      );
       const draft = draftResponse?.data ?? draftResponse;
-      targetApplicationId = draft?.id || draft?.applicationId || draft?.application?.id;
+      targetApplicationId =
+        draft?.id || draft?.applicationId || draft?.application?.id;
       if (!targetApplicationId) {
-        throw new Error("The draft was saved but no application ID was returned.");
+        throw new Error(
+          "The draft was saved but no application ID was returned.",
+        );
       }
       setCreatedApplicationId(Number(targetApplicationId));
       navigate(`/create-lead/${targetApplicationId}`, { replace: true });
@@ -680,17 +677,29 @@ useEffect(() => {
     const saved = Array.isArray(savedRows) ? savedRows[index] : null;
     const savedId = Number(saved?.id);
     if (!Number.isInteger(savedId) || savedId <= 0) {
-      throw new Error("Co-applicant was saved but no co-applicant ID was returned.");
+      throw new Error(
+        "Co-applicant was saved but no co-applicant ID was returned.",
+      );
     }
-    setCoApplicants((previous) => previous.map((item, itemIndex) =>
-      itemIndex === index ? { ...item, id: savedId } : {
-        ...item,
-        id: savedRows[itemIndex]?.id || item.id,
-      }));
+    setCoApplicants((previous) =>
+      previous.map((item, itemIndex) =>
+        itemIndex === index
+          ? { ...item, id: savedId }
+          : {
+              ...item,
+              id: savedRows[itemIndex]?.id || item.id,
+            },
+      ),
+    );
     return savedId;
   };
 
-  const handleCoApplicantMobileOtp = async (index, verify = false, otpOverride = "", consentAccepted = false) => {
+  const handleCoApplicantMobileOtp = async (
+    index,
+    verify = false,
+    otpOverride = "",
+    consentAccepted = false,
+  ) => {
     const coApp = coApplicants[index];
     if (!/^[6-9]\d{9}$/.test(String(coApp.mobile || "").trim())) {
       setMessageType("error");
@@ -710,29 +719,48 @@ useEffect(() => {
       const coApplicantId = await ensureCoApplicantIsSaved(index);
       if (verify) {
         await rmApi.verifyCoApplicantMobileOtp(coApplicantId, {
-          mobile: coApp.mobile.trim(), otp: enteredOtp, consentGiven: true, consentText: CONSENT_TEXT,
+          mobile: coApp.mobile.trim(),
+          otp: enteredOtp,
+          consentGiven: true,
+          consentText: CONSENT_TEXT,
         });
         updateCoApplicant(index, { mobileVerified: true });
         setMessage("Co-applicant mobile number verified successfully.");
       } else {
-        await rmApi.sendCoApplicantMobileOtp(coApplicantId, { mobile: coApp.mobile.trim() });
+        await rmApi.sendCoApplicantMobileOtp(coApplicantId, {
+          mobile: coApp.mobile.trim(),
+        });
         updateCoApplicant(index, { mobileOtpSent: true, mobileOtp: "" });
         setCoApplicantOtpModal({
-          open: true, index, channel: "mobile",
+          open: true,
+          index,
+          channel: "mobile",
           destination: `mobile ending ${coApp.mobile.slice(-4)}`,
-          otp: "", consentAccepted: false, error: "", verifying: false,
+          otp: "",
+          consentAccepted: false,
+          error: "",
+          verifying: false,
         });
         setMessage("OTP sent to the co-applicant's mobile number.");
       }
       setMessageType("success");
     } catch (error) {
       setMessageType("error");
-      setMessage(error?.response?.data?.message || error?.message || "Mobile verification failed.");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Mobile verification failed.",
+      );
       if (verify) throw error;
     }
   };
 
-  const handleCoApplicantEmailOtp = async (index, verify = false, otpOverride = "", consentAccepted = false) => {
+  const handleCoApplicantEmailOtp = async (
+    index,
+    verify = false,
+    otpOverride = "",
+    consentAccepted = false,
+  ) => {
     const coApp = coApplicants[index];
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(coApp.email || "").trim())) {
       setMessageType("error");
@@ -761,23 +789,37 @@ useEffect(() => {
         updateCoApplicant(index, { emailVerified: true });
         setMessage("Co-applicant email address verified successfully.");
       } else {
-        const response = unwrapResponse(await rmApi.sendCoApplicantEmailOtp(coApplicantId, { email: coApp.email.trim() }));
+        const response = unwrapResponse(
+          await rmApi.sendCoApplicantEmailOtp(coApplicantId, {
+            email: coApp.email.trim(),
+          }),
+        );
         updateCoApplicant(index, {
           emailOtpSent: true,
           emailOtp: "",
-          emailOtpSessionId: response?.data?.sessionId || response?.sessionId || null,
+          emailOtpSessionId:
+            response?.data?.sessionId || response?.sessionId || null,
         });
         setCoApplicantOtpModal({
-          open: true, index, channel: "email",
+          open: true,
+          index,
+          channel: "email",
           destination: coApp.email,
-          otp: "", consentAccepted: false, error: "", verifying: false,
+          otp: "",
+          consentAccepted: false,
+          error: "",
+          verifying: false,
         });
         setMessage("OTP sent to the co-applicant's email address.");
       }
       setMessageType("success");
     } catch (error) {
       setMessageType("error");
-      setMessage(error?.response?.data?.message || error?.message || "Email verification failed.");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Email verification failed.",
+      );
       if (verify) throw error;
     }
   };
@@ -785,25 +827,43 @@ useEffect(() => {
   const handleVerifyCoApplicantOtpModal = async () => {
     const modal = coApplicantOtpModal;
     if (!modal.consentAccepted) {
-      setCoApplicantOtpModal((previous) => ({ ...previous, error: "Please accept the consent to continue." }));
+      setCoApplicantOtpModal((previous) => ({
+        ...previous,
+        error: "Please accept the consent to continue.",
+      }));
       return;
     }
     if (!/^\d{6}$/.test(modal.otp)) {
-      setCoApplicantOtpModal((previous) => ({ ...previous, error: "Enter the valid 6-digit OTP you received." }));
+      setCoApplicantOtpModal((previous) => ({
+        ...previous,
+        error: "Enter the valid 6-digit OTP you received.",
+      }));
       return;
     }
-    setCoApplicantOtpModal((previous) => ({ ...previous, verifying: true, error: "" }));
+    setCoApplicantOtpModal((previous) => ({
+      ...previous,
+      verifying: true,
+      error: "",
+    }));
     try {
       if (modal.channel === "mobile") {
         await handleCoApplicantMobileOtp(modal.index, true, modal.otp, true);
       } else {
         await handleCoApplicantEmailOtp(modal.index, true, modal.otp, true);
       }
-      setCoApplicantOtpModal((previous) => ({ ...previous, open: false, verifying: false }));
+      setCoApplicantOtpModal((previous) => ({
+        ...previous,
+        open: false,
+        verifying: false,
+      }));
     } catch (error) {
       setCoApplicantOtpModal((previous) => ({
-        ...previous, verifying: false,
-        error: error?.response?.data?.message || error?.message || "OTP verification failed.",
+        ...previous,
+        verifying: false,
+        error:
+          error?.response?.data?.message ||
+          error?.message ||
+          "OTP verification failed.",
       }));
     }
   };
@@ -822,10 +882,27 @@ useEffect(() => {
       payload.append("clientRefId", String(coApp.id || `CO-PAN-${Date.now()}`));
       const response = unwrapResponse(await rmApi.panOcr(payload));
       const extracted = response?.data ?? response;
-      const panNumber = readPanOcrValue(extracted, ["panNumber", "pan", "pan_number", "idNumber", "documentNumber"]);
-      const name = readPanOcrValue(extracted, ["name", "fullName", "customerName", "applicantName", "nameOnPan"]);
-      if (!name || !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(String(panNumber).toUpperCase())) {
-        throw new Error("We could not clearly read the PAN card. Please re-upload a clearer, glare-free image with all four corners visible.");
+      const panNumber = readPanOcrValue(extracted, [
+        "panNumber",
+        "pan",
+        "pan_number",
+        "idNumber",
+        "documentNumber",
+      ]);
+      const name = readPanOcrValue(extracted, [
+        "name",
+        "fullName",
+        "customerName",
+        "applicantName",
+        "nameOnPan",
+      ]);
+      if (
+        !name ||
+        !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(String(panNumber).toUpperCase())
+      ) {
+        throw new Error(
+          "We could not clearly read the PAN card. Please re-upload a clearer, glare-free image with all four corners visible.",
+        );
       }
       updateCoApplicant(index, {
         name: String(name).trim(),
@@ -834,10 +911,17 @@ useEffect(() => {
         panOcrError: "",
       });
       setMessageType("success");
-      setMessage("PAN read successfully. Co-Applicant Name has been auto-filled.");
+      setMessage(
+        "PAN read successfully. Co-Applicant Name has been auto-filled.",
+      );
     } catch (error) {
-      const errorMessage = error?.message || "We could not clearly read the PAN card. Please re-upload a clearer image.";
-      updateCoApplicant(index, { panOcrLoading: false, panOcrError: errorMessage });
+      const errorMessage =
+        error?.message ||
+        "We could not clearly read the PAN card. Please re-upload a clearer image.";
+      updateCoApplicant(index, {
+        panOcrLoading: false,
+        panOcrError: errorMessage,
+      });
       setMessageType("error");
       setMessage(errorMessage);
     }
@@ -847,37 +931,56 @@ useEffect(() => {
     const coApp = coApplicants[index];
     if (!coApp.mobileVerified || (coApp.email && !coApp.emailVerified)) {
       setMessageType("error");
-      setMessage("Verify the co-applicant's mobile number and email before sending the identity link.");
+      setMessage(
+        "Verify the co-applicant's mobile number and email before sending the identity link.",
+      );
       return;
     }
     try {
       const coApplicantId = await ensureCoApplicantIsSaved(index);
-      await rmApi.initCoApplicantAadhaar(coApplicantId, { channel: "DIGILOCKER" });
+      await rmApi.initCoApplicantAadhaar(coApplicantId, {
+        channel: "DIGILOCKER",
+      });
       updateCoApplicant(index, { identityStatus: "INITIATED" });
       setMessageType("success");
-      setMessage("Secure DigiLocker identity link sent directly to the co-applicant.");
+      setMessage(
+        "Secure DigiLocker identity link sent directly to the co-applicant.",
+      );
     } catch (error) {
       setMessageType("error");
-      setMessage(error?.response?.data?.message || error?.message || "Unable to send the identity verification link.");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to send the identity verification link.",
+      );
     }
   };
 
   const handleCoApplicantPanVerify = async (index) => {
     const coApp = coApplicants[index];
-    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(String(coApp.panNumber || '').trim().toUpperCase())) {
+    if (
+      !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(
+        String(coApp.panNumber || "")
+          .trim()
+          .toUpperCase(),
+      )
+    ) {
       setMessageType("error");
       setMessage("Enter or extract a valid 10-character PAN number.");
       return;
     }
-    if (!String(coApp.name || '').trim()) {
+    if (!String(coApp.name || "").trim()) {
       setMessageType("error");
-      setMessage("Upload a clear PAN card so the legal name can be extracted before verification.");
+      setMessage(
+        "Upload a clear PAN card so the legal name can be extracted before verification.",
+      );
       return;
     }
     try {
       const coApplicantId = await ensureCoApplicantIsSaved(index);
       await rmApi.verifyCoApplicantPan(coApplicantId, {
-        panNumber: coApp.panNumber.trim().toUpperCase(), name: coApp.name.trim(),
+        panNumber: coApp.panNumber.trim().toUpperCase(),
+        name: coApp.name.trim(),
       });
       updateCoApplicant(index, { panVerified: true });
       setMessageType("success");
@@ -885,7 +988,11 @@ useEffect(() => {
     } catch (error) {
       updateCoApplicant(index, { panVerified: false });
       setMessageType("error");
-      setMessage(error?.response?.data?.message || error?.message || "PAN verification failed.");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "PAN verification failed.",
+      );
     }
   };
 
@@ -893,7 +1000,8 @@ useEffect(() => {
   const handleAddCoApplicant = () => {
     setCoApplicants((prev) => [
       ...prev,
-      { ...emptyCoApplicantForm,
+      {
+        ...emptyCoApplicantForm,
         relationship: "SPOUSE",
         occupation: "SELF_EMPLOYED",
       },
@@ -905,9 +1013,7 @@ useEffect(() => {
     setCoApplicants((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-
   const [contactPersons, setContactPersons] = useState([]);
-
 
   const buildCoApplicantsPayload = () => {
     return coApplicants.map((coApp) => ({
@@ -918,7 +1024,9 @@ useEffect(() => {
       panNumber: coApp.panNumber?.trim().toUpperCase() || undefined,
       relationship: coApp.relationship,
       occupation: coApp.occupation || undefined,
-      monthlyIncome: coApp.monthlyIncome ? Number(coApp.monthlyIncome) : undefined,
+      monthlyIncome: coApp.monthlyIncome
+        ? Number(coApp.monthlyIncome)
+        : undefined,
     }));
   };
 
@@ -927,8 +1035,8 @@ useEffect(() => {
     const { name, value } = event.target;
     setContactPersons((prev) =>
       prev.map((contact, idx) =>
-        idx === index ? { ...contact, [name]: value } : contact
-      )
+        idx === index ? { ...contact, [name]: value } : contact,
+      ),
     );
   };
 
@@ -952,7 +1060,6 @@ useEffect(() => {
         relationship: contact.relationship || "BUSINESS_ASSOCIATE",
       }));
   };
-
 
   // Append a new empty contact person structure to the array
   const handleAddContactPerson = () => {
@@ -980,8 +1087,8 @@ useEffect(() => {
         setMessageType("error");
         setMessage(
           error?.response?.data?.message ||
-          error?.message ||
-          "Unable to delete contact person.",
+            error?.message ||
+            "Unable to delete contact person.",
         );
         return;
       }
@@ -989,10 +1096,6 @@ useEffect(() => {
 
     setContactPersons((prev) => prev.filter((_, idx) => idx !== index));
   };
-
-
-
-
 
   const applicationQuery = useQuery({
     queryKey: ["application", applicationId],
@@ -1010,56 +1113,49 @@ useEffect(() => {
     retry: false,
   });
 
-
   const aadhaarStatusQuery = useQuery({
-  queryKey: ["aadhaar-kyc-status", currentApplicationId],
-  queryFn: () => rmApi.getAadhaarKycStatus(currentApplicationId),
-  enabled: Boolean(currentApplicationId),
-  retry: false,
-  refetchInterval: (query) => {
-    const response = unwrapResponse(query?.state?.data);
-    const data = response?.data ?? response ?? {};
-    const status = normalizeAadhaarKycStatus(
-      readAadhaarStatusFromRecord(data),
-    );
+    queryKey: ["aadhaar-kyc-status", currentApplicationId],
+    queryFn: () => rmApi.getAadhaarKycStatus(currentApplicationId),
+    enabled: Boolean(currentApplicationId),
+    retry: false,
+    refetchInterval: (query) => {
+      const response = unwrapResponse(query?.state?.data);
+      const data = response?.data ?? response ?? {};
+      const status = normalizeAadhaarKycStatus(
+        readAadhaarStatusFromRecord(data),
+      );
 
-    return status === "INITIATED" ? 10000 : false;
-  },
-});
+      return status === "INITIATED" ? 10000 : false;
+    },
+  });
 
-const aadhaarStatusResponse = unwrapResponse(aadhaarStatusQuery.data);
-const aadhaarStatusData =
-  aadhaarStatusResponse?.data ??
-  aadhaarStatusResponse ??
-  {};
+  const aadhaarStatusResponse = unwrapResponse(aadhaarStatusQuery.data);
+  const aadhaarStatusData =
+    aadhaarStatusResponse?.data ?? aadhaarStatusResponse ?? {};
 
-const applicationResponseForAadhaar = unwrapResponse(applicationQuery.data);
-const applicationForAadhaar =
-  applicationResponseForAadhaar?.data ??
-  applicationResponseForAadhaar ??
-  {};
+  const applicationResponseForAadhaar = unwrapResponse(applicationQuery.data);
+  const applicationForAadhaar =
+    applicationResponseForAadhaar?.data ?? applicationResponseForAadhaar ?? {};
 
-const profileResponseForAadhaar = unwrapResponse(customerProfileQuery.data);
-const profileForAadhaar =
-  profileResponseForAadhaar?.data ??
-  profileResponseForAadhaar ??
-  {};
+  const profileResponseForAadhaar = unwrapResponse(customerProfileQuery.data);
+  const profileForAadhaar =
+    profileResponseForAadhaar?.data ?? profileResponseForAadhaar ?? {};
 
-const backendAadhaarStatus = normalizeAadhaarKycStatus(
-  readAadhaarStatusFromRecord(aadhaarStatusData) ||
-    readAadhaarStatusFromRecord(applicationForAadhaar) ||
-    readAadhaarStatusFromRecord(profileForAadhaar),
-);
+  const backendAadhaarStatus = normalizeAadhaarKycStatus(
+    readAadhaarStatusFromRecord(aadhaarStatusData) ||
+      readAadhaarStatusFromRecord(applicationForAadhaar) ||
+      readAadhaarStatusFromRecord(profileForAadhaar),
+  );
 
-const aadhaarKycStatus =
-  backendAadhaarStatus !== "NOT_INITIATED"
-    ? backendAadhaarStatus
-    : localAadhaarStatus || backendAadhaarStatus;
+  const aadhaarKycStatus =
+    backendAadhaarStatus !== "NOT_INITIATED"
+      ? backendAadhaarStatus
+      : localAadhaarStatus || backendAadhaarStatus;
 
-const aadhaarStatusMeta = getAadhaarStatusMeta(aadhaarKycStatus);
+  const aadhaarStatusMeta = getAadhaarStatusMeta(aadhaarKycStatus);
 
-const isAadhaarVerified = aadhaarKycStatus === "VERIFIED";
-const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
+  const isAadhaarVerified = aadhaarKycStatus === "VERIFIED";
+  const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
   useEffect(() => {
     if (!applicationId || !applicationQuery.data) return;
@@ -1072,23 +1168,20 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
     const profile = application.customerProfile || {};
 
     const categoryFromType = String(
-      application.propertyType ||
-      profile.propertyType ||
-      ""
+      application.propertyType || profile.propertyType || "",
     )
       .split(" - ")[0]
       .trim();
 
     const propertyCategory = normalizePropertyCategory(
       application.propertyCategory ||
-      profile.propertyCategory ||
-      categoryFromType
+        profile.propertyCategory ||
+        categoryFromType,
     );
 
     const propertyType = normalizePropertyType(
-      application.propertyType ||
-      profile.propertyType,
-      propertyCategory
+      application.propertyType || profile.propertyType,
+      propertyCategory,
     );
 
     setCreatedApplicationId(Number(application.id || applicationId));
@@ -1105,27 +1198,14 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
         "",
 
       mobileNumber:
-        application.mobile ||
-        application.mobileNumber ||
-        profile.mobile ||
-        "",
+        application.mobile || application.mobileNumber || profile.mobile || "",
 
-      emailId:
-        application.email ||
-        application.emailId ||
-        profile.email ||
-        "",
+      emailId: application.email || application.emailId || profile.email || "",
 
       panNumber:
-        application.pan ||
-        application.panNumber ||
-        profile.panNumber ||
-        "",
+        application.pan || application.panNumber || profile.panNumber || "",
 
-      aadhaarNumber:
-        application.aadhaarNumber ||
-        profile.aadhaarNumber ||
-        "",
+      aadhaarNumber: application.aadhaarNumber || profile.aadhaarNumber || "",
 
       occupation:
         application.occupationType ||
@@ -1133,10 +1213,7 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
         application.occupation ||
         "SELF_EMPLOYED",
 
-      businessName:
-        application.businessName ||
-        profile.businessName ||
-        "",
+      businessName: application.businessName || profile.businessName || "",
       gstNumber:
         application.gstNumber ||
         application.gst_number ||
@@ -1155,9 +1232,7 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
         "",
 
       propertyAddress:
-        application.propertyAddress ||
-        profile.propertyAddress ||
-        "",
+        application.propertyAddress || profile.propertyAddress || "",
 
       city:
         application.propertyCity ||
@@ -1180,60 +1255,47 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
     setPanVerified(
       toBoolean(application.panVerified) ||
-      toBoolean(application.customerProfile?.panVerified) ||
-      toBoolean(profile.panVerified)
+        toBoolean(application.customerProfile?.panVerified) ||
+        toBoolean(profile.panVerified),
     );
 
     setOtpVerified(
       toBoolean(application.mobileVerified) ||
-      toBoolean(application.customerProfile?.mobileVerified) ||
-      toBoolean(profile.mobileVerified)
+        toBoolean(application.customerProfile?.mobileVerified) ||
+        toBoolean(profile.mobileVerified),
     );
 
     setEmailOtpVerified(
       toBoolean(application.emailVerified) ||
-      toBoolean(application.customerProfile?.emailVerified) ||
-      toBoolean(profile.emailVerified)
+        toBoolean(application.customerProfile?.emailVerified) ||
+        toBoolean(profile.emailVerified),
     );
   }, [applicationId, applicationQuery.data]);
-
 
   const hasPrefilledFromState = Boolean(location?.state?.formData);
 
   useEffect(() => {
-    if (
-      !emailOtpModal.open ||
-      emailOtpModal.resendAfterSeconds <= 0
-    ) {
+    if (!emailOtpModal.open || emailOtpModal.resendAfterSeconds <= 0) {
       return;
     }
 
     const interval = window.setInterval(() => {
       setEmailOtpModal((previous) => ({
         ...previous,
-        resendAfterSeconds: Math.max(
-          previous.resendAfterSeconds - 1,
-          0,
-        ),
+        resendAfterSeconds: Math.max(previous.resendAfterSeconds - 1, 0),
       }));
     }, 1000);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [
-    emailOtpModal.open,
-    emailOtpModal.resendAfterSeconds,
-  ]);
+  }, [emailOtpModal.open, emailOtpModal.resendAfterSeconds]);
 
   useEffect(() => {
     if (!applicationId) return;
 
     const applicationResponse = unwrapResponse(applicationQuery.data);
-    const application =
-      applicationResponse?.data ??
-      applicationResponse ??
-      {};
+    const application = applicationResponse?.data ?? applicationResponse ?? {};
 
     const profileResponse = unwrapResponse(customerProfileQuery.data);
     const profile = profileResponse?.data ?? profileResponse ?? {};
@@ -1252,11 +1314,7 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
     setOtpVerified(mobileIsVerified);
     setEmailOtpVerified(emailIsVerified);
-  }, [
-    applicationId,
-    applicationQuery.data,
-    customerProfileQuery.data,
-  ]);
+  }, [applicationId, applicationQuery.data, customerProfileQuery.data]);
 
   // Automatically load co-applicants from the DB for existing leads
   useEffect(() => {
@@ -1269,14 +1327,18 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
         const rows = result?.data ?? result ?? [];
 
         if (Array.isArray(rows) && rows.length > 0) {
-          const statusRows = await Promise.all(rows.map(async (row) => {
-            try {
-              const statusResponse = unwrapResponse(await rmApi.getCoApplicantAadhaarStatus(row.id));
-              return statusResponse?.data ?? statusResponse ?? {};
-            } catch {
-              return {};
-            }
-          }));
+          const statusRows = await Promise.all(
+            rows.map(async (row) => {
+              try {
+                const statusResponse = unwrapResponse(
+                  await rmApi.getCoApplicantAadhaarStatus(row.id),
+                );
+                return statusResponse?.data ?? statusResponse ?? {};
+              } catch {
+                return {};
+              }
+            }),
+          );
           setCoApplicants(
             rows.map((row, rowIndex) => ({
               ...emptyCoApplicantForm,
@@ -1291,12 +1353,16 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
               mobileVerified: statusRows[rowIndex]?.mobileStatus === "VERIFIED",
               emailVerified: statusRows[rowIndex]?.emailStatus === "VERIFIED",
               panVerified: statusRows[rowIndex]?.panStatus === "VERIFIED",
-              identityStatus: statusRows[rowIndex]?.aadhaarStatus || "NOT_INITIATED",
-            }))
+              identityStatus:
+                statusRows[rowIndex]?.aadhaarStatus || "NOT_INITIATED",
+            })),
           );
         }
       } catch (error) {
-        console.error("Failed to recover co-applicant dataset tracking lines:", error);
+        console.error(
+          "Failed to recover co-applicant dataset tracking lines:",
+          error,
+        );
       }
     };
 
@@ -1334,8 +1400,6 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
     fetchExistingContactPersons();
   }, [applicationId]);
 
-
-
   const sendOtpMutation = useMutation({
     mutationFn: () =>
       rmApi.sendOtp({
@@ -1348,7 +1412,9 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
       setOtpModal({
         open: true,
-        sentMobileMasked: formData.mobileNumber ? `XXXXXX${formData.mobileNumber.slice(-4)}` : "",
+        sentMobileMasked: formData.mobileNumber
+          ? `XXXXXX${formData.mobileNumber.slice(-4)}`
+          : "",
         resendAfterSeconds: 30,
         expiresInSeconds: 300,
       });
@@ -1356,12 +1422,15 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
       setOtpError("");
     },
     onError: (error) => {
-      const msg = error?.response?.data?.message || error?.message || "Failed to send OTP.";
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to send OTP.";
       setMessageType("error");
       setMessage(msg);
 
-      const friendly = String(msg).includes('MOBILE_OTP_TEMPLATE_ID')
-        ? 'OTP provider is misconfigured on server. Please contact admin.'
+      const friendly = String(msg).includes("MOBILE_OTP_TEMPLATE_ID")
+        ? "OTP provider is misconfigured on server. Please contact admin."
         : msg;
 
       setOtpPopup({
@@ -1372,8 +1441,6 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
       });
     },
   });
-
-
 
   const handleSendOtp = () => {
     if (otpVerified) return;
@@ -1404,7 +1471,6 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
     ]);
   };
 
-
   const verifyOtpAndCreateMutation = useMutation({
     mutationFn: () => {
       const payload = {
@@ -1430,9 +1496,7 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
       setOtpError("");
 
       const newId =
-        created?.applicationId ??
-        created?.application?.id ??
-        created?.id;
+        created?.applicationId ?? created?.application?.id ?? created?.id;
 
       const newNumber = created?.applicationNumber;
 
@@ -1458,9 +1522,7 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
     onError: (error) => {
       const msg =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Invalid OTP";
+        error?.response?.data?.message || error?.message || "Invalid OTP";
 
       setOtpError(msg);
     },
@@ -1516,8 +1578,15 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
       businessName: formData.businessName.trim() || undefined,
       gstNumber: formData.gstNumber.trim() || undefined,
       propertyCategory: formData.propertyCategory || undefined,
-      propertyType: formData.propertyType ? `${formData.propertyCategory} - ${formData.propertyType}` : undefined,
-      marketValue: formData.propertyValue ? Number(formData.propertyValue) : undefined,
+      propertyType: formData.propertyType
+        ? `${formData.propertyCategory} - ${formData.propertyType}`
+        : undefined,
+      requestedAmount: formData.propertyValue
+        ? String(formData.propertyValue)
+        : "0",
+      marketValue: formData.propertyValue
+        ? Number(formData.propertyValue)
+        : undefined,
       propertyAddress: formData.propertyAddress.trim() || undefined,
       propertyCity: formData.city.trim() || undefined,
       propertyState: formData.state.trim() || undefined,
@@ -1539,6 +1608,7 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
         "businessName",
         "propertyCategory",
         "propertyType",
+        "requestedAmount",
         "marketValue",
         "propertyAddress",
         "propertyCity",
@@ -1563,11 +1633,14 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
   const validateFullSubmission = () => {
     const errors = [];
     if (!formData.customerName.trim()) errors.push("Customer Name is required");
-    if (!/^[6-9]\d{9}$/.test(formData.mobileNumber.trim())) errors.push("Valid Mobile number is required");
+    if (!/^[6-9]\d{9}$/.test(formData.mobileNumber.trim()))
+      errors.push("Valid Mobile number is required");
     if (!formData.occupation) errors.push("Occupation is required");
-    if (!formData.propertyType?.trim()) errors.push("Property Type is required");
+    if (!formData.propertyType?.trim())
+      errors.push("Property Type is required");
     if (!formData.propertyValue) errors.push("Property Value is required");
-    if (!formData.propertyAddress.trim()) errors.push("Property Address is required");
+    if (!formData.propertyAddress.trim())
+      errors.push("Property Address is required");
     if (!formData.city.trim()) errors.push("City is required");
     if (!formData.state.trim()) errors.push("State is required");
     if (!formData.pinCode.trim()) errors.push("PIN Code is required");
@@ -1579,8 +1652,6 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
     }
     return true;
   };
-
-
 
   const saveContactPersonsForApplication = async (targetApplicationId) => {
     if (!targetApplicationId) return;
@@ -1609,32 +1680,41 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
     }
   };
 
-
-
   // =========================================================================
   // UPDATE 1: saveNewDraftMutation
   // =========================================================================
   const saveNewDraftMutation = useMutation({
     mutationFn: (customFollowUp) => {
       if (createdApplicationId != null) {
-        return rmApi.updateApplication(createdApplicationId, buildPayload(true, customFollowUp));
+        return rmApi.updateApplication(
+          createdApplicationId,
+          buildPayload(true, customFollowUp),
+        );
       }
       return rmApi.saveDraft(buildPayload(false, customFollowUp));
     },
     onSuccess: async (response) => {
       const result = unwrapResponse(response);
       const created = result?.data ?? result;
-      const newApplicationId = created?.id || created?.applicationId || created?.application?.id;
+      const newApplicationId =
+        created?.id || created?.applicationId || created?.application?.id;
 
       // --- FIXED INTEGRATION ROW ---
-      const targetId = newApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        newApplicationId || createdApplicationId || applicationId;
 
       if (targetId) {
         try {
-          await rmApi.saveCoApplicantsBulk(targetId, buildCoApplicantsPayload());
+          await rmApi.saveCoApplicantsBulk(
+            targetId,
+            buildCoApplicantsPayload(),
+          );
           await saveContactPersonsForApplication(targetId);
         } catch (err) {
-          console.error("Co-applicant/contact person synchronization failed during creation:", err);
+          console.error(
+            "Co-applicant/contact person synchronization failed during creation:",
+            err,
+          );
         }
       }
       // --- END FIXED INTEGRATION ---
@@ -1654,7 +1734,9 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
     },
     onError: (error) => {
       setMessageType("error");
-      setMessage(error?.message || "Failed running quick draft sync operation.");
+      setMessage(
+        error?.message || "Failed running quick draft sync operation.",
+      );
     },
   });
 
@@ -1680,17 +1762,25 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
       if (targetId) {
         try {
-          await rmApi.saveCoApplicantsBulk(targetId, buildCoApplicantsPayload());
+          await rmApi.saveCoApplicantsBulk(
+            targetId,
+            buildCoApplicantsPayload(),
+          );
           await saveContactPersonsForApplication(targetId);
         } catch (err) {
-          console.error("Co-applicant/contact person synchronization failed during update:", err);
+          console.error(
+            "Co-applicant/contact person synchronization failed during update:",
+            err,
+          );
         }
       }
       // --- END FIXED INTEGRATION ---
 
       const idToInvalidate = createdApplicationId ?? applicationId;
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["application", idToInvalidate] }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", idToInvalidate],
+        }),
         queryClient.invalidateQueries({ queryKey: ["rm-applications"] }),
         queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] }),
       ]);
@@ -1715,24 +1805,35 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
       // Save co-applicants + contact persons on final submit as well
       try {
         if (idToInvalidate) {
-          await rmApi.saveCoApplicantsBulk(idToInvalidate, buildCoApplicantsPayload());
+          await rmApi.saveCoApplicantsBulk(
+            idToInvalidate,
+            buildCoApplicantsPayload(),
+          );
           await saveContactPersonsForApplication(idToInvalidate);
         }
       } catch (err) {
-        console.error("Co-applicant/contact person sync failed during submitDraft:", err);
+        console.error(
+          "Co-applicant/contact person sync failed during submitDraft:",
+          err,
+        );
       }
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["rm-applications"] }),
         queryClient.invalidateQueries({ queryKey: ["rm-dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["rm-workflow", idToInvalidate] }),
+        queryClient.invalidateQueries({
+          queryKey: ["rm-workflow", idToInvalidate],
+        }),
       ]);
       setMessageType("success");
       setMessage("✓ Submitted successfully.");
     },
     onError: (error) => {
       setMessageType("error");
-      setMessage(error?.message || "Submission returned structured validation exceptions.");
+      setMessage(
+        error?.message ||
+          "Submission returned structured validation exceptions.",
+      );
     },
   });
 
@@ -1780,7 +1881,8 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
       const payload = new FormData();
       payload.append("imageUrl", panFile);
-      const clientRefId = createdApplicationId ?? applicationId ?? `PAN-${Date.now()}`;
+      const clientRefId =
+        createdApplicationId ?? applicationId ?? `PAN-${Date.now()}`;
       payload.append("clientRefId", String(clientRefId));
 
       return rmApi.panOcr(payload);
@@ -1807,12 +1909,16 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
         "fatherName",
       ]);
 
-      const nextPan = String(extractedPan || "").trim().toUpperCase();
+      const nextPan = String(extractedPan || "")
+        .trim()
+        .toUpperCase();
       const nextName = String(extractedName || "").trim();
 
       if (!nextPan && !nextName) {
         setPanOcrData(extracted);
-        setPanOcrError("PAN OCR completed, but no PAN number or name was found.");
+        setPanOcrError(
+          "PAN OCR completed, but no PAN number or name was found.",
+        );
         setMessageType("error");
         setMessage("PAN OCR completed, but no PAN number or name was found.");
         return;
@@ -1861,41 +1967,40 @@ const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
       setMessage(error?.message || "Unable to verify PAN.");
     },
   });
-const verifyGstMutation = useMutation({
-  mutationFn: () =>
-rmApi.verifyGst({
-  gstNumber: formData.gstNumber.trim().toUpperCase(),
-  applicationId: Number(createdApplicationId ?? applicationId),
-}),
-
-  onSuccess: async (response) => {
-    const result = unwrapResponse(response);
-
-    setGstVerified(true);
-    setMessageType("success");
-    setMessage(result?.message || "GST verified successfully.");
-
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["customer-profile", createdApplicationId ?? applicationId],
+  const verifyGstMutation = useMutation({
+    mutationFn: () =>
+      rmApi.verifyGst({
+        gstNumber: formData.gstNumber.trim().toUpperCase(),
+        applicationId: Number(createdApplicationId ?? applicationId),
       }),
-      queryClient.invalidateQueries({
-        queryKey: ["application", createdApplicationId ?? applicationId],
-      }),
-    ]);
-  },
 
-  onError: (error) => {
-    setGstVerified(false);
-    setMessageType("error");
-    setMessage(
-      error?.response?.data?.message ||
-        error?.message ||
-        "Unable to verify GST.",
-    );
-  },
-});
+    onSuccess: async (response) => {
+      const result = unwrapResponse(response);
 
+      setGstVerified(true);
+      setMessageType("success");
+      setMessage(result?.message || "GST verified successfully.");
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["customer-profile", createdApplicationId ?? applicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", createdApplicationId ?? applicationId],
+        }),
+      ]);
+    },
+
+    onError: (error) => {
+      setGstVerified(false);
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to verify GST.",
+      );
+    },
+  });
 
   const handleVerifyPan = () => {
     const panNumber = formData.panNumber.trim().toUpperCase();
@@ -1923,106 +2028,109 @@ rmApi.verifyGst({
 
     if (!(createdApplicationId ?? applicationId)) {
       setMessageType("error");
-      setMessage("Save the lead before PAN verification so verification can be stored.");
+      setMessage(
+        "Save the lead before PAN verification so verification can be stored.",
+      );
       return;
     }
 
     verifyPanMutation.mutate();
   };
 
-const handleVerifyGst = () => {
-  const gstNumber = formData.gstNumber.trim().toUpperCase();
+  const handleVerifyGst = () => {
+    const gstNumber = formData.gstNumber.trim().toUpperCase();
 
-  setMessage("");
-
-  if (!gstNumber) {
-    setMessageType("error");
-    setMessage("Enter GST number before verification.");
-    return;
-  }
-
-  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstNumber)) {
-    setMessageType("error");
-    setMessage("Enter a valid GST number.");
-    return;
-  }
-
-  if (!(createdApplicationId ?? applicationId)) {
-    setMessageType("error");
-    setMessage("Save the lead before GST verification so verification can be stored.");
-    return;
-  }
-
-  verifyGstMutation.mutate();
-};
-
-
-const handleInitAadhaar = async () => {
-  const targetApplicationId = currentApplicationId;
-
-  if (isAadhaarCooldownActive) {
-    setMessageType("error");
-    setMessage(
-      `Aadhaar link already initiated. Please wait ${formatCooldown(
-        aadhaarCooldownSeconds,
-      )}.`,
-    );
-    return;
-  }
-
-  if (!targetApplicationId) {
-    setMessageType("error");
-    setMessage("Save the lead before sending Aadhaar KYC link.");
-    return;
-  }
-
-  try {
-    setAadhaarLinkSending(true);
     setMessage("");
 
-    const response = await rmApi.initAadhaarKyc({
-      applicationId: Number(targetApplicationId),
-    });
-
-    const result = unwrapResponse(response);
-    const payload = result?.data ?? result;
-    const kycUrl = payload?.kycUrl || payload?.data?.kycUrl;
-
-    startAadhaarCooldown();
-setLocalAadhaarStatus("INITIATED");
-
-    setMessageType("success");
-    setMessage(
-      result?.message ||
-        "Aadhaar KYC link generated successfully. You can resend after 5 minutes.",
-    );
-
-    if (kycUrl) {
-      window.open(kycUrl, "_blank", "noopener,noreferrer");
+    if (!gstNumber) {
+      setMessageType("error");
+      setMessage("Enter GST number before verification.");
+      return;
     }
 
- await Promise.all([
-  queryClient.invalidateQueries({
-    queryKey: ["customer-profile", targetApplicationId],
-  }),
-  queryClient.invalidateQueries({
-    queryKey: ["application", targetApplicationId],
-  }),
-  queryClient.invalidateQueries({
-    queryKey: ["aadhaar-kyc-status", targetApplicationId],
-  }),
-]);
-  } catch (error) {
-    setMessageType("error");
-    setMessage(
-      error?.response?.data?.message ||
-        error?.message ||
-        "Unable to send Aadhaar KYC link.",
-    );
-  } finally {
-    setAadhaarLinkSending(false);
-  }
-};
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstNumber)) {
+      setMessageType("error");
+      setMessage("Enter a valid GST number.");
+      return;
+    }
+
+    if (!(createdApplicationId ?? applicationId)) {
+      setMessageType("error");
+      setMessage(
+        "Save the lead before GST verification so verification can be stored.",
+      );
+      return;
+    }
+
+    verifyGstMutation.mutate();
+  };
+
+  const handleInitAadhaar = async () => {
+    const targetApplicationId = currentApplicationId;
+
+    if (isAadhaarCooldownActive) {
+      setMessageType("error");
+      setMessage(
+        `Aadhaar link already initiated. Please wait ${formatCooldown(
+          aadhaarCooldownSeconds,
+        )}.`,
+      );
+      return;
+    }
+
+    if (!targetApplicationId) {
+      setMessageType("error");
+      setMessage("Save the lead before sending Aadhaar KYC link.");
+      return;
+    }
+
+    try {
+      setAadhaarLinkSending(true);
+      setMessage("");
+
+      const response = await rmApi.initAadhaarKyc({
+        applicationId: Number(targetApplicationId),
+      });
+
+      const result = unwrapResponse(response);
+      const payload = result?.data ?? result;
+      const kycUrl = payload?.kycUrl || payload?.data?.kycUrl;
+
+      startAadhaarCooldown();
+      setLocalAadhaarStatus("INITIATED");
+
+      setMessageType("success");
+      setMessage(
+        result?.message ||
+          "Aadhaar KYC link generated successfully. You can resend after 5 minutes.",
+      );
+
+      if (kycUrl) {
+        window.open(kycUrl, "_blank", "noopener,noreferrer");
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["customer-profile", targetApplicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", targetApplicationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["aadhaar-kyc-status", targetApplicationId],
+        }),
+      ]);
+    } catch (error) {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to send Aadhaar KYC link.",
+      );
+    } finally {
+      setAadhaarLinkSending(false);
+    }
+  };
 
   const handleCategoryChange = (event) => {
     const selectedCategory = event.target.value;
@@ -2039,7 +2147,9 @@ setLocalAadhaarStatus("INITIATED");
 
     if (!isWorkStarted) {
       setMessageType("error");
-      setMessage("You must start work / punch in before creating or updating leads.");
+      setMessage(
+        "You must start work / punch in before creating or updating leads.",
+      );
       setShowStartModal(true);
       return;
     }
@@ -2095,7 +2205,9 @@ setLocalAadhaarStatus("INITIATED");
 
     if (!idToSubmit) {
       setMessageType("error");
-      setMessage("Please execute a 'Save Draft' sequence before invoking workflow evaluations.");
+      setMessage(
+        "Please execute a 'Save Draft' sequence before invoking workflow evaluations.",
+      );
       return;
     }
     if (!validateFullSubmission()) return;
@@ -2104,8 +2216,7 @@ setLocalAadhaarStatus("INITIATED");
 
   //email
   const sendEmailOtpMutation = useMutation({
-    mutationFn: (payload) =>
-      rmApi.sendEmailOtp(payload),
+    mutationFn: (payload) => rmApi.sendEmailOtp(payload),
 
     onSuccess: (response) => {
       const result = unwrapResponse(response);
@@ -2115,24 +2226,19 @@ setLocalAadhaarStatus("INITIATED");
 
       if (!sessionId) {
         setMessageType("error");
-        setMessage(
-          "OTP session ID was not returned by the server.",
-        );
+        setMessage("OTP session ID was not returned by the server.");
         return;
       }
 
-      const email = String(
-        formData.emailId || "",
-      ).trim();
+      const email = String(formData.emailId || "").trim();
 
-      const [emailName, emailDomain] =
-        email.split("@");
+      const [emailName, emailDomain] = email.split("@");
 
       const maskedEmail =
         emailName && emailDomain
           ? `${emailName.slice(0, 2)}${"*".repeat(
-            Math.max(emailName.length - 2, 3),
-          )}@${emailDomain}`
+              Math.max(emailName.length - 2, 3),
+            )}@${emailDomain}`
           : email;
 
       setEmailOtpSessionId(sessionId);
@@ -2145,15 +2251,11 @@ setLocalAadhaarStatus("INITIATED");
         open: true,
         sentEmailMasked: maskedEmail,
         resendAfterSeconds: 30,
-        expiresInSeconds:
-          data?.expiresInSeconds ?? 300,
+        expiresInSeconds: data?.expiresInSeconds ?? 300,
       });
 
       setMessageType("success");
-      setMessage(
-        result?.message ||
-        "OTP sent successfully to email.",
-      );
+      setMessage(result?.message || "OTP sent successfully to email.");
 
       window.setTimeout(() => {
         emailOtpInputRefs.current[0]?.focus();
@@ -2167,11 +2269,7 @@ setLocalAadhaarStatus("INITIATED");
         "Unable to send email OTP.";
 
       setMessageType("error");
-      setMessage(
-        Array.isArray(message)
-          ? message.join(", ")
-          : message,
-      );
+      setMessage(Array.isArray(message) ? message.join(", ") : message);
     },
   });
 
@@ -2183,9 +2281,7 @@ setLocalAadhaarStatus("INITIATED");
       const data = result?.data ?? result;
 
       const idToInvalidate =
-        data?.applicationId ??
-        createdApplicationId ??
-        applicationId;
+        data?.applicationId ?? createdApplicationId ?? applicationId;
 
       setEmailOtpVerified(true);
       setEmailOtpSent(false);
@@ -2204,10 +2300,7 @@ setLocalAadhaarStatus("INITIATED");
       await invalidateVerificationQueries(idToInvalidate);
 
       setMessageType("success");
-      setMessage(
-        result?.message ||
-        "Email verified successfully.",
-      );
+      setMessage(result?.message || "Email verified successfully.");
     },
 
     onError: (error) => {
@@ -2216,18 +2309,12 @@ setLocalAadhaarStatus("INITIATED");
         error?.message ||
         "Email OTP verification failed.";
 
-      setEmailOtpError(
-        Array.isArray(message)
-          ? message.join(", ")
-          : message,
-      );
+      setEmailOtpError(Array.isArray(message) ? message.join(", ") : message);
     },
   });
 
   const handleVerifyEmailOtp = () => {
-    const email = String(
-      formData.emailId || "",
-    )
+    const email = String(formData.emailId || "")
       .trim()
       .toLowerCase();
 
@@ -2236,21 +2323,16 @@ setLocalAadhaarStatus("INITIATED");
     setEmailOtpError("");
 
     if (!emailOtpSessionId) {
-      setEmailOtpError(
-        "OTP session not found. Please resend OTP.",
-      );
+      setEmailOtpError("OTP session not found. Please resend OTP.");
       return;
     }
 
     if (!/^\d{6}$/.test(otp)) {
-      setEmailOtpError(
-        "Please enter a valid 6-digit OTP.",
-      );
+      setEmailOtpError("Please enter a valid 6-digit OTP.");
       return;
     }
 
-    const currentApplicationId =
-      createdApplicationId ?? applicationId;
+    const currentApplicationId = createdApplicationId ?? applicationId;
 
     verifyEmailOtpMutation.mutate({
       email,
@@ -2261,9 +2343,6 @@ setLocalAadhaarStatus("INITIATED");
         : undefined,
     });
   };
-
-
-
 
   const handleEmailChange = (event) => {
     const { name, value } = event.target;
@@ -2288,9 +2367,7 @@ setLocalAadhaarStatus("INITIATED");
   };
 
   const handleSendEmailOtp = () => {
-    const email = String(
-      formData.emailId || "",
-    )
+    const email = String(formData.emailId || "")
       .trim()
       .toLowerCase();
 
@@ -2300,18 +2377,13 @@ setLocalAadhaarStatus("INITIATED");
       return;
     }
 
-    if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setMessageType("error");
-      setMessage(
-        "Please enter a valid email ID.",
-      );
+      setMessage("Please enter a valid email ID.");
       return;
     }
 
-    const currentApplicationId =
-      createdApplicationId ?? applicationId;
+    const currentApplicationId = createdApplicationId ?? applicationId;
 
     sendEmailOtpMutation.mutate({
       email,
@@ -2321,22 +2393,17 @@ setLocalAadhaarStatus("INITIATED");
     });
   };
 
-
-
-
-
- const isPending =
-  saveNewDraftMutation.isPending ||
-  updateDraftMutation.isPending ||
-  submitDraftMutation.isPending ||
-  panOcrMutation.isPending ||
-  verifyPanMutation.isPending ||
-  verifyGstMutation.isPending ||
-  aadhaarLinkSending;
+  const isPending =
+    saveNewDraftMutation.isPending ||
+    updateDraftMutation.isPending ||
+    submitDraftMutation.isPending ||
+    panOcrMutation.isPending ||
+    verifyPanMutation.isPending ||
+    verifyGstMutation.isPending ||
+    aadhaarLinkSending;
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
-
       {/* Top Action Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-5">
         <div>
@@ -2344,7 +2411,8 @@ setLocalAadhaarStatus("INITIATED");
             {applicationId ? "Modify Lead Workspace" : "New Loan Application"}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Fill in information parameters to initiate property loan underwriting creation rules.
+            Fill in information parameters to initiate property loan
+            underwriting creation rules.
           </p>
         </div>
 
@@ -2355,7 +2423,9 @@ setLocalAadhaarStatus("INITIATED");
             onClick={handleSaveDraft}
             className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-700 shadow-xs transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saveNewDraftMutation.isPending || updateDraftMutation.isPending ? "Saving..." : "Save Draft"}
+            {saveNewDraftMutation.isPending || updateDraftMutation.isPending
+              ? "Saving..."
+              : "Save Draft"}
           </button>
 
           <button
@@ -2364,7 +2434,9 @@ setLocalAadhaarStatus("INITIATED");
             onClick={handleSubmitForReview}
             className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
-            {submitDraftMutation.isPending ? "Submitting..." : "Submit for Underwriting"}
+            {submitDraftMutation.isPending
+              ? "Submitting..."
+              : "Submit for Underwriting"}
           </button>
         </div>
       </div>
@@ -2384,29 +2456,49 @@ setLocalAadhaarStatus("INITIATED");
           <div className="overflow-x-auto pb-2">
             <div className="flex min-w-[800px] items-center justify-between">
               {leadJourney.map((item, index) => {
-                const firstPendingIndex = leadJourney.findIndex((step) => !step.completed);
-                const isCurrent = !item.completed && index === firstPendingIndex;
+                const firstPendingIndex = leadJourney.findIndex(
+                  (step) => !step.completed,
+                );
+                const isCurrent =
+                  !item.completed && index === firstPendingIndex;
 
                 return (
-                  <div key={item.key || item.label} className="relative flex flex-1 flex-col items-center text-center">
+                  <div
+                    key={item.key || item.label}
+                    className="relative flex flex-1 flex-col items-center text-center"
+                  >
                     {index !== leadJourney.length - 1 && (
                       <div
-                        className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${leadJourney[index + 1]?.completed ? "bg-emerald-500" : "bg-slate-100"
-                          }`}
+                        className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${
+                          leadJourney[index + 1]?.completed
+                            ? "bg-emerald-500"
+                            : "bg-slate-100"
+                        }`}
                       />
                     )}
 
                     <div
-                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${item.completed
-                        ? "bg-emerald-500 text-white ring-4 ring-emerald-50"
-                        : isCurrent
-                          ? "bg-blue-600 text-white ring-4 ring-blue-50"
-                          : "bg-white text-slate-300 ring-2 ring-slate-100"
-                        }`}
+                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+                        item.completed
+                          ? "bg-emerald-500 text-white ring-4 ring-emerald-50"
+                          : isCurrent
+                            ? "bg-blue-600 text-white ring-4 ring-blue-50"
+                            : "bg-white text-slate-300 ring-2 ring-slate-100"
+                      }`}
                     >
                       {item.completed ? (
-                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        <svg
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
                         </svg>
                       ) : isCurrent ? (
                         "●"
@@ -2415,7 +2507,9 @@ setLocalAadhaarStatus("INITIATED");
                       )}
                     </div>
 
-                    <p className={`mt-2 px-2 text-xs font-medium ${item.completed || isCurrent ? "text-slate-800 font-semibold" : "text-slate-400"}`}>
+                    <p
+                      className={`mt-2 px-2 text-xs font-medium ${item.completed || isCurrent ? "text-slate-800 font-semibold" : "text-slate-400"}`}
+                    >
                       {item.label}
                     </p>
                   </div>
@@ -2426,7 +2520,7 @@ setLocalAadhaarStatus("INITIATED");
         </div>
       )}
 
-      {/* Redesigned Clean OTP Verification Modal */}
+      {/*
       {otpModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -2437,9 +2531,15 @@ setLocalAadhaarStatus("INITIATED");
 
           <div className="relative w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden border border-slate-200">
             <div className="border-b border-slate-100 p-6">
-              <h3 className="text-lg font-bold text-slate-900">Verify Mobile Number</h3>
+              <h3 className="text-lg font-bold text-slate-900">
+                Verify Mobile Number
+              </h3>
               <p className="text-slate-500 text-xs mt-1">
-                An OTP has been sent to your registered device ending in <span className="font-semibold text-slate-700">{otpModal.sentMobileMasked || formData.mobileNumber.slice(-4)}</span>.
+                An OTP has been sent to your registered device ending in{" "}
+                <span className="font-semibold text-slate-700">
+                  {otpModal.sentMobileMasked || formData.mobileNumber.slice(-4)}
+                </span>
+                .
               </p>
             </div>
 
@@ -2483,10 +2583,17 @@ setLocalAadhaarStatus("INITIATED");
                       }
                     }}
                     onPaste={(e) => {
-                      const pasted = (e.clipboardData.getData("text") || "").replace(/\D/g, "");
+                      const pasted = (
+                        e.clipboardData.getData("text") || ""
+                      ).replace(/\D/g, "");
                       if (!pasted) return;
                       e.preventDefault();
-                      const code = pasted.slice(0, 6).padEnd(6, " ").split("").slice(0, 6).map((c) => (c === " " ? "" : c));
+                      const code = pasted
+                        .slice(0, 6)
+                        .padEnd(6, " ")
+                        .split("")
+                        .slice(0, 6)
+                        .map((c) => (c === " " ? "" : c));
                       setOtpCode(code);
                       otpInputRefs.current[5]?.focus();
                     }}
@@ -2504,7 +2611,9 @@ setLocalAadhaarStatus("INITIATED");
 
               <div className="flex items-center justify-between text-xs border-b border-slate-100 pb-4">
                 <span className="text-slate-500">
-                  {timer.resendAfterSeconds > 0 ? `Resend in ${timer.resendAfterSeconds}s` : "Didn't get the code?"}
+                  {timer.resendAfterSeconds > 0
+                    ? `Resend in ${timer.resendAfterSeconds}s`
+                    : "Didn't get the code?"}
                 </span>
 
                 <button
@@ -2521,7 +2630,6 @@ setLocalAadhaarStatus("INITIATED");
                 </button>
               </div>
 
-              {/* Consent Block Integrated Fluidly inside the form container */}
               <div className="rounded-lg bg-slate-50 p-4 border border-slate-200/60">
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
                   Customer Consent Note
@@ -2552,64 +2660,127 @@ setLocalAadhaarStatus("INITIATED");
                 </button>
                 <button
                   type="button"
-                  disabled={verifyOtpAndCreateMutation.isPending || !consentAccepted}
+                  disabled={
+                    verifyOtpAndCreateMutation.isPending || !consentAccepted
+                  }
                   onClick={handleVerifyOtpSubmit}
                   className="flex-1 rounded-lg bg-slate-900 hover:bg-slate-800 py-2.5 text-sm font-semibold text-white shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {verifyOtpAndCreateMutation.isPending ? "Verifying..." : "Verify & Authorize"}
+                  {verifyOtpAndCreateMutation.isPending
+                    ? "Verifying..."
+                    : "Verify & Authorize"}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+      */}
 
       {coApplicantOtpModal.open && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
-            onClick={() => !coApplicantOtpModal.verifying && setCoApplicantOtpModal((previous) => ({ ...previous, open: false }))}
-            aria-hidden="true" />
+          <div
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+            onClick={() =>
+              !coApplicantOtpModal.verifying &&
+              setCoApplicantOtpModal((previous) => ({
+                ...previous,
+                open: false,
+              }))
+            }
+            aria-hidden="true"
+          />
           <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="border-b border-slate-100 px-6 py-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Verify Co-Applicant {coApplicantOtpModal.channel === "mobile" ? "Mobile" : "Email"}</h3>
-                  <p className="mt-1 text-xs text-slate-500">Enter the OTP sent to {coApplicantOtpModal.destination}.</p>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Verify Co-Applicant{" "}
+                    {coApplicantOtpModal.channel === "mobile"
+                      ? "Mobile"
+                      : "Email"}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Enter the OTP sent to {coApplicantOtpModal.destination}.
+                  </p>
                 </div>
-                <button type="button" disabled={coApplicantOtpModal.verifying}
-                  onClick={() => setCoApplicantOtpModal((previous) => ({ ...previous, open: false }))}
-                  className="text-xl text-slate-400 hover:text-slate-700 disabled:opacity-40">×</button>
+                <button
+                  type="button"
+                  disabled={coApplicantOtpModal.verifying}
+                  onClick={() =>
+                    setCoApplicantOtpModal((previous) => ({
+                      ...previous,
+                      open: false,
+                    }))
+                  }
+                  className="text-xl text-slate-400 hover:text-slate-700 disabled:opacity-40"
+                >
+                  ×
+                </button>
               </div>
             </div>
             <div className="space-y-5 p-6">
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-slate-700">6-digit OTP</label>
-                <input autoFocus value={coApplicantOtpModal.otp} inputMode="numeric" maxLength={6}
-                  onChange={(event) => setCoApplicantOtpModal((previous) => ({
-                    ...previous, otp: event.target.value.replace(/\D/g, "").slice(0, 6), error: "",
-                  }))}
+                <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                  6-digit OTP
+                </label>
+                <input
+                  autoFocus
+                  value={coApplicantOtpModal.otp}
+                  inputMode="numeric"
+                  maxLength={6}
+                  onChange={(event) =>
+                    setCoApplicantOtpModal((previous) => ({
+                      ...previous,
+                      otp: event.target.value.replace(/\D/g, "").slice(0, 6),
+                      error: "",
+                    }))
+                  }
                   placeholder="Enter OTP"
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-center text-xl font-bold tracking-[0.35em] outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" />
+                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-center text-xl font-bold tracking-[0.35em] outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                />
               </div>
               <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-800">Co-Applicant Consent</p>
-                <p className="mt-2 text-xs leading-relaxed text-slate-600">{CONSENT_TEXT}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-800">
+                  Co-Applicant Consent
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                  {CONSENT_TEXT}
+                </p>
                 <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-xs font-semibold text-slate-700">
-                  <input type="checkbox" checked={coApplicantOtpModal.consentAccepted}
-                    onChange={(event) => setCoApplicantOtpModal((previous) => ({
-                      ...previous, consentAccepted: event.target.checked, error: "",
-                    }))}
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600" />
+                  <input
+                    type="checkbox"
+                    checked={coApplicantOtpModal.consentAccepted}
+                    onChange={(event) =>
+                      setCoApplicantOtpModal((previous) => ({
+                        ...previous,
+                        consentAccepted: event.target.checked,
+                        error: "",
+                      }))
+                    }
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+                  />
                   I have read and accept this consent for verification.
                 </label>
               </div>
               {coApplicantOtpModal.error && (
-                <div className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs font-semibold text-rose-700">{coApplicantOtpModal.error}</div>
+                <div className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs font-semibold text-rose-700">
+                  {coApplicantOtpModal.error}
+                </div>
               )}
-              <button type="button" onClick={handleVerifyCoApplicantOtpModal}
-                disabled={coApplicantOtpModal.verifying || !coApplicantOtpModal.consentAccepted || coApplicantOtpModal.otp.length !== 6}
-                className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
-                {coApplicantOtpModal.verifying ? "Verifying OTP..." : "Verify OTP & Save Consent"}
+              <button
+                type="button"
+                onClick={handleVerifyCoApplicantOtpModal}
+                disabled={
+                  coApplicantOtpModal.verifying ||
+                  !coApplicantOtpModal.consentAccepted ||
+                  coApplicantOtpModal.otp.length !== 6
+                }
+                className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {coApplicantOtpModal.verifying
+                  ? "Verifying OTP..."
+                  : "Verify OTP & Save Consent"}
               </button>
             </div>
           </div>
@@ -2619,10 +2790,15 @@ setLocalAadhaarStatus("INITIATED");
       {/* Secondary Server Errors Alert Popup Container */}
       {otpPopup.open && !otpModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-xs" onClick={() => setOtpPopup((p) => ({ ...p, open: false }))} />
+          <div
+            className="absolute inset-0 bg-slate-900/30 backdrop-blur-xs"
+            onClick={() => setOtpPopup((p) => ({ ...p, open: false }))}
+          />
           <div className="relative w-full max-w-md rounded-xl bg-white shadow-xl border border-slate-200 p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">{otpPopup.title}</h3>
+              <h3 className="text-base font-bold text-slate-900">
+                {otpPopup.title}
+              </h3>
               <button
                 type="button"
                 onClick={() => setOtpPopup((p) => ({ ...p, open: false }))}
@@ -2631,7 +2807,9 @@ setLocalAadhaarStatus("INITIATED");
                 ✕
               </button>
             </div>
-            <div className={`rounded-lg border p-4 text-sm ${otpPopup.severity === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-rose-100 bg-rose-50 text-rose-800"}`}>
+            <div
+              className={`rounded-lg border p-4 text-sm ${otpPopup.severity === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-rose-100 bg-rose-50 text-rose-800"}`}
+            >
               {otpPopup.body}
             </div>
             <div className="flex justify-end">
@@ -2647,6 +2825,7 @@ setLocalAadhaarStatus("INITIATED");
         </div>
       )}
 
+      {/*
       {emailOtpModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -2676,116 +2855,83 @@ setLocalAadhaarStatus("INITIATED");
 
             <div className="space-y-5 p-6">
               <div className="flex justify-between gap-1.5 sm:gap-2">
-                {Array.from({ length: 6 }).map(
-                  (_, index) => (
-                    <input
-                      key={index}
-                      ref={(element) => {
-                        emailOtpInputRefs.current[index] =
-                          element;
-                      }}
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      maxLength={1}
-                      value={emailOtpCode[index]}
-                      onChange={(event) => {
-                        const rawValue =
-                          event.target.value.replace(
-                            /\D/g,
-                            "",
-                          );
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <input
+                    key={index}
+                    ref={(element) => {
+                      emailOtpInputRefs.current[index] = element;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={1}
+                    value={emailOtpCode[index]}
+                    onChange={(event) => {
+                      const rawValue = event.target.value.replace(/\D/g, "");
 
-                        if (!rawValue) {
-                          setEmailOtpCode(
-                            (previous) => {
-                              const updated = [
-                                ...previous,
-                              ];
+                      if (!rawValue) {
+                        setEmailOtpCode((previous) => {
+                          const updated = [...previous];
 
-                              updated[index] = "";
+                          updated[index] = "";
 
-                              return updated;
-                            },
-                          );
+                          return updated;
+                        });
 
-                          return;
-                        }
+                        return;
+                      }
 
-                        const digit =
-                          rawValue.slice(-1);
+                      const digit = rawValue.slice(-1);
 
-                        setEmailOtpCode(
-                          (previous) => {
-                            const updated = [
-                              ...previous,
-                            ];
+                      setEmailOtpCode((previous) => {
+                        const updated = [...previous];
 
-                            updated[index] = digit;
+                        updated[index] = digit;
 
-                            return updated;
-                          },
-                        );
+                        return updated;
+                      });
 
-                        if (index < 5) {
-                          emailOtpInputRefs.current[
-                            index + 1
-                          ]?.focus();
-                        }
-                      }}
-                      onKeyDown={(event) => {
-                        if (
-                          event.key === "Backspace" &&
-                          !emailOtpCode[index] &&
-                          index > 0
-                        ) {
-                          emailOtpInputRefs.current[
-                            index - 1
-                          ]?.focus();
-                        }
-                      }}
-                      onPaste={(event) => {
-                        const pastedValue =
-                          event.clipboardData
-                            .getData("text")
-                            .replace(/\D/g, "")
-                            .slice(0, 6);
+                      if (index < 5) {
+                        emailOtpInputRefs.current[index + 1]?.focus();
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "Backspace" &&
+                        !emailOtpCode[index] &&
+                        index > 0
+                      ) {
+                        emailOtpInputRefs.current[index - 1]?.focus();
+                      }
+                    }}
+                    onPaste={(event) => {
+                      const pastedValue = event.clipboardData
+                        .getData("text")
+                        .replace(/\D/g, "")
+                        .slice(0, 6);
 
-                        if (!pastedValue) {
-                          return;
-                        }
+                      if (!pastedValue) {
+                        return;
+                      }
 
-                        event.preventDefault();
+                      event.preventDefault();
 
-                        const updatedCode =
-                          Array(6).fill("");
+                      const updatedCode = Array(6).fill("");
 
-                        pastedValue
-                          .split("")
-                          .forEach(
-                            (digit, digitIndex) => {
-                              updatedCode[digitIndex] =
-                                digit;
-                            },
-                          );
+                      pastedValue.split("").forEach((digit, digitIndex) => {
+                        updatedCode[digitIndex] = digit;
+                      });
 
-                        setEmailOtpCode(updatedCode);
+                      setEmailOtpCode(updatedCode);
 
-                        const focusIndex = Math.min(
-                          pastedValue.length,
-                          5,
-                        );
+                      const focusIndex = Math.min(pastedValue.length, 5);
 
-                        emailOtpInputRefs.current[
-                          focusIndex
-                        ]?.focus();
-                      }}
-                      className="h-10 w-10 sm:h-12 sm:w-12 flex-1 max-w-[48px] rounded-lg border border-slate-300 bg-slate-50 text-center text-base sm:text-lg font-bold text-slate-900 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                      aria-label={`Email OTP digit ${index + 1
-                        }`}
-                    />
-                  ),
-                )}
+                      emailOtpInputRefs.current[focusIndex]?.focus();
+                    }}
+                    className="h-10 w-10 sm:h-12 sm:w-12 flex-1 max-w-[48px] rounded-lg border border-slate-300 bg-slate-50 text-center text-base sm:text-lg font-bold text-slate-900 outline-none transition-all focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                    aria-label={`Email OTP digit ${index + 1}`}
+                  />
+                ))}
               </div>
 
               {emailOtpError && (
@@ -2796,8 +2942,7 @@ setLocalAadhaarStatus("INITIATED");
 
               <div className="flex items-center justify-between border-b border-slate-100 pb-4 text-xs">
                 <span className="text-slate-500">
-                  {emailOtpModal.resendAfterSeconds >
-                    0
+                  {emailOtpModal.resendAfterSeconds > 0
                     ? `Resend in ${emailOtpModal.resendAfterSeconds}s`
                     : "Didn't receive the OTP?"}
                 </span>
@@ -2805,8 +2950,7 @@ setLocalAadhaarStatus("INITIATED");
                 <button
                   type="button"
                   disabled={
-                    emailOtpModal.resendAfterSeconds >
-                    0 ||
+                    emailOtpModal.resendAfterSeconds > 0 ||
                     sendEmailOtpMutation.isPending
                   }
                   onClick={() => {
@@ -2815,24 +2959,18 @@ setLocalAadhaarStatus("INITIATED");
                   }}
                   className="font-bold text-blue-600 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {sendEmailOtpMutation.isPending
-                    ? "Sending..."
-                    : "Resend OTP"}
+                  {sendEmailOtpMutation.isPending ? "Sending..." : "Resend OTP"}
                 </button>
               </div>
-
-              {/* No consent section for email OTP */}
 
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() =>
-                    setEmailOtpModal(
-                      (previous) => ({
-                        ...previous,
-                        open: false,
-                      }),
-                    )
+                    setEmailOtpModal((previous) => ({
+                      ...previous,
+                      open: false,
+                    }))
                   }
                   className="flex-1 rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50"
                 >
@@ -2843,8 +2981,7 @@ setLocalAadhaarStatus("INITIATED");
                   type="button"
                   disabled={
                     verifyEmailOtpMutation.isPending ||
-                    emailOtpCode.join("").length !==
-                    6
+                    emailOtpCode.join("").length !== 6
                   }
                   onClick={handleVerifyEmailOtp}
                   className="flex-1 rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white shadow-xs transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -2858,6 +2995,7 @@ setLocalAadhaarStatus("INITIATED");
           </div>
         </div>
       )}
+      */}
 
       {/* Follow-up Scheduling Modal on Save Draft */}
       <ScheduleFollowUpModal
@@ -2868,7 +3006,9 @@ setLocalAadhaarStatus("INITIATED");
         initialDate={followUpData.nextFollowUpDate}
         initialTime={followUpData.followUpTime}
         initialNotes={followUpData.followUpNotes}
-        isSaving={saveNewDraftMutation.isPending || updateDraftMutation.isPending}
+        isSaving={
+          saveNewDraftMutation.isPending || updateDraftMutation.isPending
+        }
       />
 
       {/* Work Not Started Warning Banner */}
@@ -2883,7 +3023,8 @@ setLocalAadhaarStatus("INITIATED");
                 Attendance Punch-In Required
               </h4>
               <p className="text-xs text-amber-800">
-                You have not started your work session for today. Please punch in your attendance before creating or saving leads.
+                You have not started your work session for today. Please punch
+                in your attendance before creating or saving leads.
               </p>
             </div>
           </div>
@@ -2899,403 +3040,396 @@ setLocalAadhaarStatus("INITIATED");
 
       {/* Global Toast Alert Messages */}
       {message && (
-        <div className={`rounded-lg border p-4 text-xs font-semibold shadow-xs ${messageType === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-700" : "border-rose-100 bg-rose-50 text-rose-700"
-          }`}>
+        <div
+          className={`rounded-lg border p-4 text-xs font-semibold shadow-xs ${
+            messageType === "success"
+              ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+              : "border-rose-100 bg-rose-50 text-rose-700"
+          }`}
+        >
           {message}
         </div>
       )}
 
       {/* Main Core Form Inputs Viewport Layout matching image guidelines */}
       <div className="space-y-6">
-
-<Section title="Primary Applicant Information">
-  {/* Row 1: Legal Name */}
-  <div className="col-span-full">
-    <Field
-      label="Customer / Entity Name *"
-      name="customerName"
-      value={formData.customerName}
-      onChange={handleInputChange}
-      required
-      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-900 shadow-2xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-    />
-  </div>
-
-  {/* Row 2: Contact Validations Grid */}
-  <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
-    {/* Mobile Number Block */}
-    <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
-      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-        Mobile Number *
-      </label>
-      <div className="flex items-center gap-2 sm:gap-2.5">
-        <input
-          name="mobileNumber"
-          value={formData.mobileNumber}
-          onChange={handleInputChange}
-          maxLength={10}
-          inputMode="numeric"
-          required
-          disabled={otpVerified}
-          placeholder="Enter 10-digit number"
-          className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
-            otpVerified ? "bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200" : ""
-          }`}
-        />
-        <button
-          type="button"
-          onClick={handleSendOtp}
-          disabled={otpVerified || sendOtpMutation.isPending}
-          className={`shrink-0 rounded-xl px-3.5 sm:px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider transition-all border whitespace-nowrap shadow-2xs ${
-            otpVerified
-              ? "bg-emerald-50 border-emerald-200 text-emerald-600 cursor-not-allowed"
-              : "bg-slate-900 border-slate-900 text-white hover:bg-slate-800 active:scale-98"
-          }`}
-        >
-          {otpVerified ? "✓ Verified" : sendOtpMutation.isPending ? "Sending..." : "Send OTP"}
-        </button>
-      </div>
-
-      {otpVerified && (
-        <div className="mt-2.5 flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-2.5 border border-slate-100">
-          <span className="text-xs font-semibold text-slate-400">Application ID</span>
-          <span className="text-xs font-bold tracking-wide text-slate-700">{applicationNumber || "—"}</span>
-        </div>
-      )}
-    </div>
-
-    {/* Email Block */}
-    <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
-      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-        Email Id *
-      </label>
-      <div className="flex items-center gap-2 sm:gap-2.5">
-        <input
-          type="email"
-          name="emailId"
-          value={formData.emailId || ""}
-          onChange={handleEmailChange}
-          maxLength={255}
-          autoComplete="email"
-          placeholder="name@domain.com"
-          required
-          disabled={emailOtpVerified}
-          className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
-            emailOtpVerified ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : ""
-          }`}
-        />
-        <button
-          type="button"
-          onClick={handleSendEmailOtp}
-          disabled={emailOtpVerified || sendEmailOtpMutation.isPending}
-          className={`shrink-0 rounded-xl px-3.5 sm:px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider transition-all border whitespace-nowrap shadow-2xs ${
-            emailOtpVerified
-              ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
-              : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
-          }`}
-        >
-          {emailOtpVerified ? "✓ Verified" : sendEmailOtpMutation.isPending ? "Sending..." : emailOtpSent ? "Resend OTP" : "Send OTP"}
-        </button>
-      </div>
-
-      {emailOtpVerified && (
-        <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-emerald-50/50 px-3.5 py-2.5 border border-emerald-100/60 text-emerald-700">
-          <span className="text-xs font-bold">✓ Email address verified successfully</span>
-        </div>
-      )}
-    </div>
-  </div>
-
-  {/* Row 3: Identity Verification (PAN & Aadhaar + Compact Photo Block) */}
-  <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
-    {/* Left Side Column: PAN Block */}
-    <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
-      <div>
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-          PAN Number *
-        </label>
-        <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
-          <input
-            name="panNumber"
-            value={formData.panNumber}
-            onChange={handleInputChange}
-            maxLength={10}
-            placeholder="ABCDE1234F"
-            disabled={panVerified}
-            className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
-              panVerified ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-600" : ""
-            }`}
-          />
-          {formData.panNumber.trim() && (
-            <button
-              type="button"
-              onClick={handleVerifyPan}
-              disabled={panVerified || verifyPanMutation.isPending}
-              className={`shrink-0 rounded-xl px-3.5 sm:px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
-                panVerified
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
-                  : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
-              }`}
-            >
-              {panVerified ? "Verified" : verifyPanMutation.isPending ? "Verifying..." : "Verify"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* PAN Scan / Extraction Area */}
-      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-3xs hover:bg-slate-50 transition-colors">
-            <input
-              type="file"
-              className="hidden"
-              accept=".jpg,.jpeg,.png,.pdf"
-              disabled={panOcrMutation.isPending}
-              onChange={(event) => {
-                const file = event.target.files?.[0] || null;
-                setPanFile(file);
-                setPanOcrData(null);
-                setPanOcrError("");
-                if (file) setPanVerified(false);
-              }}
+        <Section title="Primary Applicant Information">
+          {/* Row 1: Legal Name */}
+          <div className="col-span-full">
+            <Field
+              label="Customer / Entity Name *"
+              name="customerName"
+              value={formData.customerName}
+              onChange={handleInputChange}
+              required
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-900 shadow-2xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
             />
-            <span className="block truncate max-w-[200px]">
-              {panFile ? panFile.name : "Attach card image or PDF"}
-            </span>
-          </label>
-          <button
-            type="button"
-            disabled={!panFile || panOcrMutation.isPending}
-            onClick={() => {
-              setMessage("");
-              setPanOcrError("");
-              panOcrMutation.mutate();
-            }}
-            className="rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-          >
-            {panOcrMutation.isPending ? "Extracting..." : "Auto-Fill"}
-          </button>
-        </div>
-        {panOcrError && <p className="mt-2 text-[11px] font-semibold text-rose-500">{panOcrError}</p>}
-        {panOcrData && !panOcrError && <p className="mt-2 text-[11px] font-medium text-emerald-600">Scan successful. Review mapped data.</p>}
-      </div>
-
-      {panVerified && (
-        <div className="flex items-center justify-between rounded-xl bg-emerald-50/50 px-3.5 py-2 border border-emerald-100/60 text-emerald-700">
-          <span className="text-xs font-semibold">Document matches registered identity</span>
-          <span className="text-xs font-bold uppercase tracking-wider">Verified</span>
-        </div>
-      )}
-    </div>
-
-    {/* Right Side Column: Aadhaar Box + Compact Photo Block */}
-    <div className="flex flex-col gap-4 w-full self-start">
-      {/* Aadhaar KYC Link Dispatcher Box */}
-      <div
-        className={`rounded-2xl border p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 h-fit ${aadhaarStatusMeta.boxClass}`}
-      >
-        <div className="flex flex-col gap-1 min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex self-start rounded-md bg-blue-600/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
-              DigiLocker KYC
-            </span>
-
-            <span
-              className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${aadhaarStatusMeta.badgeClass}`}
-            >
-              {aadhaarStatusQuery.isFetching && isAadhaarInitiated
-                ? "Refreshing..."
-                : aadhaarStatusMeta.label}
-            </span>
           </div>
 
-          <h4 className="text-sm font-bold text-slate-800">
-            Aadhaar Verification Link
-          </h4>
+          {/* Row 2: Contact Validations Grid */}
+          <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
+            {/* Mobile Number Block */}
+            <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Mobile Number *
+              </label>
+              <input
+                name="mobileNumber"
+                value={formData.mobileNumber}
+                onChange={handleInputChange}
+                maxLength={10}
+                inputMode="numeric"
+                required
+                placeholder="Enter 10-digit number"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+              />
+            </div>
 
-          <p className="max-w-md text-[11px] font-semibold text-slate-500">
-            {aadhaarStatusMeta.helper}
-          </p>
-        </div>
+            {/* Email Block */}
+            <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Email Id *
+              </label>
+              <input
+                type="email"
+                name="emailId"
+                value={formData.emailId || ""}
+                onChange={handleInputChange}
+                maxLength={255}
+                autoComplete="email"
+                placeholder="name@domain.com"
+                required
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+              />
+            </div>
+          </div>
 
-        <div className="w-full sm:w-auto sm:shrink-0 sm:min-w-[150px]">
-          <button
-            type="button"
-            onClick={handleInitAadhaar}
-            disabled={
-              aadhaarLinkSending ||
-              isAadhaarCooldownActive ||
-              isAadhaarVerified ||
-              !currentApplicationId
-            }
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 sm:py-2 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/10 transition-all hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-          >
-            {aadhaarLinkSending ? (
-              "Sending..."
-            ) : isAadhaarVerified ? (
-              "✓ Verified"
-            ) : isAadhaarCooldownActive ? (
-              `Wait ${formatCooldown(aadhaarCooldownSeconds)}`
-            ) : !currentApplicationId ? (
-              "Save Draft First"
-            ) : aadhaarKycStatus === "FAILED" ? (
-              "Resend Link"
-            ) : isAadhaarInitiated ? (
-              "Resend Link"
-            ) : (
-              <>
-                <svg
-                  className="h-3.5 w-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13.5 6H5.25A2.25 2.25 0 003 8.25v7.5A2.25 2.25 0 005.25 18h13.5A2.25 2.25 0 0021 15.75v-4.5M13.5 6L21 3m0 0v7.5M21 3l-7.5 7.5"
+          {/* Row 3: Identity Verification (PAN & Aadhaar + Compact Photo Block) */}
+          <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
+            {/* Left Side Column: PAN Block */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  PAN Number *
+                </label>
+                <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
+                  <input
+                    name="panNumber"
+                    value={formData.panNumber}
+                    onChange={handleInputChange}
+                    maxLength={10}
+                    placeholder="ABCDE1234F"
+                    disabled={panVerified}
+                    className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+                      panVerified
+                        ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-600"
+                        : ""
+                    }`}
                   />
-                </svg>
-                Send Link
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+                  {formData.panNumber.trim() && (
+                    <button
+                      type="button"
+                      onClick={handleVerifyPan}
+                      disabled={panVerified || verifyPanMutation.isPending}
+                      className={`shrink-0 rounded-xl px-3.5 sm:px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
+                        panVerified
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
+                          : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
+                      }`}
+                    >
+                      {panVerified
+                        ? "Verified"
+                        : verifyPanMutation.isPending
+                          ? "Verifying..."
+                          : "Verify"}
+                    </button>
+                  )}
+                </div>
+              </div>
 
-      {/* Compact Profile Photo Management Panel */}
-      <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 shadow-3xs">
-            <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
-              IMG
-            </span>
-          </div>
-          <div className="flex flex-col gap-1 min-w-0">
-            <h4 className="text-xs font-bold text-slate-800">Biometric Photo</h4>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {isApplicantPhotoUploaded ? (
-                <>
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
+              {/* PAN Scan / Extraction Area */}
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-3xs hover:bg-slate-50 transition-colors">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      disabled={panOcrMutation.isPending}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] || null;
+                        setPanFile(file);
+                        setPanOcrData(null);
+                        setPanOcrError("");
+                        if (file) setPanVerified(false);
+                      }}
+                    />
+                    <span className="block truncate max-w-[200px]">
+                      {panFile ? panFile.name : "Attach card image or PDF"}
+                    </span>
+                  </label>
                   <button
                     type="button"
-                    onClick={handleViewApplicantPhoto}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                    disabled={!panFile || panOcrMutation.isPending}
+                    onClick={() => {
+                      setMessage("");
+                      setPanOcrError("");
+                      panOcrMutation.mutate();
+                    }}
+                    className="rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
                   >
-                    View Photo
+                    {panOcrMutation.isPending ? "Extracting..." : "Auto-Fill"}
                   </button>
-                </>
-              ) : (
-                <span className="inline-flex rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
-                  Pending
-                </span>
+                </div>
+                {panOcrError && (
+                  <p className="mt-2 text-[11px] font-semibold text-rose-500">
+                    {panOcrError}
+                  </p>
+                )}
+                {panOcrData && !panOcrError && (
+                  <p className="mt-2 text-[11px] font-medium text-emerald-600">
+                    Scan successful. Review mapped data.
+                  </p>
+                )}
+              </div>
+
+              {panVerified && (
+                <div className="flex items-center justify-between rounded-xl bg-emerald-50/50 px-3.5 py-2 border border-emerald-100/60 text-emerald-700">
+                  <span className="text-xs font-semibold">
+                    Document matches registered identity
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider">
+                    Verified
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Right Side Column: Aadhaar Box + Compact Photo Block */}
+            <div className="flex flex-col gap-4 w-full self-start">
+              {/* Aadhaar KYC Link Dispatcher Box */}
+              <div
+                className={`rounded-2xl border p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 h-fit ${aadhaarStatusMeta.boxClass}`}
+              >
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex self-start rounded-md bg-blue-600/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                      DigiLocker KYC
+                    </span>
+
+                    <span
+                      className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${aadhaarStatusMeta.badgeClass}`}
+                    >
+                      {aadhaarStatusQuery.isFetching && isAadhaarInitiated
+                        ? "Refreshing..."
+                        : aadhaarStatusMeta.label}
+                    </span>
+                  </div>
+
+                  <h4 className="text-sm font-bold text-slate-800">
+                    Aadhaar Verification Link
+                  </h4>
+
+                  <p className="max-w-md text-[11px] font-semibold text-slate-500">
+                    {aadhaarStatusMeta.helper}
+                  </p>
+                </div>
+
+                <div className="w-full sm:w-auto sm:shrink-0 sm:min-w-[150px]">
+                  <button
+                    type="button"
+                    onClick={handleInitAadhaar}
+                    disabled={
+                      aadhaarLinkSending ||
+                      isAadhaarCooldownActive ||
+                      isAadhaarVerified ||
+                      !currentApplicationId
+                    }
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 sm:py-2 text-xs font-extrabold uppercase tracking-wider text-white shadow-md shadow-blue-500/10 transition-all hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                  >
+                    {aadhaarLinkSending ? (
+                      "Sending..."
+                    ) : isAadhaarVerified ? (
+                      "✓ Verified"
+                    ) : isAadhaarCooldownActive ? (
+                      `Wait ${formatCooldown(aadhaarCooldownSeconds)}`
+                    ) : !currentApplicationId ? (
+                      "Save Draft First"
+                    ) : aadhaarKycStatus === "FAILED" ? (
+                      "Resend Link"
+                    ) : isAadhaarInitiated ? (
+                      "Resend Link"
+                    ) : (
+                      <>
+                        <svg
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M13.5 6H5.25A2.25 2.25 0 003 8.25v7.5A2.25 2.25 0 005.25 18h13.5A2.25 2.25 0 0021 15.75v-4.5M13.5 6L21 3m0 0v7.5M21 3l-7.5 7.5"
+                          />
+                        </svg>
+                        Send Link
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Compact Profile Photo Management Panel */}
+              <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 shadow-3xs">
+                    <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
+                      IMG
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <h4 className="text-xs font-bold text-slate-800">
+                      Biometric Photo
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {isApplicantPhotoUploaded ? (
+                        <>
+                          <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                            Uploaded
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleViewApplicantPhoto}
+                            className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                          >
+                            View Photo
+                          </button>
+                        </>
+                      ) : (
+                        <span className="inline-flex rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
+                          Pending
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto sm:min-w-[210px]">
+                  <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 sm:py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors whitespace-nowrap">
+                    {customerPhotoFile ? "Change" : "Choose File"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={handleCustomerPhotoChange}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={
+                      !customerPhotoFile ||
+                      uploadCustomerPhotoMutation.isPending ||
+                      !(createdApplicationId ?? applicationId)
+                    }
+                    onClick={() => uploadCustomerPhotoMutation.mutate()}
+                    className="flex-1 rounded-xl bg-blue-600 px-3 py-2.5 sm:py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"
+                  >
+                    {uploadCustomerPhotoMutation.isPending
+                      ? "Uploading..."
+                      : "Upload"}
+                  </button>
+                </div>
+              </div>
+
+              {customerPhotoFile && (
+                <div className="rounded-xl bg-blue-50/50 px-3 py-1.5 border border-blue-100 text-[11px] font-medium text-blue-700 truncate w-full sm:max-w-sm">
+                  Staged:{" "}
+                  <span className="font-bold">{customerPhotoFile.name}</span>
+                </div>
               )}
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto sm:min-w-[210px]">
-          <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 sm:py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors whitespace-nowrap">
-            {customerPhotoFile ? "Change" : "Choose File"}
-            <input
-              type="file"
-              className="hidden"
-              accept=".jpg,.jpeg,.png"
-              onChange={handleCustomerPhotoChange}
+          {/* Row 4: Professional & Corporate Details Grid */}
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3 col-span-full">
+            <Field label="Occupation / Constitution">
+              <select
+                name="occupation"
+                value={formData.occupation}
+                onChange={handleInputChange}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+              >
+                <option value="SELF_EMPLOYED">Self-employed</option>
+                <option value="SALARIED">Salaried Sector</option>
+                <option value="BUSINESS">Corporate Business</option>
+                <option value="PROFESSIONAL">Licensed Professional</option>
+              </select>
+            </Field>
+
+            <Field
+              label="Employer / Business Name"
+              name="businessName"
+              value={formData.businessName}
+              onChange={handleInputChange}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
             />
-          </label>
 
-          <button
-            type="button"
-            disabled={!customerPhotoFile || uploadCustomerPhotoMutation.isPending || !(createdApplicationId ?? applicationId)}
-            onClick={() => uploadCustomerPhotoMutation.mutate()}
-            className="flex-1 rounded-xl bg-blue-600 px-3 py-2.5 sm:py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"
-          >
-            {uploadCustomerPhotoMutation.isPending ? "Uploading..." : "Upload"}
-          </button>
-        </div>
-      </div>
-      
-      {customerPhotoFile && (
-        <div className="rounded-xl bg-blue-50/50 px-3 py-1.5 border border-blue-100 text-[11px] font-medium text-blue-700 truncate w-full sm:max-w-sm">
-          Staged: <span className="font-bold">{customerPhotoFile.name}</span>
-        </div>
-      )}
-    </div>
-  </div>
+            {/* GST Identification Block */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                GST Number
+              </label>
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                <input
+                  name="gstNumber"
+                  value={formData.gstNumber}
+                  onChange={handleInputChange}
+                  maxLength={15}
+                  placeholder="22AAAAA0000A1Z5"
+                  disabled={gstVerified}
+                  className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm uppercase font-semibold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
+                    gstVerified
+                      ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-600"
+                      : ""
+                  }`}
+                />
 
-  {/* Row 4: Professional & Corporate Details Grid */}
-  <div className="grid grid-cols-1 gap-5 md:grid-cols-3 col-span-full">
-    <Field label="Occupation / Constitution">
-      <select
-        name="occupation"
-        value={formData.occupation}
-        onChange={handleInputChange}
-        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-      >
-        <option value="SELF_EMPLOYED">Self-employed</option>
-        <option value="SALARIED">Salaried Sector</option>
-        <option value="BUSINESS">Corporate Business</option>
-        <option value="PROFESSIONAL">Licensed Professional</option>
-      </select>
-    </Field>
+                {formData.gstNumber.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleVerifyGst}
+                    disabled={gstVerified || verifyGstMutation.isPending}
+                    className={`shrink-0 rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
+                      gstVerified
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
+                        : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
+                    }`}
+                  >
+                    {gstVerified
+                      ? "Verified"
+                      : verifyGstMutation.isPending
+                        ? "Verifying..."
+                        : "Verify"}
+                  </button>
+                )}
+              </div>
 
-    <Field
-      label="Employer / Business Name"
-      name="businessName"
-      value={formData.businessName}
-      onChange={handleInputChange}
-      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-    />
-
-    {/* GST Identification Block */}
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-        GST Number
-      </label>
-      <div className="flex items-center gap-2 sm:gap-2.5">
-        <input
-          name="gstNumber"
-          value={formData.gstNumber}
-          onChange={handleInputChange}
-          maxLength={15}
-          placeholder="22AAAAA0000A1Z5"
-          disabled={gstVerified}
-          className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm uppercase font-semibold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
-            gstVerified ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-600" : ""
-          }`}
-        />
-
-        {formData.gstNumber.trim() && (
-          <button
-            type="button"
-            onClick={handleVerifyGst}
-            disabled={gstVerified || verifyGstMutation.isPending}
-            className={`shrink-0 rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs font-extrabold uppercase tracking-wider border transition-all shadow-2xs ${
-              gstVerified
-                ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
-                : "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 active:scale-98"
-            }`}
-          >
-            {gstVerified ? "Verified" : verifyGstMutation.isPending ? "Verifying..." : "Verify"}
-          </button>
-        )}
-      </div>
-
-      {gstVerified && (
-        <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50/50 px-3.5 py-2 border border-emerald-100/60 text-emerald-700">
-          <span className="text-xs font-semibold">GSTIN validated successfully</span>
-          <span className="text-xs font-bold uppercase tracking-wider">Verified</span>
-        </div>
-      )}
-    </div>
-  </div>
-</Section>
-
+              {gstVerified && (
+                <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-50/50 px-3.5 py-2 border border-emerald-100/60 text-emerald-700">
+                  <span className="text-xs font-semibold">
+                    GSTIN validated successfully
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider">
+                    Verified
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </Section>
 
         {/* Co-Applicants Multi-Card Management Workspace */}
         <div className="space-y-6">
@@ -3305,7 +3439,8 @@ setLocalAadhaarStatus("INITIATED");
                 Co-Applicant Details
               </h4>
               <p className="text-xs text-slate-500">
-                Add up to 3 joint/co-signing applicants to distribute collateral risk parameters.
+                Add up to 3 joint/co-signing applicants to distribute collateral
+                risk parameters.
               </p>
             </div>
             <button
@@ -3314,8 +3449,18 @@ setLocalAadhaarStatus("INITIATED");
               disabled={coApplicants.length >= 3}
               className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"
+                />
               </svg>
               Add Co-Applicant
             </button>
@@ -3323,7 +3468,8 @@ setLocalAadhaarStatus("INITIATED");
 
           {coApplicants.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
-              No co-applicants added. Click the button above to add financial profile verification cards.
+              No co-applicants added. Click the button above to add financial
+              profile verification cards.
             </div>
           ) : (
             coApplicants.map((coApp, index) => (
@@ -3343,29 +3489,57 @@ setLocalAadhaarStatus("INITIATED");
                       Mobile Number *
                     </label>
                     <div className="flex gap-2">
-                      <input name="mobile" value={coApp.mobile}
-                        onChange={(e) => handleCoApplicantChange(index, e)} maxLength={10}
-                        inputMode="numeric" placeholder="10-digit mobile" required
+                      <input
+                        name="mobile"
+                        value={coApp.mobile}
+                        onChange={(e) => handleCoApplicantChange(index, e)}
+                        maxLength={10}
+                        inputMode="numeric"
+                        placeholder="10-digit mobile"
+                        required
                         disabled={coApp.mobileVerified}
-                        className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50" />
-                      <button type="button" onClick={() => handleCoApplicantMobileOtp(index)}
+                        className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCoApplicantMobileOtp(index)}
                         disabled={coApp.mobileVerified}
-                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600">
-                        {coApp.mobileVerified ? "Verified" : coApp.mobileOtpSent ? "Resend" : "Send OTP"}
+                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
+                      >
+                        {coApp.mobileVerified
+                          ? "Verified"
+                          : coApp.mobileOtpSent
+                            ? "Resend"
+                            : "Send OTP"}
                       </button>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">Email Address *</label>
+                    <label className="text-xs font-semibold text-slate-700">
+                      Email Address *
+                    </label>
                     <div className="flex gap-2">
-                      <input type="email" name="email" value={coApp.email}
-                        onChange={(e) => handleCoApplicantChange(index, e)} placeholder="name@domain.com"
+                      <input
+                        type="email"
+                        name="email"
+                        value={coApp.email}
+                        onChange={(e) => handleCoApplicantChange(index, e)}
+                        placeholder="name@domain.com"
                         disabled={coApp.emailVerified}
-                        className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3.5 py-2 text-sm disabled:bg-slate-50" />
-                      <button type="button" onClick={() => handleCoApplicantEmailOtp(index)} disabled={coApp.emailVerified}
-                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600">
-                        {coApp.emailVerified ? "Verified" : coApp.emailOtpSent ? "Resend" : "Send OTP"}
+                        className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3.5 py-2 text-sm disabled:bg-slate-50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCoApplicantEmailOtp(index)}
+                        disabled={coApp.emailVerified}
+                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
+                      >
+                        {coApp.emailVerified
+                          ? "Verified"
+                          : coApp.emailOtpSent
+                            ? "Resend"
+                            : "Send OTP"}
                       </button>
                     </div>
                   </div>
@@ -3382,32 +3556,75 @@ setLocalAadhaarStatus("INITIATED");
                       placeholder="ABCDE1234F"
                       className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm uppercase text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     />
-                    <span className="text-[11px] text-slate-500">Enter PAN manually or upload the card below. Format: ABCDE1234F.</span>
-                    <button type="button" onClick={() => handleCoApplicantPanVerify(index)} disabled={coApp.panVerified}
-                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600">
+                    <span className="text-[11px] text-slate-500">
+                      Enter PAN manually or upload the card below. Format:
+                      ABCDE1234F.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCoApplicantPanVerify(index)}
+                      disabled={coApp.panVerified}
+                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
+                    >
                       {coApp.panVerified ? "PAN Verified" : "Verify PAN"}
                     </button>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">PAN Card OCR *</label>
-                    <input type="file" accept="image/jpeg,image/png,application/pdf"
-                      onChange={(e) => updateCoApplicant(index, { panFile: e.target.files?.[0] || null, panOcrError: "" })}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs" />
-                    <button type="button" onClick={() => handleCoApplicantPanOcr(index)} disabled={coApp.panOcrLoading}
-                      className="rounded-lg border border-blue-600 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50">
-                      {coApp.panOcrLoading ? "Reading PAN..." : "Extract PAN & Name"}
+                    <label className="text-xs font-semibold text-slate-700">
+                      PAN Card OCR *
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,application/pdf"
+                      onChange={(e) =>
+                        updateCoApplicant(index, {
+                          panFile: e.target.files?.[0] || null,
+                          panOcrError: "",
+                        })
+                      }
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleCoApplicantPanOcr(index)}
+                      disabled={coApp.panOcrLoading}
+                      className="rounded-lg border border-blue-600 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50"
+                    >
+                      {coApp.panOcrLoading
+                        ? "Reading PAN..."
+                        : "Extract PAN & Name"}
                     </button>
-                    {coApp.panOcrError && <span className="text-[11px] text-rose-600">{coApp.panOcrError}</span>}
+                    {coApp.panOcrError && (
+                      <span className="text-[11px] text-rose-600">
+                        {coApp.panOcrError}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-1.5 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
-                    <label className="text-xs font-semibold text-slate-700">Identity Verification</label>
-                    <p className="text-[11px] leading-relaxed text-slate-600">No Aadhaar number entry is required. A secure DigiLocker / offline XML verification link will be sent directly to the co-applicant.</p>
-                    <button type="button" onClick={() => handleCoApplicantIdentityLink(index)}
-                      disabled={coApp.identityStatus === "INITIATED" || coApp.identityStatus === "VERIFIED"}
-                      className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600">
-                      {coApp.identityStatus === "VERIFIED" ? "Identity Verified" : coApp.identityStatus === "INITIATED" ? "Link Sent" : "Send Identity Link"}
+                    <label className="text-xs font-semibold text-slate-700">
+                      Identity Verification
+                    </label>
+                    <p className="text-[11px] leading-relaxed text-slate-600">
+                      No Aadhaar number entry is required. A secure DigiLocker /
+                      offline XML verification link will be sent directly to the
+                      co-applicant.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleCoApplicantIdentityLink(index)}
+                      disabled={
+                        coApp.identityStatus === "INITIATED" ||
+                        coApp.identityStatus === "VERIFIED"
+                      }
+                      className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
+                    >
+                      {coApp.identityStatus === "VERIFIED"
+                        ? "Identity Verified"
+                        : coApp.identityStatus === "INITIATED"
+                          ? "Link Sent"
+                          : "Send Identity Link"}
                     </button>
                   </div>
 
@@ -3436,7 +3653,9 @@ setLocalAadhaarStatus("INITIATED");
                       <option value="SELF_EMPLOYED">Self-employed</option>
                       <option value="SALARIED">Salaried Sector</option>
                       <option value="BUSINESS">Corporate Business</option>
-                      <option value="PROFESSIONAL">Licensed Professional</option>
+                      <option value="PROFESSIONAL">
+                        Licensed Professional
+                      </option>
                     </select>
                   </Field>
 
@@ -3457,8 +3676,18 @@ setLocalAadhaarStatus("INITIATED");
                       onClick={() => handleRemoveCoApplicant(index)}
                       className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
                       </svg>
                       Remove CoApplicant: {index + 1}
                     </button>
@@ -3477,7 +3706,8 @@ setLocalAadhaarStatus("INITIATED");
                 Reference / Contact Persons
               </h4>
               <p className="text-xs text-slate-500">
-                Add primary organizational or personal references associated with this account lead.
+                Add primary organizational or personal references associated
+                with this account lead.
               </p>
             </div>
             <button
@@ -3485,8 +3715,18 @@ setLocalAadhaarStatus("INITIATED");
               onClick={handleAddContactPerson}
               className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                />
               </svg>
               Add Contact Person
             </button>
@@ -3494,7 +3734,8 @@ setLocalAadhaarStatus("INITIATED");
 
           {contactPersons.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
-              No contact persons added. Click the button above to add verification reference lines.
+              No contact persons added. Click the button above to add
+              verification reference lines.
             </div>
           ) : (
             contactPersons.map((contact, index) => (
@@ -3549,7 +3790,9 @@ setLocalAadhaarStatus("INITIATED");
                       onChange={(e) => handleContactPersonChange(index, e)}
                       className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     >
-                      <option value="BUSINESS_ASSOCIATE">Business Associate</option>
+                      <option value="BUSINESS_ASSOCIATE">
+                        Business Associate
+                      </option>
                       <option value="EMPLOYEE">Employee</option>
                       <option value="COLLEAGUE">Colleague</option>
                       <option value="FRIEND">Friend</option>
@@ -3564,8 +3807,18 @@ setLocalAadhaarStatus("INITIATED");
                       onClick={() => handleRemoveContactPerson(index)}
                       className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
                       </svg>
                       Remove Reference
                     </button>
@@ -3584,7 +3837,9 @@ setLocalAadhaarStatus("INITIATED");
               className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
               {PROPERTY_CATEGORY.map((category) => (
-                <option key={category} value={category}>{category}</option>
+                <option key={category} value={category}>
+                  {category}
+                </option>
               ))}
             </select>
           </Field>
@@ -3597,7 +3852,9 @@ setLocalAadhaarStatus("INITIATED");
               className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
               {propertyTypeOptions.map((type) => (
-                <option key={type} value={type}>{type}</option>
+                <option key={type} value={type}>
+                  {type}
+                </option>
               ))}
             </select>
           </Field>
@@ -3624,9 +3881,6 @@ setLocalAadhaarStatus("INITIATED");
             }}
           />
         </Section>
-
-
-
       </div>
     </div>
   );

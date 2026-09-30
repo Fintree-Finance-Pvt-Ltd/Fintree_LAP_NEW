@@ -429,14 +429,14 @@ export class ApplicationsService {
   }
 
   async draft(dto: any, actor: Actor) {
-    if (!dto.customerName?.trim() || !dto.mobile?.trim() || !dto.requestedAmount) {
-      throw new BadRequestException('customerName, mobile and requestedAmount are required for draft');
+    if (!dto.customerName?.trim() || !dto.mobile?.trim()) {
+      throw new BadRequestException('customerName and mobile are required for draft');
     }
 
-    // OTP-gating: without verified OTP token we MUST NOT create an application.
-    if (!dto.applicationId && !dto.verificationToken) {
-      throw new BadRequestException('verificationToken is required to create a lead draft');
-    }
+    // OTP-gating: optional if OTP verification is bypassed
+    // if (!dto.applicationId && !dto.verificationToken) {
+    //   throw new BadRequestException('verificationToken is required to create a lead draft');
+    // }
 
     return this.dataSource.transaction(async (manager) => {
       // If applicationId exists, ONLY UPDATE it (no duplicates).
