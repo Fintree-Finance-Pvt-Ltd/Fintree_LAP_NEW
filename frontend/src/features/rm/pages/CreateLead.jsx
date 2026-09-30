@@ -505,7 +505,7 @@ export default function CreateLead() {
   const [emailOtpVerified, setEmailOtpVerified] = useState(false);
   // const [emailOtpSessionId, setEmailOtpSessionId] = useState(null);
   const [panVerified, setPanVerified] = useState(false);
-  const [gstVerified, setGstVerified] = useState(false);
+  // const [gstVerified, setGstVerified] = useState(false);
   const [panFile, setPanFile] = useState(null);
   const [aadhaarFile, setAadhaarFile] = useState(null);
   // const [panOcrData, setPanOcrData] = useState(null);
@@ -1866,6 +1866,7 @@ export default function CreateLead() {
         "aadhaarNumber",
         "occupationType",
         "businessName",
+        "gstNumber",
         "propertyCategory",
         "propertyType",
         "requestedAmount",
@@ -2106,6 +2107,8 @@ export default function CreateLead() {
       setPanVerified(false);
     } else if (name === "aadhaarNumber") {
       nextValue = value.replace(/\D/g, "").slice(0, 4);
+    } else if (name === "gstNumber") {
+      nextValue = value.toUpperCase();
     }
 
     setFormData((previous) => ({ ...previous, [name]: nextValue }));
@@ -2231,103 +2234,68 @@ export default function CreateLead() {
   //   },
   // });
 
-  const verifyGstMutation = useMutation({
-    mutationFn: () =>
-      rmApi.verifyGst({
-        gstNumber: formData.gstNumber.trim().toUpperCase(),
-        applicationId: Number(createdApplicationId ?? applicationId),
-      }),
+  // const verifyGstMutation = useMutation({
+  //   mutationFn: () =>
+  //     rmApi.verifyGst({
+  //       gstNumber: formData.gstNumber.trim().toUpperCase(),
+  //       applicationId: Number(createdApplicationId ?? applicationId),
+  //     }),
+  //
+  //   onSuccess: async (response) => {
+  //     const result = unwrapResponse(response);
+  //
+  //     setGstVerified(true);
+  //     setMessageType("success");
+  //     setMessage(result?.message || "GST verified successfully.");
+  //
+  //     await Promise.all([
+  //       queryClient.invalidateQueries({
+  //         queryKey: ["customer-profile", createdApplicationId ?? applicationId],
+  //       }),
+  //       queryClient.invalidateQueries({
+  //         queryKey: ["application", createdApplicationId ?? applicationId],
+  //       }),
+  //     ]);
+  //   },
+  //
+  //   onError: (error) => {
+  //     setGstVerified(false);
+  //     setMessageType("error");
+  //     setMessage(
+  //       error?.response?.data?.message ||
+  //         error?.message ||
+  //         "Unable to verify GST.",
+  //     );
+  //   },
+  // });
 
-    onSuccess: async (response) => {
-      const result = unwrapResponse(response);
-
-      setGstVerified(true);
-      setMessageType("success");
-      setMessage(result?.message || "GST verified successfully.");
-
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["customer-profile", createdApplicationId ?? applicationId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["application", createdApplicationId ?? applicationId],
-        }),
-      ]);
-    },
-
-    onError: (error) => {
-      setGstVerified(false);
-      setMessageType("error");
-      setMessage(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Unable to verify GST.",
-      );
-    },
-  });
-
-  // const handleVerifyPan = () => {
-  //   const panNumber = formData.panNumber.trim().toUpperCase();
-  //   const customerName = formData.customerName.trim();
-
+  // const handleVerifyGst = () => {
+  //   const gstNumber = formData.gstNumber.trim().toUpperCase();
+  //
   //   setMessage("");
-
-  //   if (!customerName) {
+  //
+  //   if (!gstNumber) {
   //     setMessageType("error");
-  //     setMessage("Enter Customer / Entity Name before PAN verification.");
+  //     setMessage("Enter GST number before verification.");
   //     return;
   //   }
-
-  //   if (!panNumber) {
+  //
+  //   if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstNumber)) {
   //     setMessageType("error");
-  //     setMessage("Enter PAN number before verification.");
+  //     setMessage("Enter a valid GST number.");
   //     return;
   //   }
-
-  //   if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) {
-  //     setMessageType("error");
-  //     setMessage("Enter a valid PAN number.");
-  //     return;
-  //   }
-
+  //
   //   if (!(createdApplicationId ?? applicationId)) {
   //     setMessageType("error");
   //     setMessage(
-  //       "Save the lead before PAN verification so verification can be stored.",
+  //       "Save the lead before GST verification so verification can be stored.",
   //     );
   //     return;
   //   }
-
-  //   verifyPanMutation.mutate();
+  //
+  //   verifyGstMutation.mutate();
   // };
-
-  const handleVerifyGst = () => {
-    const gstNumber = formData.gstNumber.trim().toUpperCase();
-
-    setMessage("");
-
-    if (!gstNumber) {
-      setMessageType("error");
-      setMessage("Enter GST number before verification.");
-      return;
-    }
-
-    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstNumber)) {
-      setMessageType("error");
-      setMessage("Enter a valid GST number.");
-      return;
-    }
-
-    if (!(createdApplicationId ?? applicationId)) {
-      setMessageType("error");
-      setMessage(
-        "Save the lead before GST verification so verification can be stored.",
-      );
-      return;
-    }
-
-    verifyGstMutation.mutate();
-  };
 
   // const handleInitAadhaar = async () => {
   //   const targetApplicationId = currentApplicationId;
@@ -2666,7 +2634,7 @@ export default function CreateLead() {
     uploadCustomerPhotoMutation.isPending ||
     // panOcrMutation.isPending ||
     // verifyPanMutation.isPending ||
-    verifyGstMutation.isPending ||
+    // verifyGstMutation.isPending ||
     aadhaarLinkSending;
 
   return (
@@ -3786,6 +3754,16 @@ export default function CreateLead() {
               <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 GST Number
               </label>
+              <input
+                name="gstNumber"
+                value={formData.gstNumber}
+                onChange={handleInputChange}
+                maxLength={15}
+                placeholder="22AAAAA0000A1Z5"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm uppercase font-semibold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+              />
+
+              {/*
               <div className="flex items-center gap-2 sm:gap-2.5">
                 <input
                   name="gstNumber"
@@ -3831,6 +3809,7 @@ export default function CreateLead() {
                   </span>
                 </div>
               )}
+              */}
             </div>
           </div>
         </Section>

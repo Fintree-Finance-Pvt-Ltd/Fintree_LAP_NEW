@@ -1761,6 +1761,7 @@ async recordWorkflowStep(
       email: dto.email || undefined,
       occupationType: dto.occupationType,
       businessName: dto.businessName || undefined,
+      gstNumber: dto.gstNumber || dto.gst_number || undefined,
       monthlyIncome: dto.monthlyIncome ?? undefined,
       panNumber: dto.pan || undefined,
       panVerified: dto.panVerified ?? application.panVerified ?? undefined,
