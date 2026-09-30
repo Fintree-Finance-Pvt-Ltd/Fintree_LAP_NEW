@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { rmApi } from "../rmApi.js";
 import {
@@ -11,112 +11,112 @@ import { useAttendance } from "../../../context/AttendanceContext.jsx";
 import ScheduleFollowUpModal from "../components/ScheduleFollowUpModal.jsx";
 import PropertyAddressAutocomplete from "../components/PropertyAddressAutocomplete.jsx";
 
-const AADHAAR_LINK_COOLDOWN_SECONDS = 5 * 60;
+// const AADHAAR_LINK_COOLDOWN_SECONDS = 5 * 60;
 
-const formatCooldown = (seconds) => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
+// const formatCooldown = (seconds) => {
+//   const minutes = Math.floor(seconds / 60);
+//   const remainingSeconds = seconds % 60;
 
-  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
-};
+//   return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+// };
 
-const normalizeAadhaarKycStatus = (value) => {
-  const status = String(value || "")
-    .trim()
-    .toUpperCase();
+// const normalizeAadhaarKycStatus = (value) => {
+//   const status = String(value || "")
+//     .trim()
+//     .toUpperCase();
 
-  if (
-    status === "VERIFIED" ||
-    status === "SUCCESS" ||
-    status === "COMPLETED" ||
-    status === "APPROVED"
-  ) {
-    return "VERIFIED";
-  }
+//   if (
+//     status === "VERIFIED" ||
+//     status === "SUCCESS" ||
+//     status === "COMPLETED" ||
+//     status === "APPROVED"
+//   ) {
+//     return "VERIFIED";
+//   }
 
-  if (
-    status === "INITIATED" ||
-    status === "LINK_SENT" ||
-    status === "SENT" ||
-    status === "PENDING" ||
-    status === "PROCESSING" ||
-    status === "IN_PROGRESS"
-  ) {
-    return "INITIATED";
-  }
+//   if (
+//     status === "INITIATED" ||
+//     status === "LINK_SENT" ||
+//     status === "SENT" ||
+//     status === "PENDING" ||
+//     status === "PROCESSING" ||
+//     status === "IN_PROGRESS"
+//   ) {
+//     return "INITIATED";
+//   }
 
-  if (
-    status === "FAILED" ||
-    status === "FAILURE" ||
-    status === "REJECTED" ||
-    status === "EXPIRED"
-  ) {
-    return "FAILED";
-  }
+//   if (
+//     status === "FAILED" ||
+//     status === "FAILURE" ||
+//     status === "REJECTED" ||
+//     status === "EXPIRED"
+//   ) {
+//     return "FAILED";
+//   }
 
-  return "NOT_INITIATED";
-};
+//   return "NOT_INITIATED";
+// };
 
-const getAadhaarStatusMeta = (status) => {
-  if (status === "VERIFIED") {
-    return {
-      label: "Verified",
-      badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
-      boxClass:
-        "border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-slate-50",
-      helper: "Aadhaar KYC completed successfully.",
-    };
-  }
+// const getAadhaarStatusMeta = (status) => {
+//   if (status === "VERIFIED") {
+//     return {
+//       label: "Verified",
+//       badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
+//       boxClass:
+//         "border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-slate-50",
+//       helper: "Aadhaar KYC completed successfully.",
+//     };
+//   }
 
-  if (status === "INITIATED") {
-    return {
-      label: "Link Sent / Pending",
-      badgeClass: "border-blue-200 bg-blue-50 text-blue-700",
-      boxClass:
-        "border-blue-200 bg-gradient-to-br from-blue-50/70 via-white to-slate-50",
-      helper:
-        "Aadhaar link has been initiated. Waiting for customer completion.",
-    };
-  }
+//   if (status === "INITIATED") {
+//     return {
+//       label: "Link Sent / Pending",
+//       badgeClass: "border-blue-200 bg-blue-50 text-blue-700",
+//       boxClass:
+//         "border-blue-200 bg-gradient-to-br from-blue-50/70 via-white to-slate-50",
+//       helper:
+//         "Aadhaar link has been initiated. Waiting for customer completion.",
+//     };
+//   }
 
-  if (status === "FAILED") {
-    return {
-      label: "Failed / Expired",
-      badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
-      boxClass:
-        "border-rose-200 bg-gradient-to-br from-rose-50/70 via-white to-slate-50",
-      helper: "Aadhaar verification failed or expired. You can resend link.",
-    };
-  }
+//   if (status === "FAILED") {
+//     return {
+//       label: "Failed / Expired",
+//       badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
+//       boxClass:
+//         "border-rose-200 bg-gradient-to-br from-rose-50/70 via-white to-slate-50",
+//       helper: "Aadhaar verification failed or expired. You can resend link.",
+//     };
+//   }
 
-  return {
-    label: "Not Initiated",
-    badgeClass: "border-slate-200 bg-slate-50 text-slate-600",
-    boxClass:
-      "border-blue-100 bg-gradient-to-br from-blue-50/60 via-white to-slate-50/50",
-    helper: "Send Aadhaar DigiLocker KYC link to customer.",
-  };
-};
+//   return {
+//     label: "Not Initiated",
+//     badgeClass: "border-slate-200 bg-slate-50 text-slate-600",
+//     boxClass:
+//       "border-blue-100 bg-gradient-to-br from-blue-50/60 via-white to-slate-50/50",
+//     helper: "Send Aadhaar DigiLocker KYC link to customer.",
+//   };
+// };
 
-const readAadhaarStatusFromRecord = (record) => {
-  if (!record || typeof record !== "object") return "";
+// const readAadhaarStatusFromRecord = (record) => {
+//   if (!record || typeof record !== "object") return "";
 
-  return (
-    record.aadhaarStatus ||
-    record.aadhaar_status ||
-    record.aadhaarKycStatus ||
-    record.aadhaar_kyc_status ||
-    record.kycAadhaarStatus ||
-    record.kyc_aadhaar_status ||
-    record?.kyc?.aadhaarStatus ||
-    record?.kyc?.aadhaar_status ||
-    record?.customerProfile?.aadhaarStatus ||
-    record?.customerProfile?.aadhaar_status ||
-    record?.customerProfile?.aadhaarKycStatus ||
-    record?.customerProfile?.aadhaar_kyc_status ||
-    ""
-  );
-};
+//   return (
+//     record.aadhaarStatus ||
+//     record.aadhaar_status ||
+//     record.aadhaarKycStatus ||
+//     record.aadhaar_kyc_status ||
+//     record.kycAadhaarStatus ||
+//     record.kyc_aadhaar_status ||
+//     record?.kyc?.aadhaarStatus ||
+//     record?.kyc?.aadhaar_status ||
+//     record?.customerProfile?.aadhaarStatus ||
+//     record?.customerProfile?.aadhaar_status ||
+//     record?.customerProfile?.aadhaarKycStatus ||
+//     record?.customerProfile?.aadhaar_kyc_status ||
+//     ""
+//   );
+// };
 
 const emptyForm = {
   customerName: "",
@@ -462,24 +462,24 @@ export default function CreateLead() {
 
     window.open(applicantAadhaarUrl, "_blank", "noopener,noreferrer");
   };
-  const [consentAccepted, setConsentAccepted] = useState(false);
+  // const [consentAccepted, setConsentAccepted] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
   const [aadhaarCooldownUntil, setAadhaarCooldownUntil] = useState(0);
   const [aadhaarCooldownSeconds, setAadhaarCooldownSeconds] = useState(0);
-  const [localAadhaarStatus, setLocalAadhaarStatus] = useState("");
+  // const [localAadhaarStatus, setLocalAadhaarStatus] = useState("");
 
-  const isAadhaarCooldownActive = aadhaarCooldownSeconds > 0;
+  // const isAadhaarCooldownActive = aadhaarCooldownSeconds > 0;
 
-  const startAadhaarCooldown = () => {
-    const until = Date.now() + AADHAAR_LINK_COOLDOWN_SECONDS * 1000;
+  // const startAadhaarCooldown = () => {
+  //   const until = Date.now() + AADHAAR_LINK_COOLDOWN_SECONDS * 1000;
 
-    setAadhaarCooldownUntil(until);
+  //   setAadhaarCooldownUntil(until);
 
-    if (aadhaarCooldownKey) {
-      localStorage.setItem(aadhaarCooldownKey, String(until));
-    }
-  };
+  //   if (aadhaarCooldownKey) {
+  //     localStorage.setItem(aadhaarCooldownKey, String(until));
+  //   }
+  // };
   const [applicationNumber, setApplicationNumber] = useState("");
   const [formData, setFormData] = useState(
     location?.state?.formData
@@ -488,11 +488,11 @@ export default function CreateLead() {
   );
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("error");
-  const [emailOtpCode, setEmailOtpCode] = useState(Array(6).fill(""));
+  // const [emailOtpCode, setEmailOtpCode] = useState(Array(6).fill(""));
 
-  const [emailOtpError, setEmailOtpError] = useState("");
+  // const [emailOtpError, setEmailOtpError] = useState("");
 
-  const emailOtpInputRefs = useRef([]);
+  // const emailOtpInputRefs = useRef([]);
 
   const [emailOtpModal, setEmailOtpModal] = useState({
     open: false,
@@ -501,15 +501,15 @@ export default function CreateLead() {
     expiresInSeconds: 0,
   });
 
-  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  // const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [emailOtpVerified, setEmailOtpVerified] = useState(false);
-  const [emailOtpSessionId, setEmailOtpSessionId] = useState(null);
+  // const [emailOtpSessionId, setEmailOtpSessionId] = useState(null);
   const [panVerified, setPanVerified] = useState(false);
   const [gstVerified, setGstVerified] = useState(false);
   const [panFile, setPanFile] = useState(null);
   const [aadhaarFile, setAadhaarFile] = useState(null);
-  const [panOcrData, setPanOcrData] = useState(null);
-  const [panOcrError, setPanOcrError] = useState("");
+  // const [panOcrData, setPanOcrData] = useState(null);
+  // const [panOcrError, setPanOcrError] = useState("");
   const [otpPopup, setOtpPopup] = useState({
     open: false,
     title: "",
@@ -534,13 +534,13 @@ export default function CreateLead() {
     expiresInSeconds: 0,
   });
 
-  const [otpCode, setOtpCode] = useState(Array(6).fill(""));
-  const [otpError, setOtpError] = useState("");
-  const otpInputRefs = useRef([]);
+  // const [otpCode, setOtpCode] = useState(Array(6).fill(""));
+  // const [otpError, setOtpError] = useState("");
+  // const otpInputRefs = useRef([]);
 
-  const [timer, setTimer] = useState({
-    resendAfterSeconds: 0,
-  });
+  // const [timer, setTimer] = useState({
+  //   resendAfterSeconds: 0,
+  // });
 
   useEffect(() => {
     if (!aadhaarCooldownKey) {
@@ -1373,49 +1373,49 @@ export default function CreateLead() {
     retry: false,
   });
 
-  const aadhaarStatusQuery = useQuery({
-    queryKey: ["aadhaar-kyc-status", currentApplicationId],
-    queryFn: () => rmApi.getAadhaarKycStatus(currentApplicationId),
-    enabled: Boolean(currentApplicationId),
-    retry: false,
-    refetchInterval: (query) => {
-      const response = unwrapResponse(query?.state?.data);
-      const data = response?.data ?? response ?? {};
-      const status = normalizeAadhaarKycStatus(
-        readAadhaarStatusFromRecord(data),
-      );
+  // const aadhaarStatusQuery = useQuery({
+  //   queryKey: ["aadhaar-kyc-status", currentApplicationId],
+  //   queryFn: () => rmApi.getAadhaarKycStatus(currentApplicationId),
+  //   enabled: Boolean(currentApplicationId),
+  //   retry: false,
+  //   refetchInterval: (query) => {
+  //     const response = unwrapResponse(query?.state?.data);
+  //     const data = response?.data ?? response ?? {};
+  //     const status = normalizeAadhaarKycStatus(
+  //       readAadhaarStatusFromRecord(data),
+  //     );
 
-      return status === "INITIATED" ? 10000 : false;
-    },
-  });
+  //     return status === "INITIATED" ? 10000 : false;
+  //   },
+  // });
 
-  const aadhaarStatusResponse = unwrapResponse(aadhaarStatusQuery.data);
-  const aadhaarStatusData =
-    aadhaarStatusResponse?.data ?? aadhaarStatusResponse ?? {};
+  // const aadhaarStatusResponse = unwrapResponse(aadhaarStatusQuery.data);
+  // const aadhaarStatusData =
+  //   aadhaarStatusResponse?.data ?? aadhaarStatusResponse ?? {};
 
-  const applicationResponseForAadhaar = unwrapResponse(applicationQuery.data);
-  const applicationForAadhaar =
-    applicationResponseForAadhaar?.data ?? applicationResponseForAadhaar ?? {};
+  // const applicationResponseForAadhaar = unwrapResponse(applicationQuery.data);
+  // const applicationForAadhaar =
+  //   applicationResponseForAadhaar?.data ?? applicationResponseForAadhaar ?? {};
 
-  const profileResponseForAadhaar = unwrapResponse(customerProfileQuery.data);
-  const profileForAadhaar =
-    profileResponseForAadhaar?.data ?? profileResponseForAadhaar ?? {};
+  // const profileResponseForAadhaar = unwrapResponse(customerProfileQuery.data);
+  // const profileForAadhaar =
+  //   profileResponseForAadhaar?.data ?? profileResponseForAadhaar ?? {};
 
-  const backendAadhaarStatus = normalizeAadhaarKycStatus(
-    readAadhaarStatusFromRecord(aadhaarStatusData) ||
-      readAadhaarStatusFromRecord(applicationForAadhaar) ||
-      readAadhaarStatusFromRecord(profileForAadhaar),
-  );
+  // const backendAadhaarStatus = normalizeAadhaarKycStatus(
+  //   readAadhaarStatusFromRecord(aadhaarStatusData) ||
+  //     readAadhaarStatusFromRecord(applicationForAadhaar) ||
+  //     readAadhaarStatusFromRecord(profileForAadhaar),
+  // );
 
-  const aadhaarKycStatus =
-    backendAadhaarStatus !== "NOT_INITIATED"
-      ? backendAadhaarStatus
-      : localAadhaarStatus || backendAadhaarStatus;
+  // const aadhaarKycStatus =
+  //   backendAadhaarStatus !== "NOT_INITIATED"
+  //     ? backendAadhaarStatus
+  //     : localAadhaarStatus || backendAadhaarStatus;
 
-  const aadhaarStatusMeta = getAadhaarStatusMeta(aadhaarKycStatus);
+  // const aadhaarStatusMeta = getAadhaarStatusMeta(aadhaarKycStatus);
 
-  const isAadhaarVerified = aadhaarKycStatus === "VERIFIED";
-  const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
+  // const isAadhaarVerified = aadhaarKycStatus === "VERIFIED";
+  // const isAadhaarInitiated = aadhaarKycStatus === "INITIATED";
 
   useEffect(() => {
     if (!applicationId || !applicationQuery.data) return;
@@ -1532,7 +1532,7 @@ export default function CreateLead() {
     );
   }, [applicationId, applicationQuery.data]);
 
-  const hasPrefilledFromState = Boolean(location?.state?.formData);
+  // const hasPrefilledFromState = Boolean(location?.state?.formData);
 
   useEffect(() => {
     if (!emailOtpModal.open || emailOtpModal.resendAfterSeconds <= 0) {
@@ -1660,133 +1660,133 @@ export default function CreateLead() {
     fetchExistingContactPersons();
   }, [applicationId]);
 
-  const sendOtpMutation = useMutation({
-    mutationFn: () =>
-      rmApi.sendOtp({
-        mobile: formData.mobileNumber,
-      }),
-    onSuccess: (response) => {
-      const result = unwrapResponse(response);
-      setMessageType("success");
-      setMessage(result.message || "OTP sent successfully.");
+  // const sendOtpMutation = useMutation({
+  //   mutationFn: () =>
+  //     rmApi.sendOtp({
+  //       mobile: formData.mobileNumber,
+  //     }),
+  //   onSuccess: (response) => {
+  //     const result = unwrapResponse(response);
+  //     setMessageType("success");
+  //     setMessage(result.message || "OTP sent successfully.");
 
-      setOtpModal({
-        open: true,
-        sentMobileMasked: formData.mobileNumber
-          ? `XXXXXX${formData.mobileNumber.slice(-4)}`
-          : "",
-        resendAfterSeconds: 30,
-        expiresInSeconds: 300,
-      });
-      setOtpCode(Array(6).fill(""));
-      setOtpError("");
-    },
-    onError: (error) => {
-      const msg =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to send OTP.";
-      setMessageType("error");
-      setMessage(msg);
+  //     setOtpModal({
+  //       open: true,
+  //       sentMobileMasked: formData.mobileNumber
+  //         ? `XXXXXX${formData.mobileNumber.slice(-4)}`
+  //         : "",
+  //       resendAfterSeconds: 30,
+  //       expiresInSeconds: 300,
+  //     });
+  //     setOtpCode(Array(6).fill(""));
+  //     setOtpError("");
+  //   },
+  //   onError: (error) => {
+  //     const msg =
+  //       error?.response?.data?.message ||
+  //       error?.message ||
+  //       "Failed to send OTP.";
+  //     setMessageType("error");
+  //     setMessage(msg);
 
-      const friendly = String(msg).includes("MOBILE_OTP_TEMPLATE_ID")
-        ? "OTP provider is misconfigured on server. Please contact admin."
-        : msg;
+  //     const friendly = String(msg).includes("MOBILE_OTP_TEMPLATE_ID")
+  //       ? "OTP provider is misconfigured on server. Please contact admin."
+  //       : msg;
 
-      setOtpPopup({
-        open: true,
-        title: "OTP Failed",
-        body: friendly,
-        severity: "error",
-      });
-    },
-  });
+  //     setOtpPopup({
+  //       open: true,
+  //       title: "OTP Failed",
+  //       body: friendly,
+  //       severity: "error",
+  //     });
+  //   },
+  // });
 
-  const handleSendOtp = () => {
-    if (otpVerified) return;
-    if (!/^[6-9]\d{9}$/.test(formData.mobileNumber)) {
-      setMessageType("error");
-      setMessage("Enter a valid mobile number.");
-      return;
-    }
-    sendOtpMutation.mutate();
-  };
+  // const handleSendOtp = () => {
+  //   if (otpVerified) return;
+  //   if (!/^[6-9]\d{9}$/.test(formData.mobileNumber)) {
+  //     setMessageType("error");
+  //     setMessage("Enter a valid mobile number.");
+  //     return;
+  //   }
+  //   sendOtpMutation.mutate();
+  // };
 
-  const invalidateVerificationQueries = async (id) => {
-    if (!id) return;
+  // const invalidateVerificationQueries = async (id) => {
+  //   if (!id) return;
 
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ["customer-profile", String(id)],
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ["customer-profile", Number(id)],
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ["application", String(id)],
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ["application", Number(id)],
-      }),
-    ]);
-  };
+  //   await Promise.all([
+  //     queryClient.invalidateQueries({
+  //       queryKey: ["customer-profile", String(id)],
+  //     }),
+  //     queryClient.invalidateQueries({
+  //       queryKey: ["customer-profile", Number(id)],
+  //     }),
+  //     queryClient.invalidateQueries({
+  //       queryKey: ["application", String(id)],
+  //     }),
+  //     queryClient.invalidateQueries({
+  //       queryKey: ["application", Number(id)],
+  //     }),
+  //   ]);
+  // };
 
-  const verifyOtpAndCreateMutation = useMutation({
-    mutationFn: () => {
-      const payload = {
-        customerName: formData.customerName,
-        mobile: formData.mobileNumber,
-        otp: otpCode.join(""),
-        consentText: consentAccepted ? CONSENT_TEXT : "",
-      };
+  // const verifyOtpAndCreateMutation = useMutation({
+  //   mutationFn: () => {
+  //     const payload = {
+  //       customerName: formData.customerName,
+  //       mobile: formData.mobileNumber,
+  //       otp: otpCode.join(""),
+  //       consentText: consentAccepted ? CONSENT_TEXT : "",
+  //     };
 
-      return rmApi.verifyOtpAndCreate(payload);
-    },
+  //     return rmApi.verifyOtpAndCreate(payload);
+  //   },
 
-    onSuccess: async (res) => {
-      const result = unwrapResponse(res);
-      const created = result?.data ?? result;
+  //   onSuccess: async (res) => {
+  //     const result = unwrapResponse(res);
+  //     const created = result?.data ?? result;
 
-      setMessageType("success");
-      setMessage("✓ Lead created successfully");
+  //     setMessageType("success");
+  //     setMessage("✓ Lead created successfully");
 
-      setOtpModal((p) => ({ ...p, open: false }));
-      setConsentAccepted(false);
-      setOtpCode(Array(6).fill(""));
-      setOtpError("");
+  //     setOtpModal((p) => ({ ...p, open: false }));
+  //     setConsentAccepted(false);
+  //     setOtpCode(Array(6).fill(""));
+  //     setOtpError("");
 
-      const newId =
-        created?.applicationId ?? created?.application?.id ?? created?.id;
+  //     const newId =
+  //       created?.applicationId ?? created?.application?.id ?? created?.id;
 
-      const newNumber = created?.applicationNumber;
+  //     const newNumber = created?.applicationNumber;
 
-      if (newId) {
-        setCreatedApplicationId(newId);
-        setApplicationNumber(newNumber || "");
-        setOtpVerified(true);
+  //     if (newId) {
+  //       setCreatedApplicationId(newId);
+  //       setApplicationNumber(newNumber || "");
+  //       setOtpVerified(true);
 
-        await invalidateVerificationQueries(newId);
+  //       await invalidateVerificationQueries(newId);
 
-        setMessageType("success");
-        setMessage("✓ Mobile verified successfully.");
+  //       setMessageType("success");
+  //       setMessage("✓ Mobile verified successfully.");
 
-        if (!applicationId) {
-          // Stay on the same CreateLead page by re-loading it with the newly created applicationId
-          navigate(`/create-lead/${newId}`, {
-            replace: true,
-          });
-          return;
-        }
-      }
-    },
+  //       if (!applicationId) {
+  //         // Stay on the same CreateLead page by re-loading it with the newly created applicationId
+  //         navigate(`/create-lead/${newId}`, {
+  //           replace: true,
+  //         });
+  //         return;
+  //       }
+  //     }
+  //   },
 
-    onError: (error) => {
-      const msg =
-        error?.response?.data?.message || error?.message || "Invalid OTP";
+  //   onError: (error) => {
+  //     const msg =
+  //       error?.response?.data?.message || error?.message || "Invalid OTP";
 
-      setOtpError(msg);
-    },
-  });
+  //     setOtpError(msg);
+  //   },
+  // });
 
   const workflowQuery = useQuery({
     queryKey: ["rm-workflow", applicationId],
@@ -2136,100 +2136,101 @@ export default function CreateLead() {
     return "";
   };
 
-  const panOcrMutation = useMutation({
-    mutationFn: async () => {
-      if (!panFile) {
-        throw new Error("Please upload PAN image or PDF.");
-      }
+  // const panOcrMutation = useMutation({
+  //   mutationFn: async () => {
+  //     if (!panFile) {
+  //       throw new Error("Please upload PAN image or PDF.");
+  //     }
 
-      const payload = new FormData();
-      payload.append("imageUrl", panFile);
-      const clientRefId =
-        createdApplicationId ?? applicationId ?? `PAN-${Date.now()}`;
-      payload.append("clientRefId", String(clientRefId));
+  //     const payload = new FormData();
+  //     payload.append("imageUrl", panFile);
+  //     const clientRefId =
+  //       createdApplicationId ?? applicationId ?? `PAN-${Date.now()}`;
+  //     payload.append("clientRefId", String(clientRefId));
 
-      return rmApi.panOcr(payload);
-    },
-    onSuccess: (response) => {
-      const result = unwrapResponse(response);
-      const data = result?.data ?? result;
+  //     return rmApi.panOcr(payload);
+  //   },
+  //   onSuccess: (response) => {
+  //     const result = unwrapResponse(response);
+  //     const data = result?.data ?? result;
 
-      const extracted = data ?? {};
-      const extractedPan = readPanOcrValue(extracted, [
-        "panNumber",
-        "pan",
-        "pan_number",
-        "idNumber",
-        "documentNumber",
-      ]);
+  //     const extracted = data ?? {};
+  //     const extractedPan = readPanOcrValue(extracted, [
+  //       "panNumber",
+  //       "pan",
+  //       "pan_number",
+  //       "idNumber",
+  //       "documentNumber",
+  //     ]);
 
-      const extractedName = readPanOcrValue(extracted, [
-        "name",
-        "fullName",
-        "customerName",
-        "applicantName",
-        "nameOnPan",
-        "fatherName",
-      ]);
+  //     const extractedName = readPanOcrValue(extracted, [
+  //       "name",
+  //       "fullName",
+  //       "customerName",
+  //       "applicantName",
+  //       "nameOnPan",
+  //       "fatherName",
+  //     ]);
 
-      const nextPan = String(extractedPan || "")
-        .trim()
-        .toUpperCase();
-      const nextName = String(extractedName || "").trim();
+  //     const nextPan = String(extractedPan || "")
+  //       .trim()
+  //       .toUpperCase();
+  //     const nextName = String(extractedName || "").trim();
 
-      if (!nextPan && !nextName) {
-        setPanOcrData(extracted);
-        setPanOcrError(
-          "PAN OCR completed, but no PAN number or name was found.",
-        );
-        setMessageType("error");
-        setMessage("PAN OCR completed, but no PAN number or name was found.");
-        return;
-      }
+  //     if (!nextPan && !nextName) {
+  //       setPanOcrData(extracted);
+  //       setPanOcrError(
+  //         "PAN OCR completed, but no PAN number or name was found.",
+  //       );
+  //       setMessageType("error");
+  //       setMessage("PAN OCR completed, but no PAN number or name was found.");
+  //       return;
+  //     }
 
-      setFormData((previous) => ({
-        ...previous,
-        panNumber: nextPan || previous.panNumber,
-        customerName: nextName || previous.customerName,
-      }));
-      setPanVerified(false);
-      setPanOcrData(extracted);
-      setPanOcrError("");
-      setMessageType("success");
-      setMessage("PAN details extracted successfully. Please verify PAN.");
-    },
-    onError: (error) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Unable to extract details from PAN document.";
+  //     setFormData((previous) => ({
+  //       ...previous,
+  //       panNumber: nextPan || previous.panNumber,
+  //       customerName: nextName || previous.customerName,
+  //     }));
+  //     setPanVerified(false);
+  //     setPanOcrData(extracted);
+  //     setPanOcrError("");
+  //     setMessageType("success");
+  //     setMessage("PAN details extracted successfully. Please verify PAN.");
+  //   },
+  //   onError: (error) => {
+  //     const message =
+  //       error?.response?.data?.message ||
+  //       error?.message ||
+  //       "Unable to extract details from PAN document.";
 
-      setPanOcrError(Array.isArray(message) ? message.join(", ") : message);
-      setMessageType("error");
-      setMessage(Array.isArray(message) ? message.join(", ") : message);
-    },
-  });
+  //     setPanOcrError(Array.isArray(message) ? message.join(", ") : message);
+  //     setMessageType("error");
+  //     setMessage(Array.isArray(message) ? message.join(", ") : message);
+  //   },
+  // });
 
-  const verifyPanMutation = useMutation({
-    mutationFn: () =>
-      rmApi.verifyPan({
-        panNumber: formData.panNumber.trim().toUpperCase(),
-        name: formData.customerName.trim().toUpperCase(),
-        applicationId: Number(createdApplicationId ?? applicationId),
-      }),
-    onSuccess: async (response) => {
-      const result = unwrapResponse(response);
+  // const verifyPanMutation = useMutation({
+  //   mutationFn: () =>
+  //     rmApi.verifyPan({
+  //       panNumber: formData.panNumber.trim().toUpperCase(),
+  //       name: formData.customerName.trim().toUpperCase(),
+  //       applicationId: Number(createdApplicationId ?? applicationId),
+  //     }),
+  //   onSuccess: async (response) => {
+  //     const result = unwrapResponse(response);
 
-      setPanVerified(true);
-      setMessageType("success");
-      setMessage(result?.message || "PAN verified successfully.");
-    },
-    onError: (error) => {
-      setPanVerified(false);
-      setMessageType("error");
-      setMessage(error?.message || "Unable to verify PAN.");
-    },
-  });
+  //     setPanVerified(true);
+  //     setMessageType("success");
+  //     setMessage(result?.message || "PAN verified successfully.");
+  //   },
+  //   onError: (error) => {
+  //     setPanVerified(false);
+  //     setMessageType("error");
+  //     setMessage(error?.message || "Unable to verify PAN.");
+  //   },
+  // });
+
   const verifyGstMutation = useMutation({
     mutationFn: () =>
       rmApi.verifyGst({
@@ -2265,40 +2266,40 @@ export default function CreateLead() {
     },
   });
 
-  const handleVerifyPan = () => {
-    const panNumber = formData.panNumber.trim().toUpperCase();
-    const customerName = formData.customerName.trim();
+  // const handleVerifyPan = () => {
+  //   const panNumber = formData.panNumber.trim().toUpperCase();
+  //   const customerName = formData.customerName.trim();
 
-    setMessage("");
+  //   setMessage("");
 
-    if (!customerName) {
-      setMessageType("error");
-      setMessage("Enter Customer / Entity Name before PAN verification.");
-      return;
-    }
+  //   if (!customerName) {
+  //     setMessageType("error");
+  //     setMessage("Enter Customer / Entity Name before PAN verification.");
+  //     return;
+  //   }
 
-    if (!panNumber) {
-      setMessageType("error");
-      setMessage("Enter PAN number before verification.");
-      return;
-    }
+  //   if (!panNumber) {
+  //     setMessageType("error");
+  //     setMessage("Enter PAN number before verification.");
+  //     return;
+  //   }
 
-    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) {
-      setMessageType("error");
-      setMessage("Enter a valid PAN number.");
-      return;
-    }
+  //   if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) {
+  //     setMessageType("error");
+  //     setMessage("Enter a valid PAN number.");
+  //     return;
+  //   }
 
-    if (!(createdApplicationId ?? applicationId)) {
-      setMessageType("error");
-      setMessage(
-        "Save the lead before PAN verification so verification can be stored.",
-      );
-      return;
-    }
+  //   if (!(createdApplicationId ?? applicationId)) {
+  //     setMessageType("error");
+  //     setMessage(
+  //       "Save the lead before PAN verification so verification can be stored.",
+  //     );
+  //     return;
+  //   }
 
-    verifyPanMutation.mutate();
-  };
+  //   verifyPanMutation.mutate();
+  // };
 
   const handleVerifyGst = () => {
     const gstNumber = formData.gstNumber.trim().toUpperCase();
@@ -2328,72 +2329,72 @@ export default function CreateLead() {
     verifyGstMutation.mutate();
   };
 
-  const handleInitAadhaar = async () => {
-    const targetApplicationId = currentApplicationId;
+  // const handleInitAadhaar = async () => {
+  //   const targetApplicationId = currentApplicationId;
 
-    if (isAadhaarCooldownActive) {
-      setMessageType("error");
-      setMessage(
-        `Aadhaar link already initiated. Please wait ${formatCooldown(
-          aadhaarCooldownSeconds,
-        )}.`,
-      );
-      return;
-    }
+  //   if (isAadhaarCooldownActive) {
+  //     setMessageType("error");
+  //     setMessage(
+  //       `Aadhaar link already initiated. Please wait ${formatCooldown(
+  //         aadhaarCooldownSeconds,
+  //       )}.`,
+  //     );
+  //     return;
+  //   }
 
-    if (!targetApplicationId) {
-      setMessageType("error");
-      setMessage("Save the lead before sending Aadhaar KYC link.");
-      return;
-    }
+  //   if (!targetApplicationId) {
+  //     setMessageType("error");
+  //     setMessage("Save the lead before sending Aadhaar KYC link.");
+  //     return;
+  //   }
 
-    try {
-      setAadhaarLinkSending(true);
-      setMessage("");
+  //   try {
+  //     setAadhaarLinkSending(true);
+  //     setMessage("");
 
-      const response = await rmApi.initAadhaarKyc({
-        applicationId: Number(targetApplicationId),
-      });
+  //     const response = await rmApi.initAadhaarKyc({
+  //       applicationId: Number(targetApplicationId),
+  //     });
 
-      const result = unwrapResponse(response);
-      const payload = result?.data ?? result;
-      const kycUrl = payload?.kycUrl || payload?.data?.kycUrl;
+  //     const result = unwrapResponse(response);
+  //     const payload = result?.data ?? result;
+  //     const kycUrl = payload?.kycUrl || payload?.data?.kycUrl;
 
-      startAadhaarCooldown();
-      setLocalAadhaarStatus("INITIATED");
+  //     startAadhaarCooldown();
+  //     setLocalAadhaarStatus("INITIATED");
 
-      setMessageType("success");
-      setMessage(
-        result?.message ||
-          "Aadhaar KYC link generated successfully. You can resend after 5 minutes.",
-      );
+  //     setMessageType("success");
+  //     setMessage(
+  //       result?.message ||
+  //         "Aadhaar KYC link generated successfully. You can resend after 5 minutes.",
+  //     );
 
-      if (kycUrl) {
-        window.open(kycUrl, "_blank", "noopener,noreferrer");
-      }
+  //     if (kycUrl) {
+  //       window.open(kycUrl, "_blank", "noopener,noreferrer");
+  //     }
 
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["customer-profile", targetApplicationId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["application", targetApplicationId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["aadhaar-kyc-status", targetApplicationId],
-        }),
-      ]);
-    } catch (error) {
-      setMessageType("error");
-      setMessage(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Unable to send Aadhaar KYC link.",
-      );
-    } finally {
-      setAadhaarLinkSending(false);
-    }
-  };
+  //     await Promise.all([
+  //       queryClient.invalidateQueries({
+  //         queryKey: ["customer-profile", targetApplicationId],
+  //       }),
+  //       queryClient.invalidateQueries({
+  //         queryKey: ["application", targetApplicationId],
+  //       }),
+  //       queryClient.invalidateQueries({
+  //         queryKey: ["aadhaar-kyc-status", targetApplicationId],
+  //       }),
+  //     ]);
+  //   } catch (error) {
+  //     setMessageType("error");
+  //     setMessage(
+  //       error?.response?.data?.message ||
+  //         error?.message ||
+  //         "Unable to send Aadhaar KYC link.",
+  //     );
+  //   } finally {
+  //     setAadhaarLinkSending(false);
+  //   }
+  // };
 
   const handleCategoryChange = (event) => {
     const selectedCategory = event.target.value;
@@ -2448,19 +2449,19 @@ export default function CreateLead() {
     }
   };
 
-  const handleVerifyOtpSubmit = () => {
-    setOtpError("");
-    if (!consentAccepted) {
-      setOtpError("Please read and accept the consent before continuing.");
-      return;
-    }
-    const joined = otpCode.join("");
-    if (!/^\d{6}$/.test(joined)) {
-      setOtpError("Enter a valid 6-digit OTP configuration.");
-      return;
-    }
-    verifyOtpAndCreateMutation.mutate();
-  };
+  // const handleVerifyOtpSubmit = () => {
+  //   setOtpError("");
+  //   if (!consentAccepted) {
+  //     setOtpError("Please read and accept the consent before continuing.");
+  //     return;
+  //   }
+  //   const joined = otpCode.join("");
+  //   if (!/^\d{6}$/.test(joined)) {
+  //     setOtpError("Enter a valid 6-digit OTP configuration.");
+  //     return;
+  //   }
+  //   verifyOtpAndCreateMutation.mutate();
+  // };
 
   const handleSubmitForReview = () => {
     setMessage("");
@@ -2478,183 +2479,183 @@ export default function CreateLead() {
   };
 
   //email
-  const sendEmailOtpMutation = useMutation({
-    mutationFn: (payload) => rmApi.sendEmailOtp(payload),
+  // const sendEmailOtpMutation = useMutation({
+  //   mutationFn: (payload) => rmApi.sendEmailOtp(payload),
 
-    onSuccess: (response) => {
-      const result = unwrapResponse(response);
-      const data = result?.data ?? result;
+  //   onSuccess: (response) => {
+  //     const result = unwrapResponse(response);
+  //     const data = result?.data ?? result;
 
-      const sessionId = data?.sessionId;
+  //     const sessionId = data?.sessionId;
 
-      if (!sessionId) {
-        setMessageType("error");
-        setMessage("OTP session ID was not returned by the server.");
-        return;
-      }
+  //     if (!sessionId) {
+  //       setMessageType("error");
+  //       setMessage("OTP session ID was not returned by the server.");
+  //       return;
+  //     }
 
-      const email = String(formData.emailId || "").trim();
+  //     const email = String(formData.emailId || "").trim();
 
-      const [emailName, emailDomain] = email.split("@");
+  //     const [emailName, emailDomain] = email.split("@");
 
-      const maskedEmail =
-        emailName && emailDomain
-          ? `${emailName.slice(0, 2)}${"*".repeat(
-              Math.max(emailName.length - 2, 3),
-            )}@${emailDomain}`
-          : email;
+  //     const maskedEmail =
+  //       emailName && emailDomain
+  //         ? `${emailName.slice(0, 2)}${"*".repeat(
+  //             Math.max(emailName.length - 2, 3),
+  //           )}@${emailDomain}`
+  //         : email;
 
-      setEmailOtpSessionId(sessionId);
-      setEmailOtpSent(true);
-      setEmailOtpVerified(false);
-      setEmailOtpCode(Array(6).fill(""));
-      setEmailOtpError("");
+  //     setEmailOtpSessionId(sessionId);
+  //     setEmailOtpSent(true);
+  //     setEmailOtpVerified(false);
+  //     setEmailOtpCode(Array(6).fill(""));
+  //     setEmailOtpError("");
 
-      setEmailOtpModal({
-        open: true,
-        sentEmailMasked: maskedEmail,
-        resendAfterSeconds: 30,
-        expiresInSeconds: data?.expiresInSeconds ?? 300,
-      });
+  //     setEmailOtpModal({
+  //       open: true,
+  //       sentEmailMasked: maskedEmail,
+  //       resendAfterSeconds: 30,
+  //       expiresInSeconds: data?.expiresInSeconds ?? 300,
+  //     });
 
-      setMessageType("success");
-      setMessage(result?.message || "OTP sent successfully to email.");
+  //     setMessageType("success");
+  //     setMessage(result?.message || "OTP sent successfully to email.");
 
-      window.setTimeout(() => {
-        emailOtpInputRefs.current[0]?.focus();
-      }, 100);
-    },
+  //     window.setTimeout(() => {
+  //       emailOtpInputRefs.current[0]?.focus();
+  //     }, 100);
+  //   },
 
-    onError: (error) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Unable to send email OTP.";
+  //   onError: (error) => {
+  //     const message =
+  //       error?.response?.data?.message ||
+  //       error?.message ||
+  //       "Unable to send email OTP.";
 
-      setMessageType("error");
-      setMessage(Array.isArray(message) ? message.join(", ") : message);
-    },
-  });
+  //     setMessageType("error");
+  //     setMessage(Array.isArray(message) ? message.join(", ") : message);
+  //   },
+  // });
 
-  const verifyEmailOtpMutation = useMutation({
-    mutationFn: (payload) => rmApi.verifyEmailOtp(payload),
+  // const verifyEmailOtpMutation = useMutation({
+  //   mutationFn: (payload) => rmApi.verifyEmailOtp(payload),
 
-    onSuccess: async (response) => {
-      const result = unwrapResponse(response);
-      const data = result?.data ?? result;
+  //   onSuccess: async (response) => {
+  //     const result = unwrapResponse(response);
+  //     const data = result?.data ?? result;
 
-      const idToInvalidate =
-        data?.applicationId ?? createdApplicationId ?? applicationId;
+  //     const idToInvalidate =
+  //       data?.applicationId ?? createdApplicationId ?? applicationId;
 
-      setEmailOtpVerified(true);
-      setEmailOtpSent(false);
-      setEmailOtpError("");
-      setEmailOtpCode(Array(6).fill(""));
+  //     setEmailOtpVerified(true);
+  //     setEmailOtpSent(false);
+  //     setEmailOtpError("");
+  //     setEmailOtpCode(Array(6).fill(""));
 
-      setEmailOtpModal((previous) => ({
-        ...previous,
-        open: false,
-      }));
+  //     setEmailOtpModal((previous) => ({
+  //       ...previous,
+  //       open: false,
+  //     }));
 
-      if (data?.applicationNumber) {
-        setApplicationNumber(data.applicationNumber);
-      }
+  //     if (data?.applicationNumber) {
+  //       setApplicationNumber(data.applicationNumber);
+  //     }
 
-      await invalidateVerificationQueries(idToInvalidate);
+  //     await invalidateVerificationQueries(idToInvalidate);
 
-      setMessageType("success");
-      setMessage(result?.message || "Email verified successfully.");
-    },
+  //     setMessageType("success");
+  //     setMessage(result?.message || "Email verified successfully.");
+  //   },
 
-    onError: (error) => {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Email OTP verification failed.";
+  //   onError: (error) => {
+  //     const message =
+  //       error?.response?.data?.message ||
+  //       error?.message ||
+  //       "Email OTP verification failed.";
 
-      setEmailOtpError(Array.isArray(message) ? message.join(", ") : message);
-    },
-  });
+  //     setEmailOtpError(Array.isArray(message) ? message.join(", ") : message);
+  //   },
+  // });
 
-  const handleVerifyEmailOtp = () => {
-    const email = String(formData.emailId || "")
-      .trim()
-      .toLowerCase();
+  // const handleVerifyEmailOtp = () => {
+  //   const email = String(formData.emailId || "")
+  //     .trim()
+  //     .toLowerCase();
 
-    const otp = emailOtpCode.join("");
+  //   const otp = emailOtpCode.join("");
 
-    setEmailOtpError("");
+  //   setEmailOtpError("");
 
-    if (!emailOtpSessionId) {
-      setEmailOtpError("OTP session not found. Please resend OTP.");
-      return;
-    }
+  //   if (!emailOtpSessionId) {
+  //     setEmailOtpError("OTP session not found. Please resend OTP.");
+  //     return;
+  //   }
 
-    if (!/^\d{6}$/.test(otp)) {
-      setEmailOtpError("Please enter a valid 6-digit OTP.");
-      return;
-    }
+  //   if (!/^\d{6}$/.test(otp)) {
+  //     setEmailOtpError("Please enter a valid 6-digit OTP.");
+  //     return;
+  //   }
 
-    const currentApplicationId = createdApplicationId ?? applicationId;
+  //   const currentApplicationId = createdApplicationId ?? applicationId;
 
-    verifyEmailOtpMutation.mutate({
-      email,
-      otp,
-      sessionId: emailOtpSessionId,
-      applicationId: currentApplicationId
-        ? Number(currentApplicationId)
-        : undefined,
-    });
-  };
+  //   verifyEmailOtpMutation.mutate({
+  //     email,
+  //     otp,
+  //     sessionId: emailOtpSessionId,
+  //     applicationId: currentApplicationId
+  //       ? Number(currentApplicationId)
+  //       : undefined,
+  //   });
+  // };
 
-  const handleEmailChange = (event) => {
-    const { name, value } = event.target;
+  // const handleEmailChange = (event) => {
+  //   const { name, value } = event.target;
 
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+  //   setFormData((previous) => ({
+  //     ...previous,
+  //     [name]: value,
+  //   }));
 
-    setEmailOtpCode(Array(6).fill(""));
-    setEmailOtpSent(false);
-    setEmailOtpVerified(false);
-    setEmailOtpSessionId(null);
-    setEmailOtpError("");
+  //   setEmailOtpCode(Array(6).fill(""));
+  //   setEmailOtpSent(false);
+  //   setEmailOtpVerified(false);
+  //   setEmailOtpSessionId(null);
+  //   setEmailOtpError("");
 
-    setEmailOtpModal({
-      open: false,
-      sentEmailMasked: "",
-      resendAfterSeconds: 0,
-      expiresInSeconds: 0,
-    });
-  };
+  //   setEmailOtpModal({
+  //     open: false,
+  //     sentEmailMasked: "",
+  //     resendAfterSeconds: 0,
+  //     expiresInSeconds: 0,
+  //   });
+  // };
 
-  const handleSendEmailOtp = () => {
-    const email = String(formData.emailId || "")
-      .trim()
-      .toLowerCase();
+  // const handleSendEmailOtp = () => {
+  //   const email = String(formData.emailId || "")
+  //     .trim()
+  //     .toLowerCase();
 
-    if (!email) {
-      setMessageType("error");
-      setMessage("Please enter email ID.");
-      return;
-    }
+  //   if (!email) {
+  //     setMessageType("error");
+  //     setMessage("Please enter email ID.");
+  //     return;
+  //   }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setMessageType("error");
-      setMessage("Please enter a valid email ID.");
-      return;
-    }
+  //   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  //     setMessageType("error");
+  //     setMessage("Please enter a valid email ID.");
+  //     return;
+  //   }
 
-    const currentApplicationId = createdApplicationId ?? applicationId;
+  //   const currentApplicationId = createdApplicationId ?? applicationId;
 
-    sendEmailOtpMutation.mutate({
-      email,
-      applicationId: currentApplicationId
-        ? Number(currentApplicationId)
-        : undefined,
-    });
-  };
+  //   sendEmailOtpMutation.mutate({
+  //     email,
+  //     applicationId: currentApplicationId
+  //       ? Number(currentApplicationId)
+  //       : undefined,
+  //   });
+  // };
 
   const isPending =
     saveNewDraftMutation.isPending ||
