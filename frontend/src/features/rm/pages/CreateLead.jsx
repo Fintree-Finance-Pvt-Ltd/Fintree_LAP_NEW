@@ -431,6 +431,37 @@ export default function CreateLead() {
 
     window.open(applicantPanUrl, "_blank", "noopener,noreferrer");
   };
+
+  const applicantAadhaarDocument = useMemo(() => {
+    const matchedAadhaars = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
+      return (
+        documentName.includes("AADHAAR") ||
+        documentName.includes("UDYAM") ||
+        documentType.includes("AADHAAR")
+      );
+    });
+
+    return matchedAadhaars[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantAadhaarUrl = getDocumentImageUrl(applicantAadhaarDocument);
+  const isApplicantAadhaarUploaded = Boolean(applicantAadhaarDocument);
+
+  const handleViewApplicantAadhaar = () => {
+    if (!applicantAadhaarUrl) {
+      setMessageType("error");
+      setMessage("Aadhaar document file is not available.");
+      return;
+    }
+
+    window.open(applicantAadhaarUrl, "_blank", "noopener,noreferrer");
+  };
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
@@ -476,6 +507,7 @@ export default function CreateLead() {
   const [panVerified, setPanVerified] = useState(false);
   const [gstVerified, setGstVerified] = useState(false);
   const [panFile, setPanFile] = useState(null);
+  const [aadhaarFile, setAadhaarFile] = useState(null);
   const [panOcrData, setPanOcrData] = useState(null);
   const [panOcrError, setPanOcrError] = useState("");
   const [otpPopup, setOtpPopup] = useState({
@@ -740,6 +772,100 @@ export default function CreateLead() {
     }
 
     setPanFile(file);
+  };
+
+  const uploadAadhaarDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+
+      if (!aadhaarFile) {
+        throw new Error("Please select Aadhaar / Udyam Aadhaar file.");
+      }
+
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error("Please enter Customer Name and Mobile Number before uploading Aadhaar.");
+        }
+        const draftRes = unwrapResponse(await rmApi.saveDraft(buildPayload(false)));
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId = draftData?.id || draftData?.applicationId || draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "AADHAAR");
+      payload.append("documentName", "Aadhaar / Udyam Card");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", aadhaarFile);
+
+      return rmApi.uploadDocument(payload);
+    },
+    onSuccess: async () => {
+      setMessageType("success");
+      setMessage("Aadhaar / Udyam document uploaded successfully.");
+      setAadhaarFile(null);
+
+      const targetId = createdApplicationId ?? applicationId;
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["rm-documents", targetId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", targetId],
+        }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Aadhaar document.",
+      );
+    },
+  });
+
+  const handleAadhaarFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setAadhaarFile(null);
+      return;
+    }
+
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Aadhaar card files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const maximumFileSize = 15 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Aadhaar card file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setAadhaarFile(file);
   };
 
   const [coApplicants, setCoApplicants] = useState([]);
@@ -1973,10 +2099,13 @@ export default function CreateLead() {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    const nextValue = name === "panNumber" ? value.toUpperCase() : value;
+    let nextValue = value;
 
     if (name === "panNumber") {
+      nextValue = value.toUpperCase();
       setPanVerified(false);
+    } else if (name === "aadhaarNumber") {
+      nextValue = value.replace(/\D/g, "").slice(0, 4);
     }
 
     setFormData((previous) => ({ ...previous, [name]: nextValue }));
@@ -2532,6 +2661,7 @@ export default function CreateLead() {
     updateDraftMutation.isPending ||
     submitDraftMutation.isPending ||
     uploadPanDocumentMutation.isPending ||
+    uploadAadhaarDocumentMutation.isPending ||
     uploadCustomerPhotoMutation.isPending ||
     // panOcrMutation.isPending ||
     // verifyPanMutation.isPending ||
@@ -3400,9 +3530,87 @@ export default function CreateLead() {
               */}
             </div>
 
-            {/* Right Side Column: Aadhaar Box + Compact Photo Block */}
+            {/* Right Side Column: Aadhaar / Udyam Aadhaar Box + Compact Photo Block */}
             <div className="flex flex-col gap-4 w-full self-start">
-              {/* Aadhaar KYC Link Dispatcher Box */}
+              {/* Aadhaar / Udyam Aadhaar Block */}
+              <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Aadhaar / Udyam Aadhaar (Last 4 Digits) *
+                  </label>
+                  <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
+                    <input
+                      name="aadhaarNumber"
+                      value={formData.aadhaarNumber || ""}
+                      onChange={handleInputChange}
+                      maxLength={4}
+                      inputMode="numeric"
+                      placeholder="e.g. 1234"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-bold tracking-widest text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                    />
+                  </div>
+                </div>
+
+                {/* Aadhaar / Udyam Aadhaar Document Upload Section (Image and PDF) */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700">
+                      Upload Aadhaar / Udyam (Image / PDF)
+                    </span>
+                    {isApplicantAadhaarUploaded && (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                          Uploaded
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleViewApplicantAadhaar}
+                          className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                        >
+                          View Aadhaar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                        onChange={handleAadhaarFileChange}
+                      />
+                      <span className="truncate max-w-[200px]">
+                        {aadhaarFile ? aadhaarFile.name : "Choose File (Image / PDF)"}
+                      </span>
+                    </label>
+
+                    <button
+                      type="button"
+                      disabled={
+                        !aadhaarFile ||
+                        uploadAadhaarDocumentMutation.isPending
+                      }
+                      onClick={() => uploadAadhaarDocumentMutation.mutate()}
+                      className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                    >
+                      {uploadAadhaarDocumentMutation.isPending
+                        ? "Uploading..."
+                        : "Upload"}
+                    </button>
+                  </div>
+
+                  {aadhaarFile && (
+                    <p className="text-[11px] font-medium text-slate-600 truncate">
+                      Selected: <span className="font-semibold text-slate-800">{aadhaarFile.name}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Old Aadhaar KYC Link Dispatcher Box commented out */}
+              {/*
               <div
                 className={`rounded-2xl border p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 h-fit ${aadhaarStatusMeta.boxClass}`}
               >
@@ -3475,7 +3683,9 @@ export default function CreateLead() {
                   </button>
                 </div>
               </div>
+              */}
 
+            </div>
               {/* Compact Profile Photo Management Panel */}
               <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
                 <div className="flex items-center gap-3 min-w-0">
@@ -3544,7 +3754,6 @@ export default function CreateLead() {
                   <span className="font-bold">{customerPhotoFile.name}</span>
                 </div>
               )}
-            </div>
           </div>
 
           {/* Row 4: Professional & Corporate Details Grid */}
@@ -3558,8 +3767,8 @@ export default function CreateLead() {
               >
                 <option value="SELF_EMPLOYED">Self-employed</option>
                 <option value="SALARIED">Salaried Sector</option>
-                <option value="BUSINESS">Corporate Business</option>
-                <option value="PROFESSIONAL">Licensed Professional</option>
+                {/* <option value="BUSINESS">Corporate Business</option>
+                <option value="PROFESSIONAL">Licensed Professional</option> */}
               </select>
             </Field>
 
@@ -3846,10 +4055,10 @@ export default function CreateLead() {
                     >
                       <option value="SELF_EMPLOYED">Self-employed</option>
                       <option value="SALARIED">Salaried Sector</option>
-                      <option value="BUSINESS">Corporate Business</option>
+                      {/* <option value="BUSINESS">Corporate Business</option>
                       <option value="PROFESSIONAL">
                         Licensed Professional
-                      </option>
+                      </option> */}
                     </select>
                   </Field>
 
