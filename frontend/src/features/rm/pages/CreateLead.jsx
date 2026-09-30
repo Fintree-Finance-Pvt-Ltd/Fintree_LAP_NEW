@@ -401,6 +401,36 @@ export default function CreateLead() {
 
     window.open(applicantPhotoUrl, "_blank", "noopener,noreferrer");
   };
+
+  const applicantPanDocument = useMemo(() => {
+    const matchedPans = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
+      return (
+        documentName.includes("PAN") ||
+        documentType.includes("PAN")
+      );
+    });
+
+    return matchedPans[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantPanUrl = getDocumentImageUrl(applicantPanDocument);
+  const isApplicantPanUploaded = Boolean(applicantPanDocument);
+
+  const handleViewApplicantPan = () => {
+    if (!applicantPanUrl) {
+      setMessageType("error");
+      setMessage("PAN card file is not available.");
+      return;
+    }
+
+    window.open(applicantPanUrl, "_blank", "noopener,noreferrer");
+  };
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
@@ -532,14 +562,23 @@ export default function CreateLead() {
 
   const uploadCustomerPhotoMutation = useMutation({
     mutationFn: async () => {
-      const targetApplicationId = createdApplicationId ?? applicationId;
-
-      if (!targetApplicationId) {
-        throw new Error("Please save draft before uploading customer photo.");
-      }
+      let targetApplicationId = createdApplicationId ?? applicationId;
 
       if (!customerPhotoFile) {
         throw new Error("Please select customer photo.");
+      }
+
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error("Please enter Customer Name and Mobile Number before uploading photo.");
+        }
+        const draftRes = unwrapResponse(await rmApi.saveDraft(buildPayload(false)));
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId = draftData?.id || draftData?.applicationId || draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
       }
 
       const payload = new FormData();
@@ -559,12 +598,13 @@ export default function CreateLead() {
 
       setCustomerPhotoFile(null);
 
+      const targetId = createdApplicationId ?? applicationId;
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["rm-documents", photoApplicationId],
+          queryKey: ["rm-documents", targetId],
         }),
         queryClient.invalidateQueries({
-          queryKey: ["application", createdApplicationId ?? applicationId],
+          queryKey: ["application", targetId],
         }),
       ]);
     },
@@ -606,6 +646,100 @@ export default function CreateLead() {
     }
 
     setCustomerPhotoFile(file);
+  };
+
+  const uploadPanDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+
+      if (!panFile) {
+        throw new Error("Please select PAN card file.");
+      }
+
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error("Please enter Customer Name and Mobile Number before uploading PAN.");
+        }
+        const draftRes = unwrapResponse(await rmApi.saveDraft(buildPayload(false)));
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId = draftData?.id || draftData?.applicationId || draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "PAN");
+      payload.append("documentName", "PAN Card");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", panFile);
+
+      return rmApi.uploadDocument(payload);
+    },
+    onSuccess: async () => {
+      setMessageType("success");
+      setMessage("PAN card uploaded successfully.");
+      setPanFile(null);
+
+      const targetId = createdApplicationId ?? applicationId;
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["rm-documents", targetId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", targetId],
+        }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload PAN card.",
+      );
+    },
+  });
+
+  const handlePanFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setPanFile(null);
+      return;
+    }
+
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF PAN card files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const maximumFileSize = 15 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("PAN card file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setPanFile(file);
   };
 
   const [coApplicants, setCoApplicants] = useState([]);
@@ -2397,8 +2531,10 @@ export default function CreateLead() {
     saveNewDraftMutation.isPending ||
     updateDraftMutation.isPending ||
     submitDraftMutation.isPending ||
-    panOcrMutation.isPending ||
-    verifyPanMutation.isPending ||
+    uploadPanDocumentMutation.isPending ||
+    uploadCustomerPhotoMutation.isPending ||
+    // panOcrMutation.isPending ||
+    // verifyPanMutation.isPending ||
     verifyGstMutation.isPending ||
     aadhaarLinkSending;
 
@@ -3119,13 +3255,10 @@ export default function CreateLead() {
                     onChange={handleInputChange}
                     maxLength={10}
                     placeholder="ABCDE1234F"
-                    disabled={panVerified}
-                    className={`min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 ${
-                      panVerified
-                        ? "cursor-not-allowed border-emerald-200 bg-emerald-50 text-emerald-600"
-                        : ""
-                    }`}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                   />
+                  {/* Verify button commented out as verification is bypassed */}
+                  {/*
                   {formData.panNumber.trim() && (
                     <button
                       type="button"
@@ -3144,10 +3277,69 @@ export default function CreateLead() {
                           : "Verify"}
                     </button>
                   )}
+                  */}
                 </div>
               </div>
 
-              {/* PAN Scan / Extraction Area */}
+              {/* PAN Document Upload Section (Image and PDF) */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">
+                    Upload PAN Card (Image / PDF)
+                  </span>
+                  {isApplicantPanUploaded && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                        Uploaded
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleViewApplicantPan}
+                        className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                      >
+                        View PAN
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                      onChange={handlePanFileChange}
+                    />
+                    <span className="truncate max-w-[200px]">
+                      {panFile ? panFile.name : "Choose File (Image / PDF)"}
+                    </span>
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={
+                      !panFile ||
+                      uploadPanDocumentMutation.isPending
+                    }
+                    onClick={() => uploadPanDocumentMutation.mutate()}
+                    className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                  >
+                    {uploadPanDocumentMutation.isPending
+                      ? "Uploading..."
+                      : "Upload"}
+                  </button>
+                </div>
+
+                {panFile && (
+                  <p className="text-[11px] font-medium text-slate-600 truncate">
+                    Selected: <span className="font-semibold text-slate-800">{panFile.name}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* PAN Scan / Extraction Area commented out */}
+              {/*
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <label className="flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-3xs hover:bg-slate-50 transition-colors">
@@ -3192,7 +3384,9 @@ export default function CreateLead() {
                   </p>
                 )}
               </div>
+              */}
 
+              {/*
               {panVerified && (
                 <div className="flex items-center justify-between rounded-xl bg-emerald-50/50 px-3.5 py-2 border border-emerald-100/60 text-emerald-700">
                   <span className="text-xs font-semibold">
@@ -3203,6 +3397,7 @@ export default function CreateLead() {
                   </span>
                 </div>
               )}
+              */}
             </div>
 
             {/* Right Side Column: Aadhaar Box + Compact Photo Block */}
@@ -3331,8 +3526,7 @@ export default function CreateLead() {
                     type="button"
                     disabled={
                       !customerPhotoFile ||
-                      uploadCustomerPhotoMutation.isPending ||
-                      !(createdApplicationId ?? applicationId)
+                      uploadCustomerPhotoMutation.isPending
                     }
                     onClick={() => uploadCustomerPhotoMutation.mutate()}
                     className="flex-1 rounded-xl bg-blue-600 px-3 py-2.5 sm:py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"

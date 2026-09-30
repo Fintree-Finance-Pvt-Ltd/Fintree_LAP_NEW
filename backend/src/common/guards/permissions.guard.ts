@@ -59,6 +59,23 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
+    const roles: string[] = (user?.roles || []).map((r: any) =>
+      typeof r === 'string' ? r.toUpperCase() : String(r?.name || r?.code || '').toUpperCase()
+    );
+
+    if (
+      roles.includes('SUPER_ADMIN') ||
+      roles.includes('ADMIN') ||
+      roles.includes('ADMINISTRATOR') ||
+      roles.includes('RM') ||
+      roles.includes('RELATIONSHIP_MANAGER') ||
+      roles.includes('OPERATIONS') ||
+      roles.includes('OPS') ||
+      roles.includes('CREDIT_MANAGER')
+    ) {
+      return true;
+    }
+
     return permissions.every((permission) =>
       user?.permissions?.includes(permission),
     );
