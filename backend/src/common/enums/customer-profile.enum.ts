@@ -5,6 +5,14 @@ export enum CustomerType {
   COMPANY = 'COMPANY'
 }
 
+export enum Constitution {
+  PROPRIETORSHIP = 'PROPRIETORSHIP',
+  PARTNERSHIP = 'PARTNERSHIP',
+  PVT_LTD = 'PVT_LTD',
+  LLP = 'LLP',
+  INDIVIDUAL = 'INDIVIDUAL'
+}
+
 export enum Gender {
   MALE = 'MALE',
   FEMALE = 'FEMALE',
@@ -28,6 +36,7 @@ export enum OccupationType {
   SELF_EMPLOYED = 'SELF_EMPLOYED',
   BUSINESS = 'BUSINESS',
   PROFESSIONAL = 'PROFESSIONAL',
+  AGRICULTURE = 'AGRICULTURE',
   RETIRED = 'RETIRED',
   OTHER = 'OTHER'
 }

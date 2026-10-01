@@ -23,6 +23,7 @@ const emptyForm = {
   panNumber: "",
   aadhaarNumber: "",
   occupation: "SELF_EMPLOYED",
+  constitution: "INDIVIDUAL",
   businessName: "",
   gstNumber: "",
   propertyCategory: "Residential",
@@ -1309,11 +1310,9 @@ export default function CreateLead() {
 
       gender: application.gender || profile.gender || "",
 
-      maritalStatus:
-        application.maritalStatus || profile.maritalStatus || "",
+      maritalStatus: application.maritalStatus || profile.maritalStatus || "",
 
-      nationality:
-        application.nationality || profile.nationality || "INDIAN",
+      nationality: application.nationality || profile.nationality || "INDIAN",
 
       mobileNumber:
         application.mobile || application.mobileNumber || profile.mobile || "",
@@ -1330,6 +1329,11 @@ export default function CreateLead() {
         profile.occupationType ||
         application.occupation ||
         "SELF_EMPLOYED",
+
+      constitution:
+        application.constitution ||
+        profile.constitution ||
+        "INDIVIDUAL",
 
       businessName: application.businessName || profile.businessName || "",
       gstNumber:
@@ -1544,6 +1548,7 @@ export default function CreateLead() {
       pan: formData.panNumber.trim() || undefined,
       aadhaarNumber: formData.aadhaarNumber.trim() || undefined,
       occupationType: formData.occupation,
+      constitution: formData.constitution || undefined,
       businessName: formData.businessName.trim() || undefined,
       gstNumber: formData.gstNumber.trim() || undefined,
       propertyCategory: formData.propertyCategory || undefined,
@@ -1570,6 +1575,7 @@ export default function CreateLead() {
       const allowedPatchFields = [
         "customerName",
         "customerType",
+        "constitution",
         "dob",
         "gender",
         "maritalStatus",
@@ -2650,15 +2656,35 @@ export default function CreateLead() {
             </div>
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-              <Field label="Occupation / Constitution">
+              <Field label="Occupation">
                 <select
                   name="occupation"
-                  value={formData.occupation}
+                  value={formData.occupation || "SELF_EMPLOYED"}
                   onChange={handleInputChange}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 >
-                  <option value="SELF_EMPLOYED">Self-employed</option>
-                  <option value="SALARIED">Salaried Sector</option>
+                  <option value="SALARIED">Salaried</option>
+                  <option value="SELF_EMPLOYED">Self Employed</option>
+                  <option value="BUSINESS">Business</option>
+                  <option value="PROFESSIONAL">Professional</option>
+                  <option value="AGRICULTURE">Agriculture</option>
+                  <option value="RETIRED">Retired</option>
+                  <option value="OTHER">Others</option>
+                </select>
+              </Field>
+
+              <Field label="Constitution">
+                <select
+                  name="constitution"
+                  value={formData.constitution || "INDIVIDUAL"}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="PROPRIETORSHIP">Proprietorship</option>
+                  <option value="PARTNERSHIP">Partnership</option>
+                  <option value="PVT_LTD">Pvt Ltd</option>
+                  <option value="LLP">LLP</option>
+                  <option value="INDIVIDUAL">Individual</option>
                 </select>
               </Field>
 
@@ -2667,23 +2693,20 @@ export default function CreateLead() {
                 name="businessName"
                 value={formData.businessName}
                 onChange={handleInputChange}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                placeholder="Enter employer or business name"
               />
 
               {/* GST Identification Block */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  GST Number
-                </label>
+              <Field label="GST Number">
                 <input
                   name="gstNumber"
                   value={formData.gstNumber}
                   onChange={handleInputChange}
                   maxLength={15}
                   placeholder="22AAAAA0000A1Z5"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm uppercase font-semibold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm uppercase font-semibold tracking-wider text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
-              </div>
+              </Field>
             </div>
           </div>
         </Section>

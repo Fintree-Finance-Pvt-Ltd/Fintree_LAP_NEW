@@ -1,11 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsBoolean, IsDateString, IsEmail, IsEnum, IsInt, IsMobilePhone, IsNumber, IsOptional, IsString, Length, Max, Min } from 'class-validator';
-import { BureauStatus, CustomerType, Gender, MaritalStatus, OccupationType } from '../../../common/enums/customer-profile.enum';
+import { BureauStatus, Constitution, CustomerType, Gender, MaritalStatus, OccupationType } from '../../../common/enums/customer-profile.enum';
 
 export class CreateCustomerProfileDto {
   @ApiProperty() @Type(() => Number) @IsInt() applicationId: number;
   @ApiProperty({ enum: CustomerType }) @IsEnum(CustomerType) customerType: CustomerType;
+  @ApiPropertyOptional({ enum: Constitution }) @IsOptional() @IsEnum(Constitution) constitution?: Constitution;
   @ApiProperty() @IsString() @Length(1, 80) firstName: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 80) middleName?: string;
   @ApiProperty() @IsString() @Length(1, 80) lastName: string;

@@ -521,6 +521,7 @@ export class ApplicationsService {
           dob: dto.dob ? String(dto.dob).slice(0, 10) : undefined,
           gender: dto.gender || undefined,
           customerType: dto.customerType || undefined,
+          constitution: dto.constitution || undefined,
           maritalStatus: dto.maritalStatus || undefined,
           nationality: dto.nationality || undefined,
           mobile: dto.mobile.trim(),
@@ -595,6 +596,9 @@ export class ApplicationsService {
       if (dto.customerType !== undefined) {
         existingDraft.customerType = dto.customerType || undefined;
       }
+      if (dto.constitution !== undefined) {
+        existingDraft.constitution = dto.constitution || undefined;
+      }
       if (dto.maritalStatus !== undefined) {
         existingDraft.maritalStatus = dto.maritalStatus || undefined;
       }
@@ -664,6 +668,9 @@ export class ApplicationsService {
       }
       if (dto.customerType !== undefined) {
         application.customerType = dto.customerType || undefined;
+      }
+      if (dto.constitution !== undefined) {
+        application.constitution = dto.constitution || undefined;
       }
       if (dto.maritalStatus !== undefined) {
         application.maritalStatus = dto.maritalStatus || undefined;
@@ -1811,6 +1818,7 @@ export class ApplicationsService {
     return {
       applicationId: application.id,
       customerType: dto.customerType || CustomerType.INDIVIDUAL,
+      constitution: dto.constitution || undefined,
       firstName: dto.firstName || parts[0] || name,
       lastName: dto.lastName || parts[parts.length - 1] || name,
       middleName:

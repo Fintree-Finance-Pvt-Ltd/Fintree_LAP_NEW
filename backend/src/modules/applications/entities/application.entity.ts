@@ -19,7 +19,7 @@ import { Document } from "../../documents/entities/document.entity";
 import { Workflow } from "../../workflow/entities/workflow.entity";
 import { ChargesReceipt } from "../../charges-receipts/entities/charges-receipt.entity";
 import { KycVerificationStatus } from "../../varification/entities/kyc-verification-status.entity";
-import { CustomerType, Gender, MaritalStatus } from "../../../common/enums/customer-profile.enum";
+import { Constitution, CustomerType, Gender, MaritalStatus } from "../../../common/enums/customer-profile.enum";
 
 @Entity("applications")
 export class Application {
@@ -37,6 +37,14 @@ export class Application {
     nullable: true,
   })
   customerType?: CustomerType;
+
+  @Column({
+    name: "constitution",
+    type: "enum",
+    enum: Constitution,
+    nullable: true,
+  })
+  constitution?: Constitution;
 
   @Column({ name: "customer_name", length: 160 })
   customerName: string;

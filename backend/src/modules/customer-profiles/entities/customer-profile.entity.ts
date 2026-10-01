@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { BureauStatus, CustomerType, Gender, MaritalStatus, OccupationType } from '../../../common/enums/customer-profile.enum';
+import { BureauStatus, Constitution, CustomerType, Gender, MaritalStatus, OccupationType } from '../../../common/enums/customer-profile.enum';
 import { Application } from '../../applications/entities/application.entity';
 
 @Entity('customer_profiles')
@@ -16,6 +16,13 @@ export class CustomerProfile {
   nullable: true,
 })
 customerType?: CustomerType;
+@Column({
+  name: 'constitution',
+  type: 'enum',
+  enum: Constitution,
+  nullable: true,
+})
+constitution?: Constitution;
   @Column({ name: 'first_name', length: 80 }) firstName: string;
   @Column({ name: 'middle_name', length: 80, nullable: true }) middleName?: string;
   @Column({ name: 'last_name', length: 80 }) lastName: string;
