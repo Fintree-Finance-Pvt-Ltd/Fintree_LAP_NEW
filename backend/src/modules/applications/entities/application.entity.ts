@@ -8,32 +8,40 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   VersionColumn,
-} from 'typeorm';
+} from "typeorm";
 
-import { ApplicationStage } from '../../../common/enums/application-stage.enum';
-import { ApplicationStatus } from '../../../common/enums/application-status.enum';
-import { CoApplicant } from '../../co-applicants/entities/co-applicant.entity';
-import { ContactPerson } from '../../contact-persons/entities/contact-person.entity';
-import { CustomerProfile } from '../../customer-profiles/entities/customer-profile.entity';
-import { Document } from '../../documents/entities/document.entity';
-import { Workflow } from '../../workflow/entities/workflow.entity';
-import { ChargesReceipt } from '../../charges-receipts/entities/charges-receipt.entity';
-import { KycVerificationStatus } from '../../varification/entities/kyc-verification-status.entity';
+import { ApplicationStage } from "../../../common/enums/application-stage.enum";
+import { ApplicationStatus } from "../../../common/enums/application-status.enum";
+import { CoApplicant } from "../../co-applicants/entities/co-applicant.entity";
+import { ContactPerson } from "../../contact-persons/entities/contact-person.entity";
+import { CustomerProfile } from "../../customer-profiles/entities/customer-profile.entity";
+import { Document } from "../../documents/entities/document.entity";
+import { Workflow } from "../../workflow/entities/workflow.entity";
+import { ChargesReceipt } from "../../charges-receipts/entities/charges-receipt.entity";
+import { KycVerificationStatus } from "../../varification/entities/kyc-verification-status.entity";
+import { Gender } from "../../../common/enums/customer-profile.enum";
 
-@Entity('applications')
+@Entity("applications")
 export class Application {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
+  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: number;
 
   @Index()
-  @Column({ name: 'application_number', length: 40, unique: true })
+  @Column({ name: "application_number", length: 40, unique: true })
   applicationNumber: string;
 
-  @Column({ name: 'customer_name', length: 160 })
+  @Column({ name: "customer_name", length: 160 })
   customerName: string;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ type: "date", nullable: true })
   dob?: string;
+
+  @Column({
+    type: "enum",
+    enum: Gender,
+    nullable: true,
+  })
+  gender?: Gender;
 
   @Column({ length: 20 })
   mobile: string;
@@ -41,12 +49,12 @@ export class Application {
   @Column({ length: 10, nullable: true })
   pan?: string;
 
-  @Column({ name: 'pan_verified', default: false })
+  @Column({ name: "pan_verified", default: false })
   panVerified: boolean;
 
   @Column({
-    name: 'requested_amount',
-    type: 'decimal',
+    name: "requested_amount",
+    type: "decimal",
     precision: 15,
     scale: 2,
     default: 0,
@@ -55,7 +63,7 @@ export class Application {
 
   @Index()
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: ApplicationStage,
     default: ApplicationStage.RM,
   })
@@ -63,43 +71,43 @@ export class Application {
 
   @Index()
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: ApplicationStatus,
     default: ApplicationStatus.DRAFT,
   })
   status: ApplicationStatus;
 
   @Column({
-    name: 'assigned_to',
-    type: 'bigint',
+    name: "assigned_to",
+    type: "bigint",
     unsigned: true,
     nullable: true,
   })
   assignedTo?: number;
 
-  @Column({ name: 'next_follow_up_date', length: 30, nullable: true })
+  @Column({ name: "next_follow_up_date", length: 30, nullable: true })
   nextFollowUpDate?: string;
 
   @VersionColumn()
   version: number;
 
-  @CreateDateColumn({ name: 'created_at', precision: 6 })
+  @CreateDateColumn({ name: "created_at", precision: 6 })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', precision: 6 })
+  @UpdateDateColumn({ name: "updated_at", precision: 6 })
   updatedAt: Date;
 
   @Column({
-    name: 'created_by',
-    type: 'bigint',
+    name: "created_by",
+    type: "bigint",
     unsigned: true,
     nullable: true,
   })
   createdBy?: number;
 
   @Column({
-    name: 'updated_by',
-    type: 'bigint',
+    name: "updated_by",
+    type: "bigint",
     unsigned: true,
     nullable: true,
   })
@@ -120,14 +128,17 @@ export class Application {
   @OneToOne(() => Workflow, (workflow) => workflow.application)
   workflow?: Workflow;
 
-  @OneToMany(() => ChargesReceipt, (chargesReceipt) => chargesReceipt.application)
+  @OneToMany(
+    () => ChargesReceipt,
+    (chargesReceipt) => chargesReceipt.application,
+  )
   chargesReceipts?: ChargesReceipt[];
 
   @OneToMany(
-  () => KycVerificationStatus,
-  (kycVerificationStatus) => kycVerificationStatus.application,
-)
-kycVerificationStatuses?: KycVerificationStatus[];
+    () => KycVerificationStatus,
+    (kycVerificationStatus) => kycVerificationStatus.application,
+  )
+  kycVerificationStatuses?: KycVerificationStatus[];
   email: string | undefined;
   marketValue: any;
   propertyValue: any;
