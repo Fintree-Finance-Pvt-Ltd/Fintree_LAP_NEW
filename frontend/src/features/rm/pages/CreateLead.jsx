@@ -120,16 +120,22 @@ function Section({ title, children }) {
   );
 }
 
-function Field({ label, children, className = "", ...props }) {
+function Field({
+  label,
+  children,
+  containerClassName = "",
+  className = "",
+  ...props
+}) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
       <label className="text-xs font-semibold text-slate-700">{label}</label>
       {children ? (
         children
       ) : (
         <input
           {...props}
-          className={`w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${className}`}
+          className={`w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${className}`}
         />
       )}
     </div>
@@ -2246,200 +2252,244 @@ export default function CreateLead() {
       {/* Main Core Form Inputs Viewport Layout matching image guidelines */}
       <div className="space-y-6">
         <Section title="Primary Applicant Information">
-          {/* Primary Applicant Basic Details Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
-            <Field
-              label={
-                <>
-                  Customer / Entity Name
-                  <span className="text-red-600 font-bold"> *</span>
-                </>
-              }
-              name="customerName"
-              value={formData.customerName}
-              onChange={handleInputChange}
-              required
-              placeholder="Enter customer / entity name"
-            />
-
-            <Field label="Customer Type">
-              <select
-                name="customerType"
-                value={formData.customerType || "INDIVIDUAL"}
-                onChange={handleInputChange}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="INDIVIDUAL">Individual</option>
-                <option value="PROPRIETORSHIP">Proprietor</option>
-                <option value="PARTNERSHIP">Partnership</option>
-                <option value="COMPANY">Company</option>
-              </select>
-            </Field>
-
-            <Field
-              label="Date of Birth (DOB)"
-              type="date"
-              name="dob"
-              value={formData.dob ? String(formData.dob).slice(0, 10) : ""}
-              onChange={handleInputChange}
-            />
-
-            <Field label="Gender">
-              <select
-                name="gender"
-                value={formData.gender || ""}
-                onChange={handleInputChange}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Select Gender</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </Field>
-
-            <Field label="Marital Status">
-              <select
-                name="maritalStatus"
-                value={formData.maritalStatus || ""}
-                onChange={handleInputChange}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Select Marital Status</option>
-                <option value="SINGLE">Single</option>
-                <option value="MARRIED">Married</option>
-                <option value="DIVORCED">Divorce</option>
-                <option value="WIDOWED">Widow</option>
-              </select>
-            </Field>
-
-            <Field label="Nationality">
-              <select
-                name="nationality"
-                value={formData.nationality || "INDIAN"}
-                onChange={handleInputChange}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="INDIAN">Indian</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </Field>
-
-            <Field
-              label={
-                <>
-                  Mobile Number
-                  <span className="text-red-600 font-bold"> *</span>
-                </>
-              }
-              name="mobileNumber"
-              value={formData.mobileNumber}
-              onChange={handleInputChange}
-              maxLength={10}
-              inputMode="numeric"
-              required
-              placeholder="Enter 10-digit number"
-            />
-
-            <Field
-              label={
-                <>
-                  Email Id
-                  <span className="text-red-600 font-bold"> *</span>
-                </>
-              }
-              type="email"
-              name="emailId"
-              value={formData.emailId || ""}
-              onChange={handleInputChange}
-              maxLength={255}
-              autoComplete="email"
-              placeholder="name@domain.com"
-              required
-            />
-          </div>
-
-          {/* Row 3: Identity Verification (PAN & Aadhaar + Compact Photo Block) */}
-          <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
-            {/* Left Side Column: PAN Block */}
-            <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  PAN Number *
-                </label>
-                <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
-                  <input
-                    name="panNumber"
-                    value={formData.panNumber}
-                    onChange={handleInputChange}
-                    maxLength={10}
-                    placeholder="ABCDE1234F"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                  />
-                </div>
-              </div>
-
-              {/* PAN Document Upload Section (Image and PDF) */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700">
-                    Upload PAN Card (Image / PDF)
-                  </span>
-                  {isApplicantPanUploaded && (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                        Uploaded
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleViewApplicantPan}
-                        className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                      >
-                        View PAN
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                      onChange={handlePanFileChange}
-                    />
-                    <span className="truncate max-w-[200px]">
-                      {panFile ? panFile.name : "Choose File (Image / PDF)"}
-                    </span>
-                  </label>
-
-                  <button
-                    type="button"
-                    disabled={!panFile || uploadPanDocumentMutation.isPending}
-                    onClick={() => uploadPanDocumentMutation.mutate()}
-                    className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                  >
-                    {uploadPanDocumentMutation.isPending
-                      ? "Uploading..."
-                      : "Upload"}
-                  </button>
-                </div>
-
-                {panFile && (
-                  <p className="text-[11px] font-medium text-slate-600 truncate">
-                    Selected:{" "}
-                    <span className="font-semibold text-slate-800">
-                      {panFile.name}
-                    </span>
-                  </p>
-                )}
-              </div>
+          {/* Sub-Section 1: BASIC INFORMATION */}
+          <div className="col-span-full space-y-4">
+            <div className="border-b border-slate-200 pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <span className="h-2 w-1 rounded-full bg-blue-600" />
+                Basic Information
+              </h4>
             </div>
 
-            {/* Right Side Column: Aadhaar / Udyam Aadhaar Box + Compact Photo Block */}
-            <div className="flex flex-col gap-4 w-full self-start">
-              {/* Aadhaar / Udyam Aadhaar Block */}
+            <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
+              <Field
+                containerClassName="md:col-span-1"
+                label={
+                  <>
+                    Customer / Entity Name
+                    <span className="text-red-600 font-bold"> *</span>
+                  </>
+                }
+                name="customerName"
+                value={formData.customerName}
+                onChange={handleInputChange}
+                required
+                placeholder="Enter customer / entity name"
+              />
+
+              <Field
+                containerClassName="md:col-span-1"
+                label={
+                  <>
+                    Customer Type
+                    <span className="text-red-600 font-bold"> *</span>
+                  </>
+                }
+              >
+                <select
+                  name="customerType"
+                  value={formData.customerType || "INDIVIDUAL"}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="INDIVIDUAL">Individual</option>
+                  <option value="PROPRIETORSHIP">Proprietor</option>
+                  <option value="PARTNERSHIP">Partnership</option>
+                  <option value="COMPANY">Company</option>
+                </select>
+              </Field>
+
+              <Field
+                containerClassName="md:col-span-1"
+                label={
+                  <>
+                    Date of Birth
+                    <span className="text-red-600 font-bold"> *</span>
+                  </>
+                }
+                type="date"
+                name="dob"
+                value={formData.dob ? String(formData.dob).slice(0, 10) : ""}
+                onChange={handleInputChange}
+              />
+
+              <Field containerClassName="md:col-span-1" label="Gender">
+                <select
+                  name="gender"
+                  value={formData.gender || ""}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </Field>
+
+              <Field containerClassName="md:col-span-1" label="Marital Status">
+                <select
+                  name="maritalStatus"
+                  value={formData.maritalStatus || ""}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">Select Marital Status</option>
+                  <option value="SINGLE">Single</option>
+                  <option value="MARRIED">Married</option>
+                  <option value="DIVORCED">Divorce</option>
+                  <option value="WIDOWED">Widow</option>
+                </select>
+              </Field>
+
+              <Field containerClassName="md:col-span-1" label="Nationality">
+                <select
+                  name="nationality"
+                  value={formData.nationality || "INDIAN"}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="INDIAN">Indian</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </Field>
+            </div>
+          </div>
+
+          {/* Sub-Section 2: CONTACT INFORMATION */}
+          <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
+            <div className="border-b border-slate-200 pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <span className="h-2 w-1 rounded-full bg-blue-600" />
+                Contact Information
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
+              <Field
+                containerClassName="md:col-span-1"
+                label={
+                  <>
+                    Mobile Number
+                    <span className="text-red-600 font-bold"> *</span>
+                  </>
+                }
+                name="mobileNumber"
+                value={formData.mobileNumber}
+                onChange={handleInputChange}
+                maxLength={10}
+                inputMode="numeric"
+                required
+                placeholder="Enter 10-digit number"
+              />
+
+              <Field
+                containerClassName="md:col-span-1"
+                label={
+                  <>
+                    Email Id
+                    <span className="text-red-600 font-bold"> *</span>
+                  </>
+                }
+                type="email"
+                name="emailId"
+                value={formData.emailId || ""}
+                onChange={handleInputChange}
+                maxLength={255}
+                autoComplete="email"
+                placeholder="name@domain.com"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Sub-Section 3: KYC DETAILS */}
+          <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
+            <div className="border-b border-slate-200 pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <span className="h-2 w-1 rounded-full bg-blue-600" />
+                KYC Details
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
+              {/* Left Side Column: PAN Block */}
+              <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    PAN Number *
+                  </label>
+                  <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
+                    <input
+                      name="panNumber"
+                      value={formData.panNumber}
+                      onChange={handleInputChange}
+                      maxLength={10}
+                      placeholder="ABCDE1234F"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                    />
+                  </div>
+                </div>
+
+                {/* PAN Document Upload Section (Image and PDF) */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700">
+                      Upload PAN Card (Image / PDF)
+                    </span>
+                    {isApplicantPanUploaded && (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                          Uploaded
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleViewApplicantPan}
+                          className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                        >
+                          View PAN
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                        onChange={handlePanFileChange}
+                      />
+                      <span className="truncate max-w-[200px]">
+                        {panFile ? panFile.name : "Choose File (Image / PDF)"}
+                      </span>
+                    </label>
+
+                    <button
+                      type="button"
+                      disabled={!panFile || uploadPanDocumentMutation.isPending}
+                      onClick={() => uploadPanDocumentMutation.mutate()}
+                      className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                    >
+                      {uploadPanDocumentMutation.isPending
+                        ? "Uploading..."
+                        : "Upload"}
+                    </button>
+                  </div>
+
+                  {panFile && (
+                    <p className="text-[11px] font-medium text-slate-600 truncate">
+                      Selected:{" "}
+                      <span className="font-semibold text-slate-800">
+                        {panFile.name}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Side Column: Aadhaar / Udyam Aadhaar Box */}
               <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
                 <div>
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -2520,6 +2570,7 @@ export default function CreateLead() {
                 </div>
               </div>
             </div>
+
             {/* Compact Profile Photo Management Panel */}
             <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
               <div className="flex items-center gap-3 min-w-0">
@@ -2589,43 +2640,50 @@ export default function CreateLead() {
             )}
           </div>
 
-          {/* Row 4: Professional & Corporate Details Grid */}
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3 col-span-full">
-            <Field label="Occupation / Constitution">
-              <select
-                name="occupation"
-                value={formData.occupation}
+          {/* Sub-Section 4: EMPLOYMENT & BUSINESS INFORMATION */}
+          <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
+            <div className="border-b border-slate-200 pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <span className="h-2 w-1 rounded-full bg-blue-600" />
+                Employment &amp; Business Information
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+              <Field label="Occupation / Constitution">
+                <select
+                  name="occupation"
+                  value={formData.occupation}
+                  onChange={handleInputChange}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                >
+                  <option value="SELF_EMPLOYED">Self-employed</option>
+                  <option value="SALARIED">Salaried Sector</option>
+                </select>
+              </Field>
+
+              <Field
+                label="Employer / Business Name"
+                name="businessName"
+                value={formData.businessName}
                 onChange={handleInputChange}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-              >
-                <option value="SELF_EMPLOYED">Self-employed</option>
-                <option value="SALARIED">Salaried Sector</option>
-                {/* <option value="BUSINESS">Corporate Business</option>
-                <option value="PROFESSIONAL">Licensed Professional</option> */}
-              </select>
-            </Field>
-
-            <Field
-              label="Employer / Business Name"
-              name="businessName"
-              value={formData.businessName}
-              onChange={handleInputChange}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-            />
-
-            {/* GST Identification Block */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                GST Number
-              </label>
-              <input
-                name="gstNumber"
-                value={formData.gstNumber}
-                onChange={handleInputChange}
-                maxLength={15}
-                placeholder="22AAAAA0000A1Z5"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm uppercase font-semibold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
               />
+
+              {/* GST Identification Block */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  GST Number
+                </label>
+                <input
+                  name="gstNumber"
+                  value={formData.gstNumber}
+                  onChange={handleInputChange}
+                  maxLength={15}
+                  placeholder="22AAAAA0000A1Z5"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-sm uppercase font-semibold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                />
+              </div>
             </div>
           </div>
         </Section>
