@@ -28,6 +28,7 @@ customerType?: CustomerType;
 
   @Column({ type: 'enum', enum: Gender, nullable: true }) gender?: Gender;
   @Column({ name: 'marital_status', type: 'enum', enum: MaritalStatus, nullable: true }) maritalStatus?: MaritalStatus;
+  @Column({ name: 'nationality', length: 50, nullable: true, default: 'INDIAN' }) nationality?: string;
   @Column({ length: 120, nullable: true }) education?: string;
   @Column({ name: 'occupation_type', type: 'enum', enum: OccupationType, nullable: true }) occupationType?: OccupationType;
   @Column({ name: 'business_name', length: 180, nullable: true }) businessName?: string;

@@ -13,8 +13,11 @@ import PropertyAddressAutocomplete from "../components/PropertyAddressAutocomple
 
 const emptyForm = {
   customerName: "",
+  customerType: "INDIVIDUAL",
   dob: "",
   gender: "",
+  maritalStatus: "",
+  nationality: "INDIAN",
   mobileNumber: "",
   emailId: "",
   panNumber: "",
@@ -1286,6 +1289,9 @@ export default function CreateLead() {
           .trim() ||
         "",
 
+      customerType:
+        application.customerType || profile.customerType || "INDIVIDUAL",
+
       dob:
         application.dob ||
         profile.dob ||
@@ -1296,6 +1302,12 @@ export default function CreateLead() {
         "",
 
       gender: application.gender || profile.gender || "",
+
+      maritalStatus:
+        application.maritalStatus || profile.maritalStatus || "",
+
+      nationality:
+        application.nationality || profile.nationality || "INDIAN",
 
       mobileNumber:
         application.mobile || application.mobileNumber || profile.mobile || "",
@@ -1516,8 +1528,11 @@ export default function CreateLead() {
     const activeFollowUp = customFollowUp || followUpData;
     const basePayload = {
       customerName: formData.customerName.trim() || undefined,
+      customerType: formData.customerType || undefined,
       dob: formData.dob ? String(formData.dob).slice(0, 10) : undefined,
       gender: formData.gender || undefined,
+      maritalStatus: formData.maritalStatus || undefined,
+      nationality: formData.nationality || undefined,
       mobile: formData.mobileNumber.trim() || undefined,
       email: formData.emailId.trim() || undefined,
       pan: formData.panNumber.trim() || undefined,
@@ -1548,8 +1563,11 @@ export default function CreateLead() {
     if (isPatchUpdate) {
       const allowedPatchFields = [
         "customerName",
+        "customerType",
         "dob",
         "gender",
+        "maritalStatus",
+        "nationality",
         "mobile",
         "email",
         "pan",
@@ -2244,6 +2262,20 @@ export default function CreateLead() {
               placeholder="Enter customer / entity name"
             />
 
+            <Field label="Customer Type">
+              <select
+                name="customerType"
+                value={formData.customerType || "INDIVIDUAL"}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="INDIVIDUAL">Individual</option>
+                <option value="PROPRIETORSHIP">Proprietor</option>
+                <option value="PARTNERSHIP">Partnership</option>
+                <option value="COMPANY">Company</option>
+              </select>
+            </Field>
+
             <Field
               label="Date of Birth (DOB)"
               type="date"
@@ -2262,6 +2294,33 @@ export default function CreateLead() {
                 <option value="">Select Gender</option>
                 <option value="MALE">Male</option>
                 <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </Field>
+
+            <Field label="Marital Status">
+              <select
+                name="maritalStatus"
+                value={formData.maritalStatus || ""}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="">Select Marital Status</option>
+                <option value="SINGLE">Single</option>
+                <option value="MARRIED">Married</option>
+                <option value="DIVORCED">Divorce</option>
+                <option value="WIDOWED">Widow</option>
+              </select>
+            </Field>
+
+            <Field label="Nationality">
+              <select
+                name="nationality"
+                value={formData.nationality || "INDIAN"}
+                onChange={handleInputChange}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="INDIAN">Indian</option>
                 <option value="OTHER">Other</option>
               </select>
             </Field>

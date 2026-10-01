@@ -18,6 +18,11 @@ export enum MaritalStatus {
   WIDOWED = 'WIDOWED'
 }
 
+export enum Nationality {
+  INDIAN = 'INDIAN',
+  OTHER = 'OTHER'
+}
+
 export enum OccupationType {
   SALARIED = 'SALARIED',
   SELF_EMPLOYED = 'SELF_EMPLOYED',

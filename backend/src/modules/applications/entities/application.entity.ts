@@ -19,7 +19,7 @@ import { Document } from "../../documents/entities/document.entity";
 import { Workflow } from "../../workflow/entities/workflow.entity";
 import { ChargesReceipt } from "../../charges-receipts/entities/charges-receipt.entity";
 import { KycVerificationStatus } from "../../varification/entities/kyc-verification-status.entity";
-import { Gender } from "../../../common/enums/customer-profile.enum";
+import { CustomerType, Gender, MaritalStatus } from "../../../common/enums/customer-profile.enum";
 
 @Entity("applications")
 export class Application {
@@ -29,6 +29,14 @@ export class Application {
   @Index()
   @Column({ name: "application_number", length: 40, unique: true })
   applicationNumber: string;
+
+  @Column({
+    name: "customer_type",
+    type: "enum",
+    enum: CustomerType,
+    nullable: true,
+  })
+  customerType?: CustomerType;
 
   @Column({ name: "customer_name", length: 160 })
   customerName: string;
@@ -42,6 +50,17 @@ export class Application {
     nullable: true,
   })
   gender?: Gender;
+
+  @Column({
+    name: "marital_status",
+    type: "enum",
+    enum: MaritalStatus,
+    nullable: true,
+  })
+  maritalStatus?: MaritalStatus;
+
+  @Column({ name: "nationality", length: 50, nullable: true, default: "INDIAN" })
+  nationality?: string;
 
   @Column({ length: 20 })
   mobile: string;

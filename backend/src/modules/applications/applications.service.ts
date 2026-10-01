@@ -456,6 +456,16 @@ export class ApplicationsService {
           existing.gender = dto.gender || undefined;
         }
 
+        if (dto.customerType !== undefined) {
+          existing.customerType = dto.customerType || undefined;
+        }
+        if (dto.maritalStatus !== undefined) {
+          existing.maritalStatus = dto.maritalStatus || undefined;
+        }
+        if (dto.nationality !== undefined) {
+          existing.nationality = dto.nationality || undefined;
+        }
+
         existing.mobile = dto.mobile.trim();
         if (dto.pan !== undefined) {
           const nextPan = dto.pan?.trim();
@@ -510,6 +520,9 @@ export class ApplicationsService {
           customerName: dto.customerName.trim(),
           dob: dto.dob ? String(dto.dob).slice(0, 10) : undefined,
           gender: dto.gender || undefined,
+          customerType: dto.customerType || undefined,
+          maritalStatus: dto.maritalStatus || undefined,
+          nationality: dto.nationality || undefined,
           mobile: dto.mobile.trim(),
           pan: dto.pan?.trim(),
           requestedAmount: dto.requestedAmount || "0",
@@ -579,6 +592,15 @@ export class ApplicationsService {
       if (dto.gender !== undefined) {
         existingDraft.gender = dto.gender || undefined;
       }
+      if (dto.customerType !== undefined) {
+        existingDraft.customerType = dto.customerType || undefined;
+      }
+      if (dto.maritalStatus !== undefined) {
+        existingDraft.maritalStatus = dto.maritalStatus || undefined;
+      }
+      if (dto.nationality !== undefined) {
+        existingDraft.nationality = dto.nationality || undefined;
+      }
       if (dto.pan !== undefined) {
         const nextPan = dto.pan?.trim();
         existingDraft.panVerified =
@@ -639,6 +661,15 @@ export class ApplicationsService {
       }
       if (dto.gender !== undefined) {
         application.gender = dto.gender || undefined;
+      }
+      if (dto.customerType !== undefined) {
+        application.customerType = dto.customerType || undefined;
+      }
+      if (dto.maritalStatus !== undefined) {
+        application.maritalStatus = dto.maritalStatus || undefined;
+      }
+      if (dto.nationality !== undefined) {
+        application.nationality = dto.nationality || undefined;
       }
       application.mobile = dto.mobile.trim();
       if (dto.pan !== undefined) {
@@ -849,6 +880,9 @@ export class ApplicationsService {
         customerName: dto.customerName.trim(),
         dob: dto.dob ? String(dto.dob).slice(0, 10) : undefined,
         gender: dto.gender || undefined,
+        customerType: dto.customerType || undefined,
+        maritalStatus: dto.maritalStatus || undefined,
+        nationality: dto.nationality || undefined,
         mobile: dto.mobile.trim(),
         pan: dto.pan?.trim(),
         requestedAmount: dto.requestedAmount || "0",
@@ -1403,6 +1437,15 @@ export class ApplicationsService {
 
         gender: application.gender || customerProfile.gender,
 
+        customerType:
+          application.customerType || customerProfile.customerType,
+
+        maritalStatus:
+          application.maritalStatus || customerProfile.maritalStatus,
+
+        nationality:
+          application.nationality || customerProfile.nationality,
+
         mobile: application.mobile || customerProfile.mobile,
 
         pan: application.pan || customerProfile.panNumber,
@@ -1474,6 +1517,16 @@ export class ApplicationsService {
 
         if (dto.gender !== undefined) {
           application.gender = dto.gender || undefined;
+        }
+
+        if (dto.customerType !== undefined) {
+          application.customerType = dto.customerType || undefined;
+        }
+        if (dto.maritalStatus !== undefined) {
+          application.maritalStatus = dto.maritalStatus || undefined;
+        }
+        if (dto.nationality !== undefined) {
+          application.nationality = dto.nationality || undefined;
         }
 
         application.mobile = dto.mobile ?? application.mobile;
@@ -1765,6 +1818,8 @@ export class ApplicationsService {
         (parts.length > 2 ? parts.slice(1, -1).join(" ") : undefined),
       dob: dto.dob ? String(dto.dob).slice(0, 10) : undefined,
       gender: dto.gender || undefined,
+      maritalStatus: dto.maritalStatus || undefined,
+      nationality: dto.nationality || undefined,
       mobile: dto?.mobile?.trim() || "",
       email: dto.email || undefined,
       occupationType: dto.occupationType,
