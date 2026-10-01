@@ -32,6 +32,9 @@ export class Application {
   @Column({ name: 'customer_name', length: 160 })
   customerName: string;
 
+  @Column({ type: 'date', nullable: true })
+  dob?: string;
+
   @Column({ length: 20 })
   mobile: string;
 

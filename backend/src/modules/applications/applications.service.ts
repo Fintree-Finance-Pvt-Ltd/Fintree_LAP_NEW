@@ -445,6 +445,9 @@ export class ApplicationsService {
         if (!existing) throw new NotFoundException('Application not found');
 
         existing.customerName = dto.customerName.trim();
+        if (dto.dob !== undefined) {
+          existing.dob = dto.dob ? String(dto.dob).slice(0, 10) : undefined;
+        }
         existing.mobile = dto.mobile.trim();
         if (dto.pan !== undefined) {
           const nextPan = dto.pan?.trim();
@@ -490,6 +493,7 @@ export class ApplicationsService {
         existingDraft ??
         manager.create(Application, {
           customerName: dto.customerName.trim(),
+          dob: dto.dob ? String(dto.dob).slice(0, 10) : undefined,
           mobile: dto.mobile.trim(),
           pan: dto.pan?.trim(),
           requestedAmount: dto.requestedAmount || '0',
@@ -546,6 +550,9 @@ export class ApplicationsService {
       }
 
       // Update existing draft
+      if (dto.dob !== undefined) {
+        existingDraft.dob = dto.dob ? String(dto.dob).slice(0, 10) : undefined;
+      }
       if (dto.pan !== undefined) {
         const nextPan = dto.pan?.trim();
         existingDraft.panVerified =
@@ -590,6 +597,9 @@ export class ApplicationsService {
       // 1. PREPARING APPLICATION UPDATE PAYLOAD
       // ==========================================
       application.customerName = dto.customerName.trim();
+      if (dto.dob !== undefined) {
+        application.dob = dto.dob ? String(dto.dob).slice(0, 10) : undefined;
+      }
       application.mobile = dto.mobile.trim();
       if (dto.pan !== undefined) {
         const nextPan = dto.pan?.trim();
@@ -766,6 +776,7 @@ return {
     return this.dataSource.transaction(async (manager) => {
       const entity = manager.create(Application, {
         customerName: dto.customerName.trim(),
+        dob: dto.dob ? String(dto.dob).slice(0, 10) : undefined,
         mobile: dto.mobile.trim(),
         pan: dto.pan?.trim(),
         requestedAmount: dto.requestedAmount || '0',
@@ -1340,6 +1351,10 @@ async findOne(id: number) {
         customerName:
         application.customerName,
 
+      dob:
+        application.dob ||
+        customerProfile.dob,
+
       mobile:
         application.mobile ||
         customerProfile.mobile,
@@ -1429,6 +1444,10 @@ async findOne(id: number) {
 
         application.customerName =
           dto.customerName ?? application.customerName;
+
+        if (dto.dob !== undefined) {
+          application.dob = dto.dob ? String(dto.dob).slice(0, 10) : undefined;
+        }
 
         application.mobile =
           dto.mobile ?? application.mobile;
@@ -1757,6 +1776,7 @@ async recordWorkflowStep(
       firstName: dto.firstName || parts[0] || name,
       lastName: dto.lastName || parts[parts.length - 1] || name,
       middleName: dto.middleName || (parts.length > 2 ? parts.slice(1, -1).join(' ') : undefined),
+      dob: dto.dob ? String(dto.dob).slice(0, 10) : undefined,
       mobile: dto?.mobile?.trim() || '',
       email: dto.email || undefined,
       occupationType: dto.occupationType,

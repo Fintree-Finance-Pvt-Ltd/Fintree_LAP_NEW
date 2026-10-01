@@ -13,6 +13,7 @@ import PropertyAddressAutocomplete from "../components/PropertyAddressAutocomple
 
 const emptyForm = {
   customerName: "",
+  dob: "",
   mobileNumber: "",
   emailId: "",
   panNumber: "",
@@ -115,7 +116,7 @@ function Section({ title, children }) {
   );
 }
 
-function Field({ label, children, ...props }) {
+function Field({ label, children, className = "", ...props }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold text-slate-700">{label}</label>
@@ -124,7 +125,7 @@ function Field({ label, children, ...props }) {
       ) : (
         <input
           {...props}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          className={`w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${className}`}
         />
       )}
     </div>
@@ -502,8 +503,8 @@ export default function CreateLead() {
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to upload customer photo.",
+        error?.message ||
+        "Unable to upload customer photo.",
       );
     },
   });
@@ -593,8 +594,8 @@ export default function CreateLead() {
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to upload PAN card.",
+        error?.message ||
+        "Unable to upload PAN card.",
       );
     },
   });
@@ -694,8 +695,8 @@ export default function CreateLead() {
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to upload Aadhaar document.",
+        error?.message ||
+        "Unable to upload Aadhaar document.",
       );
     },
   });
@@ -817,9 +818,9 @@ export default function CreateLead() {
         itemIndex === index
           ? { ...item, id: savedId }
           : {
-              ...item,
-              id: savedRows[itemIndex]?.id || item.id,
-            },
+            ...item,
+            id: savedRows[itemIndex]?.id || item.id,
+          },
       ),
     );
     return savedId;
@@ -879,8 +880,8 @@ export default function CreateLead() {
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Mobile verification failed.",
+        error?.message ||
+        "Mobile verification failed.",
       );
       if (verify) throw error;
     }
@@ -948,8 +949,8 @@ export default function CreateLead() {
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Email verification failed.",
+        error?.message ||
+        "Email verification failed.",
       );
       if (verify) throw error;
     }
@@ -1081,8 +1082,8 @@ export default function CreateLead() {
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "Unable to send the identity verification link.",
+        error?.message ||
+        "Unable to send the identity verification link.",
       );
     }
   };
@@ -1121,8 +1122,8 @@ export default function CreateLead() {
       setMessageType("error");
       setMessage(
         error?.response?.data?.message ||
-          error?.message ||
-          "PAN verification failed.",
+        error?.message ||
+        "PAN verification failed.",
       );
     }
   };
@@ -1218,8 +1219,8 @@ export default function CreateLead() {
         setMessageType("error");
         setMessage(
           error?.response?.data?.message ||
-            error?.message ||
-            "Unable to delete contact person.",
+          error?.message ||
+          "Unable to delete contact person.",
         );
         return;
       }
@@ -1262,8 +1263,8 @@ export default function CreateLead() {
 
     const propertyCategory = normalizePropertyCategory(
       application.propertyCategory ||
-        profile.propertyCategory ||
-        categoryFromType,
+      profile.propertyCategory ||
+      categoryFromType,
     );
 
     const propertyType = normalizePropertyType(
@@ -1282,6 +1283,15 @@ export default function CreateLead() {
         `${profile.firstName || ""} ${profile.middleName || ""} ${profile.lastName || ""}`
           .replace(/\s+/g, " ")
           .trim() ||
+        "",
+
+      dob:
+        application.dob ||
+        profile.dob ||
+        (application.dateOfBirth
+          ? String(application.dateOfBirth).slice(0, 10)
+          : "") ||
+        (profile.dob ? String(profile.dob).slice(0, 10) : "") ||
         "",
 
       mobileNumber:
@@ -1342,20 +1352,20 @@ export default function CreateLead() {
 
     setPanVerified(
       toBoolean(application.panVerified) ||
-        toBoolean(application.customerProfile?.panVerified) ||
-        toBoolean(profile.panVerified),
+      toBoolean(application.customerProfile?.panVerified) ||
+      toBoolean(profile.panVerified),
     );
 
     setOtpVerified(
       toBoolean(application.mobileVerified) ||
-        toBoolean(application.customerProfile?.mobileVerified) ||
-        toBoolean(profile.mobileVerified),
+      toBoolean(application.customerProfile?.mobileVerified) ||
+      toBoolean(profile.mobileVerified),
     );
 
     setEmailOtpVerified(
       toBoolean(application.emailVerified) ||
-        toBoolean(application.customerProfile?.emailVerified) ||
-        toBoolean(profile.emailVerified),
+      toBoolean(application.customerProfile?.emailVerified) ||
+      toBoolean(profile.emailVerified),
     );
   }, [applicationId, applicationQuery.data]);
 
@@ -1503,6 +1513,7 @@ export default function CreateLead() {
     const activeFollowUp = customFollowUp || followUpData;
     const basePayload = {
       customerName: formData.customerName.trim() || undefined,
+      dob: formData.dob ? String(formData.dob).slice(0, 10) : undefined,
       mobile: formData.mobileNumber.trim() || undefined,
       email: formData.emailId.trim() || undefined,
       pan: formData.panNumber.trim() || undefined,
@@ -1533,6 +1544,7 @@ export default function CreateLead() {
     if (isPatchUpdate) {
       const allowedPatchFields = [
         "customerName",
+        "dob",
         "mobile",
         "email",
         "pan",
@@ -1766,7 +1778,7 @@ export default function CreateLead() {
       setMessageType("error");
       setMessage(
         error?.message ||
-          "Submission returned structured validation exceptions.",
+        "Submission returned structured validation exceptions.",
       );
     },
   });
@@ -1955,22 +1967,20 @@ export default function CreateLead() {
                   >
                     {index !== leadJourney.length - 1 && (
                       <div
-                        className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${
-                          leadJourney[index + 1]?.completed
+                        className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${leadJourney[index + 1]?.completed
                             ? "bg-emerald-500"
                             : "bg-slate-100"
-                        }`}
+                          }`}
                       />
                     )}
 
                     <div
-                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
-                        item.completed
+                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${item.completed
                           ? "bg-emerald-500 text-white ring-4 ring-emerald-50"
                           : isCurrent
                             ? "bg-blue-600 text-white ring-4 ring-blue-50"
                             : "bg-white text-slate-300 ring-2 ring-slate-100"
-                      }`}
+                        }`}
                     >
                       {item.completed ? (
                         <svg
@@ -2198,11 +2208,10 @@ export default function CreateLead() {
       {/* Global Toast Alert Messages */}
       {message && (
         <div
-          className={`rounded-lg border p-4 text-xs font-semibold shadow-xs ${
-            messageType === "success"
+          className={`rounded-lg border p-4 text-xs font-semibold shadow-xs ${messageType === "success"
               ? "border-emerald-100 bg-emerald-50 text-emerald-700"
               : "border-rose-100 bg-rose-50 text-rose-700"
-          }`}
+            }`}
         >
           {message}
         </div>
@@ -2211,54 +2220,62 @@ export default function CreateLead() {
       {/* Main Core Form Inputs Viewport Layout matching image guidelines */}
       <div className="space-y-6">
         <Section title="Primary Applicant Information">
-          {/* Row 1: Legal Name */}
-          <div className="col-span-full">
+          {/* Primary Applicant Basic Details Grid */}
+          <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
             <Field
-              label="Customer / Entity Name *"
+              label={
+                <>
+                  Customer / Entity Name
+                  <span className="text-red-600 font-bold"> *</span>
+                </>
+              }
               name="customerName"
               value={formData.customerName}
               onChange={handleInputChange}
               required
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-900 shadow-2xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+              placeholder="Enter customer / entity name"
             />
-          </div>
 
-          {/* Row 2: Contact Validations Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 col-span-full">
-            {/* Mobile Number Block */}
-            <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Mobile Number *
-              </label>
-              <input
-                name="mobileNumber"
-                value={formData.mobileNumber}
-                onChange={handleInputChange}
-                maxLength={10}
-                inputMode="numeric"
-                required
-                placeholder="Enter 10-digit number"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-              />
-            </div>
+            <Field
+              label="Date of Birth (DOB)"
+              type="date"
+              name="dob"
+              value={formData.dob ? String(formData.dob).slice(0, 10) : ""}
+              onChange={handleInputChange}
+            />
 
-            {/* Email Block */}
-            <div className="flex flex-col gap-1.5 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Email Id *
-              </label>
-              <input
-                type="email"
-                name="emailId"
-                value={formData.emailId || ""}
-                onChange={handleInputChange}
-                maxLength={255}
-                autoComplete="email"
-                placeholder="name@domain.com"
-                required
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-              />
-            </div>
+            <Field
+              label={
+                <>
+                  Mobile Number
+                  <span className="text-red-600 font-bold"> *</span>
+                </>
+              }
+              name="mobileNumber"
+              value={formData.mobileNumber}
+              onChange={handleInputChange}
+              maxLength={10}
+              inputMode="numeric"
+              required
+              placeholder="Enter 10-digit number"
+            />
+
+            <Field
+              label={
+                <>
+                  Email Id
+                  <span className="text-red-600 font-bold"> *</span>
+                </>
+              }
+              type="email"
+              name="emailId"
+              value={formData.emailId || ""}
+              onChange={handleInputChange}
+              maxLength={255}
+              autoComplete="email"
+              placeholder="name@domain.com"
+              required
+            />
           </div>
 
           {/* Row 3: Identity Verification (PAN & Aadhaar + Compact Photo Block) */}
