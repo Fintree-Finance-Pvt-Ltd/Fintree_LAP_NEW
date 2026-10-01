@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { rmApi } from "../rmApi.js";
 import {
@@ -136,8 +136,172 @@ function Field({
       ) : (
         <input
           {...props}
-          className={`w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${className}`}
+          className={`w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${className}`}
         />
+      )}
+    </div>
+  );
+}
+
+function Select({
+  name,
+  value,
+  onChange,
+  children,
+  placeholder = "Select option",
+  disabled = false,
+  className = "",
+  ...props
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Parse children options
+  const options = useMemo(() => {
+    if (!children) return [];
+    const childArray = Array.isArray(children) ? children : [children];
+    return childArray
+      .flat(Infinity)
+      .filter((child) => child && child.props)
+      .map((child) => ({
+        value: child.props.value,
+        label: child.props.children || child.props.label || String(child.props.value),
+        disabled: child.props.disabled,
+      }));
+  }, [children]);
+
+  // Find currently active option
+  const selectedOption = options.find(
+    (opt) => String(opt.value ?? "") === String(value ?? ""),
+  );
+  const displayLabel = selectedOption ? selectedOption.label : placeholder;
+
+  const handleSelect = (optionValue) => {
+    if (disabled) return;
+    setIsOpen(false);
+    if (onChange) {
+      onChange({
+        target: {
+          name,
+          value: optionValue,
+        },
+      });
+    }
+  };
+
+  // Close when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
+  return (
+    <div ref={dropdownRef} className="relative w-full">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        className={`w-full flex items-center justify-between rounded-lg border bg-white px-3.5 py-2.5 text-left text-sm font-medium shadow-2xs outline-none transition-all cursor-pointer ${
+          isOpen
+            ? "border-blue-600 ring-2 ring-blue-100 text-slate-900 shadow-sm"
+            : "border-slate-300 text-slate-800 hover:border-slate-400"
+        } ${disabled ? "bg-slate-50 text-slate-400 cursor-not-allowed" : ""} ${className}`}
+        {...props}
+      >
+        <span
+          className={`truncate ${
+            !selectedOption || selectedOption.value === ""
+              ? "text-slate-400"
+              : "text-slate-900 font-medium"
+          }`}
+        >
+          {displayLabel}
+        </span>
+        <span
+          className={`pointer-events-none ml-2 text-slate-400 transition-transform duration-200 ${
+            isOpen ? "rotate-180 text-blue-600" : ""
+          }`}
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </span>
+      </button>
+
+      {/* Custom Styled Floating Options Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute left-0 top-full z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 animate-in fade-in-50 zoom-in-95 duration-100">
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-slate-400">
+              No options available
+            </div>
+          ) : (
+            options.map((opt, index) => {
+              const isSelected =
+                String(opt.value ?? "") === String(value ?? "");
+              return (
+                <button
+                  key={`${opt.value}-${index}`}
+                  type="button"
+                  disabled={opt.disabled}
+                  onClick={() => handleSelect(opt.value)}
+                  className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-left transition-colors cursor-pointer ${
+                    isSelected
+                      ? "bg-blue-50 text-blue-700 font-semibold"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                  } ${opt.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <span className="truncate">{opt.label}</span>
+                  {isSelected && (
+                    <svg
+                      className="h-4 w-4 text-blue-600 shrink-0 ml-2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
       )}
     </div>
   );
@@ -2292,17 +2456,16 @@ export default function CreateLead() {
                   </>
                 }
               >
-                <select
+                <Select
                   name="customerType"
                   value={formData.customerType || "INDIVIDUAL"}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="INDIVIDUAL">Individual</option>
                   <option value="PROPRIETORSHIP">Proprietor</option>
                   <option value="PARTNERSHIP">Partnership</option>
                   <option value="COMPANY">Company</option>
-                </select>
+                </Select>
               </Field>
 
               <Field
@@ -2320,44 +2483,41 @@ export default function CreateLead() {
               />
 
               <Field containerClassName="md:col-span-1" label="Gender">
-                <select
+                <Select
                   name="gender"
                   value={formData.gender || ""}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="">Select Gender</option>
                   <option value="MALE">Male</option>
                   <option value="FEMALE">Female</option>
                   <option value="OTHER">Other</option>
-                </select>
+                </Select>
               </Field>
 
               <Field containerClassName="md:col-span-1" label="Marital Status">
-                <select
+                <Select
                   name="maritalStatus"
                   value={formData.maritalStatus || ""}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="">Select Marital Status</option>
                   <option value="SINGLE">Single</option>
                   <option value="MARRIED">Married</option>
                   <option value="DIVORCED">Divorce</option>
                   <option value="WIDOWED">Widow</option>
-                </select>
+                </Select>
               </Field>
 
               <Field containerClassName="md:col-span-1" label="Nationality">
-                <select
+                <Select
                   name="nationality"
                   value={formData.nationality || "INDIAN"}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="INDIAN">Indian</option>
                   <option value="OTHER">Other</option>
-                </select>
+                </Select>
               </Field>
             </div>
           </div>
@@ -2657,11 +2817,10 @@ export default function CreateLead() {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
               <Field label="Occupation">
-                <select
+                <Select
                   name="occupation"
                   value={formData.occupation || "SELF_EMPLOYED"}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="SALARIED">Salaried</option>
                   <option value="SELF_EMPLOYED">Self Employed</option>
@@ -2670,22 +2829,21 @@ export default function CreateLead() {
                   <option value="AGRICULTURE">Agriculture</option>
                   <option value="RETIRED">Retired</option>
                   <option value="OTHER">Others</option>
-                </select>
+                </Select>
               </Field>
 
               <Field label="Constitution">
-                <select
+                <Select
                   name="constitution"
                   value={formData.constitution || "INDIVIDUAL"}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="PROPRIETORSHIP">Proprietorship</option>
                   <option value="PARTNERSHIP">Partnership</option>
                   <option value="PVT_LTD">Pvt Ltd</option>
                   <option value="LLP">LLP</option>
                   <option value="INDIVIDUAL">Individual</option>
-                </select>
+                </Select>
               </Field>
 
               <Field
@@ -2909,34 +3067,32 @@ export default function CreateLead() {
                   </div>
 
                   <Field label="Relationship Matrix *">
-                    <select
+                    <Select
                       name="relationship"
                       value={coApp.relationship}
                       onChange={(e) => handleCoApplicantChange(index, e)}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     >
                       <option value="SPOUSE">Spouse</option>
                       <option value="FATHER">Father</option>
                       <option value="MOTHER">Mother</option>
                       <option value="SON">Son</option>
                       <option value="SIBLING">Sibling</option>
-                    </select>
+                    </Select>
                   </Field>
 
                   <Field label="Occupation Type">
-                    <select
+                    <Select
                       name="occupation"
                       value={coApp.occupation}
                       onChange={(e) => handleCoApplicantChange(index, e)}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     >
                       <option value="SELF_EMPLOYED">Self-employed</option>
                       <option value="SALARIED">Salaried Sector</option>
-                      {/* <option value="BUSINESS">Corporate Business</option>
-                      <option value="PROFESSIONAL">
-                        Licensed Professional
-                      </option> */}
-                    </select>
+                      <option value="BUSINESS">Business</option>
+                      <option value="PROFESSIONAL">Professional</option>
+                      <option value="AGRICULTURE">Agriculture</option>
+                      <option value="OTHER">Others</option>
+                    </Select>
                   </Field>
 
                   <Field
@@ -3110,33 +3266,31 @@ export default function CreateLead() {
         </div>
         <Section title="Collateral Property Information">
           <Field label="Property Category">
-            <select
+            <Select
               name="propertyCategory"
               value={formData.propertyCategory}
               onChange={handleCategoryChange}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
               {PROPERTY_CATEGORY.map((category) => (
                 <option key={category} value={category}>
                   {category}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
 
           <Field label="Property Type *">
-            <select
+            <Select
               name="propertyType"
               value={formData.propertyType}
               onChange={handleInputChange}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
               {propertyTypeOptions.map((type) => (
                 <option key={type} value={type}>
                   {type}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
 
           <Field
