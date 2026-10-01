@@ -253,7 +253,7 @@ function Select({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
-        className={`w-full flex items-center justify-between rounded-lg border bg-white px-3.5 py-2.5 text-left text-sm font-medium shadow-2xs outline-none transition-all cursor-pointer ${
+        className={`w-full flex items-center justify-between rounded-lg border bg-white px-3.5 py-2.5 text-left text-sm font-normal shadow-2xs outline-none transition-all cursor-pointer ${
           isOpen
             ? "border-blue-600 ring-2 ring-blue-100 text-slate-900 shadow-sm"
             : "border-slate-300 text-slate-800 hover:border-slate-400"
@@ -263,8 +263,8 @@ function Select({
         <span
           className={`truncate ${
             !selectedOption || selectedOption.value === ""
-              ? "text-slate-400"
-              : "text-slate-900 font-medium"
+              ? "text-slate-400 font-normal"
+              : "text-slate-900 font-normal"
           }`}
         >
           {displayLabel}
@@ -2987,7 +2987,7 @@ export default function CreateLead() {
                       onChange={handleInputChange}
                       maxLength={10}
                       placeholder="ABCDE1234F"
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-bold tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-normal tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                     />
                   </div>
                 </div>
@@ -3064,7 +3064,7 @@ export default function CreateLead() {
                       maxLength={4}
                       inputMode="numeric"
                       placeholder="e.g. 1234"
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-bold tracking-widest text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-normal tracking-widest text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
                     />
                   </div>
                 </div>
@@ -3289,7 +3289,7 @@ export default function CreateLead() {
                 value={formData.udyamNumber}
                 onChange={handleInputChange}
                 placeholder="e.g. UDYAM-MH-01-0012345"
-                className="uppercase tracking-wider font-semibold"
+                className="uppercase tracking-wider font-normal"
               />
 
               {/* GST Identification Block */}
@@ -3300,7 +3300,7 @@ export default function CreateLead() {
                   onChange={handleInputChange}
                   maxLength={15}
                   placeholder="22AAAAA0000A1Z5"
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm uppercase font-semibold tracking-wider text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm uppercase tracking-wider text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
               </Field>
 
@@ -3335,7 +3335,7 @@ export default function CreateLead() {
                       value={formData.monthlyIncome}
                       onChange={handleInputChange}
                       placeholder="0.00"
-                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-semibold text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-normal text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
                 </Field>
@@ -3351,7 +3351,7 @@ export default function CreateLead() {
                       value={formData.monthlySales}
                       onChange={handleInputChange}
                       placeholder="0.00"
-                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-semibold text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-normal text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
                 </Field>
@@ -3367,7 +3367,7 @@ export default function CreateLead() {
                       value={formData.monthlyProfit}
                       onChange={handleInputChange}
                       placeholder="0.00"
-                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-semibold text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-normal text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
                 </Field>
