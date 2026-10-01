@@ -464,7 +464,7 @@ export default function CreateLead() {
   };
   // const [consentAccepted, setConsentAccepted] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
+  // const [aadhaarLinkSending, setAadhaarLinkSending] = useState(false);
   const [aadhaarCooldownUntil, setAadhaarCooldownUntil] = useState(0);
   const [aadhaarCooldownSeconds, setAadhaarCooldownSeconds] = useState(0);
   // const [localAadhaarStatus, setLocalAadhaarStatus] = useState("");
@@ -480,7 +480,7 @@ export default function CreateLead() {
   //     localStorage.setItem(aadhaarCooldownKey, String(until));
   //   }
   // };
-  const [applicationNumber, setApplicationNumber] = useState("");
+  const [applicationNumber, setApplicationNumber] = useState(""); 
   const [formData, setFormData] = useState(
     location?.state?.formData
       ? { ...emptyForm, ...location.state.formData }
@@ -489,9 +489,7 @@ export default function CreateLead() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("error");
   // const [emailOtpCode, setEmailOtpCode] = useState(Array(6).fill(""));
-
   // const [emailOtpError, setEmailOtpError] = useState("");
-
   // const emailOtpInputRefs = useRef([]);
 
   const [emailOtpModal, setEmailOtpModal] = useState({
@@ -527,12 +525,12 @@ export default function CreateLead() {
     verifying: false,
   });
 
-  const [otpModal, setOtpModal] = useState({
-    open: false,
-    sentMobileMasked: "",
-    resendAfterSeconds: 0,
-    expiresInSeconds: 0,
-  });
+  // const [otpModal, setOtpModal] = useState({
+  //   open: false,
+  //   sentMobileMasked: "",
+  //   resendAfterSeconds: 0,
+  //   expiresInSeconds: 0,
+  // });
 
   // const [otpCode, setOtpCode] = useState(Array(6).fill(""));
   // const [otpError, setOtpError] = useState("");
@@ -2631,11 +2629,12 @@ export default function CreateLead() {
     submitDraftMutation.isPending ||
     uploadPanDocumentMutation.isPending ||
     uploadAadhaarDocumentMutation.isPending ||
-    uploadCustomerPhotoMutation.isPending ||
+    uploadCustomerPhotoMutation.isPending 
+    // ||
     // panOcrMutation.isPending ||
     // verifyPanMutation.isPending ||
     // verifyGstMutation.isPending ||
-    aadhaarLinkSending;
+    // aadhaarLinkSending;
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
@@ -3023,7 +3022,7 @@ export default function CreateLead() {
       )}
 
       {/* Secondary Server Errors Alert Popup Container */}
-      {otpPopup.open && !otpModal.open && (
+      {otpPopup.open /* && !otpModal.open */ && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-slate-900/30 backdrop-blur-xs"
