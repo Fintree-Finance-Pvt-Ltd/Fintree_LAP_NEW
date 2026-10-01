@@ -115,6 +115,45 @@ export class Application {
   @Column({ name: "next_follow_up_date", length: 30, nullable: true })
   nextFollowUpDate?: string;
 
+  @Column({ name: "nature_of_business", length: 150, nullable: true })
+  natureOfBusiness?: string;
+
+  @Column({ name: "business_vintage", length: 80, nullable: true })
+  businessVintage?: string;
+
+  @Column({ name: "business_address", type: "text", nullable: true })
+  businessAddress?: string;
+
+  @Column({ name: "udyam_number", length: 50, nullable: true })
+  udyamNumber?: string;
+
+  @Column({
+    name: "monthly_income",
+    type: "decimal",
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
+  monthlyIncome?: string;
+
+  @Column({
+    name: "monthly_sales",
+    type: "decimal",
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
+  monthlySales?: string;
+
+  @Column({
+    name: "monthly_profit",
+    type: "decimal",
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
+  monthlyProfit?: string;
+
   @VersionColumn()
   version: number;
 

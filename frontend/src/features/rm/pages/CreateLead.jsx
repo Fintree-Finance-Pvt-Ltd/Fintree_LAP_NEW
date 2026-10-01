@@ -11,6 +11,30 @@ import { useAttendance } from "../../../context/AttendanceContext.jsx";
 import ScheduleFollowUpModal from "../components/ScheduleFollowUpModal.jsx";
 import PropertyAddressAutocomplete from "../components/PropertyAddressAutocomplete.jsx";
 
+const NATURE_OF_BUSINESS_OPTIONS = [
+  "Trading",
+  "Manufacturing",
+  "Services",
+  "Retail",
+  "Wholesale",
+  "Professional Services",
+  "Construction / Real Estate",
+  "Transport / Logistics",
+  "Agriculture / Allied Activities",
+  "Hospitality / Restaurant",
+  "Healthcare / Medical",
+  "Education / Training",
+  "IT / Software / Technology",
+  "Financial Services",
+  "Automobile / Dealership",
+  "Textile / Garments",
+  "FMCG / Consumer Goods",
+  "E-commerce",
+  "Import / Export",
+  "Contractor",
+  "Other",
+];
+
 const emptyForm = {
   customerName: "",
   customerType: "INDIVIDUAL",
@@ -25,6 +49,14 @@ const emptyForm = {
   occupation: "SELF_EMPLOYED",
   constitution: "INDIVIDUAL",
   businessName: "",
+  natureOfBusiness: "",
+  otherNatureOfBusiness: "",
+  businessVintage: "",
+  businessAddress: "",
+  udyamNumber: "",
+  monthlyIncome: "",
+  monthlySales: "",
+  monthlyProfit: "",
   gstNumber: "",
   propertyCategory: "Residential",
   propertyType: PROPERTY_TYPE.Residential?.[0] || "Independent House",
@@ -528,6 +560,69 @@ export default function CreateLead() {
 
     window.open(applicantAadhaarUrl, "_blank", "noopener,noreferrer");
   };
+
+  const applicantUdyamDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
+      return (
+        documentName.includes("UDYAM_CERTIFICATE") ||
+        documentType.includes("UDYAM_CERTIFICATE") ||
+        documentName.includes("UDYAM CERTIFICATE")
+      );
+    });
+
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantUdyamUrl = getDocumentImageUrl(applicantUdyamDocument);
+  const isApplicantUdyamUploaded = Boolean(applicantUdyamDocument);
+
+  const handleViewApplicantUdyam = () => {
+    if (!applicantUdyamUrl) {
+      setMessageType("error");
+      setMessage("UDYAM Certificate file is not available.");
+      return;
+    }
+
+    window.open(applicantUdyamUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantBusinessLicenseDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
+      return (
+        documentName.includes("BUSINESS_LICENSE") ||
+        documentType.includes("BUSINESS_LICENSE") ||
+        documentName.includes("BUSINESS LICENSE")
+      );
+    });
+
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantBusinessLicenseUrl = getDocumentImageUrl(applicantBusinessLicenseDocument);
+  const isApplicantBusinessLicenseUploaded = Boolean(applicantBusinessLicenseDocument);
+
+  const handleViewApplicantBusinessLicense = () => {
+    if (!applicantBusinessLicenseUrl) {
+      setMessageType("error");
+      setMessage("Business License file is not available.");
+      return;
+    }
+
+    window.open(applicantBusinessLicenseUrl, "_blank", "noopener,noreferrer");
+  };
+
   const [otpVerified, setOtpVerified] = useState(false);
   const [aadhaarCooldownUntil, setAadhaarCooldownUntil] = useState(0);
   const [aadhaarCooldownSeconds, setAadhaarCooldownSeconds] = useState(0);
@@ -551,6 +646,8 @@ export default function CreateLead() {
   const [panVerified, setPanVerified] = useState(false);
   const [panFile, setPanFile] = useState(null);
   const [aadhaarFile, setAadhaarFile] = useState(null);
+  const [udyamFile, setUdyamFile] = useState(null);
+  const [businessLicenseFile, setBusinessLicenseFile] = useState(null);
   const [otpPopup, setOtpPopup] = useState({
     open: false,
     title: "",
@@ -913,6 +1010,208 @@ export default function CreateLead() {
     }
 
     setAadhaarFile(file);
+  };
+
+  const uploadUdyamDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+
+      if (!udyamFile) {
+        throw new Error("Please select UDYAM certificate file.");
+      }
+
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading UDYAM Certificate.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "UDYAM_CERTIFICATE");
+      payload.append("documentName", "UDYAM Certificate");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", udyamFile);
+
+      return rmApi.uploadDocument(payload);
+    },
+    onSuccess: async () => {
+      setMessageType("success");
+      setMessage("UDYAM Certificate uploaded successfully.");
+      setUdyamFile(null);
+
+      const targetId = createdApplicationId ?? applicationId;
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["rm-documents", targetId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", targetId],
+        }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload UDYAM Certificate.",
+      );
+    },
+  });
+
+  const handleUdyamFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setUdyamFile(null);
+      return;
+    }
+
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF UDYAM certificate files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const maximumFileSize = 15 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("UDYAM certificate file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setUdyamFile(file);
+  };
+
+  const uploadBusinessLicenseDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+
+      if (!businessLicenseFile) {
+        throw new Error("Please select Business License file.");
+      }
+
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Business License.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "BUSINESS_LICENSE");
+      payload.append("documentName", "Business License");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", businessLicenseFile);
+
+      return rmApi.uploadDocument(payload);
+    },
+    onSuccess: async () => {
+      setMessageType("success");
+      setMessage("Business License uploaded successfully.");
+      setBusinessLicenseFile(null);
+
+      const targetId = createdApplicationId ?? applicationId;
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["rm-documents", targetId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", targetId],
+        }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Business License.",
+      );
+    },
+  });
+
+  const handleBusinessLicenseFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setBusinessLicenseFile(null);
+      return;
+    }
+
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Business License files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const maximumFileSize = 15 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Business License file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setBusinessLicenseFile(file);
   };
 
   const [coApplicants, setCoApplicants] = useState([]);
@@ -1507,6 +1806,70 @@ export default function CreateLead() {
         profile.gst_number ||
         "",
 
+      natureOfBusiness: (() => {
+        const raw =
+          application.natureOfBusiness ||
+          profile.natureOfBusiness ||
+          application.nature_of_business ||
+          profile.nature_of_business ||
+          "";
+        if (!raw) return "";
+        return NATURE_OF_BUSINESS_OPTIONS.includes(raw) ? raw : "Other";
+      })(),
+
+      otherNatureOfBusiness: (() => {
+        const raw =
+          application.natureOfBusiness ||
+          profile.natureOfBusiness ||
+          application.nature_of_business ||
+          profile.nature_of_business ||
+          "";
+        if (!raw) return "";
+        return NATURE_OF_BUSINESS_OPTIONS.includes(raw) ? "" : raw;
+      })(),
+
+      businessVintage:
+        application.businessVintage ||
+        profile.businessVintage ||
+        application.business_vintage ||
+        profile.business_vintage ||
+        "",
+
+      businessAddress:
+        application.businessAddress ||
+        profile.businessAddress ||
+        application.business_address ||
+        profile.business_address ||
+        "",
+
+      udyamNumber:
+        application.udyamNumber ||
+        profile.udyamNumber ||
+        application.udyam_number ||
+        profile.udyam_number ||
+        "",
+
+      monthlyIncome:
+        application.monthlyIncome ??
+        profile.monthlyIncome ??
+        application.monthly_income ??
+        profile.monthly_income ??
+        "",
+
+      monthlySales:
+        application.monthlySales ??
+        profile.monthlySales ??
+        application.monthly_sales ??
+        profile.monthly_sales ??
+        "",
+
+      monthlyProfit:
+        application.monthlyProfit ??
+        profile.monthlyProfit ??
+        application.monthly_profit ??
+        profile.monthly_profit ??
+        "",
+
       propertyCategory,
 
       propertyType,
@@ -1715,6 +2078,31 @@ export default function CreateLead() {
       constitution: formData.constitution || undefined,
       businessName: formData.businessName.trim() || undefined,
       gstNumber: formData.gstNumber.trim() || undefined,
+      natureOfBusiness:
+        formData.natureOfBusiness === "Other"
+          ? formData.otherNatureOfBusiness?.trim() || "Other"
+          : formData.natureOfBusiness || undefined,
+      businessVintage: formData.businessVintage?.trim() || undefined,
+      businessAddress: formData.businessAddress?.trim() || undefined,
+      udyamNumber: formData.udyamNumber?.trim() || undefined,
+      monthlyIncome:
+        formData.monthlyIncome !== "" &&
+        formData.monthlyIncome !== null &&
+        formData.monthlyIncome !== undefined
+          ? Number(formData.monthlyIncome)
+          : undefined,
+      monthlySales:
+        formData.monthlySales !== "" &&
+        formData.monthlySales !== null &&
+        formData.monthlySales !== undefined
+          ? Number(formData.monthlySales)
+          : undefined,
+      monthlyProfit:
+        formData.monthlyProfit !== "" &&
+        formData.monthlyProfit !== null &&
+        formData.monthlyProfit !== undefined
+          ? Number(formData.monthlyProfit)
+          : undefined,
       propertyCategory: formData.propertyCategory || undefined,
       propertyType: formData.propertyType
         ? `${formData.propertyCategory} - ${formData.propertyType}`
@@ -1751,6 +2139,13 @@ export default function CreateLead() {
         "occupationType",
         "businessName",
         "gstNumber",
+        "natureOfBusiness",
+        "businessVintage",
+        "businessAddress",
+        "udyamNumber",
+        "monthlyIncome",
+        "monthlySales",
+        "monthlyProfit",
         "propertyCategory",
         "propertyType",
         "requestedAmount",
@@ -2807,7 +3202,7 @@ export default function CreateLead() {
           </div>
 
           {/* Sub-Section 4: EMPLOYMENT & BUSINESS INFORMATION */}
-          <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
+          <div className="col-span-full space-y-5 pt-3 border-t border-slate-100">
             <div className="border-b border-slate-200 pb-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
                 <span className="h-2 w-1 rounded-full bg-blue-600" />
@@ -2815,7 +3210,8 @@ export default function CreateLead() {
               </h4>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            {/* Core Business & Profile Inputs */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Occupation">
                 <Select
                   name="occupation"
@@ -2854,6 +3250,48 @@ export default function CreateLead() {
                 placeholder="Enter employer or business name"
               />
 
+              <Field label="Nature of Business">
+                <Select
+                  name="natureOfBusiness"
+                  value={formData.natureOfBusiness}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select Nature of Business</option>
+                  {NATURE_OF_BUSINESS_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              {formData.natureOfBusiness === "Other" && (
+                <Field
+                  label="Specify Nature of Business"
+                  name="otherNatureOfBusiness"
+                  value={formData.otherNatureOfBusiness}
+                  onChange={handleInputChange}
+                  placeholder="Enter specific business category"
+                />
+              )}
+
+              <Field
+                label="Business Vintage"
+                name="businessVintage"
+                value={formData.businessVintage}
+                onChange={handleInputChange}
+                placeholder="e.g. 5 Years"
+              />
+
+              <Field
+                label="UDYAM Number"
+                name="udyamNumber"
+                value={formData.udyamNumber}
+                onChange={handleInputChange}
+                placeholder="e.g. UDYAM-MH-01-0012345"
+                className="uppercase tracking-wider font-semibold"
+              />
+
               {/* GST Identification Block */}
               <Field label="GST Number">
                 <input
@@ -2865,6 +3303,216 @@ export default function CreateLead() {
                   className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm uppercase font-semibold tracking-wider text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
               </Field>
+
+              <div className="sm:col-span-2 lg:col-span-3">
+                <Field
+                  label="Business Address"
+                  name="businessAddress"
+                  value={formData.businessAddress}
+                  onChange={handleInputChange}
+                  placeholder="Complete business or office address with landmark"
+                />
+              </div>
+            </div>
+
+            {/* Monthly Financials Section */}
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Monthly Financial Overview
+                </h5>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Field label="Monthly Income (₹)">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      name="monthlyIncome"
+                      value={formData.monthlyIncome}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-semibold text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </Field>
+
+                <Field label="Monthly Sales / Turnover (₹)">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      name="monthlySales"
+                      value={formData.monthlySales}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-semibold text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </Field>
+
+                <Field label="Monthly Profit (₹)">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      name="monthlyProfit"
+                      value={formData.monthlyProfit}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-semibold text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </Field>
+              </div>
+            </div>
+
+            {/* Business Document Verification Cards */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {/* UDYAM Certificate Card */}
+              <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h5 className="text-xs font-bold text-slate-900 truncate">
+                        UDYAM Certificate
+                      </h5>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        MSME / Udyam Registration (PDF or Image)
+                      </p>
+                    </div>
+                  </div>
+
+                  {isApplicantUdyamUploaded ? (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                        Uploaded
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleViewApplicantUdyam}
+                        className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                      >
+                        View
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
+                      Pending
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                      onChange={handleUdyamFileChange}
+                    />
+                    <span className="truncate max-w-[200px]">
+                      {udyamFile ? udyamFile.name : "Choose File (PDF / Image)"}
+                    </span>
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={!udyamFile || uploadUdyamDocumentMutation.isPending}
+                    onClick={() => uploadUdyamDocumentMutation.mutate()}
+                    className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                  >
+                    {uploadUdyamDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                  </button>
+                </div>
+
+                {udyamFile && (
+                  <p className="text-[11px] font-medium text-slate-600 truncate">
+                    Selected: <span className="font-semibold text-slate-800">{udyamFile.name}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Business License Card */}
+              <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h5 className="text-xs font-bold text-slate-900 truncate">
+                        Business License / Shop Act
+                      </h5>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        Trade License, Gumasta, or MOA/AOA (PDF or Image)
+                      </p>
+                    </div>
+                  </div>
+
+                  {isApplicantBusinessLicenseUploaded ? (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                        Uploaded
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleViewApplicantBusinessLicense}
+                        className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                      >
+                        View
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
+                      Pending
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                      onChange={handleBusinessLicenseFileChange}
+                    />
+                    <span className="truncate max-w-[200px]">
+                      {businessLicenseFile ? businessLicenseFile.name : "Choose File (PDF / Image)"}
+                    </span>
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={!businessLicenseFile || uploadBusinessLicenseDocumentMutation.isPending}
+                    onClick={() => uploadBusinessLicenseDocumentMutation.mutate()}
+                    className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                  >
+                    {uploadBusinessLicenseDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                  </button>
+                </div>
+
+                {businessLicenseFile && (
+                  <p className="text-[11px] font-medium text-slate-600 truncate">
+                    Selected: <span className="font-semibold text-slate-800">{businessLicenseFile.name}</span>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </Section>

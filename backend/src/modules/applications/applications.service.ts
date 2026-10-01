@@ -522,6 +522,13 @@ export class ApplicationsService {
           gender: dto.gender || undefined,
           customerType: dto.customerType || undefined,
           constitution: dto.constitution || undefined,
+          natureOfBusiness: dto.natureOfBusiness || undefined,
+          businessVintage: dto.businessVintage || undefined,
+          businessAddress: dto.businessAddress || undefined,
+          udyamNumber: dto.udyamNumber || undefined,
+          monthlyIncome: dto.monthlyIncome !== undefined && dto.monthlyIncome !== "" ? String(dto.monthlyIncome) : undefined,
+          monthlySales: dto.monthlySales !== undefined && dto.monthlySales !== "" ? String(dto.monthlySales) : undefined,
+          monthlyProfit: dto.monthlyProfit !== undefined && dto.monthlyProfit !== "" ? String(dto.monthlyProfit) : undefined,
           maritalStatus: dto.maritalStatus || undefined,
           nationality: dto.nationality || undefined,
           mobile: dto.mobile.trim(),
@@ -599,6 +606,27 @@ export class ApplicationsService {
       if (dto.constitution !== undefined) {
         existingDraft.constitution = dto.constitution || undefined;
       }
+      if (dto.natureOfBusiness !== undefined) {
+        existingDraft.natureOfBusiness = dto.natureOfBusiness || undefined;
+      }
+      if (dto.businessVintage !== undefined) {
+        existingDraft.businessVintage = dto.businessVintage || undefined;
+      }
+      if (dto.businessAddress !== undefined) {
+        existingDraft.businessAddress = dto.businessAddress || undefined;
+      }
+      if (dto.udyamNumber !== undefined) {
+        existingDraft.udyamNumber = dto.udyamNumber || undefined;
+      }
+      if (dto.monthlyIncome !== undefined) {
+        existingDraft.monthlyIncome = dto.monthlyIncome !== "" ? String(dto.monthlyIncome) : undefined;
+      }
+      if (dto.monthlySales !== undefined) {
+        existingDraft.monthlySales = dto.monthlySales !== "" ? String(dto.monthlySales) : undefined;
+      }
+      if (dto.monthlyProfit !== undefined) {
+        existingDraft.monthlyProfit = dto.monthlyProfit !== "" ? String(dto.monthlyProfit) : undefined;
+      }
       if (dto.maritalStatus !== undefined) {
         existingDraft.maritalStatus = dto.maritalStatus || undefined;
       }
@@ -671,6 +699,27 @@ export class ApplicationsService {
       }
       if (dto.constitution !== undefined) {
         application.constitution = dto.constitution || undefined;
+      }
+      if (dto.natureOfBusiness !== undefined) {
+        application.natureOfBusiness = dto.natureOfBusiness || undefined;
+      }
+      if (dto.businessVintage !== undefined) {
+        application.businessVintage = dto.businessVintage || undefined;
+      }
+      if (dto.businessAddress !== undefined) {
+        application.businessAddress = dto.businessAddress || undefined;
+      }
+      if (dto.udyamNumber !== undefined) {
+        application.udyamNumber = dto.udyamNumber || undefined;
+      }
+      if (dto.monthlyIncome !== undefined) {
+        application.monthlyIncome = dto.monthlyIncome !== "" ? String(dto.monthlyIncome) : undefined;
+      }
+      if (dto.monthlySales !== undefined) {
+        application.monthlySales = dto.monthlySales !== "" ? String(dto.monthlySales) : undefined;
+      }
+      if (dto.monthlyProfit !== undefined) {
+        application.monthlyProfit = dto.monthlyProfit !== "" ? String(dto.monthlyProfit) : undefined;
       }
       if (dto.maritalStatus !== undefined) {
         application.maritalStatus = dto.maritalStatus || undefined;
@@ -1793,6 +1842,8 @@ export class ApplicationsService {
     const copy = { ...dto };
     for (const key of [
       "monthlyIncome",
+      "monthlySales",
+      "monthlyProfit",
       "annualIncome",
       "marketValue",
       "distressValue",
@@ -1819,6 +1870,10 @@ export class ApplicationsService {
       applicationId: application.id,
       customerType: dto.customerType || CustomerType.INDIVIDUAL,
       constitution: dto.constitution || undefined,
+      natureOfBusiness: dto.natureOfBusiness || undefined,
+      businessVintage: dto.businessVintage || undefined,
+      businessAddress: dto.businessAddress || undefined,
+      udyamNumber: dto.udyamNumber || undefined,
       firstName: dto.firstName || parts[0] || name,
       lastName: dto.lastName || parts[parts.length - 1] || name,
       middleName:
@@ -1834,6 +1889,8 @@ export class ApplicationsService {
       businessName: dto.businessName || undefined,
       gstNumber: dto.gstNumber || dto.gst_number || undefined,
       monthlyIncome: dto.monthlyIncome ?? undefined,
+      monthlySales: dto.monthlySales ?? undefined,
+      monthlyProfit: dto.monthlyProfit ?? undefined,
       panNumber: dto.pan || undefined,
       panVerified: dto.panVerified ?? application.panVerified ?? undefined,
       aadhaarNumber: dto.aadhaarNumber || undefined,

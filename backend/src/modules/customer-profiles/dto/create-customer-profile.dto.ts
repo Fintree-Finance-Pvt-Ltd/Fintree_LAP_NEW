@@ -18,8 +18,14 @@ export class CreateCustomerProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() education?: string;
   @ApiPropertyOptional({ enum: OccupationType }) @IsOptional() @IsEnum(OccupationType) occupationType?: OccupationType;
   @ApiPropertyOptional() @IsOptional() @IsString() businessName?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() natureOfBusiness?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() businessVintage?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() businessAddress?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() udyamNumber?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() designation?: string;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() monthlyIncome?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() monthlySales?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() monthlyProfit?: number;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() annualIncome?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(10, 10) panNumber?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() panVerified?: boolean;
