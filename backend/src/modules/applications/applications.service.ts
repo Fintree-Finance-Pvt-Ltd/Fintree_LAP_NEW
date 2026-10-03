@@ -1813,6 +1813,13 @@ export class ApplicationsService {
         dto.gramPanchayatCorporation ||
         undefined,
       residenceType: dto.residenceType || undefined,
+      propertyOwnerName: dto.propertyOwnerName || undefined,
+      relationshipWithApplicant: dto.relationshipWithApplicant || undefined,
+      plotSize: dto.plotSize || undefined,
+      areaSqFt: dto.areaSqFt || undefined,
+      governmentValue: dto.governmentValue ?? undefined,
+      typeOfStructure: dto.typeOfStructure || undefined,
+      plotDemarcated: dto.plotDemarcated || undefined,
       propertyCategory: dto.propertyCategory || undefined,
       propertyType: dto.propertyType || undefined,
       propertyAddress: dto.propertyAddress || undefined,

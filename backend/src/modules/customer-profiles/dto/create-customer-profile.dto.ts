@@ -52,6 +52,13 @@ export class CreateCustomerProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() permanentCity?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() permanentState?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(6, 6) permanentPincode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() propertyOwnerName?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() relationshipWithApplicant?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() plotSize?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() areaSqFt?: string;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() governmentValue?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() typeOfStructure?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() plotDemarcated?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyCategory?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyType?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyAddress?: string;

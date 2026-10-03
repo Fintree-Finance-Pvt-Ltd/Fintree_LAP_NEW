@@ -107,6 +107,31 @@ const FAMILY_RELATION_OPTIONS = [
   "Daughter",
 ];
 
+const PROPERTY_OWNER_RELATION_OPTIONS = [
+  "Self",
+  "Spouse",
+  "Father",
+  "Mother",
+  "Son",
+  "Daughter",
+  "Brother",
+  "Sister",
+  "Partner",
+  "Other",
+];
+
+const STRUCTURE_TYPE_OPTIONS = [
+  "RCC",
+  "Stone",
+  "BB",
+  "GI Sheet",
+  "Plot",
+  "Load Bearing",
+  "Mangalore Tiles",
+];
+
+const PLOT_DEMARCATED_OPTIONS = ["Yes", "No"];
+
 const emptyForm = {
   customerName: "",
   customerType: "INDIVIDUAL",
@@ -140,6 +165,16 @@ const emptyForm = {
   residencePincode: "",
   gramPanchayatCorporation: "",
   residenceType: "",
+  // 8. Property Details (LAP / Mortgage)
+  propertyOwnerName: "",
+  relationshipWithApplicant: "",
+  plotSize: "",
+  areaSqFt: "",
+  governmentValue: "",
+  // 9. Type of Structure
+  typeOfStructure: "",
+  // 10. Plot Demarcated
+  plotDemarcated: "",
   // Collateral Property
   propertyCategory: "Residential",
   propertyType: PROPERTY_TYPE.Residential?.[0] || "Independent House",
@@ -865,6 +900,18 @@ export default function CreateLead() {
       gramPanchayatCorporation: formData.gramPanchayatCorporation || undefined,
       gramPanchayatOrCorporation: formData.gramPanchayatCorporation || undefined,
       residenceType: formData.residenceType || undefined,
+      propertyOwnerName: formData.propertyOwnerName?.trim() || undefined,
+      relationshipWithApplicant: formData.relationshipWithApplicant || undefined,
+      plotSize: formData.plotSize?.trim() || undefined,
+      areaSqFt: formData.areaSqFt?.trim() || undefined,
+      governmentValue:
+        formData.governmentValue !== "" &&
+        formData.governmentValue !== null &&
+        formData.governmentValue !== undefined
+          ? Number(formData.governmentValue)
+          : undefined,
+      typeOfStructure: formData.typeOfStructure || undefined,
+      plotDemarcated: formData.plotDemarcated || undefined,
       propertyCategory: formData.propertyCategory || undefined,
       propertyType: formData.propertyType
         ? `${formData.propertyCategory} - ${formData.propertyType}`
@@ -918,6 +965,13 @@ export default function CreateLead() {
         "gramPanchayatCorporation",
         "gramPanchayatOrCorporation",
         "residenceType",
+        "propertyOwnerName",
+        "relationshipWithApplicant",
+        "plotSize",
+        "areaSqFt",
+        "governmentValue",
+        "typeOfStructure",
+        "plotDemarcated",
         "propertyCategory",
         "propertyType",
         "requestedAmount",
@@ -2247,6 +2301,55 @@ export default function CreateLead() {
         profile.residenceType ||
         application.residence_type ||
         profile.residence_type ||
+        "",
+
+      propertyOwnerName:
+        application.propertyOwnerName ||
+        profile.propertyOwnerName ||
+        application.property_owner_name ||
+        profile.property_owner_name ||
+        "",
+
+      relationshipWithApplicant:
+        application.relationshipWithApplicant ||
+        profile.relationshipWithApplicant ||
+        application.relationship_with_applicant ||
+        profile.relationship_with_applicant ||
+        "",
+
+      plotSize:
+        application.plotSize ||
+        profile.plotSize ||
+        application.plot_size ||
+        profile.plot_size ||
+        "",
+
+      areaSqFt:
+        application.areaSqFt ||
+        profile.areaSqFt ||
+        application.area_sq_ft ||
+        profile.area_sq_ft ||
+        "",
+
+      governmentValue:
+        application.governmentValue ??
+        profile.governmentValue ??
+        application.government_value ??
+        profile.government_value ??
+        "",
+
+      typeOfStructure:
+        application.typeOfStructure ||
+        profile.typeOfStructure ||
+        application.type_of_structure ||
+        profile.type_of_structure ||
+        "",
+
+      plotDemarcated:
+        application.plotDemarcated ||
+        profile.plotDemarcated ||
+        application.plot_demarcated ||
+        profile.plot_demarcated ||
         "",
 
       propertyCategory,
@@ -4481,7 +4584,72 @@ export default function CreateLead() {
           )}
         </div>
 
-        <Section title="Collateral Property Information">
+        <Section title="8. Property Details (LAP / Mortgage)">
+          <Field label="Property Owner Name">
+            <input
+              name="propertyOwnerName"
+              value={formData.propertyOwnerName || ""}
+              onChange={handleInputChange}
+              placeholder="Enter property owner name"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            />
+          </Field>
+
+          <Field label="Relationship With Applicant">
+            <Select
+              name="relationshipWithApplicant"
+              value={formData.relationshipWithApplicant || ""}
+              onChange={handleInputChange}
+              placeholder="Select relationship"
+            >
+              {PROPERTY_OWNER_RELATION_OPTIONS.map((rel) => (
+                <option key={rel} value={rel}>
+                  {rel}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="Plot Size">
+            <input
+              name="plotSize"
+              value={formData.plotSize || ""}
+              onChange={handleInputChange}
+              placeholder="e.g. 1200 sq yards / 30x40"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            />
+          </Field>
+
+          <Field label="Area Sq Ft">
+            <input
+              name="areaSqFt"
+              value={formData.areaSqFt || ""}
+              onChange={handleInputChange}
+              placeholder="e.g. 1500"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            />
+          </Field>
+
+          <Field
+            label="Market Value *"
+            name="propertyValue"
+            type="number"
+            min="0"
+            value={formData.propertyValue}
+            onChange={handleInputChange}
+            placeholder="Enter market value"
+          />
+
+          <Field
+            label="Government Value"
+            name="governmentValue"
+            type="number"
+            min="0"
+            value={formData.governmentValue || ""}
+            onChange={handleInputChange}
+            placeholder="Enter government value"
+          />
+
           <Field label="Property Category">
             <Select
               name="propertyCategory"
@@ -4510,14 +4678,35 @@ export default function CreateLead() {
             </Select>
           </Field>
 
-          <Field
-            label="Approximate Property Value *"
-            name="propertyValue"
-            type="number"
-            min="0"
-            value={formData.propertyValue}
-            onChange={handleInputChange}
-          />
+          <Field label="9. Type of Structure">
+            <Select
+              name="typeOfStructure"
+              value={formData.typeOfStructure || ""}
+              onChange={handleInputChange}
+              placeholder="Select structure type"
+            >
+              {STRUCTURE_TYPE_OPTIONS.map((struct) => (
+                <option key={struct} value={struct}>
+                  {struct}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="10. Plot Demarcated">
+            <Select
+              name="plotDemarcated"
+              value={formData.plotDemarcated || ""}
+              onChange={handleInputChange}
+              placeholder="Select demarcation status"
+            >
+              {PLOT_DEMARCATED_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </Select>
+          </Field>
 
           <PropertyAddressAutocomplete
             propertyAddress={formData.propertyAddress}
