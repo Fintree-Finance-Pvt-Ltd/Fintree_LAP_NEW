@@ -783,6 +783,309 @@ export default function CreateLead() {
     window.open(applicantBusinessLicenseUrl, "_blank", "noopener,noreferrer");
   };
 
+  const applicantAddressProofDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
+      return (
+        documentName.includes("ADDRESS_PROOF") ||
+        documentType.includes("ADDRESS_PROOF") ||
+        documentName.includes("ADDRESS PROOF") ||
+        documentType.includes("ADDRESS PROOF") ||
+        documentName.includes("ELECTRICITY_BILL") ||
+        documentName.includes("VOTER") ||
+        documentName.includes("PASSPORT")
+      );
+    });
+
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantAddressProofUrl = getDocumentImageUrl(applicantAddressProofDocument);
+  const isApplicantAddressProofUploaded = Boolean(applicantAddressProofDocument);
+
+  const handleViewApplicantAddressProof = () => {
+    if (!applicantAddressProofUrl) {
+      setMessageType("error");
+      setMessage("Address Proof file is not available.");
+      return;
+    }
+
+    window.open(applicantAddressProofUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantBankStatementDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
+      return (
+        documentName.includes("BANK_STATEMENT") ||
+        documentType.includes("BANK_STATEMENT") ||
+        documentName.includes("BANK STATEMENT") ||
+        documentType.includes("BANK STATEMENT") ||
+        documentName.includes("BANK_PASSBOOK") ||
+        documentName.includes("PASSBOOK")
+      );
+    });
+
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantBankStatementUrl = getDocumentImageUrl(applicantBankStatementDocument);
+  const isApplicantBankStatementUploaded = Boolean(applicantBankStatementDocument);
+
+  const handleViewApplicantBankStatement = () => {
+    if (!applicantBankStatementUrl) {
+      setMessageType("error");
+      setMessage("Bank Statement file is not available.");
+      return;
+    }
+
+    window.open(applicantBankStatementUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantIncomeProofDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
+      return (
+        documentName.includes("INCOME_PROOF") ||
+        documentType.includes("INCOME_PROOF") ||
+        documentName.includes("INCOME PROOF") ||
+        documentType.includes("INCOME PROOF") ||
+        documentName.includes("SALARY_SLIP") ||
+        documentName.includes("SALARY SLIP") ||
+        documentName.includes("ITR") ||
+        documentType.includes("ITR") ||
+        documentName.includes("FORM 16")
+      );
+    });
+
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantIncomeProofUrl = getDocumentImageUrl(applicantIncomeProofDocument);
+  const isApplicantIncomeProofUploaded = Boolean(applicantIncomeProofDocument);
+
+  const handleViewApplicantIncomeProof = () => {
+    if (!applicantIncomeProofUrl) {
+      setMessageType("error");
+      setMessage("Income Proof file is not available.");
+      return;
+    }
+
+    window.open(applicantIncomeProofUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantBusinessProofDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
+      return (
+        documentName.includes("BUSINESS_PROOF") ||
+        documentType.includes("BUSINESS_PROOF") ||
+        documentName.includes("BUSINESS PROOF") ||
+        documentType.includes("BUSINESS PROOF") ||
+        documentName.includes("BUSINESS_LICENSE") ||
+        documentType.includes("BUSINESS_LICENSE") ||
+        documentName.includes("GST_CERTIFICATE") ||
+        documentName.includes("GST")
+      );
+    });
+
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantBusinessProofUrl = getDocumentImageUrl(applicantBusinessProofDocument);
+  const isApplicantBusinessProofUploaded = Boolean(applicantBusinessProofDocument);
+
+  const handleViewApplicantBusinessProof = () => {
+    if (!applicantBusinessProofUrl) {
+      setMessageType("error");
+      setMessage("Business Proof file is not available.");
+      return;
+    }
+
+    window.open(applicantBusinessProofUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantSaleDeedDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
+      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      return (
+        documentName.includes("SALE_DEED") ||
+        documentType.includes("SALE_DEED") ||
+        documentName.includes("SALE DEED") ||
+        documentName.includes("TITLE_DEED") ||
+        documentName.includes("TITLE DEED")
+      );
+    });
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantSaleDeedUrl = getDocumentImageUrl(applicantSaleDeedDocument);
+  const isApplicantSaleDeedUploaded = Boolean(applicantSaleDeedDocument);
+
+  const handleViewApplicantSaleDeed = () => {
+    if (!applicantSaleDeedUrl) {
+      setMessageType("error");
+      setMessage("Sale Deed file is not available.");
+      return;
+    }
+    window.open(applicantSaleDeedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantPropertyTaxReceiptDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
+      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      return (
+        documentName.includes("PROPERTY_TAX") ||
+        documentType.includes("PROPERTY_TAX") ||
+        documentName.includes("PROPERTY TAX") ||
+        documentName.includes("TAX_RECEIPT") ||
+        documentName.includes("TAX RECEIPT")
+      );
+    });
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantPropertyTaxReceiptUrl = getDocumentImageUrl(applicantPropertyTaxReceiptDocument);
+  const isApplicantPropertyTaxReceiptUploaded = Boolean(applicantPropertyTaxReceiptDocument);
+
+  const handleViewApplicantPropertyTaxReceipt = () => {
+    if (!applicantPropertyTaxReceiptUrl) {
+      setMessageType("error");
+      setMessage("Property Tax Receipt file is not available.");
+      return;
+    }
+    window.open(applicantPropertyTaxReceiptUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantKhataCertificateDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
+      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      return (
+        documentName.includes("KHATA") ||
+        documentType.includes("KHATA") ||
+        documentName.includes("KHATA_CERTIFICATE") ||
+        documentName.includes("KHATA CERTIFICATE")
+      );
+    });
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantKhataCertificateUrl = getDocumentImageUrl(applicantKhataCertificateDocument);
+  const isApplicantKhataCertificateUploaded = Boolean(applicantKhataCertificateDocument);
+
+  const handleViewApplicantKhataCertificate = () => {
+    if (!applicantKhataCertificateUrl) {
+      setMessageType("error");
+      setMessage("Khata Certificate file is not available.");
+      return;
+    }
+    window.open(applicantKhataCertificateUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantSurveySketchDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
+      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      return (
+        documentName.includes("SURVEY_SKETCH") ||
+        documentType.includes("SURVEY_SKETCH") ||
+        documentName.includes("SURVEY SKETCH") ||
+        documentName.includes("SURVEY") ||
+        documentType.includes("SURVEY")
+      );
+    });
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantSurveySketchUrl = getDocumentImageUrl(applicantSurveySketchDocument);
+  const isApplicantSurveySketchUploaded = Boolean(applicantSurveySketchDocument);
+
+  const handleViewApplicantSurveySketch = () => {
+    if (!applicantSurveySketchUrl) {
+      setMessageType("error");
+      setMessage("Survey Sketch file is not available.");
+      return;
+    }
+    window.open(applicantSurveySketchUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantEcCertificateDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
+      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      return (
+        documentName.includes("EC_CERTIFICATE") ||
+        documentType.includes("EC_CERTIFICATE") ||
+        documentName.includes("EC CERTIFICATE") ||
+        documentName.includes("ENCUMBRANCE") ||
+        documentType.includes("ENCUMBRANCE")
+      );
+    });
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantEcCertificateUrl = getDocumentImageUrl(applicantEcCertificateDocument);
+  const isApplicantEcCertificateUploaded = Boolean(applicantEcCertificateDocument);
+
+  const handleViewApplicantEcCertificate = () => {
+    if (!applicantEcCertificateUrl) {
+      setMessageType("error");
+      setMessage("EC Certificate file is not available.");
+      return;
+    }
+    window.open(applicantEcCertificateUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const applicantApprovalPlanDocument = useMemo(() => {
+    const matched = uploadedDocuments.filter((doc) => {
+      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
+      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      return (
+        documentName.includes("APPROVAL_PLAN") ||
+        documentType.includes("APPROVAL_PLAN") ||
+        documentName.includes("APPROVAL PLAN") ||
+        documentName.includes("SANCTION_PLAN") ||
+        documentName.includes("BLUEPRINT")
+      );
+    });
+    return matched[0] || null;
+  }, [uploadedDocuments]);
+
+  const applicantApprovalPlanUrl = getDocumentImageUrl(applicantApprovalPlanDocument);
+  const isApplicantApprovalPlanUploaded = Boolean(applicantApprovalPlanDocument);
+
+  const handleViewApplicantApprovalPlan = () => {
+    if (!applicantApprovalPlanUrl) {
+      setMessageType("error");
+      setMessage("Approval Plan file is not available.");
+      return;
+    }
+    window.open(applicantApprovalPlanUrl, "_blank", "noopener,noreferrer");
+  };
+
   const [otpVerified, setOtpVerified] = useState(false);
   const [aadhaarCooldownUntil, setAadhaarCooldownUntil] = useState(0);
   const [aadhaarCooldownSeconds, setAadhaarCooldownSeconds] = useState(0);
@@ -806,6 +1109,16 @@ export default function CreateLead() {
   const [panVerified, setPanVerified] = useState(false);
   const [panFile, setPanFile] = useState(null);
   const [aadhaarFile, setAadhaarFile] = useState(null);
+  const [addressProofFile, setAddressProofFile] = useState(null);
+  const [bankStatementFile, setBankStatementFile] = useState(null);
+  const [incomeProofFile, setIncomeProofFile] = useState(null);
+  const [businessProofFile, setBusinessProofFile] = useState(null);
+  const [saleDeedFile, setSaleDeedFile] = useState(null);
+  const [propertyTaxReceiptFile, setPropertyTaxReceiptFile] = useState(null);
+  const [khataCertificateFile, setKhataCertificateFile] = useState(null);
+  const [surveySketchFile, setSurveySketchFile] = useState(null);
+  const [ecCertificateFile, setEcCertificateFile] = useState(null);
+  const [approvalPlanFile, setApprovalPlanFile] = useState(null);
   const [udyamFile, setUdyamFile] = useState(null);
   const [businessLicenseFile, setBusinessLicenseFile] = useState(null);
   const [otpPopup, setOtpPopup] = useState({
@@ -1205,20 +1518,12 @@ export default function CreateLead() {
     }
 
     const fileNameLower = String(file.name || "").toLowerCase();
-    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
-      fileNameLower.endsWith(ext),
-    );
-
-    const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "application/pdf",
-    ];
+    const isExtensionValid = fileNameLower.endsWith(".pdf");
+    const allowedTypes = ["application/pdf"];
 
     if (!allowedTypes.includes(file.type) && !isExtensionValid) {
       setMessageType("error");
-      setMessage("Only JPG, PNG and PDF PAN card files are allowed.");
+      setMessage("Only PDF files are allowed for PAN Card.");
       event.target.value = "";
       return;
     }
@@ -1266,7 +1571,7 @@ export default function CreateLead() {
       const payload = new FormData();
       payload.append("applicationId", String(Number(targetApplicationId)));
       payload.append("documentType", "AADHAAR");
-      payload.append("documentName", "Aadhaar / Udyam Card");
+      payload.append("documentName", "Aadhaar Card");
       payload.append("documentSource", "RM_PORTAL");
       payload.append("file", aadhaarFile);
 
@@ -1279,7 +1584,7 @@ export default function CreateLead() {
         setCreatedApplicationId(Number(targetId));
       }
       setMessageType("success");
-      setMessage("Aadhaar / Udyam document uploaded successfully.");
+      setMessage("Aadhaar document uploaded successfully.");
       setAadhaarFile(null);
 
       await Promise.all([
@@ -1310,20 +1615,12 @@ export default function CreateLead() {
     }
 
     const fileNameLower = String(file.name || "").toLowerCase();
-    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
-      fileNameLower.endsWith(ext),
-    );
-
-    const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "application/pdf",
-    ];
+    const isExtensionValid = fileNameLower.endsWith(".pdf");
+    const allowedTypes = ["application/pdf"];
 
     if (!allowedTypes.includes(file.type) && !isExtensionValid) {
       setMessageType("error");
-      setMessage("Only JPG, PNG and PDF Aadhaar card files are allowed.");
+      setMessage("Only PDF files are allowed for Aadhaar Card.");
       event.target.value = "";
       return;
     }
@@ -1548,6 +1845,948 @@ export default function CreateLead() {
     }
 
     setBusinessLicenseFile(file);
+  };
+
+  const uploadAddressProofDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+
+      if (!addressProofFile) {
+        throw new Error("Please select Address Proof file.");
+      }
+
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Address Proof.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "ADDRESS_PROOF");
+      payload.append("documentName", "Address Proof");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", addressProofFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("Address Proof uploaded successfully.");
+      setAddressProofFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["rm-documents"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", targetId],
+        }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Address Proof.",
+      );
+    },
+  });
+
+  const handleAddressProofFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setAddressProofFile(null);
+      return;
+    }
+
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Address Proof files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const maximumFileSize = 15 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Address Proof file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setAddressProofFile(file);
+  };
+
+  const uploadBankStatementDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+
+      if (!bankStatementFile) {
+        throw new Error("Please select Bank Statement file.");
+      }
+
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Bank Statement.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "BANK_STATEMENT");
+      payload.append("documentName", "Bank Statement");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", bankStatementFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("Bank Statement uploaded successfully.");
+      setBankStatementFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["rm-documents"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", targetId],
+        }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Bank Statement.",
+      );
+    },
+  });
+
+  const handleBankStatementFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setBankStatementFile(null);
+      return;
+    }
+
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Bank Statement files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const maximumFileSize = 15 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Bank Statement file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setBankStatementFile(file);
+  };
+
+  const uploadIncomeProofDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+
+      if (!incomeProofFile) {
+        throw new Error("Please select Income Proof file.");
+      }
+
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Income Proof.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "INCOME_PROOF");
+      payload.append("documentName", "Income Proof");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", incomeProofFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("Income Proof uploaded successfully.");
+      setIncomeProofFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["rm-documents"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", targetId],
+        }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Income Proof.",
+      );
+    },
+  });
+
+  const handleIncomeProofFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setIncomeProofFile(null);
+      return;
+    }
+
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Income Proof files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const maximumFileSize = 15 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Income Proof file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setIncomeProofFile(file);
+  };
+
+  const uploadBusinessProofDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+
+      if (!businessProofFile) {
+        throw new Error("Please select Business Proof file.");
+      }
+
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Business Proof.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "BUSINESS_PROOF");
+      payload.append("documentName", "Business Proof");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", businessProofFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("Business Proof uploaded successfully.");
+      setBusinessProofFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["rm-documents"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["application", targetId],
+        }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Business Proof.",
+      );
+    },
+  });
+
+  const handleBusinessProofFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setBusinessProofFile(null);
+      return;
+    }
+
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Business Proof files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const maximumFileSize = 15 * 1024 * 1024;
+
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Business Proof file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setBusinessProofFile(file);
+  };
+
+  const uploadSaleDeedDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+      if (!saleDeedFile) {
+        throw new Error("Please select Sale Deed file.");
+      }
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Sale Deed.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "SALE_DEED");
+      payload.append("documentName", "Sale Deed");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", saleDeedFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("Sale Deed uploaded successfully.");
+      setSaleDeedFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rm-documents"] }),
+        queryClient.invalidateQueries({ queryKey: ["application", targetId] }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Sale Deed.",
+      );
+    },
+  });
+
+  const handleSaleDeedFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setSaleDeedFile(null);
+      return;
+    }
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Sale Deed files are allowed.");
+      event.target.value = "";
+      return;
+    }
+    const maximumFileSize = 15 * 1024 * 1024;
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Sale Deed file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+    setSaleDeedFile(file);
+  };
+
+  const uploadPropertyTaxReceiptDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+      if (!propertyTaxReceiptFile) {
+        throw new Error("Please select Property Tax Receipt file.");
+      }
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Property Tax Receipt.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "PROPERTY_TAX_RECEIPT");
+      payload.append("documentName", "Property Tax Receipt");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", propertyTaxReceiptFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("Property Tax Receipt uploaded successfully.");
+      setPropertyTaxReceiptFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rm-documents"] }),
+        queryClient.invalidateQueries({ queryKey: ["application", targetId] }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Property Tax Receipt.",
+      );
+    },
+  });
+
+  const handlePropertyTaxReceiptFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setPropertyTaxReceiptFile(null);
+      return;
+    }
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Property Tax Receipt files are allowed.");
+      event.target.value = "";
+      return;
+    }
+    const maximumFileSize = 15 * 1024 * 1024;
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Property Tax Receipt file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+    setPropertyTaxReceiptFile(file);
+  };
+
+  const uploadKhataCertificateDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+      if (!khataCertificateFile) {
+        throw new Error("Please select Khata Certificate file.");
+      }
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Khata Certificate.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "KHATA_CERTIFICATE");
+      payload.append("documentName", "Khata Certificate");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", khataCertificateFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("Khata Certificate uploaded successfully.");
+      setKhataCertificateFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rm-documents"] }),
+        queryClient.invalidateQueries({ queryKey: ["application", targetId] }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Khata Certificate.",
+      );
+    },
+  });
+
+  const handleKhataCertificateFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setKhataCertificateFile(null);
+      return;
+    }
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Khata Certificate files are allowed.");
+      event.target.value = "";
+      return;
+    }
+    const maximumFileSize = 15 * 1024 * 1024;
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Khata Certificate file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+    setKhataCertificateFile(file);
+  };
+
+  const uploadSurveySketchDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+      if (!surveySketchFile) {
+        throw new Error("Please select Survey Sketch file.");
+      }
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Survey Sketch.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "SURVEY_SKETCH");
+      payload.append("documentName", "Survey Sketch");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", surveySketchFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("Survey Sketch uploaded successfully.");
+      setSurveySketchFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rm-documents"] }),
+        queryClient.invalidateQueries({ queryKey: ["application", targetId] }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Survey Sketch.",
+      );
+    },
+  });
+
+  const handleSurveySketchFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setSurveySketchFile(null);
+      return;
+    }
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Survey Sketch files are allowed.");
+      event.target.value = "";
+      return;
+    }
+    const maximumFileSize = 15 * 1024 * 1024;
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Survey Sketch file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+    setSurveySketchFile(file);
+  };
+
+  const uploadEcCertificateDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+      if (!ecCertificateFile) {
+        throw new Error("Please select EC Certificate file.");
+      }
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading EC Certificate.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "EC_CERTIFICATE");
+      payload.append("documentName", "EC Certificate");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", ecCertificateFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("EC Certificate uploaded successfully.");
+      setEcCertificateFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rm-documents"] }),
+        queryClient.invalidateQueries({ queryKey: ["application", targetId] }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload EC Certificate.",
+      );
+    },
+  });
+
+  const handleEcCertificateFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setEcCertificateFile(null);
+      return;
+    }
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF EC Certificate files are allowed.");
+      event.target.value = "";
+      return;
+    }
+    const maximumFileSize = 15 * 1024 * 1024;
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("EC Certificate file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+    setEcCertificateFile(file);
+  };
+
+  const uploadApprovalPlanDocumentMutation = useMutation({
+    mutationFn: async () => {
+      let targetApplicationId = createdApplicationId ?? applicationId;
+      if (!approvalPlanFile) {
+        throw new Error("Please select Approval Plan file.");
+      }
+      if (!targetApplicationId) {
+        if (!formData.customerName.trim() || !formData.mobileNumber.trim()) {
+          throw new Error(
+            "Please enter Customer Name and Mobile Number before uploading Approval Plan.",
+          );
+        }
+        const draftRes = unwrapResponse(
+          await rmApi.saveDraft(buildPayload(false)),
+        );
+        const draftData = draftRes?.data ?? draftRes;
+        targetApplicationId =
+          draftData?.id ||
+          draftData?.applicationId ||
+          draftData?.application?.id;
+        if (!targetApplicationId) {
+          throw new Error("Could not initialize lead draft.");
+        }
+        setCreatedApplicationId(Number(targetApplicationId));
+      }
+
+      const payload = new FormData();
+      payload.append("applicationId", String(Number(targetApplicationId)));
+      payload.append("documentType", "APPROVAL_PLAN");
+      payload.append("documentName", "Approval Plan");
+      payload.append("documentSource", "RM_PORTAL");
+      payload.append("file", approvalPlanFile);
+
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
+    },
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
+      setMessageType("success");
+      setMessage("Approval Plan uploaded successfully.");
+      setApprovalPlanFile(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rm-documents"] }),
+        queryClient.invalidateQueries({ queryKey: ["application", targetId] }),
+      ]);
+    },
+    onError: (error) => {
+      setMessageType("error");
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to upload Approval Plan.",
+      );
+    },
+  });
+
+  const handleApprovalPlanFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    if (!file) {
+      setApprovalPlanFile(null);
+      return;
+    }
+    const fileNameLower = String(file.name || "").toLowerCase();
+    const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
+      fileNameLower.endsWith(ext),
+    );
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(file.type) && !isExtensionValid) {
+      setMessageType("error");
+      setMessage("Only JPG, PNG and PDF Approval Plan files are allowed.");
+      event.target.value = "";
+      return;
+    }
+    const maximumFileSize = 15 * 1024 * 1024;
+    if (file.size > maximumFileSize) {
+      setMessageType("error");
+      setMessage("Approval Plan file size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+    setApprovalPlanFile(file);
   };
 
   const [coApplicants, setCoApplicants] = useState([]);
@@ -4840,6 +6079,480 @@ export default function CreateLead() {
               }));
             }}
           />
+        </Section>
+
+        <Section title="15. Property Documents">
+          {/* 1. Sale Deed */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">1. Sale Deed</span>
+              {isApplicantSaleDeedUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantSaleDeed}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleSaleDeedFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {saleDeedFile ? saleDeedFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!saleDeedFile || uploadSaleDeedDocumentMutation.isPending}
+                onClick={() => uploadSaleDeedDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadSaleDeedDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {saleDeedFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{saleDeedFile.name}</span>
+              </p>
+            )}
+          </div>
+
+          {/* 2. Property Tax Receipt */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">2. Property Tax Receipt</span>
+              {isApplicantPropertyTaxReceiptUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantPropertyTaxReceipt}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handlePropertyTaxReceiptFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {propertyTaxReceiptFile ? propertyTaxReceiptFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!propertyTaxReceiptFile || uploadPropertyTaxReceiptDocumentMutation.isPending}
+                onClick={() => uploadPropertyTaxReceiptDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadPropertyTaxReceiptDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {propertyTaxReceiptFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{propertyTaxReceiptFile.name}</span>
+              </p>
+            )}
+          </div>
+
+          {/* 3. Khata Certificate */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">3. Khata Certificate</span>
+              {isApplicantKhataCertificateUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantKhataCertificate}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleKhataCertificateFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {khataCertificateFile ? khataCertificateFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!khataCertificateFile || uploadKhataCertificateDocumentMutation.isPending}
+                onClick={() => uploadKhataCertificateDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadKhataCertificateDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {khataCertificateFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{khataCertificateFile.name}</span>
+              </p>
+            )}
+          </div>
+
+          {/* 4. Survey Sketch */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">4. Survey Sketch</span>
+              {isApplicantSurveySketchUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantSurveySketch}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleSurveySketchFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {surveySketchFile ? surveySketchFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!surveySketchFile || uploadSurveySketchDocumentMutation.isPending}
+                onClick={() => uploadSurveySketchDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadSurveySketchDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {surveySketchFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{surveySketchFile.name}</span>
+              </p>
+            )}
+          </div>
+
+          {/* 5. EC Certificate */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">5. EC Certificate</span>
+              {isApplicantEcCertificateUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantEcCertificate}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleEcCertificateFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {ecCertificateFile ? ecCertificateFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!ecCertificateFile || uploadEcCertificateDocumentMutation.isPending}
+                onClick={() => uploadEcCertificateDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadEcCertificateDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {ecCertificateFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{ecCertificateFile.name}</span>
+              </p>
+            )}
+          </div>
+
+          {/* 6. Approval Plan */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">6. Approval Plan</span>
+              {isApplicantApprovalPlanUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantApprovalPlan}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleApprovalPlanFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {approvalPlanFile ? approvalPlanFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!approvalPlanFile || uploadApprovalPlanDocumentMutation.isPending}
+                onClick={() => uploadApprovalPlanDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadApprovalPlanDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {approvalPlanFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{approvalPlanFile.name}</span>
+              </p>
+            )}
+          </div>
+        </Section>
+
+        <Section title="16. KYC Documents">
+          {/* 1. Address Proof (Upload) */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">1. Address Proof</span>
+              {isApplicantAddressProofUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantAddressProof}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleAddressProofFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {addressProofFile ? addressProofFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!addressProofFile || uploadAddressProofDocumentMutation.isPending}
+                onClick={() => uploadAddressProofDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadAddressProofDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {addressProofFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{addressProofFile.name}</span>
+              </p>
+            )}
+          </div>
+
+          {/* 2. Bank Statement (Upload) */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">2. Bank Statement</span>
+              {isApplicantBankStatementUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantBankStatement}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleBankStatementFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {bankStatementFile ? bankStatementFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!bankStatementFile || uploadBankStatementDocumentMutation.isPending}
+                onClick={() => uploadBankStatementDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadBankStatementDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {bankStatementFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{bankStatementFile.name}</span>
+              </p>
+            )}
+          </div>
+
+          {/* 3. Income Proof (Upload) */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">3. Income Proof</span>
+              {isApplicantIncomeProofUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantIncomeProof}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleIncomeProofFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {incomeProofFile ? incomeProofFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!incomeProofFile || uploadIncomeProofDocumentMutation.isPending}
+                onClick={() => uploadIncomeProofDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadIncomeProofDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {incomeProofFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{incomeProofFile.name}</span>
+              </p>
+            )}
+          </div>
+
+          {/* 4. Business Proof (Upload) */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">4. Business Proof</span>
+              {isApplicantBusinessProofUploaded && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                    Uploaded
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleViewApplicantBusinessProof}
+                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  onChange={handleBusinessProofFileChange}
+                />
+                <span className="truncate max-w-[200px]">
+                  {businessProofFile ? businessProofFile.name : "Choose File (PDF / Image)"}
+                </span>
+              </label>
+              <button
+                type="button"
+                disabled={!businessProofFile || uploadBusinessProofDocumentMutation.isPending}
+                onClick={() => uploadBusinessProofDocumentMutation.mutate()}
+                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+              >
+                {uploadBusinessProofDocumentMutation.isPending ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            {businessProofFile && (
+              <p className="text-[11px] font-medium text-slate-600 truncate">
+                Selected: <span className="font-semibold text-slate-800">{businessProofFile.name}</span>
+              </p>
+            )}
+          </div>
         </Section>
       </div>
     </div>
