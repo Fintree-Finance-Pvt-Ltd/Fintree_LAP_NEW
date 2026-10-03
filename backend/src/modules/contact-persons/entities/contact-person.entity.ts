@@ -10,9 +10,10 @@ export class ContactPerson {
   application: Application;
   @Column({ length: 140 }) name: string;
   @Column({ length: 20 }) mobile: string;
+  @Column({ name: 'reference_type', length: 80, nullable: true }) referenceType?: string;
   @Column({ length: 180, nullable: true }) email?: string;
   @Column({ length: 120, nullable: true }) designation?: string;
-  @Column({ length: 80 }) relationship: string;
+  @Column({ length: 80, nullable: true, default: 'Purchaser' }) relationship?: string;
   @CreateDateColumn({ name: 'created_at', precision: 6 }) createdAt: Date;
   @UpdateDateColumn({ name: 'updated_at', precision: 6 }) updatedAt: Date;
 }

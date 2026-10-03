@@ -6,7 +6,8 @@ export class CreateContactPersonDto {
   @ApiProperty() @Type(() => Number) @IsInt() applicationId: number;
   @ApiProperty() @IsString() @Length(1, 140) name: string;
   @ApiProperty() @IsMobilePhone('en-IN') mobile: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 80) referenceType?: string;
   @ApiPropertyOptional() @IsOptional() @IsEmail() email?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 120) designation?: string;
-  @ApiProperty() @IsString() @Length(1, 80) relationship: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @Length(1, 80) relationship?: string;
 }

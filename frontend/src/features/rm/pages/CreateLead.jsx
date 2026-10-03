@@ -88,6 +88,14 @@ const RESIDENCE_TYPE_OPTIONS = [
   "Company Provided",
 ];
 
+const REFERENCE_TYPE_OPTIONS = [
+  "Purchaser",
+  "Supplier",
+  "Seller",
+  "Customer",
+  "Neighbour",
+];
+
 const emptyForm = {
   customerName: "",
   customerType: "INDIVIDUAL",
@@ -1716,8 +1724,7 @@ export default function CreateLead() {
         return (
           String(contact.name || "").trim() ||
           String(contact.mobile || "").trim() ||
-          String(contact.email || "").trim() ||
-          String(contact.designation || "").trim()
+          String(contact.referenceType || "").trim()
         );
       })
       .map((contact) => ({
@@ -1725,9 +1732,8 @@ export default function CreateLead() {
         applicationId: Number(targetApplicationId),
         name: String(contact.name || "").trim(),
         mobile: String(contact.mobile || "").trim(),
-        email: String(contact.email || "").trim() || undefined,
-        designation: String(contact.designation || "").trim() || undefined,
-        relationship: contact.relationship || "BUSINESS_ASSOCIATE",
+        referenceType: contact.referenceType || "Purchaser",
+        relationship: contact.referenceType || contact.relationship || "Purchaser",
       }));
   };
 
@@ -1739,9 +1745,8 @@ export default function CreateLead() {
         id: null,
         name: "",
         mobile: "",
-        email: "",
-        designation: "",
-        relationship: "BUSINESS_ASSOCIATE",
+        referenceType: "Purchaser",
+        relationship: "Purchaser",
       },
     ]);
   };
@@ -2164,9 +2169,16 @@ export default function CreateLead() {
               id: row.id,
               name: row.name || "",
               mobile: row.mobile || "",
-              email: row.email || "",
-              designation: row.designation || "",
-              relationship: row.relationship || "BUSINESS_ASSOCIATE",
+              referenceType:
+                row.referenceType ||
+                row.reference_type ||
+                row.relationship ||
+                "Purchaser",
+              relationship:
+                row.referenceType ||
+                row.reference_type ||
+                row.relationship ||
+                "Purchaser",
             })),
           );
         }
@@ -2354,9 +2366,8 @@ export default function CreateLead() {
         applicationId: Number(targetApplicationId),
         name: contact.name,
         mobile: contact.mobile,
-        email: contact.email,
-        designation: contact.designation,
-        relationship: contact.relationship,
+        referenceType: contact.referenceType || "Purchaser",
+        relationship: contact.referenceType || contact.relationship || "Purchaser",
       };
 
       if (!finalPayload.name || !finalPayload.mobile) {
@@ -4104,11 +4115,11 @@ export default function CreateLead() {
               <div key={index} className="relative group">
                 <Section title={`Contact Person Reference ${index + 1}`}>
                   <Field
-                    label="Full Name *"
+                    label="Reference Name *"
                     name="name"
                     value={contact.name}
                     onChange={(e) => handleContactPersonChange(index, e)}
-                    placeholder="Enter contact name"
+                    placeholder="Enter reference name"
                     required
                   />
 
@@ -4119,51 +4130,37 @@ export default function CreateLead() {
                     <input
                       name="mobile"
                       value={contact.mobile}
-                      onChange={(e) => handleContactPersonChange(index, e)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        handleContactPersonChange(index, {
+                          target: { name: "mobile", value: val },
+                        });
+                      }}
                       maxLength={10}
                       inputMode="numeric"
                       placeholder="Enter 10-digit mobile"
                       required
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
 
-                  <Field
-                    label="Email Id"
-                    type="email"
-                    name="email"
-                    value={contact.email}
-                    onChange={(e) => handleContactPersonChange(index, e)}
-                    placeholder="contact@domain.com"
-                  />
-
-                  <Field
-                    label="Designation / Role"
-                    name="designation"
-                    value={contact.designation}
-                    onChange={(e) => handleContactPersonChange(index, e)}
-                    placeholder="e.g. Manager, Director, Partner"
-                  />
-
-                  <Field label="Relationship Matrix *">
-                    <select
-                      name="relationship"
-                      value={contact.relationship}
+                  <Field label="Reference Type *">
+                    <Select
+                      name="referenceType"
+                      value={contact.referenceType || "Purchaser"}
                       onChange={(e) => handleContactPersonChange(index, e)}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      placeholder="Select Reference Type"
                     >
-                      <option value="BUSINESS_ASSOCIATE">
-                        Business Associate
-                      </option>
-                      <option value="EMPLOYEE">Employee</option>
-                      <option value="COLLEAGUE">Colleague</option>
-                      <option value="FRIEND">Friend</option>
-                      <option value="RELATIVE">Relative</option>
-                    </select>
+                      {REFERENCE_TYPE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </Select>
                   </Field>
 
                   {/* Action Row containing layout removal button */}
-                  <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-1">
+                  <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-3">
                     <button
                       type="button"
                       onClick={() => handleRemoveContactPerson(index)}
