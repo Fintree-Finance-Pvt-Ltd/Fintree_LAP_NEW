@@ -4771,281 +4771,261 @@ export default function CreateLead() {
               {/* STEP 1: BASIC INFORMATION & KYC */}
               {currentStep === 1 && (
                 <div className="space-y-6">
-                  <Section title="Primary Applicant Information">
-                    {/* Sub-Section 1: BASIC INFORMATION */}
-                    <div className="col-span-full space-y-4">
-                      <div className="border-b border-slate-200 pb-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                          <span className="h-2 w-1 rounded-full bg-blue-600" />
-                          Basic Information
-                        </h4>
-                      </div>
+                  {/* 1. Basic Information */}
+                  <Section
+                    title="Basic Information"
+                    subtitle="Primary applicant entity & demographic profile"
+                  >
+                    <Field
+                      containerClassName="md:col-span-1"
+                      label={
+                        <>
+                          Customer / Entity Name
+                          <span className="text-red-600 font-bold"> *</span>
+                        </>
+                      }
+                      name="customerName"
+                      value={formData.customerName}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="Enter customer / entity name"
+                    />
 
-                      <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label={
-                            <>
-                              Customer / Entity Name
-                              <span className="text-red-600 font-bold"> *</span>
-                            </>
-                          }
-                          name="customerName"
-                          value={formData.customerName}
-                          onChange={handleInputChange}
-                          required
-                          placeholder="Enter customer / entity name"
-                        />
+                    <Field
+                      containerClassName="md:col-span-1"
+                      label={
+                        <>
+                          Customer Type
+                          <span className="text-red-600 font-bold"> *</span>
+                        </>
+                      }
+                    >
+                      <Select
+                        name="customerType"
+                        value={formData.customerType || "INDIVIDUAL"}
+                        onChange={handleInputChange}
+                      >
+                        <option value="INDIVIDUAL">Individual</option>
+                        <option value="PROPRIETORSHIP">Proprietor</option>
+                        <option value="PARTNERSHIP">Partnership</option>
+                        <option value="COMPANY">Company</option>
+                      </Select>
+                    </Field>
 
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label={
-                            <>
-                              Customer Type
-                              <span className="text-red-600 font-bold"> *</span>
-                            </>
-                          }
-                        >
-                          <Select
-                            name="customerType"
-                            value={formData.customerType || "INDIVIDUAL"}
-                            onChange={handleInputChange}
-                          >
-                            <option value="INDIVIDUAL">Individual</option>
-                            <option value="PROPRIETORSHIP">Proprietor</option>
-                            <option value="PARTNERSHIP">Partnership</option>
-                            <option value="COMPANY">Company</option>
-                          </Select>
-                        </Field>
+                    <Field
+                      containerClassName="md:col-span-1"
+                      label={
+                        <>
+                          Date of Birth
+                          <span className="text-red-600 font-bold"> *</span>
+                        </>
+                      }
+                      type="date"
+                      name="dob"
+                      value={
+                        formData.dob
+                          ? String(formData.dob).slice(0, 10)
+                          : ""
+                      }
+                      onChange={handleInputChange}
+                    />
 
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label={
-                            <>
-                              Date of Birth
-                              <span className="text-red-600 font-bold"> *</span>
-                            </>
-                          }
-                          type="date"
-                          name="dob"
-                          value={
-                            formData.dob
-                              ? String(formData.dob).slice(0, 10)
-                              : ""
-                          }
-                          onChange={handleInputChange}
-                        />
+                    <Field
+                      containerClassName="md:col-span-1"
+                      label="Gender"
+                    >
+                      <Select
+                        name="gender"
+                        value={formData.gender || ""}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="MALE">Male</option>
+                        <option value="FEMALE">Female</option>
+                        <option value="OTHER">Other</option>
+                      </Select>
+                    </Field>
 
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label="Gender"
-                        >
-                          <Select
-                            name="gender"
-                            value={formData.gender || ""}
-                            onChange={handleInputChange}
-                          >
-                            <option value="">Select Gender</option>
-                            <option value="MALE">Male</option>
-                            <option value="FEMALE">Female</option>
-                            <option value="OTHER">Other</option>
-                          </Select>
-                        </Field>
+                    <Field
+                      containerClassName="md:col-span-1"
+                      label="Marital Status"
+                    >
+                      <Select
+                        name="maritalStatus"
+                        value={formData.maritalStatus || ""}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Select Marital Status</option>
+                        <option value="SINGLE">Single</option>
+                        <option value="MARRIED">Married</option>
+                        <option value="DIVORCED">Divorce</option>
+                        <option value="WIDOWED">Widow</option>
+                      </Select>
+                    </Field>
 
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label="Marital Status"
-                        >
-                          <Select
-                            name="maritalStatus"
-                            value={formData.maritalStatus || ""}
-                            onChange={handleInputChange}
-                          >
-                            <option value="">Select Marital Status</option>
-                            <option value="SINGLE">Single</option>
-                            <option value="MARRIED">Married</option>
-                            <option value="DIVORCED">Divorce</option>
-                            <option value="WIDOWED">Widow</option>
-                          </Select>
-                        </Field>
+                    <Field
+                      containerClassName="md:col-span-1"
+                      label="Nationality"
+                    >
+                      <Select
+                        name="nationality"
+                        value={formData.nationality || "INDIAN"}
+                        onChange={handleInputChange}
+                      >
+                        <option value="INDIAN">Indian</option>
+                        <option value="OTHER">Other</option>
+                      </Select>
+                    </Field>
+                  </Section>
 
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label="Nationality"
-                        >
-                          <Select
-                            name="nationality"
-                            value={formData.nationality || "INDIAN"}
-                            onChange={handleInputChange}
-                          >
-                            <option value="INDIAN">Indian</option>
-                            <option value="OTHER">Other</option>
-                          </Select>
-                        </Field>
-                      </div>
-                    </div>
+                  {/* 2. Contact Information */}
+                  <Section
+                    title="Contact Information"
+                    subtitle="Phone and email for verification & communication"
+                  >
+                    <Field
+                      containerClassName="md:col-span-1"
+                      label={
+                        <>
+                          Mobile Number
+                          <span className="text-red-600 font-bold"> *</span>
+                        </>
+                      }
+                      name="mobileNumber"
+                      value={formData.mobileNumber}
+                      onChange={handleInputChange}
+                      maxLength={10}
+                      inputMode="numeric"
+                      required
+                      placeholder="Enter 10-digit number"
+                    />
 
-                    {/* Sub-Section 2: CONTACT INFORMATION */}
-                    <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
-                      <div className="border-b border-slate-200 pb-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                          <span className="h-2 w-1 rounded-full bg-blue-600" />
-                          Contact Information
-                        </h4>
-                      </div>
+                    <Field
+                      containerClassName="md:col-span-1"
+                      label={
+                        <>
+                          Email Id
+                          <span className="text-red-600 font-bold"> *</span>
+                        </>
+                      }
+                      type="email"
+                      name="emailId"
+                      value={formData.emailId || ""}
+                      onChange={handleInputChange}
+                      maxLength={255}
+                      autoComplete="email"
+                      placeholder="name@domain.com"
+                      required
+                    />
+                  </Section>
 
-                      <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label={
-                            <>
-                              Mobile Number
-                              <span className="text-red-600 font-bold"> *</span>
-                            </>
-                          }
-                          name="mobileNumber"
-                          value={formData.mobileNumber}
-                          onChange={handleInputChange}
-                          maxLength={10}
-                          inputMode="numeric"
-                          required
-                          placeholder="Enter 10-digit number"
-                        />
+                  {/* 3. KYC & Identification */}
+                  <Section
+                    title="KYC & Identity Verification"
+                    subtitle="Government identification numbers and live photo"
+                  >
+                    <Field
+                      containerClassName="md:col-span-1"
+                      label={
+                        <>
+                          PAN Number
+                          <span className="text-red-600 font-bold"> *</span>
+                        </>
+                      }
+                      name="panNumber"
+                      value={formData.panNumber}
+                      onChange={handleInputChange}
+                      maxLength={10}
+                      placeholder="ABCDE1234F"
+                      className="uppercase tracking-wider font-normal"
+                    />
 
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label={
-                            <>
-                              Email Id
-                              <span className="text-red-600 font-bold"> *</span>
-                            </>
-                          }
-                          type="email"
-                          name="emailId"
-                          value={formData.emailId || ""}
-                          onChange={handleInputChange}
-                          maxLength={255}
-                          autoComplete="email"
-                          placeholder="name@domain.com"
-                          required
-                        />
-                      </div>
-                    </div>
+                    <Field
+                      containerClassName="md:col-span-1S"
+                      label={
+                        <>
+                          Aadhaar / Udyam Aadhaar (Last 4 Digits)
+                          <span className="text-red-600 font-bold"> *</span>
+                        </>
+                      }
+                      name="aadhaarNumber"
+                      value={formData.aadhaarNumber || ""}
+                      onChange={handleInputChange}
+                      maxLength={4}
+                      inputMode="numeric"
+                      placeholder="e.g. 1234"
+                    />
 
-                    {/* Sub-Section 3: KYC DETAILS */}
-                    <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
-                      <div className="border-b border-slate-200 pb-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                          <span className="h-2 w-1 rounded-full bg-blue-600" />
-                          KYC Details
-                        </h4>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label={
-                            <>
-                              PAN Number
-                              <span className="text-red-600 font-bold"> *</span>
-                            </>
-                          }
-                          name="panNumber"
-                          value={formData.panNumber}
-                          onChange={handleInputChange}
-                          maxLength={10}
-                          placeholder="ABCDE1234F"
-                          className="uppercase tracking-wider font-normal"
-                        />
-
-                        <Field
-                          containerClassName="md:col-span-1"
-                          label={
-                            <>
-                              Aadhaar / Udyam Aadhaar (Last 4 Digits)
-                              <span className="text-red-600 font-bold"> *</span>
-                            </>
-                          }
-                          name="aadhaarNumber"
-                          value={formData.aadhaarNumber || ""}
-                          onChange={handleInputChange}
-                          maxLength={4}
-                          inputMode="numeric"
-                          placeholder="e.g. 1234"
-                        />
-                      </div>
-
-                      {/* Compact Profile Photo Management Panel */}
-                      <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 shadow-3xs">
-                            <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
-                              IMG
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-1 min-w-0">
-                            <h4 className="text-xs font-bold text-slate-800">
-                              Biometric Photo
-                            </h4>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {isApplicantPhotoUploaded ? (
-                                <>
-                                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                                    Uploaded
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={handleViewApplicantPhoto}
-                                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                                  >
-                                    View Photo
-                                  </button>
-                                </>
-                              ) : (
-                                <span className="inline-flex rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
-                                  Pending
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 w-full sm:w-auto sm:min-w-[210px]">
-                          <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 sm:py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors whitespace-nowrap">
-                            {customerPhotoFile ? "Change" : "Choose File"}
-                            <input
-                              type="file"
-                              className="hidden"
-                              accept=".jpg,.jpeg,.png"
-                              onChange={handleCustomerPhotoChange}
-                            />
-                          </label>
-
-                          <button
-                            type="button"
-                            disabled={
-                              !customerPhotoFile ||
-                              uploadCustomerPhotoMutation.isPending
-                            }
-                            onClick={() => uploadCustomerPhotoMutation.mutate()}
-                            className="flex-1 rounded-xl bg-blue-600 px-3 py-2.5 sm:py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"
-                          >
-                            {uploadCustomerPhotoMutation.isPending
-                              ? "Uploading..."
-                              : "Upload"}
-                          </button>
-                        </div>
-                      </div>
-
-                      {customerPhotoFile && (
-                        <div className="rounded-xl bg-blue-50/50 px-3 py-1.5 border border-blue-100 text-[11px] font-medium text-blue-700 truncate w-full sm:max-w-sm">
-                          Staged:{" "}
-                          <span className="font-bold">
-                            {customerPhotoFile.name}
+                    {/* Compact Profile Photo Management Panel */}
+                    <div className="col-span-full rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 mt-1">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 shadow-3xs">
+                          <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
+                            IMG
                           </span>
                         </div>
-                      )}
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <h4 className="text-xs font-bold text-slate-800">
+                            Biometric Photo
+                          </h4>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {isApplicantPhotoUploaded ? (
+                              <>
+                                <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                                  Uploaded
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={handleViewApplicantPhoto}
+                                  className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                                >
+                                  View Photo
+                                </button>
+                              </>
+                            ) : (
+                              <span className="inline-flex rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
+                                Pending
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto sm:min-w-[210px]">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 sm:py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors whitespace-nowrap">
+                          {customerPhotoFile ? "Change" : "Choose File"}
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png"
+                            onChange={handleCustomerPhotoChange}
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          disabled={
+                            !customerPhotoFile ||
+                            uploadCustomerPhotoMutation.isPending
+                          }
+                          onClick={() => uploadCustomerPhotoMutation.mutate()}
+                          className="flex-1 rounded-xl bg-blue-600 px-3 py-2.5 sm:py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"
+                        >
+                          {uploadCustomerPhotoMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
                     </div>
+
+                    {customerPhotoFile && (
+                      <div className="col-span-full rounded-xl bg-blue-50/50 px-3 py-1.5 border border-blue-100 text-[11px] font-medium text-blue-700 truncate w-full sm:max-w-sm">
+                        Staged:{" "}
+                        <span className="font-bold">
+                          {customerPhotoFile.name}
+                        </span>
+                      </div>
+                    )}
                   </Section>
                 </div>
               )}
@@ -5229,7 +5209,7 @@ export default function CreateLead() {
                       <div className="border-b border-slate-200 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
                           <span className="h-2 w-1 rounded-full bg-blue-600" />
-                          5. Address Details
+                          Address Details
                         </h4>
                         <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-100/80 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
                           Residence Address
@@ -5778,7 +5758,7 @@ export default function CreateLead() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
                       <div>
                         <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
-                          7. Family Details
+                          Family Details
                         </h4>
                         <p className="text-xs text-slate-500">
                           Add family member details associated with the
@@ -5913,7 +5893,7 @@ export default function CreateLead() {
               {/* STEP 4: COLLATERAL PROPERTY DETAILS */}
               {currentStep === 4 && (
                 <div className="space-y-6">
-                  <Section title="8. Property Details (LAP / Mortgage)">
+                  <Section title="Property Details (LAP / Mortgage)">
                     <Field label="Property Owner Name">
                       <input
                         name="propertyOwnerName"
