@@ -154,6 +154,33 @@ export class Application {
   })
   monthlyProfit?: string;
 
+  @Column({ name: "residence_address_line1", length: 255, nullable: true })
+  residenceAddressLine1?: string;
+
+  @Column({ name: "residence_address_line2", length: 255, nullable: true })
+  residenceAddressLine2?: string;
+
+  @Column({ name: "residence_landmark", length: 150, nullable: true })
+  residenceLandmark?: string;
+
+  @Column({ name: "residence_city", length: 100, nullable: true })
+  residenceCity?: string;
+
+  @Column({ name: "residence_district", length: 100, nullable: true })
+  residenceDistrict?: string;
+
+  @Column({ name: "residence_state", length: 100, nullable: true })
+  residenceState?: string;
+
+  @Column({ name: "residence_pincode", length: 10, nullable: true })
+  residencePincode?: string;
+
+  @Column({ name: "gram_panchayat_or_corporation", length: 100, nullable: true })
+  gramPanchayatOrCorporation?: string;
+
+  @Column({ name: "residence_type", length: 50, nullable: true })
+  residenceType?: string;
+
   @VersionColumn()
   version: number;
 

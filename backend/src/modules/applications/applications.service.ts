@@ -466,6 +466,34 @@ export class ApplicationsService {
           existing.nationality = dto.nationality || undefined;
         }
 
+        if (dto.residenceAddressLine1 !== undefined) {
+          existing.residenceAddressLine1 = dto.residenceAddressLine1 || undefined;
+        }
+        if (dto.residenceAddressLine2 !== undefined) {
+          existing.residenceAddressLine2 = dto.residenceAddressLine2 || undefined;
+        }
+        if (dto.residenceLandmark !== undefined) {
+          existing.residenceLandmark = dto.residenceLandmark || undefined;
+        }
+        if (dto.residenceCity !== undefined) {
+          existing.residenceCity = dto.residenceCity || undefined;
+        }
+        if (dto.residenceDistrict !== undefined) {
+          existing.residenceDistrict = dto.residenceDistrict || undefined;
+        }
+        if (dto.residenceState !== undefined) {
+          existing.residenceState = dto.residenceState || undefined;
+        }
+        if (dto.residencePincode !== undefined) {
+          existing.residencePincode = dto.residencePincode || undefined;
+        }
+        if (dto.gramPanchayatOrCorporation !== undefined || dto.gramPanchayatCorporation !== undefined) {
+          existing.gramPanchayatOrCorporation = dto.gramPanchayatOrCorporation || dto.gramPanchayatCorporation || undefined;
+        }
+        if (dto.residenceType !== undefined) {
+          existing.residenceType = dto.residenceType || undefined;
+        }
+
         existing.mobile = dto.mobile.trim();
         if (dto.pan !== undefined) {
           const nextPan = dto.pan?.trim();
@@ -531,6 +559,15 @@ export class ApplicationsService {
           monthlyProfit: dto.monthlyProfit !== undefined && dto.monthlyProfit !== "" ? String(dto.monthlyProfit) : undefined,
           maritalStatus: dto.maritalStatus || undefined,
           nationality: dto.nationality || undefined,
+          residenceAddressLine1: dto.residenceAddressLine1 || undefined,
+          residenceAddressLine2: dto.residenceAddressLine2 || undefined,
+          residenceLandmark: dto.residenceLandmark || undefined,
+          residenceCity: dto.residenceCity || undefined,
+          residenceDistrict: dto.residenceDistrict || undefined,
+          residenceState: dto.residenceState || undefined,
+          residencePincode: dto.residencePincode || undefined,
+          gramPanchayatOrCorporation: dto.gramPanchayatOrCorporation || dto.gramPanchayatCorporation || undefined,
+          residenceType: dto.residenceType || undefined,
           mobile: dto.mobile.trim(),
           pan: dto.pan?.trim(),
           requestedAmount: dto.requestedAmount || "0",
@@ -633,6 +670,33 @@ export class ApplicationsService {
       if (dto.nationality !== undefined) {
         existingDraft.nationality = dto.nationality || undefined;
       }
+      if (dto.residenceAddressLine1 !== undefined) {
+        existingDraft.residenceAddressLine1 = dto.residenceAddressLine1 || undefined;
+      }
+      if (dto.residenceAddressLine2 !== undefined) {
+        existingDraft.residenceAddressLine2 = dto.residenceAddressLine2 || undefined;
+      }
+      if (dto.residenceLandmark !== undefined) {
+        existingDraft.residenceLandmark = dto.residenceLandmark || undefined;
+      }
+      if (dto.residenceCity !== undefined) {
+        existingDraft.residenceCity = dto.residenceCity || undefined;
+      }
+      if (dto.residenceDistrict !== undefined) {
+        existingDraft.residenceDistrict = dto.residenceDistrict || undefined;
+      }
+      if (dto.residenceState !== undefined) {
+        existingDraft.residenceState = dto.residenceState || undefined;
+      }
+      if (dto.residencePincode !== undefined) {
+        existingDraft.residencePincode = dto.residencePincode || undefined;
+      }
+      if (dto.gramPanchayatOrCorporation !== undefined || dto.gramPanchayatCorporation !== undefined) {
+        existingDraft.gramPanchayatOrCorporation = dto.gramPanchayatOrCorporation || dto.gramPanchayatCorporation || undefined;
+      }
+      if (dto.residenceType !== undefined) {
+        existingDraft.residenceType = dto.residenceType || undefined;
+      }
       if (dto.pan !== undefined) {
         const nextPan = dto.pan?.trim();
         existingDraft.panVerified =
@@ -726,6 +790,33 @@ export class ApplicationsService {
       }
       if (dto.nationality !== undefined) {
         application.nationality = dto.nationality || undefined;
+      }
+      if (dto.residenceAddressLine1 !== undefined) {
+        application.residenceAddressLine1 = dto.residenceAddressLine1 || undefined;
+      }
+      if (dto.residenceAddressLine2 !== undefined) {
+        application.residenceAddressLine2 = dto.residenceAddressLine2 || undefined;
+      }
+      if (dto.residenceLandmark !== undefined) {
+        application.residenceLandmark = dto.residenceLandmark || undefined;
+      }
+      if (dto.residenceCity !== undefined) {
+        application.residenceCity = dto.residenceCity || undefined;
+      }
+      if (dto.residenceDistrict !== undefined) {
+        application.residenceDistrict = dto.residenceDistrict || undefined;
+      }
+      if (dto.residenceState !== undefined) {
+        application.residenceState = dto.residenceState || undefined;
+      }
+      if (dto.residencePincode !== undefined) {
+        application.residencePincode = dto.residencePincode || undefined;
+      }
+      if (dto.gramPanchayatOrCorporation !== undefined || dto.gramPanchayatCorporation !== undefined) {
+        application.gramPanchayatOrCorporation = dto.gramPanchayatOrCorporation || dto.gramPanchayatCorporation || undefined;
+      }
+      if (dto.residenceType !== undefined) {
+        application.residenceType = dto.residenceType || undefined;
       }
       application.mobile = dto.mobile.trim();
       if (dto.pan !== undefined) {
@@ -939,6 +1030,15 @@ export class ApplicationsService {
         customerType: dto.customerType || undefined,
         maritalStatus: dto.maritalStatus || undefined,
         nationality: dto.nationality || undefined,
+        residenceAddressLine1: dto.residenceAddressLine1 || undefined,
+        residenceAddressLine2: dto.residenceAddressLine2 || undefined,
+        residenceLandmark: dto.residenceLandmark || undefined,
+        residenceCity: dto.residenceCity || undefined,
+        residenceDistrict: dto.residenceDistrict || undefined,
+        residenceState: dto.residenceState || undefined,
+        residencePincode: dto.residencePincode || undefined,
+        gramPanchayatOrCorporation: dto.gramPanchayatOrCorporation || dto.gramPanchayatCorporation || undefined,
+        residenceType: dto.residenceType || undefined,
         mobile: dto.mobile.trim(),
         pan: dto.pan?.trim(),
         requestedAmount: dto.requestedAmount || "0",
@@ -1894,6 +1994,32 @@ export class ApplicationsService {
       panNumber: dto.pan || undefined,
       panVerified: dto.panVerified ?? application.panVerified ?? undefined,
       aadhaarNumber: dto.aadhaarNumber || undefined,
+      currentAddress:
+        dto.currentAddress ||
+        (dto.residenceAddressLine1 || dto.residenceAddressLine2
+          ? [
+              dto.residenceAddressLine1,
+              dto.residenceAddressLine2,
+              dto.residenceLandmark,
+            ]
+              .filter(Boolean)
+              .join(", ")
+          : undefined),
+      currentCity: dto.residenceCity || dto.currentCity || undefined,
+      currentState: dto.residenceState || dto.currentState || undefined,
+      currentPincode: dto.residencePincode || dto.currentPincode || undefined,
+      residenceAddressLine1: dto.residenceAddressLine1 || undefined,
+      residenceAddressLine2: dto.residenceAddressLine2 || undefined,
+      residenceLandmark: dto.residenceLandmark || undefined,
+      residenceCity: dto.residenceCity || undefined,
+      residenceDistrict: dto.residenceDistrict || undefined,
+      residenceState: dto.residenceState || undefined,
+      residencePincode: dto.residencePincode || undefined,
+      gramPanchayatOrCorporation:
+        dto.gramPanchayatOrCorporation ||
+        dto.gramPanchayatCorporation ||
+        undefined,
+      residenceType: dto.residenceType || undefined,
       propertyCategory: dto.propertyCategory || undefined,
       propertyType: dto.propertyType || undefined,
       propertyAddress: dto.propertyAddress || undefined,

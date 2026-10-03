@@ -38,7 +38,16 @@ export class CreateCustomerProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() currentAddress?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() currentCity?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() currentState?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() @Length(6, 6) currentPincode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() currentPincode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() residenceAddressLine1?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() residenceAddressLine2?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() residenceLandmark?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() residenceCity?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() residenceDistrict?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() residenceState?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() residencePincode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() gramPanchayatOrCorporation?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() residenceType?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() permanentAddress?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() permanentCity?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() permanentState?: string;

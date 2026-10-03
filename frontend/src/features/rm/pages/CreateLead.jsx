@@ -35,6 +35,59 @@ const NATURE_OF_BUSINESS_OPTIONS = [
   "Other",
 ];
 
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
+
+const LOCAL_BODY_OPTIONS = [
+  "Gram Panchayat",
+  "Municipal Corporation",
+  "Municipality / Municipal Council",
+  "Town Panchayat / Cantonment Board",
+];
+
+const RESIDENCE_TYPE_OPTIONS = [
+  "Owned",
+  "Rented",
+  "Family Owned",
+  "Company Provided",
+];
+
 const emptyForm = {
   customerName: "",
   customerType: "INDIVIDUAL",
@@ -58,6 +111,17 @@ const emptyForm = {
   monthlySales: "",
   monthlyProfit: "",
   gstNumber: "",
+  // 5. Address Details - Residence Address
+  residenceAddressLine1: "",
+  residenceAddressLine2: "",
+  residenceLandmark: "",
+  residenceCity: "",
+  residenceDistrict: "",
+  residenceState: "",
+  residencePincode: "",
+  gramPanchayatCorporation: "",
+  residenceType: "",
+  // Collateral Property
   propertyCategory: "Residential",
   propertyType: PROPERTY_TYPE.Residential?.[0] || "Independent House",
   propertyValue: "",
@@ -1870,6 +1934,73 @@ export default function CreateLead() {
         profile.monthly_profit ??
         "",
 
+      residenceAddressLine1:
+        application.residenceAddressLine1 ||
+        profile.residenceAddressLine1 ||
+        application.residence_address_line1 ||
+        profile.residence_address_line1 ||
+        profile.currentAddress ||
+        "",
+
+      residenceAddressLine2:
+        application.residenceAddressLine2 ||
+        profile.residenceAddressLine2 ||
+        application.residence_address_line2 ||
+        profile.residence_address_line2 ||
+        "",
+
+      residenceLandmark:
+        application.residenceLandmark ||
+        profile.residenceLandmark ||
+        application.residence_landmark ||
+        profile.residence_landmark ||
+        "",
+
+      residenceCity:
+        application.residenceCity ||
+        profile.residenceCity ||
+        application.residence_city ||
+        profile.residence_city ||
+        profile.currentCity ||
+        "",
+
+      residenceDistrict:
+        application.residenceDistrict ||
+        profile.residenceDistrict ||
+        application.residence_district ||
+        profile.residence_district ||
+        "",
+
+      residenceState:
+        application.residenceState ||
+        profile.residenceState ||
+        application.residence_state ||
+        profile.residence_state ||
+        profile.currentState ||
+        "",
+
+      residencePincode:
+        application.residencePincode ||
+        profile.residencePincode ||
+        application.residence_pincode ||
+        profile.residence_pincode ||
+        profile.currentPincode ||
+        "",
+
+      gramPanchayatCorporation:
+        application.gramPanchayatOrCorporation ||
+        profile.gramPanchayatOrCorporation ||
+        application.gram_panchayat_or_corporation ||
+        profile.gram_panchayat_or_corporation ||
+        "",
+
+      residenceType:
+        application.residenceType ||
+        profile.residenceType ||
+        application.residence_type ||
+        profile.residence_type ||
+        "",
+
       propertyCategory,
 
       propertyType,
@@ -2103,6 +2234,16 @@ export default function CreateLead() {
         formData.monthlyProfit !== undefined
           ? Number(formData.monthlyProfit)
           : undefined,
+      residenceAddressLine1: formData.residenceAddressLine1?.trim() || undefined,
+      residenceAddressLine2: formData.residenceAddressLine2?.trim() || undefined,
+      residenceLandmark: formData.residenceLandmark?.trim() || undefined,
+      residenceCity: formData.residenceCity?.trim() || undefined,
+      residenceDistrict: formData.residenceDistrict?.trim() || undefined,
+      residenceState: formData.residenceState?.trim() || undefined,
+      residencePincode: formData.residencePincode?.trim() || undefined,
+      gramPanchayatCorporation: formData.gramPanchayatCorporation || undefined,
+      gramPanchayatOrCorporation: formData.gramPanchayatCorporation || undefined,
+      residenceType: formData.residenceType || undefined,
       propertyCategory: formData.propertyCategory || undefined,
       propertyType: formData.propertyType
         ? `${formData.propertyCategory} - ${formData.propertyType}`
@@ -2146,6 +2287,16 @@ export default function CreateLead() {
         "monthlyIncome",
         "monthlySales",
         "monthlyProfit",
+        "residenceAddressLine1",
+        "residenceAddressLine2",
+        "residenceLandmark",
+        "residenceCity",
+        "residenceDistrict",
+        "residenceState",
+        "residencePincode",
+        "gramPanchayatCorporation",
+        "gramPanchayatOrCorporation",
+        "residenceType",
         "propertyCategory",
         "propertyType",
         "requestedAmount",
@@ -2388,6 +2539,8 @@ export default function CreateLead() {
       nextValue = value.replace(/\D/g, "").slice(0, 4);
     } else if (name === "gstNumber") {
       nextValue = value.toUpperCase();
+    } else if (name === "residencePincode") {
+      nextValue = value.replace(/\D/g, "").slice(0, 6);
     }
 
     setFormData((previous) => ({ ...previous, [name]: nextValue }));
@@ -3513,6 +3666,131 @@ export default function CreateLead() {
                   </p>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Sub-Section 5: ADDRESS DETAILS - RESIDENCE ADDRESS */}
+          <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
+            <div className="border-b border-slate-200 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <span className="h-2 w-1 rounded-full bg-blue-600" />
+                5. Address Details
+              </h4>
+              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-100/80 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
+                Residence Address
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
+              <Field
+                containerClassName="md:col-span-2"
+                label="Address Line 1"
+                name="residenceAddressLine1"
+                value={formData.residenceAddressLine1 || ""}
+                onChange={handleInputChange}
+                placeholder="House / Flat No., Building Name, Street"
+              />
+
+              <Field
+                containerClassName="md:col-span-1"
+                label="Address Line 2"
+                name="residenceAddressLine2"
+                value={formData.residenceAddressLine2 || ""}
+                onChange={handleInputChange}
+                placeholder="Area, Sector, Locality"
+              />
+
+              <Field
+                containerClassName="md:col-span-1"
+                label="Landmark"
+                name="residenceLandmark"
+                value={formData.residenceLandmark || ""}
+                onChange={handleInputChange}
+                placeholder="Nearby Landmark"
+              />
+
+              <Field
+                containerClassName="md:col-span-1"
+                label="City"
+                name="residenceCity"
+                value={formData.residenceCity || ""}
+                onChange={handleInputChange}
+                placeholder="City"
+              />
+
+              <Field
+                containerClassName="md:col-span-1"
+                label="District"
+                name="residenceDistrict"
+                value={formData.residenceDistrict || ""}
+                onChange={handleInputChange}
+                placeholder="District"
+              />
+
+              <Field containerClassName="md:col-span-1" label="State">
+                <Select
+                  name="residenceState"
+                  value={formData.residenceState || ""}
+                  onChange={handleInputChange}
+                  placeholder="Select State"
+                >
+                  <option value="">Select State</option>
+                  {INDIAN_STATES.map((stateName) => (
+                    <option key={stateName} value={stateName}>
+                      {stateName}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Field
+                containerClassName="md:col-span-1"
+                label="Pincode"
+                name="residencePincode"
+                value={formData.residencePincode || ""}
+                onChange={handleInputChange}
+                maxLength={6}
+                inputMode="numeric"
+                placeholder="6-digit Pincode"
+              />
+
+              <Field
+                containerClassName="md:col-span-1"
+                label="Gram Panchayat / Municipal Corporation"
+              >
+                <Select
+                  name="gramPanchayatCorporation"
+                  value={formData.gramPanchayatCorporation || ""}
+                  onChange={handleInputChange}
+                  placeholder="Select Option"
+                >
+                  <option value="">Select Option</option>
+                  {LOCAL_BODY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Field
+                containerClassName="md:col-span-1"
+                label="Residence Type"
+              >
+                <Select
+                  name="residenceType"
+                  value={formData.residenceType || ""}
+                  onChange={handleInputChange}
+                  placeholder="Select Residence Type"
+                >
+                  <option value="">Select Residence Type</option>
+                  {RESIDENCE_TYPE_OPTIONS.map((resType) => (
+                    <option key={resType} value={resType}>
+                      {resType}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
             </div>
           </div>
         </Section>
