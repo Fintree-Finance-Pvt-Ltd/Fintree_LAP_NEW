@@ -59,6 +59,10 @@ export class CreateCustomerProfileDto {
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() governmentValue?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() typeOfStructure?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() plotDemarcated?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() propertyUsageType?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() premisesType?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() occupiedBy?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() constructionStatus?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyCategory?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyType?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyAddress?: string;

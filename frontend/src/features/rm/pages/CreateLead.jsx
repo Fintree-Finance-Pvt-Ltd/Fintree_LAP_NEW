@@ -132,6 +132,27 @@ const STRUCTURE_TYPE_OPTIONS = [
 
 const PLOT_DEMARCATED_OPTIONS = ["Yes", "No"];
 
+const PROPERTY_USAGE_TYPE_OPTIONS = [
+  "SOCP",
+  "Rented Residential",
+  "Self Commercial",
+  "Industrial Shed",
+  "Vacant Land",
+  "Residential",
+];
+
+const PREMISES_TYPE_OPTIONS = [
+  "Raw House",
+  "Flat",
+  "Bungalow",
+  "Shop",
+  "Industrial",
+  "Plot",
+  "Office",
+];
+
+const CONSTRUCTION_STATUS_OPTIONS = ["Under Construction", "Completed"];
+
 const emptyForm = {
   customerName: "",
   customerType: "INDIVIDUAL",
@@ -175,6 +196,14 @@ const emptyForm = {
   typeOfStructure: "",
   // 10. Plot Demarcated
   plotDemarcated: "",
+  // 11. Type of Usage of Entire Property
+  propertyUsageType: "",
+  // 12. Type of Premises
+  premisesType: "",
+  // 13. Property Occupancy
+  occupiedBy: "",
+  // 14. Construction Details
+  constructionStatus: "",
   // Collateral Property
   propertyCategory: "Residential",
   propertyType: PROPERTY_TYPE.Residential?.[0] || "Independent House",
@@ -912,6 +941,10 @@ export default function CreateLead() {
           : undefined,
       typeOfStructure: formData.typeOfStructure || undefined,
       plotDemarcated: formData.plotDemarcated || undefined,
+      propertyUsageType: formData.propertyUsageType || undefined,
+      premisesType: formData.premisesType || undefined,
+      occupiedBy: formData.occupiedBy?.trim() || undefined,
+      constructionStatus: formData.constructionStatus || undefined,
       propertyCategory: formData.propertyCategory || undefined,
       propertyType: formData.propertyType
         ? `${formData.propertyCategory} - ${formData.propertyType}`
@@ -972,6 +1005,10 @@ export default function CreateLead() {
         "governmentValue",
         "typeOfStructure",
         "plotDemarcated",
+        "propertyUsageType",
+        "premisesType",
+        "occupiedBy",
+        "constructionStatus",
         "propertyCategory",
         "propertyType",
         "requestedAmount",
@@ -2350,6 +2387,34 @@ export default function CreateLead() {
         profile.plotDemarcated ||
         application.plot_demarcated ||
         profile.plot_demarcated ||
+        "",
+
+      propertyUsageType:
+        application.propertyUsageType ||
+        profile.propertyUsageType ||
+        application.property_usage_type ||
+        profile.property_usage_type ||
+        "",
+
+      premisesType:
+        application.premisesType ||
+        profile.premisesType ||
+        application.premises_type ||
+        profile.premises_type ||
+        "",
+
+      occupiedBy:
+        application.occupiedBy ||
+        profile.occupiedBy ||
+        application.occupied_by ||
+        profile.occupied_by ||
+        "",
+
+      constructionStatus:
+        application.constructionStatus ||
+        profile.constructionStatus ||
+        application.construction_status ||
+        profile.construction_status ||
         "",
 
       propertyCategory,
@@ -4701,6 +4766,61 @@ export default function CreateLead() {
               placeholder="Select demarcation status"
             >
               {PLOT_DEMARCATED_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="11. Type of Usage of Entire Property">
+            <Select
+              name="propertyUsageType"
+              value={formData.propertyUsageType || ""}
+              onChange={handleInputChange}
+              placeholder="Select property usage"
+            >
+              {PROPERTY_USAGE_TYPE_OPTIONS.map((usage) => (
+                <option key={usage} value={usage}>
+                  {usage}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="12. Type of Premises">
+            <Select
+              name="premisesType"
+              value={formData.premisesType || ""}
+              onChange={handleInputChange}
+              placeholder="Select premises type"
+            >
+              {PREMISES_TYPE_OPTIONS.map((premise) => (
+                <option key={premise} value={premise}>
+                  {premise}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="13. Property Occupancy (Occupied By)">
+            <input
+              name="occupiedBy"
+              value={formData.occupiedBy || ""}
+              onChange={handleInputChange}
+              placeholder="e.g. Owner / Tenant Name / Vacant / Family Member"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            />
+          </Field>
+
+          <Field label="14. Construction Details (Construction Status)">
+            <Select
+              name="constructionStatus"
+              value={formData.constructionStatus || ""}
+              onChange={handleInputChange}
+              placeholder="Select construction status"
+            >
+              {CONSTRUCTION_STATUS_OPTIONS.map((status) => (
                 <option key={status} value={status}>
                   {status}
                 </option>
