@@ -4681,7 +4681,7 @@ export default function CreateLead() {
                     {/* Vertical connecting line */}
                     {idx < STEPS.length - 1 && (
                       <div
-                        className={`hidden md:block absolute left-4 top-10 bottom-0 w-0.5 -ml-px ${
+                        className={`hidden md:block absolute left-7 top-10 bottom-0 w-0.5 -translate-x-1/2 ${
                           isCompleted ? "bg-blue-600" : "bg-slate-200"
                         }`}
                       />
@@ -4942,172 +4942,37 @@ export default function CreateLead() {
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
-                        {/* Left Side Column: PAN Block */}
-                        <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
-                          <div>
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                              PAN Number *
-                            </label>
-                            <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
-                              <input
-                                name="panNumber"
-                                value={formData.panNumber}
-                                onChange={handleInputChange}
-                                maxLength={10}
-                                placeholder="ABCDE1234F"
-                                className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-normal tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                              />
-                            </div>
-                          </div>
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label={
+                            <>
+                              PAN Number
+                              <span className="text-red-600 font-bold"> *</span>
+                            </>
+                          }
+                          name="panNumber"
+                          value={formData.panNumber}
+                          onChange={handleInputChange}
+                          maxLength={10}
+                          placeholder="ABCDE1234F"
+                          className="uppercase tracking-wider font-normal"
+                        />
 
-                          {/* PAN Document Upload Section (Image and PDF) */}
-                          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-slate-700">
-                                Upload PAN Card (Image / PDF)
-                              </span>
-                              {isApplicantPanUploaded && (
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                                    Uploaded
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={handleViewApplicantPan}
-                                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                                  >
-                                    View PAN
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                                <input
-                                  type="file"
-                                  className="hidden"
-                                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                                  onChange={handlePanFileChange}
-                                />
-                                <span className="truncate max-w-[200px]">
-                                  {panFile
-                                    ? panFile.name
-                                    : "Choose File (Image / PDF)"}
-                                </span>
-                              </label>
-
-                              <button
-                                type="button"
-                                disabled={
-                                  !panFile ||
-                                  uploadPanDocumentMutation.isPending
-                                }
-                                onClick={() =>
-                                  uploadPanDocumentMutation.mutate()
-                                }
-                                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                              >
-                                {uploadPanDocumentMutation.isPending
-                                  ? "Uploading..."
-                                  : "Upload"}
-                              </button>
-                            </div>
-
-                            {panFile && (
-                              <p className="text-[11px] font-medium text-slate-600 truncate">
-                                Selected:{" "}
-                                <span className="font-semibold text-slate-800">
-                                  {panFile.name}
-                                </span>
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Right Side Column: Aadhaar / Udyam Aadhaar Box */}
-                        <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
-                          <div>
-                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                              Aadhaar / Udyam Aadhaar (Last 4 Digits) *
-                            </label>
-                            <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
-                              <input
-                                name="aadhaarNumber"
-                                value={formData.aadhaarNumber || ""}
-                                onChange={handleInputChange}
-                                maxLength={4}
-                                inputMode="numeric"
-                                placeholder="e.g. 1234"
-                                className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-normal tracking-widest text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Aadhaar / Udyam Aadhaar Document Upload Section (Image and PDF) */}
-                          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-slate-700">
-                                Upload Aadhaar / Udyam (Image / PDF)
-                              </span>
-                              {isApplicantAadhaarUploaded && (
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                                    Uploaded
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={handleViewApplicantAadhaar}
-                                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                                  >
-                                    View Aadhaar
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                                <input
-                                  type="file"
-                                  className="hidden"
-                                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                                  onChange={handleAadhaarFileChange}
-                                />
-                                <span className="truncate max-w-[200px]">
-                                  {aadhaarFile
-                                    ? aadhaarFile.name
-                                    : "Choose File (Image / PDF)"}
-                                </span>
-                              </label>
-
-                              <button
-                                type="button"
-                                disabled={
-                                  !aadhaarFile ||
-                                  uploadAadhaarDocumentMutation.isPending
-                                }
-                                onClick={() =>
-                                  uploadAadhaarDocumentMutation.mutate()
-                                }
-                                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                              >
-                                {uploadAadhaarDocumentMutation.isPending
-                                  ? "Uploading..."
-                                  : "Upload"}
-                              </button>
-                            </div>
-
-                            {aadhaarFile && (
-                              <p className="text-[11px] font-medium text-slate-600 truncate">
-                                Selected:{" "}
-                                <span className="font-semibold text-slate-800">
-                                  {aadhaarFile.name}
-                                </span>
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label={
+                            <>
+                              Aadhaar / Udyam Aadhaar (Last 4 Digits)
+                              <span className="text-red-600 font-bold"> *</span>
+                            </>
+                          }
+                          name="aadhaarNumber"
+                          value={formData.aadhaarNumber || ""}
+                          onChange={handleInputChange}
+                          maxLength={4}
+                          inputMode="numeric"
+                          placeholder="e.g. 1234"
+                        />
                       </div>
 
                       {/* Compact Profile Photo Management Panel */}
@@ -5356,191 +5221,7 @@ export default function CreateLead() {
                         </div>
                       </div>
 
-                      {/* Business Document Verification Cards */}
-                      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                        {/* UDYAM Certificate Card */}
-                        <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600">
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                  />
-                                </svg>
-                              </div>
-                              <div className="min-w-0">
-                                <h5 className="text-xs font-bold text-slate-900 truncate">
-                                  UDYAM Certificate
-                                </h5>
-                                <p className="text-[11px] text-slate-500 truncate">
-                                  MSME / Udyam Registration (PDF or Image)
-                                </p>
-                              </div>
-                            </div>
 
-                            {isApplicantUdyamUploaded ? (
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                                  Uploaded
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={handleViewApplicantUdyam}
-                                  className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                                >
-                                  View
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
-                                Pending
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                              <input
-                                type="file"
-                                className="hidden"
-                                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                                onChange={handleUdyamFileChange}
-                              />
-                              <span className="truncate max-w-[200px]">
-                                {udyamFile
-                                  ? udyamFile.name
-                                  : "Choose File (PDF / Image)"}
-                              </span>
-                            </label>
-
-                            <button
-                              type="button"
-                              disabled={
-                                !udyamFile ||
-                                uploadUdyamDocumentMutation.isPending
-                              }
-                              onClick={() =>
-                                uploadUdyamDocumentMutation.mutate()
-                              }
-                              className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                            >
-                              {uploadUdyamDocumentMutation.isPending
-                                ? "Uploading..."
-                                : "Upload"}
-                            </button>
-                          </div>
-
-                          {udyamFile && (
-                            <p className="text-[11px] font-medium text-slate-600 truncate">
-                              Selected:{" "}
-                              <span className="font-semibold text-slate-800">
-                                {udyamFile.name}
-                              </span>
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Business License Card */}
-                        <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600">
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                                  />
-                                </svg>
-                              </div>
-                              <div className="min-w-0">
-                                <h5 className="text-xs font-bold text-slate-900 truncate">
-                                  Business License / Shop Act
-                                </h5>
-                                <p className="text-[11px] text-slate-500 truncate">
-                                  Trade License, Gumasta, or MOA/AOA (PDF or
-                                  Image)
-                                </p>
-                              </div>
-                            </div>
-
-                            {isApplicantBusinessLicenseUploaded ? (
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                                  Uploaded
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={handleViewApplicantBusinessLicense}
-                                  className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                                >
-                                  View
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
-                                Pending
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                              <input
-                                type="file"
-                                className="hidden"
-                                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                                onChange={handleBusinessLicenseFileChange}
-                              />
-                              <span className="truncate max-w-[200px]">
-                                {businessLicenseFile
-                                  ? businessLicenseFile.name
-                                  : "Choose File (PDF / Image)"}
-                              </span>
-                            </label>
-
-                            <button
-                              type="button"
-                              disabled={
-                                !businessLicenseFile ||
-                                uploadBusinessLicenseDocumentMutation.isPending
-                              }
-                              onClick={() =>
-                                uploadBusinessLicenseDocumentMutation.mutate()
-                              }
-                              className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                            >
-                              {uploadBusinessLicenseDocumentMutation.isPending
-                                ? "Uploading..."
-                                : "Upload"}
-                            </button>
-                          </div>
-
-                          {businessLicenseFile && (
-                            <p className="text-[11px] font-medium text-slate-600 truncate">
-                              Selected:{" "}
-                              <span className="font-semibold text-slate-800">
-                                {businessLicenseFile.name}
-                              </span>
-                            </p>
-                          )}
-                        </div>
-                      </div>
                     </div>
 
                     {/* Sub-Section 5: ADDRESS DETAILS - RESIDENCE ADDRESS */}
@@ -6326,7 +6007,7 @@ export default function CreateLead() {
                       </Select>
                     </Field>
 
-                    <Field label="9. Type of Structure">
+                    <Field label="Type of Structure">
                       <Select
                         name="typeOfStructure"
                         value={formData.typeOfStructure || ""}
@@ -6341,7 +6022,7 @@ export default function CreateLead() {
                       </Select>
                     </Field>
 
-                    <Field label="10. Plot Demarcated">
+                    <Field label="Plot Demarcated">
                       <Select
                         name="plotDemarcated"
                         value={formData.plotDemarcated || ""}
@@ -6356,7 +6037,7 @@ export default function CreateLead() {
                       </Select>
                     </Field>
 
-                    <Field label="11. Type of Usage of Entire Property">
+                    <Field label="Type of Usage of Entire Property">
                       <Select
                         name="propertyUsageType"
                         value={formData.propertyUsageType || ""}
@@ -6371,7 +6052,7 @@ export default function CreateLead() {
                       </Select>
                     </Field>
 
-                    <Field label="12. Type of Premises">
+                    <Field label="Type of Premises">
                       <Select
                         name="premisesType"
                         value={formData.premisesType || ""}
@@ -6386,7 +6067,7 @@ export default function CreateLead() {
                       </Select>
                     </Field>
 
-                    <Field label="13. Property Occupancy (Occupied By)">
+                    <Field label="Property Occupancy (Occupied By)">
                       <input
                         name="occupiedBy"
                         value={formData.occupiedBy || ""}
@@ -6396,7 +6077,7 @@ export default function CreateLead() {
                       />
                     </Field>
 
-                    <Field label="14. Construction Details (Construction Status)">
+                    <Field label="Construction Details (Construction Status)">
                       <Select
                         name="constructionStatus"
                         value={formData.constructionStatus || ""}
@@ -6430,7 +6111,406 @@ export default function CreateLead() {
               {/* STEP 5: ATTACHMENTS & DOCUMENTS */}
               {currentStep === 5 && (
                 <div className="space-y-6">
-                  <Section title="15. Property Documents">
+                  {/* 1. Primary Applicant KYC Documents */}
+                  <Section title="1. Primary Applicant KYC Documents">
+                    {/* PAN Card Upload */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          1. PAN Card
+                        </span>
+                        {isApplicantPanUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantPan}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handlePanFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {panFile ? panFile.name : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={!panFile || uploadPanDocumentMutation.isPending}
+                          onClick={() => uploadPanDocumentMutation.mutate()}
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadPanDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                        </button>
+                      </div>
+                      {panFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected: <span className="font-semibold text-slate-800">{panFile.name}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Aadhaar / Udyam Aadhaar Upload */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          2. Aadhaar / Udyam Aadhaar
+                        </span>
+                        {isApplicantAadhaarUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantAadhaar}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleAadhaarFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {aadhaarFile ? aadhaarFile.name : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={!aadhaarFile || uploadAadhaarDocumentMutation.isPending}
+                          onClick={() => uploadAadhaarDocumentMutation.mutate()}
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadAadhaarDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                        </button>
+                      </div>
+                      {aadhaarFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected: <span className="font-semibold text-slate-800">{aadhaarFile.name}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Address Proof */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          3. Address Proof
+                        </span>
+                        {isApplicantAddressProofUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantAddressProof}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleAddressProofFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {addressProofFile ? addressProofFile.name : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={!addressProofFile || uploadAddressProofDocumentMutation.isPending}
+                          onClick={() => uploadAddressProofDocumentMutation.mutate()}
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadAddressProofDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                        </button>
+                      </div>
+                      {addressProofFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected: <span className="font-semibold text-slate-800">{addressProofFile.name}</span>
+                        </p>
+                      )}
+                    </div>
+                  </Section>
+
+                  {/* 2. Employment & Business Documents */}
+                  <Section title="2. Employment & Business Documents">
+                    {/* UDYAM Certificate */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          1. UDYAM Certificate
+                        </span>
+                        {isApplicantUdyamUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantUdyam}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleUdyamFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {udyamFile ? udyamFile.name : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={!udyamFile || uploadUdyamDocumentMutation.isPending}
+                          onClick={() => uploadUdyamDocumentMutation.mutate()}
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadUdyamDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                        </button>
+                      </div>
+                      {udyamFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected: <span className="font-semibold text-slate-800">{udyamFile.name}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Business License */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          2. Business License / Shop Act
+                        </span>
+                        {isApplicantBusinessLicenseUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantBusinessLicense}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleBusinessLicenseFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {businessLicenseFile ? businessLicenseFile.name : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={!businessLicenseFile || uploadBusinessLicenseDocumentMutation.isPending}
+                          onClick={() => uploadBusinessLicenseDocumentMutation.mutate()}
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadBusinessLicenseDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                        </button>
+                      </div>
+                      {businessLicenseFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected: <span className="font-semibold text-slate-800">{businessLicenseFile.name}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Bank Statement */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          3. Bank Statement
+                        </span>
+                        {isApplicantBankStatementUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantBankStatement}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleBankStatementFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {bankStatementFile ? bankStatementFile.name : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={!bankStatementFile || uploadBankStatementDocumentMutation.isPending}
+                          onClick={() => uploadBankStatementDocumentMutation.mutate()}
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadBankStatementDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                        </button>
+                      </div>
+                      {bankStatementFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected: <span className="font-semibold text-slate-800">{bankStatementFile.name}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Income Proof */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          4. Income Proof
+                        </span>
+                        {isApplicantIncomeProofUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantIncomeProof}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleIncomeProofFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {incomeProofFile ? incomeProofFile.name : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={!incomeProofFile || uploadIncomeProofDocumentMutation.isPending}
+                          onClick={() => uploadIncomeProofDocumentMutation.mutate()}
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadIncomeProofDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                        </button>
+                      </div>
+                      {incomeProofFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected: <span className="font-semibold text-slate-800">{incomeProofFile.name}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Business Proof */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          5. Business Proof
+                        </span>
+                        {isApplicantBusinessProofUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantBusinessProof}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleBusinessProofFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {businessProofFile ? businessProofFile.name : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={!businessProofFile || uploadBusinessProofDocumentMutation.isPending}
+                          onClick={() => uploadBusinessProofDocumentMutation.mutate()}
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadBusinessProofDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                        </button>
+                      </div>
+                      {businessProofFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected: <span className="font-semibold text-slate-800">{businessProofFile.name}</span>
+                        </p>
+                      )}
+                    </div>
+                  </Section>
+
+                  {/* 3. Collateral Property Documents */}
+                  <Section title="3. Collateral Property Documents">
                     {/* 1. Sale Deed */}
                     <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
@@ -6792,252 +6872,6 @@ export default function CreateLead() {
                           Selected:{" "}
                           <span className="font-semibold text-slate-800">
                             {approvalPlanFile.name}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                  </Section>
-
-                  <Section title="16. KYC Documents">
-                    {/* 1. Address Proof (Upload) */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800">
-                          1. Address Proof
-                        </span>
-                        {isApplicantAddressProofUploaded && (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                              Uploaded
-                            </span>
-                            <button
-                              type="button"
-                              onClick={handleViewApplicantAddressProof}
-                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                            >
-                              View
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                            onChange={handleAddressProofFileChange}
-                          />
-                          <span className="truncate max-w-[200px]">
-                            {addressProofFile
-                              ? addressProofFile.name
-                              : "Choose File (PDF / Image)"}
-                          </span>
-                        </label>
-                        <button
-                          type="button"
-                          disabled={
-                            !addressProofFile ||
-                            uploadAddressProofDocumentMutation.isPending
-                          }
-                          onClick={() =>
-                            uploadAddressProofDocumentMutation.mutate()
-                          }
-                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                        >
-                          {uploadAddressProofDocumentMutation.isPending
-                            ? "Uploading..."
-                            : "Upload"}
-                        </button>
-                      </div>
-                      {addressProofFile && (
-                        <p className="text-[11px] font-medium text-slate-600 truncate">
-                          Selected:{" "}
-                          <span className="font-semibold text-slate-800">
-                            {addressProofFile.name}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-
-                    {/* 2. Bank Statement (Upload) */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800">
-                          2. Bank Statement
-                        </span>
-                        {isApplicantBankStatementUploaded && (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                              Uploaded
-                            </span>
-                            <button
-                              type="button"
-                              onClick={handleViewApplicantBankStatement}
-                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                            >
-                              View
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                            onChange={handleBankStatementFileChange}
-                          />
-                          <span className="truncate max-w-[200px]">
-                            {bankStatementFile
-                              ? bankStatementFile.name
-                              : "Choose File (PDF / Image)"}
-                          </span>
-                        </label>
-                        <button
-                          type="button"
-                          disabled={
-                            !bankStatementFile ||
-                            uploadBankStatementDocumentMutation.isPending
-                          }
-                          onClick={() =>
-                            uploadBankStatementDocumentMutation.mutate()
-                          }
-                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                        >
-                          {uploadBankStatementDocumentMutation.isPending
-                            ? "Uploading..."
-                            : "Upload"}
-                        </button>
-                      </div>
-                      {bankStatementFile && (
-                        <p className="text-[11px] font-medium text-slate-600 truncate">
-                          Selected:{" "}
-                          <span className="font-semibold text-slate-800">
-                            {bankStatementFile.name}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-
-                    {/* 3. Income Proof (Upload) */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800">
-                          3. Income Proof
-                        </span>
-                        {isApplicantIncomeProofUploaded && (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                              Uploaded
-                            </span>
-                            <button
-                              type="button"
-                              onClick={handleViewApplicantIncomeProof}
-                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                            >
-                              View
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                            onChange={handleIncomeProofFileChange}
-                          />
-                          <span className="truncate max-w-[200px]">
-                            {incomeProofFile
-                              ? incomeProofFile.name
-                              : "Choose File (PDF / Image)"}
-                          </span>
-                        </label>
-                        <button
-                          type="button"
-                          disabled={
-                            !incomeProofFile ||
-                            uploadIncomeProofDocumentMutation.isPending
-                          }
-                          onClick={() =>
-                            uploadIncomeProofDocumentMutation.mutate()
-                          }
-                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                        >
-                          {uploadIncomeProofDocumentMutation.isPending
-                            ? "Uploading..."
-                            : "Upload"}
-                        </button>
-                      </div>
-                      {incomeProofFile && (
-                        <p className="text-[11px] font-medium text-slate-600 truncate">
-                          Selected:{" "}
-                          <span className="font-semibold text-slate-800">
-                            {incomeProofFile.name}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-
-                    {/* 4. Business Proof (Upload) */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800">
-                          4. Business Proof
-                        </span>
-                        {isApplicantBusinessProofUploaded && (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                              Uploaded
-                            </span>
-                            <button
-                              type="button"
-                              onClick={handleViewApplicantBusinessProof}
-                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                            >
-                              View
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                            onChange={handleBusinessProofFileChange}
-                          />
-                          <span className="truncate max-w-[200px]">
-                            {businessProofFile
-                              ? businessProofFile.name
-                              : "Choose File (PDF / Image)"}
-                          </span>
-                        </label>
-                        <button
-                          type="button"
-                          disabled={
-                            !businessProofFile ||
-                            uploadBusinessProofDocumentMutation.isPending
-                          }
-                          onClick={() =>
-                            uploadBusinessProofDocumentMutation.mutate()
-                          }
-                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                        >
-                          {uploadBusinessProofDocumentMutation.isPending
-                            ? "Uploading..."
-                            : "Upload"}
-                        </button>
-                      </div>
-                      {businessProofFile && (
-                        <p className="text-[11px] font-medium text-slate-600 truncate">
-                          Selected:{" "}
-                          <span className="font-semibold text-slate-800">
-                            {businessProofFile.name}
                           </span>
                         </p>
                       )}
