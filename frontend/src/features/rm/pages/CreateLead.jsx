@@ -282,18 +282,78 @@ const normalizePropertyType = (value, category) => {
     .trim();
 };
 
-function Section({ title, children }) {
+const STEPS = [
+  {
+    id: 1,
+    title: "Basic Information",
+    subtitle: "Name, contact & KYC",
+    headerTitle: "1. Basic Information & KYC",
+    headerDesc:
+      "Enter the basic personal, contact, and identity verification details of the lead.",
+  },
+  {
+    id: 2,
+    title: "Additional Details",
+    subtitle: "Employment & residence",
+    headerTitle: "2. Employment & Residence Details",
+    headerDesc:
+      "Provide business profile, income specifics, and residential address.",
+  },
+  {
+    id: 3,
+    title: "Co-Applicants & Refs",
+    subtitle: "Co-signers & references",
+    headerTitle: "3. Co-Applicants, References & Family",
+    headerDesc:
+      "Add joint applicants, reference contacts, and dependent family members.",
+  },
+  {
+    id: 4,
+    title: "Collateral Details",
+    subtitle: "Property & valuation",
+    headerTitle: "4. Collateral Property Details (LAP / Mortgage)",
+    headerDesc:
+      "Specify mortgaged asset, guidance valuation, structure type, and property location.",
+  },
+  {
+    id: 5,
+    title: "Attachments",
+    subtitle: "Upload documents",
+    headerTitle: "5. Attachments & Documents",
+    headerDesc:
+      "Upload verified property title deeds, tax receipts, and financial proofs.",
+  },
+  {
+    id: 6,
+    title: "Review & Submit",
+    subtitle: "Confirm information",
+    headerTitle: "6. Review & Final Submission",
+    headerDesc:
+      "Review all captured lead details before final underwriting submission.",
+  },
+];
+
+function Section({ title, subtitle, children, className = "" }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 p-6 md:p-8 shadow-xs space-y-6">
-      <div className="border-b border-slate-100 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="h-4 w-1.5 bg-blue-600 rounded-full" />
-          <h3 className="text-sm font-bold tracking-wide text-slate-900">
-            {title}
-          </h3>
+    <div
+      className={`rounded-xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-3xs space-y-5 ${className}`}
+    >
+      {title && (
+        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-1.5 bg-blue-600 rounded-full" />
+            <h3 className="text-sm font-bold tracking-wide text-slate-900">
+              {title}
+            </h3>
+          </div>
+          {subtitle && (
+            <span className="text-xs text-slate-500 font-medium">
+              {subtitle}
+            </span>
+          )}
         </div>
-      </div>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+      )}
+      <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
         {children}
       </div>
     </div>
@@ -305,18 +365,30 @@ function Field({
   children,
   containerClassName = "",
   className = "",
+  icon = null,
   ...props
 }) {
   return (
     <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
-      <label className="text-xs font-semibold text-slate-700">{label}</label>
+      {label && (
+        <label className="text-xs font-semibold text-slate-700">{label}</label>
+      )}
       {children ? (
         children
       ) : (
-        <input
-          {...props}
-          className={`w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${className}`}
-        />
+        <div className="relative w-full">
+          {icon && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              {icon}
+            </div>
+          )}
+          <input
+            {...props}
+            className={`w-full rounded-lg border border-slate-300 bg-white ${
+              icon ? "pl-9" : "px-3.5"
+            } py-2.5 text-sm text-slate-900 shadow-2xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${className}`}
+          />
+        </div>
       )}
     </div>
   );
@@ -344,7 +416,10 @@ function Select({
       .filter((child) => child && child.props)
       .map((child) => ({
         value: child.props.value,
-        label: child.props.children || child.props.label || String(child.props.value),
+        label:
+          child.props.children ||
+          child.props.label ||
+          String(child.props.value),
         disabled: child.props.disabled,
       }));
   }, [children]);
@@ -491,6 +566,7 @@ export default function CreateLead() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const location = useLocation();
+  const [currentStep, setCurrentStep] = useState(1);
 
   const { isWorkStarted, setShowStartModal } = useAttendance();
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
@@ -770,8 +846,12 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantBusinessLicenseUrl = getDocumentImageUrl(applicantBusinessLicenseDocument);
-  const isApplicantBusinessLicenseUploaded = Boolean(applicantBusinessLicenseDocument);
+  const applicantBusinessLicenseUrl = getDocumentImageUrl(
+    applicantBusinessLicenseDocument,
+  );
+  const isApplicantBusinessLicenseUploaded = Boolean(
+    applicantBusinessLicenseDocument,
+  );
 
   const handleViewApplicantBusinessLicense = () => {
     if (!applicantBusinessLicenseUrl) {
@@ -805,8 +885,12 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantAddressProofUrl = getDocumentImageUrl(applicantAddressProofDocument);
-  const isApplicantAddressProofUploaded = Boolean(applicantAddressProofDocument);
+  const applicantAddressProofUrl = getDocumentImageUrl(
+    applicantAddressProofDocument,
+  );
+  const isApplicantAddressProofUploaded = Boolean(
+    applicantAddressProofDocument,
+  );
 
   const handleViewApplicantAddressProof = () => {
     if (!applicantAddressProofUrl) {
@@ -839,8 +923,12 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantBankStatementUrl = getDocumentImageUrl(applicantBankStatementDocument);
-  const isApplicantBankStatementUploaded = Boolean(applicantBankStatementDocument);
+  const applicantBankStatementUrl = getDocumentImageUrl(
+    applicantBankStatementDocument,
+  );
+  const isApplicantBankStatementUploaded = Boolean(
+    applicantBankStatementDocument,
+  );
 
   const handleViewApplicantBankStatement = () => {
     if (!applicantBankStatementUrl) {
@@ -876,7 +964,9 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantIncomeProofUrl = getDocumentImageUrl(applicantIncomeProofDocument);
+  const applicantIncomeProofUrl = getDocumentImageUrl(
+    applicantIncomeProofDocument,
+  );
   const isApplicantIncomeProofUploaded = Boolean(applicantIncomeProofDocument);
 
   const handleViewApplicantIncomeProof = () => {
@@ -912,8 +1002,12 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantBusinessProofUrl = getDocumentImageUrl(applicantBusinessProofDocument);
-  const isApplicantBusinessProofUploaded = Boolean(applicantBusinessProofDocument);
+  const applicantBusinessProofUrl = getDocumentImageUrl(
+    applicantBusinessProofDocument,
+  );
+  const isApplicantBusinessProofUploaded = Boolean(
+    applicantBusinessProofDocument,
+  );
 
   const handleViewApplicantBusinessProof = () => {
     if (!applicantBusinessProofUrl) {
@@ -927,8 +1021,12 @@ export default function CreateLead() {
 
   const applicantSaleDeedDocument = useMemo(() => {
     const matched = uploadedDocuments.filter((doc) => {
-      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
-      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
       return (
         documentName.includes("SALE_DEED") ||
         documentType.includes("SALE_DEED") ||
@@ -954,8 +1052,12 @@ export default function CreateLead() {
 
   const applicantPropertyTaxReceiptDocument = useMemo(() => {
     const matched = uploadedDocuments.filter((doc) => {
-      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
-      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
       return (
         documentName.includes("PROPERTY_TAX") ||
         documentType.includes("PROPERTY_TAX") ||
@@ -967,8 +1069,12 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantPropertyTaxReceiptUrl = getDocumentImageUrl(applicantPropertyTaxReceiptDocument);
-  const isApplicantPropertyTaxReceiptUploaded = Boolean(applicantPropertyTaxReceiptDocument);
+  const applicantPropertyTaxReceiptUrl = getDocumentImageUrl(
+    applicantPropertyTaxReceiptDocument,
+  );
+  const isApplicantPropertyTaxReceiptUploaded = Boolean(
+    applicantPropertyTaxReceiptDocument,
+  );
 
   const handleViewApplicantPropertyTaxReceipt = () => {
     if (!applicantPropertyTaxReceiptUrl) {
@@ -976,13 +1082,21 @@ export default function CreateLead() {
       setMessage("Property Tax Receipt file is not available.");
       return;
     }
-    window.open(applicantPropertyTaxReceiptUrl, "_blank", "noopener,noreferrer");
+    window.open(
+      applicantPropertyTaxReceiptUrl,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   const applicantKhataCertificateDocument = useMemo(() => {
     const matched = uploadedDocuments.filter((doc) => {
-      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
-      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
       return (
         documentName.includes("KHATA") ||
         documentType.includes("KHATA") ||
@@ -993,8 +1107,12 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantKhataCertificateUrl = getDocumentImageUrl(applicantKhataCertificateDocument);
-  const isApplicantKhataCertificateUploaded = Boolean(applicantKhataCertificateDocument);
+  const applicantKhataCertificateUrl = getDocumentImageUrl(
+    applicantKhataCertificateDocument,
+  );
+  const isApplicantKhataCertificateUploaded = Boolean(
+    applicantKhataCertificateDocument,
+  );
 
   const handleViewApplicantKhataCertificate = () => {
     if (!applicantKhataCertificateUrl) {
@@ -1007,8 +1125,12 @@ export default function CreateLead() {
 
   const applicantSurveySketchDocument = useMemo(() => {
     const matched = uploadedDocuments.filter((doc) => {
-      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
-      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
       return (
         documentName.includes("SURVEY_SKETCH") ||
         documentType.includes("SURVEY_SKETCH") ||
@@ -1020,8 +1142,12 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantSurveySketchUrl = getDocumentImageUrl(applicantSurveySketchDocument);
-  const isApplicantSurveySketchUploaded = Boolean(applicantSurveySketchDocument);
+  const applicantSurveySketchUrl = getDocumentImageUrl(
+    applicantSurveySketchDocument,
+  );
+  const isApplicantSurveySketchUploaded = Boolean(
+    applicantSurveySketchDocument,
+  );
 
   const handleViewApplicantSurveySketch = () => {
     if (!applicantSurveySketchUrl) {
@@ -1034,8 +1160,12 @@ export default function CreateLead() {
 
   const applicantEcCertificateDocument = useMemo(() => {
     const matched = uploadedDocuments.filter((doc) => {
-      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
-      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
       return (
         documentName.includes("EC_CERTIFICATE") ||
         documentType.includes("EC_CERTIFICATE") ||
@@ -1047,8 +1177,12 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantEcCertificateUrl = getDocumentImageUrl(applicantEcCertificateDocument);
-  const isApplicantEcCertificateUploaded = Boolean(applicantEcCertificateDocument);
+  const applicantEcCertificateUrl = getDocumentImageUrl(
+    applicantEcCertificateDocument,
+  );
+  const isApplicantEcCertificateUploaded = Boolean(
+    applicantEcCertificateDocument,
+  );
 
   const handleViewApplicantEcCertificate = () => {
     if (!applicantEcCertificateUrl) {
@@ -1061,8 +1195,12 @@ export default function CreateLead() {
 
   const applicantApprovalPlanDocument = useMemo(() => {
     const matched = uploadedDocuments.filter((doc) => {
-      const documentName = normalizeDocumentValue(doc.documentName || doc.document_name);
-      const documentType = normalizeDocumentValue(doc.documentType || doc.document_type);
+      const documentName = normalizeDocumentValue(
+        doc.documentName || doc.document_name,
+      );
+      const documentType = normalizeDocumentValue(
+        doc.documentType || doc.document_type,
+      );
       return (
         documentName.includes("APPROVAL_PLAN") ||
         documentType.includes("APPROVAL_PLAN") ||
@@ -1074,8 +1212,12 @@ export default function CreateLead() {
     return matched[0] || null;
   }, [uploadedDocuments]);
 
-  const applicantApprovalPlanUrl = getDocumentImageUrl(applicantApprovalPlanDocument);
-  const isApplicantApprovalPlanUploaded = Boolean(applicantApprovalPlanDocument);
+  const applicantApprovalPlanUrl = getDocumentImageUrl(
+    applicantApprovalPlanDocument,
+  );
+  const isApplicantApprovalPlanUploaded = Boolean(
+    applicantApprovalPlanDocument,
+  );
 
   const handleViewApplicantApprovalPlan = () => {
     if (!applicantApprovalPlanUrl) {
@@ -1232,18 +1374,22 @@ export default function CreateLead() {
         formData.monthlyProfit !== undefined
           ? Number(formData.monthlyProfit)
           : undefined,
-      residenceAddressLine1: formData.residenceAddressLine1?.trim() || undefined,
-      residenceAddressLine2: formData.residenceAddressLine2?.trim() || undefined,
+      residenceAddressLine1:
+        formData.residenceAddressLine1?.trim() || undefined,
+      residenceAddressLine2:
+        formData.residenceAddressLine2?.trim() || undefined,
       residenceLandmark: formData.residenceLandmark?.trim() || undefined,
       residenceCity: formData.residenceCity?.trim() || undefined,
       residenceDistrict: formData.residenceDistrict?.trim() || undefined,
       residenceState: formData.residenceState?.trim() || undefined,
       residencePincode: formData.residencePincode?.trim() || undefined,
       gramPanchayatCorporation: formData.gramPanchayatCorporation || undefined,
-      gramPanchayatOrCorporation: formData.gramPanchayatCorporation || undefined,
+      gramPanchayatOrCorporation:
+        formData.gramPanchayatCorporation || undefined,
       residenceType: formData.residenceType || undefined,
       propertyOwnerName: formData.propertyOwnerName?.trim() || undefined,
-      relationshipWithApplicant: formData.relationshipWithApplicant || undefined,
+      relationshipWithApplicant:
+        formData.relationshipWithApplicant || undefined,
       plotSize: formData.plotSize?.trim() || undefined,
       areaSqFt: formData.areaSqFt?.trim() || undefined,
       governmentValue:
@@ -1386,7 +1532,8 @@ export default function CreateLead() {
     },
 
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -1482,7 +1629,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -1579,7 +1727,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -1676,7 +1825,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -1781,7 +1931,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -1886,7 +2037,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -1991,7 +2143,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -2096,7 +2249,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -2201,7 +2355,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -2304,7 +2459,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -2337,7 +2493,12 @@ export default function CreateLead() {
     const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
       fileNameLower.endsWith(ext),
     );
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
     if (!allowedTypes.includes(file.type) && !isExtensionValid) {
       setMessageType("error");
       setMessage("Only JPG, PNG and PDF Sale Deed files are allowed.");
@@ -2391,7 +2552,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -2424,10 +2586,17 @@ export default function CreateLead() {
     const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
       fileNameLower.endsWith(ext),
     );
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
     if (!allowedTypes.includes(file.type) && !isExtensionValid) {
       setMessageType("error");
-      setMessage("Only JPG, PNG and PDF Property Tax Receipt files are allowed.");
+      setMessage(
+        "Only JPG, PNG and PDF Property Tax Receipt files are allowed.",
+      );
       event.target.value = "";
       return;
     }
@@ -2478,7 +2647,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -2511,7 +2681,12 @@ export default function CreateLead() {
     const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
       fileNameLower.endsWith(ext),
     );
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
     if (!allowedTypes.includes(file.type) && !isExtensionValid) {
       setMessageType("error");
       setMessage("Only JPG, PNG and PDF Khata Certificate files are allowed.");
@@ -2565,7 +2740,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -2598,7 +2774,12 @@ export default function CreateLead() {
     const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
       fileNameLower.endsWith(ext),
     );
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
     if (!allowedTypes.includes(file.type) && !isExtensionValid) {
       setMessageType("error");
       setMessage("Only JPG, PNG and PDF Survey Sketch files are allowed.");
@@ -2652,7 +2833,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -2685,7 +2867,12 @@ export default function CreateLead() {
     const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
       fileNameLower.endsWith(ext),
     );
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
     if (!allowedTypes.includes(file.type) && !isExtensionValid) {
       setMessageType("error");
       setMessage("Only JPG, PNG and PDF EC Certificate files are allowed.");
@@ -2739,7 +2926,8 @@ export default function CreateLead() {
       return { res, targetApplicationId: Number(targetApplicationId) };
     },
     onSuccess: async (data) => {
-      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      const targetId =
+        data?.targetApplicationId || createdApplicationId || applicationId;
       if (targetId && !createdApplicationId) {
         setCreatedApplicationId(Number(targetId));
       }
@@ -2772,7 +2960,12 @@ export default function CreateLead() {
     const isExtensionValid = [".jpg", ".jpeg", ".png", ".pdf"].some((ext) =>
       fileNameLower.endsWith(ext),
     );
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
     if (!allowedTypes.includes(file.type) && !isExtensionValid) {
       setMessageType("error");
       setMessage("Only JPG, PNG and PDF Approval Plan files are allowed.");
@@ -3236,7 +3429,8 @@ export default function CreateLead() {
         name: String(contact.name || "").trim(),
         mobile: String(contact.mobile || "").trim(),
         referenceType: contact.referenceType || "Purchaser",
-        relationship: contact.referenceType || contact.relationship || "Purchaser",
+        relationship:
+          contact.referenceType || contact.relationship || "Purchaser",
       }));
   };
 
@@ -3303,9 +3497,21 @@ export default function CreateLead() {
         applicationId: Number(targetApplicationId),
         name: String(member.name || "").trim(),
         relation: member.relation || "Brother",
-        age: member.age !== "" && member.age !== undefined && !isNaN(Number(member.age)) ? Number(member.age) : undefined,
-        occupation: member.occupation ? String(member.occupation).trim() : undefined,
-        income: member.income !== "" && member.income !== undefined && !isNaN(Number(member.income)) ? Number(member.income) : undefined,
+        age:
+          member.age !== "" &&
+          member.age !== undefined &&
+          !isNaN(Number(member.age))
+            ? Number(member.age)
+            : undefined,
+        occupation: member.occupation
+          ? String(member.occupation).trim()
+          : undefined,
+        income:
+          member.income !== "" &&
+          member.income !== undefined &&
+          !isNaN(Number(member.income))
+            ? Number(member.income)
+            : undefined,
       }));
   };
 
@@ -3436,9 +3642,7 @@ export default function CreateLead() {
         "SELF_EMPLOYED",
 
       constitution:
-        application.constitution ||
-        profile.constitution ||
-        "INDIVIDUAL",
+        application.constitution || profile.constitution || "INDIVIDUAL",
 
       businessName: application.businessName || profile.businessName || "",
       gstNumber:
@@ -3856,9 +4060,15 @@ export default function CreateLead() {
               id: row.id,
               name: row.name || "",
               relation: row.relation || "Brother",
-              age: row.age !== null && row.age !== undefined ? String(row.age) : "",
+              age:
+                row.age !== null && row.age !== undefined
+                  ? String(row.age)
+                  : "",
               occupation: row.occupation || "",
-              income: row.income !== null && row.income !== undefined ? String(row.income) : "",
+              income:
+                row.income !== null && row.income !== undefined
+                  ? String(row.income)
+                  : "",
             })),
           );
         }
@@ -3916,7 +4126,8 @@ export default function CreateLead() {
         name: contact.name,
         mobile: contact.mobile,
         referenceType: contact.referenceType || "Purchaser",
-        relationship: contact.referenceType || contact.relationship || "Purchaser",
+        relationship:
+          contact.referenceType || contact.relationship || "Purchaser",
       };
 
       if (!finalPayload.name || !finalPayload.mobile) {
@@ -4236,123 +4447,7 @@ export default function CreateLead() {
     uploadCustomerPhotoMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-800 antialiased p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Top Action Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-5">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900">
-            {applicationId ? "Modify Lead Workspace" : "New Loan Application"}
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Fill in information parameters to initiate property loan
-            underwriting creation rules.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={handleSaveDraft}
-            className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-700 shadow-xs transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saveNewDraftMutation.isPending || updateDraftMutation.isPending
-              ? "Saving..."
-              : "Save Draft"}
-          </button>
-
-          <button
-            type="button"
-            disabled={isPending || !applicationId}
-            onClick={handleSubmitForReview}
-            className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-          >
-            {submitDraftMutation.isPending
-              ? "Submitting..."
-              : "Submit for Underwriting"}
-          </button>
-        </div>
-      </div>
-
-      {/* Workflow Timeline Status Tracker */}
-      {applicationId && (
-        <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-xs">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Application Workflow Journey
-            </h3>
-            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10">
-              Live Stage
-            </span>
-          </div>
-
-          <div className="overflow-x-auto pb-2">
-            <div className="flex min-w-[800px] items-center justify-between">
-              {leadJourney.map((item, index) => {
-                const firstPendingIndex = leadJourney.findIndex(
-                  (step) => !step.completed,
-                );
-                const isCurrent =
-                  !item.completed && index === firstPendingIndex;
-
-                return (
-                  <div
-                    key={item.key || item.label}
-                    className="relative flex flex-1 flex-col items-center text-center"
-                  >
-                    {index !== leadJourney.length - 1 && (
-                      <div
-                        className={`absolute left-[50%] top-4 h-[2px] w-full -translate-y-1/2 ${
-                          leadJourney[index + 1]?.completed
-                            ? "bg-emerald-500"
-                            : "bg-slate-100"
-                        }`}
-                      />
-                    )}
-
-                    <div
-                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
-                        item.completed
-                          ? "bg-emerald-500 text-white ring-4 ring-emerald-50"
-                          : isCurrent
-                            ? "bg-blue-600 text-white ring-4 ring-blue-50"
-                            : "bg-white text-slate-300 ring-2 ring-slate-100"
-                      }`}
-                    >
-                      {item.completed ? (
-                        <svg
-                          className="h-3.5 w-3.5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={3}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      ) : isCurrent ? (
-                        "●"
-                      ) : (
-                        index + 1
-                      )}
-                    </div>
-
-                    <p
-                      className={`mt-2 px-2 text-xs font-medium ${item.completed || isCurrent ? "text-slate-800 font-semibold" : "text-slate-400"}`}
-                    >
-                      {item.label}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
+    <div className="h-[calc(100vh-130px)] min-h-[520px] w-full bg-white rounded-2xl border border-slate-200/90 flex flex-col overflow-hidden shadow-xs antialiased">
       {coApplicantOtpModal.open && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div
@@ -4515,2045 +4610,2926 @@ export default function CreateLead() {
         }
       />
 
-      {/* Work Not Started Warning Banner */}
-      {!isWorkStarted && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-900 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white font-black text-lg">
-              ⚠️
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-amber-950">
-                Attendance Punch-In Required
-              </h4>
-              <p className="text-xs text-amber-800">
-                You have not started your work session for today. Please punch
-                in your attendance before creating or saving leads.
-              </p>
-            </div>
+      {/* Modern Lead Workspace Full-Page Layout */}
+      <div className="w-full bg-white flex flex-col flex-1 min-h-0 overflow-hidden shadow-2xs">
+        {/* Fixed Page Header */}
+        <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 border-b border-slate-200 bg-white">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              {applicationId ? "Modify Lead Workspace" : "Create Lead"}
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Add a new lead with complete details
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowStartModal(true)}
-            className="inline-flex items-center justify-center rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all active:scale-95 shrink-0"
-          >
-            Start Work Now ➔
-          </button>
         </div>
-      )}
 
-      {/* Global Toast Alert Messages */}
-      {message && (
-        <div
-          className={`rounded-lg border p-4 text-xs font-semibold shadow-xs ${
-            messageType === "success"
-              ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-              : "border-rose-100 bg-rose-50 text-rose-700"
-          }`}
-        >
-          {message}
-        </div>
-      )}
-
-      {/* Main Core Form Inputs Viewport Layout matching image guidelines */}
-      <div className="space-y-6">
-        <Section title="Primary Applicant Information">
-          {/* Sub-Section 1: BASIC INFORMATION */}
-          <div className="col-span-full space-y-4">
-            <div className="border-b border-slate-200 pb-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <span className="h-2 w-1 rounded-full bg-blue-600" />
-                Basic Information
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
-              <Field
-                containerClassName="md:col-span-1"
-                label={
-                  <>
-                    Customer / Entity Name
-                    <span className="text-red-600 font-bold"> *</span>
-                  </>
-                }
-                name="customerName"
-                value={formData.customerName}
-                onChange={handleInputChange}
-                required
-                placeholder="Enter customer / entity name"
-              />
-
-              <Field
-                containerClassName="md:col-span-1"
-                label={
-                  <>
-                    Customer Type
-                    <span className="text-red-600 font-bold"> *</span>
-                  </>
-                }
-              >
-                <Select
-                  name="customerType"
-                  value={formData.customerType || "INDIVIDUAL"}
-                  onChange={handleInputChange}
-                >
-                  <option value="INDIVIDUAL">Individual</option>
-                  <option value="PROPRIETORSHIP">Proprietor</option>
-                  <option value="PARTNERSHIP">Partnership</option>
-                  <option value="COMPANY">Company</option>
-                </Select>
-              </Field>
-
-              <Field
-                containerClassName="md:col-span-1"
-                label={
-                  <>
-                    Date of Birth
-                    <span className="text-red-600 font-bold"> *</span>
-                  </>
-                }
-                type="date"
-                name="dob"
-                value={formData.dob ? String(formData.dob).slice(0, 10) : ""}
-                onChange={handleInputChange}
-              />
-
-              <Field containerClassName="md:col-span-1" label="Gender">
-                <Select
-                  name="gender"
-                  value={formData.gender || ""}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Gender</option>
-                  <option value="MALE">Male</option>
-                  <option value="FEMALE">Female</option>
-                  <option value="OTHER">Other</option>
-                </Select>
-              </Field>
-
-              <Field containerClassName="md:col-span-1" label="Marital Status">
-                <Select
-                  name="maritalStatus"
-                  value={formData.maritalStatus || ""}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Marital Status</option>
-                  <option value="SINGLE">Single</option>
-                  <option value="MARRIED">Married</option>
-                  <option value="DIVORCED">Divorce</option>
-                  <option value="WIDOWED">Widow</option>
-                </Select>
-              </Field>
-
-              <Field containerClassName="md:col-span-1" label="Nationality">
-                <Select
-                  name="nationality"
-                  value={formData.nationality || "INDIAN"}
-                  onChange={handleInputChange}
-                >
-                  <option value="INDIAN">Indian</option>
-                  <option value="OTHER">Other</option>
-                </Select>
-              </Field>
-            </div>
-          </div>
-
-          {/* Sub-Section 2: CONTACT INFORMATION */}
-          <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
-            <div className="border-b border-slate-200 pb-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <span className="h-2 w-1 rounded-full bg-blue-600" />
-                Contact Information
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
-              <Field
-                containerClassName="md:col-span-1"
-                label={
-                  <>
-                    Mobile Number
-                    <span className="text-red-600 font-bold"> *</span>
-                  </>
-                }
-                name="mobileNumber"
-                value={formData.mobileNumber}
-                onChange={handleInputChange}
-                maxLength={10}
-                inputMode="numeric"
-                required
-                placeholder="Enter 10-digit number"
-              />
-
-              <Field
-                containerClassName="md:col-span-1"
-                label={
-                  <>
-                    Email Id
-                    <span className="text-red-600 font-bold"> *</span>
-                  </>
-                }
-                type="email"
-                name="emailId"
-                value={formData.emailId || ""}
-                onChange={handleInputChange}
-                maxLength={255}
-                autoComplete="email"
-                placeholder="name@domain.com"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Sub-Section 3: KYC DETAILS */}
-          <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
-            <div className="border-b border-slate-200 pb-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <span className="h-2 w-1 rounded-full bg-blue-600" />
-                KYC Details
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
-              {/* Left Side Column: PAN Block */}
-              <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
+        {/* Global Notifications & Attendance Banner */}
+        <div className="shrink-0 px-4 sm:px-6 lg:px-8 pt-3 space-y-2 empty:hidden">
+          {!isWorkStarted && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-amber-900 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white font-black text-xs">
+                  ⚠️
+                </div>
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    PAN Number *
-                  </label>
-                  <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
-                    <input
-                      name="panNumber"
-                      value={formData.panNumber}
-                      onChange={handleInputChange}
-                      maxLength={10}
-                      placeholder="ABCDE1234F"
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-normal tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                    />
-                  </div>
-                </div>
-
-                {/* PAN Document Upload Section (Image and PDF) */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700">
-                      Upload PAN Card (Image / PDF)
-                    </span>
-                    {isApplicantPanUploaded && (
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                          Uploaded
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleViewApplicantPan}
-                          className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                        >
-                          View PAN
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                        onChange={handlePanFileChange}
-                      />
-                      <span className="truncate max-w-[200px]">
-                        {panFile ? panFile.name : "Choose File (Image / PDF)"}
-                      </span>
-                    </label>
-
-                    <button
-                      type="button"
-                      disabled={!panFile || uploadPanDocumentMutation.isPending}
-                      onClick={() => uploadPanDocumentMutation.mutate()}
-                      className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                    >
-                      {uploadPanDocumentMutation.isPending
-                        ? "Uploading..."
-                        : "Upload"}
-                    </button>
-                  </div>
-
-                  {panFile && (
-                    <p className="text-[11px] font-medium text-slate-600 truncate">
-                      Selected:{" "}
-                      <span className="font-semibold text-slate-800">
-                        {panFile.name}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Side Column: Aadhaar / Udyam Aadhaar Box */}
-              <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Aadhaar / Udyam Aadhaar (Last 4 Digits) *
-                  </label>
-                  <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
-                    <input
-                      name="aadhaarNumber"
-                      value={formData.aadhaarNumber || ""}
-                      onChange={handleInputChange}
-                      maxLength={4}
-                      inputMode="numeric"
-                      placeholder="e.g. 1234"
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-normal tracking-widest text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                    />
-                  </div>
-                </div>
-
-                {/* Aadhaar / Udyam Aadhaar Document Upload Section (Image and PDF) */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700">
-                      Upload Aadhaar / Udyam (Image / PDF)
-                    </span>
-                    {isApplicantAadhaarUploaded && (
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                          Uploaded
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleViewApplicantAadhaar}
-                          className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                        >
-                          View Aadhaar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                        onChange={handleAadhaarFileChange}
-                      />
-                      <span className="truncate max-w-[200px]">
-                        {aadhaarFile
-                          ? aadhaarFile.name
-                          : "Choose File (Image / PDF)"}
-                      </span>
-                    </label>
-
-                    <button
-                      type="button"
-                      disabled={
-                        !aadhaarFile || uploadAadhaarDocumentMutation.isPending
-                      }
-                      onClick={() => uploadAadhaarDocumentMutation.mutate()}
-                      className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-                    >
-                      {uploadAadhaarDocumentMutation.isPending
-                        ? "Uploading..."
-                        : "Upload"}
-                    </button>
-                  </div>
-
-                  {aadhaarFile && (
-                    <p className="text-[11px] font-medium text-slate-600 truncate">
-                      Selected:{" "}
-                      <span className="font-semibold text-slate-800">
-                        {aadhaarFile.name}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Compact Profile Photo Management Panel */}
-            <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 shadow-3xs">
-                  <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
-                    IMG
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 min-w-0">
-                  <h4 className="text-xs font-bold text-slate-800">
-                    Biometric Photo
+                  <h4 className="text-xs font-bold text-amber-950">
+                    Attendance Punch-In Required
                   </h4>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {isApplicantPhotoUploaded ? (
-                      <>
-                        <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                          Uploaded
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleViewApplicantPhoto}
-                          className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                  <p className="text-[11px] text-amber-800">
+                    Please punch in your attendance before creating or saving
+                    leads.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowStartModal(true)}
+                className="inline-flex items-center justify-center rounded-lg bg-amber-600 hover:bg-amber-700 px-3 py-1 text-xs font-bold text-white shadow-xs transition-all active:scale-95 shrink-0"
+              >
+                Start Work Now ➔
+              </button>
+            </div>
+          )}
+
+          {message && (
+            <div
+              className={`rounded-xl border p-3 text-xs font-semibold shadow-xs ${
+                messageType === "success"
+                  ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                  : "border-rose-100 bg-rose-50 text-rose-700"
+              }`}
+            >
+              {message}
+            </div>
+          )}
+        </div>
+
+        {/* Multi-Step Workspace Grid: Left Stepper Navigation + Right Form Content */}
+        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
+          {/* Left Vertical Stepper Navigation */}
+          <div className="w-full md:w-64 lg:w-72 bg-slate-50/80 border-b md:border-b-0 md:border-r border-slate-200 p-4 sm:p-5 flex md:flex-col justify-start shrink-0 overflow-y-auto">
+            <div className="flex md:flex-col gap-1.5 md:gap-0 w-full relative">
+              {STEPS.map((step, idx) => {
+                const isActive = currentStep === step.id;
+                const isCompleted = currentStep > step.id;
+                return (
+                  <div
+                    key={step.id}
+                    className="relative flex-1 md:flex-initial"
+                  >
+                    {/* Vertical connecting line */}
+                    {idx < STEPS.length - 1 && (
+                      <div
+                        className={`hidden md:block absolute left-4 top-10 bottom-0 w-0.5 -ml-px ${
+                          isCompleted ? "bg-blue-600" : "bg-slate-200"
+                        }`}
+                      />
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentStep(step.id);
+                        document
+                          .getElementById("create-lead-step-scroll-container")
+                          ?.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className={`w-full flex items-center md:items-start gap-3.5 p-2.5 md:p-3 rounded-xl transition-all text-left mb-1 cursor-pointer ${
+                        isActive
+                          ? "bg-blue-50/90 md:bg-white md:shadow-xs border border-blue-200/90 md:border-slate-200/90 ring-1 ring-blue-500/10"
+                          : "hover:bg-slate-100/70"
+                      }`}
+                    >
+                      <div
+                        className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                          isActive
+                            ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-4 ring-blue-100"
+                            : isCompleted
+                              ? "bg-blue-600 text-white"
+                              : "bg-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2.5}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        ) : (
+                          step.id
+                        )}
+                      </div>
+                      <div className="hidden sm:block min-w-0">
+                        <div
+                          className={`text-xs sm:text-sm font-bold truncate ${
+                            isActive
+                              ? "text-blue-600"
+                              : isCompleted
+                                ? "text-slate-900"
+                                : "text-slate-600"
+                          }`}
                         >
-                          View Photo
-                        </button>
-                      </>
+                          {step.title}
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                          {step.subtitle}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right Column: Scrollable Step Form Content + Fixed Bottom Action Bar */}
+          <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-white overflow-hidden">
+            {/* Scrollable Step Form Body */}
+            <div
+              id="create-lead-step-scroll-container"
+              className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6"
+            >
+              {/* Step Section Header */}
+              <div className="pb-4 border-b border-slate-100">
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900">
+                  {STEPS[currentStep - 1]?.headerTitle}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                  {STEPS[currentStep - 1]?.headerDesc}
+                </p>
+              </div>
+
+              {/* STEP 1: BASIC INFORMATION & KYC */}
+              {currentStep === 1 && (
+                <div className="space-y-6">
+                  <Section title="Primary Applicant Information">
+                    {/* Sub-Section 1: BASIC INFORMATION */}
+                    <div className="col-span-full space-y-4">
+                      <div className="border-b border-slate-200 pb-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                          <span className="h-2 w-1 rounded-full bg-blue-600" />
+                          Basic Information
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label={
+                            <>
+                              Customer / Entity Name
+                              <span className="text-red-600 font-bold"> *</span>
+                            </>
+                          }
+                          name="customerName"
+                          value={formData.customerName}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="Enter customer / entity name"
+                        />
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label={
+                            <>
+                              Customer Type
+                              <span className="text-red-600 font-bold"> *</span>
+                            </>
+                          }
+                        >
+                          <Select
+                            name="customerType"
+                            value={formData.customerType || "INDIVIDUAL"}
+                            onChange={handleInputChange}
+                          >
+                            <option value="INDIVIDUAL">Individual</option>
+                            <option value="PROPRIETORSHIP">Proprietor</option>
+                            <option value="PARTNERSHIP">Partnership</option>
+                            <option value="COMPANY">Company</option>
+                          </Select>
+                        </Field>
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label={
+                            <>
+                              Date of Birth
+                              <span className="text-red-600 font-bold"> *</span>
+                            </>
+                          }
+                          type="date"
+                          name="dob"
+                          value={
+                            formData.dob
+                              ? String(formData.dob).slice(0, 10)
+                              : ""
+                          }
+                          onChange={handleInputChange}
+                        />
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="Gender"
+                        >
+                          <Select
+                            name="gender"
+                            value={formData.gender || ""}
+                            onChange={handleInputChange}
+                          >
+                            <option value="">Select Gender</option>
+                            <option value="MALE">Male</option>
+                            <option value="FEMALE">Female</option>
+                            <option value="OTHER">Other</option>
+                          </Select>
+                        </Field>
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="Marital Status"
+                        >
+                          <Select
+                            name="maritalStatus"
+                            value={formData.maritalStatus || ""}
+                            onChange={handleInputChange}
+                          >
+                            <option value="">Select Marital Status</option>
+                            <option value="SINGLE">Single</option>
+                            <option value="MARRIED">Married</option>
+                            <option value="DIVORCED">Divorce</option>
+                            <option value="WIDOWED">Widow</option>
+                          </Select>
+                        </Field>
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="Nationality"
+                        >
+                          <Select
+                            name="nationality"
+                            value={formData.nationality || "INDIAN"}
+                            onChange={handleInputChange}
+                          >
+                            <option value="INDIAN">Indian</option>
+                            <option value="OTHER">Other</option>
+                          </Select>
+                        </Field>
+                      </div>
+                    </div>
+
+                    {/* Sub-Section 2: CONTACT INFORMATION */}
+                    <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
+                      <div className="border-b border-slate-200 pb-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                          <span className="h-2 w-1 rounded-full bg-blue-600" />
+                          Contact Information
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label={
+                            <>
+                              Mobile Number
+                              <span className="text-red-600 font-bold"> *</span>
+                            </>
+                          }
+                          name="mobileNumber"
+                          value={formData.mobileNumber}
+                          onChange={handleInputChange}
+                          maxLength={10}
+                          inputMode="numeric"
+                          required
+                          placeholder="Enter 10-digit number"
+                        />
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label={
+                            <>
+                              Email Id
+                              <span className="text-red-600 font-bold"> *</span>
+                            </>
+                          }
+                          type="email"
+                          name="emailId"
+                          value={formData.emailId || ""}
+                          onChange={handleInputChange}
+                          maxLength={255}
+                          autoComplete="email"
+                          placeholder="name@domain.com"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sub-Section 3: KYC DETAILS */}
+                    <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
+                      <div className="border-b border-slate-200 pb-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                          <span className="h-2 w-1 rounded-full bg-blue-600" />
+                          KYC Details
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
+                        {/* Left Side Column: PAN Block */}
+                        <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
+                          <div>
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                              PAN Number *
+                            </label>
+                            <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
+                              <input
+                                name="panNumber"
+                                value={formData.panNumber}
+                                onChange={handleInputChange}
+                                maxLength={10}
+                                placeholder="ABCDE1234F"
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm uppercase font-normal tracking-wider text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                              />
+                            </div>
+                          </div>
+
+                          {/* PAN Document Upload Section (Image and PDF) */}
+                          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">
+                                Upload PAN Card (Image / PDF)
+                              </span>
+                              {isApplicantPanUploaded && (
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                                    Uploaded
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={handleViewApplicantPan}
+                                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                                  >
+                                    View PAN
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                                  onChange={handlePanFileChange}
+                                />
+                                <span className="truncate max-w-[200px]">
+                                  {panFile
+                                    ? panFile.name
+                                    : "Choose File (Image / PDF)"}
+                                </span>
+                              </label>
+
+                              <button
+                                type="button"
+                                disabled={
+                                  !panFile ||
+                                  uploadPanDocumentMutation.isPending
+                                }
+                                onClick={() =>
+                                  uploadPanDocumentMutation.mutate()
+                                }
+                                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                              >
+                                {uploadPanDocumentMutation.isPending
+                                  ? "Uploading..."
+                                  : "Upload"}
+                              </button>
+                            </div>
+
+                            {panFile && (
+                              <p className="text-[11px] font-medium text-slate-600 truncate">
+                                Selected:{" "}
+                                <span className="font-semibold text-slate-800">
+                                  {panFile.name}
+                                </span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Right Side Column: Aadhaar / Udyam Aadhaar Box */}
+                        <div className="flex flex-col gap-3 rounded-2xl border border-slate-300 bg-white p-3.5 sm:p-4 shadow-2xs">
+                          <div>
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                              Aadhaar / Udyam Aadhaar (Last 4 Digits) *
+                            </label>
+                            <div className="flex items-center gap-2 sm:gap-2.5 mt-1.5">
+                              <input
+                                name="aadhaarNumber"
+                                value={formData.aadhaarNumber || ""}
+                                onChange={handleInputChange}
+                                maxLength={4}
+                                inputMode="numeric"
+                                placeholder="e.g. 1234"
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 sm:px-4 py-2.5 text-sm font-normal tracking-widest text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Aadhaar / Udyam Aadhaar Document Upload Section (Image and PDF) */}
+                          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">
+                                Upload Aadhaar / Udyam (Image / PDF)
+                              </span>
+                              {isApplicantAadhaarUploaded && (
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                                    Uploaded
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={handleViewApplicantAadhaar}
+                                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                                  >
+                                    View Aadhaar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                                  onChange={handleAadhaarFileChange}
+                                />
+                                <span className="truncate max-w-[200px]">
+                                  {aadhaarFile
+                                    ? aadhaarFile.name
+                                    : "Choose File (Image / PDF)"}
+                                </span>
+                              </label>
+
+                              <button
+                                type="button"
+                                disabled={
+                                  !aadhaarFile ||
+                                  uploadAadhaarDocumentMutation.isPending
+                                }
+                                onClick={() =>
+                                  uploadAadhaarDocumentMutation.mutate()
+                                }
+                                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                              >
+                                {uploadAadhaarDocumentMutation.isPending
+                                  ? "Uploading..."
+                                  : "Upload"}
+                              </button>
+                            </div>
+
+                            {aadhaarFile && (
+                              <p className="text-[11px] font-medium text-slate-600 truncate">
+                                Selected:{" "}
+                                <span className="font-semibold text-slate-800">
+                                  {aadhaarFile.name}
+                                </span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Compact Profile Photo Management Panel */}
+                      <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 shadow-3xs">
+                            <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
+                              IMG
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <h4 className="text-xs font-bold text-slate-800">
+                              Biometric Photo
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {isApplicantPhotoUploaded ? (
+                                <>
+                                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                                    Uploaded
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={handleViewApplicantPhoto}
+                                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                                  >
+                                    View Photo
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="inline-flex rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
+                                  Pending
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 w-full sm:w-auto sm:min-w-[210px]">
+                          <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 sm:py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors whitespace-nowrap">
+                            {customerPhotoFile ? "Change" : "Choose File"}
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept=".jpg,.jpeg,.png"
+                              onChange={handleCustomerPhotoChange}
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            disabled={
+                              !customerPhotoFile ||
+                              uploadCustomerPhotoMutation.isPending
+                            }
+                            onClick={() => uploadCustomerPhotoMutation.mutate()}
+                            className="flex-1 rounded-xl bg-blue-600 px-3 py-2.5 sm:py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"
+                          >
+                            {uploadCustomerPhotoMutation.isPending
+                              ? "Uploading..."
+                              : "Upload"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {customerPhotoFile && (
+                        <div className="rounded-xl bg-blue-50/50 px-3 py-1.5 border border-blue-100 text-[11px] font-medium text-blue-700 truncate w-full sm:max-w-sm">
+                          Staged:{" "}
+                          <span className="font-bold">
+                            {customerPhotoFile.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </Section>
+                </div>
+              )}
+
+              {/* STEP 2: EMPLOYMENT, FINANCIALS & RESIDENCE */}
+              {currentStep === 2 && (
+                <div className="space-y-6">
+                  <Section title="Employment & Business Profile">
+                    <div className="col-span-full space-y-5">
+                      {/* Core Business & Profile Inputs */}
+                      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                        <Field label="Occupation">
+                          <Select
+                            name="occupation"
+                            value={formData.occupation || "SELF_EMPLOYED"}
+                            onChange={handleInputChange}
+                          >
+                            <option value="SALARIED">Salaried</option>
+                            <option value="SELF_EMPLOYED">Self Employed</option>
+                            <option value="BUSINESS">Business</option>
+                            <option value="PROFESSIONAL">Professional</option>
+                            <option value="AGRICULTURE">Agriculture</option>
+                            <option value="RETIRED">Retired</option>
+                            <option value="OTHER">Others</option>
+                          </Select>
+                        </Field>
+
+                        <Field label="Constitution">
+                          <Select
+                            name="constitution"
+                            value={formData.constitution || "INDIVIDUAL"}
+                            onChange={handleInputChange}
+                          >
+                            <option value="PROPRIETORSHIP">
+                              Proprietorship
+                            </option>
+                            <option value="PARTNERSHIP">Partnership</option>
+                            <option value="PVT_LTD">Pvt Ltd</option>
+                            <option value="LLP">LLP</option>
+                            <option value="INDIVIDUAL">Individual</option>
+                          </Select>
+                        </Field>
+
+                        <Field
+                          label="Employer / Business Name"
+                          name="businessName"
+                          value={formData.businessName}
+                          onChange={handleInputChange}
+                          placeholder="Enter employer or business name"
+                        />
+
+                        <Field label="Nature of Business">
+                          <Select
+                            name="natureOfBusiness"
+                            value={formData.natureOfBusiness}
+                            onChange={handleInputChange}
+                          >
+                            <option value="">Select Nature of Business</option>
+                            {NATURE_OF_BUSINESS_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+
+                        {formData.natureOfBusiness === "Other" && (
+                          <Field
+                            label="Specify Nature of Business"
+                            name="otherNatureOfBusiness"
+                            value={formData.otherNatureOfBusiness}
+                            onChange={handleInputChange}
+                            placeholder="Enter specific business category"
+                          />
+                        )}
+
+                        <Field
+                          label="Business Vintage"
+                          name="businessVintage"
+                          value={formData.businessVintage}
+                          onChange={handleInputChange}
+                          placeholder="e.g. 5 Years"
+                        />
+
+                        <Field
+                          label="UDYAM Number"
+                          name="udyamNumber"
+                          value={formData.udyamNumber}
+                          onChange={handleInputChange}
+                          placeholder="e.g. UDYAM-MH-01-0012345"
+                          className="uppercase tracking-wider font-normal"
+                        />
+
+                        {/* GST Identification Block */}
+                        <Field label="GST Number">
+                          <input
+                            name="gstNumber"
+                            value={formData.gstNumber}
+                            onChange={handleInputChange}
+                            maxLength={15}
+                            placeholder="22AAAAA0000A1Z5"
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm uppercase tracking-wider text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          />
+                        </Field>
+
+                        <div className="sm:col-span-2 lg:col-span-3">
+                          <Field
+                            label="Business Address"
+                            name="businessAddress"
+                            value={formData.businessAddress}
+                            onChange={handleInputChange}
+                            placeholder="Complete business or office address with landmark"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Monthly Financials Section */}
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 space-y-3">
+                        <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                          <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Monthly Financial Overview
+                          </h5>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                          <Field label="Monthly Income (₹)">
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                                ₹
+                              </span>
+                              <input
+                                type="number"
+                                name="monthlyIncome"
+                                value={formData.monthlyIncome}
+                                onChange={handleInputChange}
+                                placeholder="0.00"
+                                className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-normal text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                              />
+                            </div>
+                          </Field>
+
+                          <Field label="Monthly Sales / Turnover (₹)">
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                                ₹
+                              </span>
+                              <input
+                                type="number"
+                                name="monthlySales"
+                                value={formData.monthlySales}
+                                onChange={handleInputChange}
+                                placeholder="0.00"
+                                className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-normal text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                              />
+                            </div>
+                          </Field>
+
+                          <Field label="Monthly Profit (₹)">
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                                ₹
+                              </span>
+                              <input
+                                type="number"
+                                name="monthlyProfit"
+                                value={formData.monthlyProfit}
+                                onChange={handleInputChange}
+                                placeholder="0.00"
+                                className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-normal text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                              />
+                            </div>
+                          </Field>
+                        </div>
+                      </div>
+
+                      {/* Business Document Verification Cards */}
+                      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        {/* UDYAM Certificate Card */}
+                        <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600">
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                  />
+                                </svg>
+                              </div>
+                              <div className="min-w-0">
+                                <h5 className="text-xs font-bold text-slate-900 truncate">
+                                  UDYAM Certificate
+                                </h5>
+                                <p className="text-[11px] text-slate-500 truncate">
+                                  MSME / Udyam Registration (PDF or Image)
+                                </p>
+                              </div>
+                            </div>
+
+                            {isApplicantUdyamUploaded ? (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                                  Uploaded
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={handleViewApplicantUdyam}
+                                  className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                                >
+                                  View
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
+                                Pending
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                                onChange={handleUdyamFileChange}
+                              />
+                              <span className="truncate max-w-[200px]">
+                                {udyamFile
+                                  ? udyamFile.name
+                                  : "Choose File (PDF / Image)"}
+                              </span>
+                            </label>
+
+                            <button
+                              type="button"
+                              disabled={
+                                !udyamFile ||
+                                uploadUdyamDocumentMutation.isPending
+                              }
+                              onClick={() =>
+                                uploadUdyamDocumentMutation.mutate()
+                              }
+                              className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                            >
+                              {uploadUdyamDocumentMutation.isPending
+                                ? "Uploading..."
+                                : "Upload"}
+                            </button>
+                          </div>
+
+                          {udyamFile && (
+                            <p className="text-[11px] font-medium text-slate-600 truncate">
+                              Selected:{" "}
+                              <span className="font-semibold text-slate-800">
+                                {udyamFile.name}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Business License Card */}
+                        <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600">
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                                  />
+                                </svg>
+                              </div>
+                              <div className="min-w-0">
+                                <h5 className="text-xs font-bold text-slate-900 truncate">
+                                  Business License / Shop Act
+                                </h5>
+                                <p className="text-[11px] text-slate-500 truncate">
+                                  Trade License, Gumasta, or MOA/AOA (PDF or
+                                  Image)
+                                </p>
+                              </div>
+                            </div>
+
+                            {isApplicantBusinessLicenseUploaded ? (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                                  Uploaded
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={handleViewApplicantBusinessLicense}
+                                  className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                                >
+                                  View
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
+                                Pending
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                                onChange={handleBusinessLicenseFileChange}
+                              />
+                              <span className="truncate max-w-[200px]">
+                                {businessLicenseFile
+                                  ? businessLicenseFile.name
+                                  : "Choose File (PDF / Image)"}
+                              </span>
+                            </label>
+
+                            <button
+                              type="button"
+                              disabled={
+                                !businessLicenseFile ||
+                                uploadBusinessLicenseDocumentMutation.isPending
+                              }
+                              onClick={() =>
+                                uploadBusinessLicenseDocumentMutation.mutate()
+                              }
+                              className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                            >
+                              {uploadBusinessLicenseDocumentMutation.isPending
+                                ? "Uploading..."
+                                : "Upload"}
+                            </button>
+                          </div>
+
+                          {businessLicenseFile && (
+                            <p className="text-[11px] font-medium text-slate-600 truncate">
+                              Selected:{" "}
+                              <span className="font-semibold text-slate-800">
+                                {businessLicenseFile.name}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sub-Section 5: ADDRESS DETAILS - RESIDENCE ADDRESS */}
+                    <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
+                      <div className="border-b border-slate-200 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                          <span className="h-2 w-1 rounded-full bg-blue-600" />
+                          5. Address Details
+                        </h4>
+                        <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-100/80 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
+                          Residence Address
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
+                        <Field
+                          containerClassName="md:col-span-2"
+                          label="Address Line 1"
+                          name="residenceAddressLine1"
+                          value={formData.residenceAddressLine1 || ""}
+                          onChange={handleInputChange}
+                          placeholder="House / Flat No., Building Name, Street"
+                        />
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="Address Line 2"
+                          name="residenceAddressLine2"
+                          value={formData.residenceAddressLine2 || ""}
+                          onChange={handleInputChange}
+                          placeholder="Area, Sector, Locality"
+                        />
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="Landmark"
+                          name="residenceLandmark"
+                          value={formData.residenceLandmark || ""}
+                          onChange={handleInputChange}
+                          placeholder="Nearby Landmark"
+                        />
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="City"
+                          name="residenceCity"
+                          value={formData.residenceCity || ""}
+                          onChange={handleInputChange}
+                          placeholder="City"
+                        />
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="District"
+                          name="residenceDistrict"
+                          value={formData.residenceDistrict || ""}
+                          onChange={handleInputChange}
+                          placeholder="District"
+                        />
+
+                        <Field containerClassName="md:col-span-1" label="State">
+                          <Select
+                            name="residenceState"
+                            value={formData.residenceState || ""}
+                            onChange={handleInputChange}
+                            placeholder="Select State"
+                          >
+                            <option value="">Select State</option>
+                            {INDIAN_STATES.map((stateName) => (
+                              <option key={stateName} value={stateName}>
+                                {stateName}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="Pincode"
+                          name="residencePincode"
+                          value={formData.residencePincode || ""}
+                          onChange={handleInputChange}
+                          maxLength={6}
+                          inputMode="numeric"
+                          placeholder="6-digit Pincode"
+                        />
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="Gram Panchayat / Municipal Corporation"
+                        >
+                          <Select
+                            name="gramPanchayatCorporation"
+                            value={formData.gramPanchayatCorporation || ""}
+                            onChange={handleInputChange}
+                            placeholder="Select Option"
+                          >
+                            <option value="">Select Option</option>
+                            {LOCAL_BODY_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+
+                        <Field
+                          containerClassName="md:col-span-1"
+                          label="Residence Type"
+                        >
+                          <Select
+                            name="residenceType"
+                            value={formData.residenceType || ""}
+                            onChange={handleInputChange}
+                            placeholder="Select Residence Type"
+                          >
+                            <option value="">Select Residence Type</option>
+                            {RESIDENCE_TYPE_OPTIONS.map((resType) => (
+                              <option key={resType} value={resType}>
+                                {resType}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+                      </div>
+                    </div>
+                  </Section>
+                </div>
+              )}
+
+              {/* STEP 3: CO-APPLICANTS, REFERENCES & FAMILY */}
+              {currentStep === 3 && (
+                <div className="space-y-6">
+                  {/* Co-Applicants Multi-Card Management Workspace */}
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                          Co-Applicant Details
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          Add up to 3 joint/co-signing applicants to distribute
+                          collateral risk parameters.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddCoApplicant}
+                        disabled={coApplicants.length >= 3}
+                        className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 4.5v15m7.5-7.5h-15"
+                          />
+                        </svg>
+                        Add Co-Applicant
+                      </button>
+                    </div>
+
+                    {coApplicants.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
+                        No co-applicants added. Click the button above to add
+                        financial profile verification cards.
+                      </div>
                     ) : (
-                      <span className="inline-flex rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
-                        Pending
-                      </span>
+                      coApplicants.map((coApp, index) => (
+                        <div key={index} className="relative group">
+                          <Section title={`Co-Applicant Details ${index + 1}`}>
+                            <Field
+                              label="Co-Applicant Name (from PAN) *"
+                              name="name"
+                              value={coApp.name}
+                              readOnly
+                              placeholder="Auto-filled after PAN scan"
+                              required
+                            />
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-semibold text-slate-700">
+                                Mobile Number *
+                              </label>
+                              <div className="flex gap-2">
+                                <input
+                                  name="mobile"
+                                  value={coApp.mobile}
+                                  onChange={(e) =>
+                                    handleCoApplicantChange(index, e)
+                                  }
+                                  maxLength={10}
+                                  inputMode="numeric"
+                                  placeholder="10-digit mobile"
+                                  required
+                                  disabled={coApp.mobileVerified}
+                                  className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleCoApplicantMobileOtp(index)
+                                  }
+                                  disabled={coApp.mobileVerified}
+                                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
+                                >
+                                  {coApp.mobileVerified
+                                    ? "Verified"
+                                    : coApp.mobileOtpSent
+                                      ? "Resend"
+                                      : "Send OTP"}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-semibold text-slate-700">
+                                Email Address *
+                              </label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="email"
+                                  name="email"
+                                  value={coApp.email}
+                                  onChange={(e) =>
+                                    handleCoApplicantChange(index, e)
+                                  }
+                                  placeholder="name@domain.com"
+                                  disabled={coApp.emailVerified}
+                                  className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3.5 py-2 text-sm disabled:bg-slate-50"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleCoApplicantEmailOtp(index)
+                                  }
+                                  disabled={coApp.emailVerified}
+                                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
+                                >
+                                  {coApp.emailVerified
+                                    ? "Verified"
+                                    : coApp.emailOtpSent
+                                      ? "Resend"
+                                      : "Send OTP"}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-semibold text-slate-700">
+                                PAN Number
+                              </label>
+                              <input
+                                name="panNumber"
+                                value={coApp.panNumber}
+                                onChange={(e) =>
+                                  handleCoApplicantChange(index, e)
+                                }
+                                maxLength={10}
+                                placeholder="ABCDE1234F"
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm uppercase text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                              />
+                              <span className="text-[11px] text-slate-500">
+                                Enter PAN manually or upload the card below.
+                                Format: ABCDE1234F.
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleCoApplicantPanVerify(index)
+                                }
+                                disabled={coApp.panVerified}
+                                className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
+                              >
+                                {coApp.panVerified
+                                  ? "PAN Verified"
+                                  : "Verify PAN"}
+                              </button>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-semibold text-slate-700">
+                                PAN Card OCR *
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,application/pdf"
+                                onChange={(e) =>
+                                  updateCoApplicant(index, {
+                                    panFile: e.target.files?.[0] || null,
+                                    panOcrError: "",
+                                  })
+                                }
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleCoApplicantPanOcr(index)}
+                                disabled={coApp.panOcrLoading}
+                                className="rounded-lg border border-blue-600 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50"
+                              >
+                                {coApp.panOcrLoading
+                                  ? "Reading PAN..."
+                                  : "Extract PAN & Name"}
+                              </button>
+                              {coApp.panOcrError && (
+                                <span className="text-[11px] text-rose-600">
+                                  {coApp.panOcrError}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
+                              <label className="text-xs font-semibold text-slate-700">
+                                Identity Verification
+                              </label>
+                              <p className="text-[11px] leading-relaxed text-slate-600">
+                                No Aadhaar number entry is required. A secure
+                                DigiLocker / offline XML verification link will
+                                be sent directly to the co-applicant.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleCoApplicantIdentityLink(index)
+                                }
+                                disabled={
+                                  coApp.identityStatus === "INITIATED" ||
+                                  coApp.identityStatus === "VERIFIED"
+                                }
+                                className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
+                              >
+                                {coApp.identityStatus === "VERIFIED"
+                                  ? "Identity Verified"
+                                  : coApp.identityStatus === "INITIATED"
+                                    ? "Link Sent"
+                                    : "Send Identity Link"}
+                              </button>
+                            </div>
+
+                            <Field label="Relationship Matrix *">
+                              <Select
+                                name="relationship"
+                                value={coApp.relationship}
+                                onChange={(e) =>
+                                  handleCoApplicantChange(index, e)
+                                }
+                              >
+                                <option value="SPOUSE">Spouse</option>
+                                <option value="FATHER">Father</option>
+                                <option value="MOTHER">Mother</option>
+                                <option value="SON">Son</option>
+                                <option value="SIBLING">Sibling</option>
+                              </Select>
+                            </Field>
+
+                            <Field label="Occupation Type">
+                              <Select
+                                name="occupation"
+                                value={coApp.occupation}
+                                onChange={(e) =>
+                                  handleCoApplicantChange(index, e)
+                                }
+                              >
+                                <option value="SELF_EMPLOYED">
+                                  Self-employed
+                                </option>
+                                <option value="SALARIED">
+                                  Salaried Sector
+                                </option>
+                                <option value="BUSINESS">Business</option>
+                                <option value="PROFESSIONAL">
+                                  Professional
+                                </option>
+                                <option value="AGRICULTURE">Agriculture</option>
+                                <option value="OTHER">Others</option>
+                              </Select>
+                            </Field>
+
+                            <Field
+                              label="Verified Monthly Income"
+                              name="monthlyIncome"
+                              type="number"
+                              min="0"
+                              value={coApp.monthlyIncome}
+                              onChange={(e) =>
+                                handleCoApplicantChange(index, e)
+                              }
+                              placeholder="e.g. 50000"
+                            />
+
+                            {/* Action Row containing structural removal handlers */}
+                            <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-2">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCoApplicant(index)}
+                                className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
+                              >
+                                <svg
+                                  className="h-3.5 w-3.5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2.5}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                Remove CoApplicant: {index + 1}
+                              </button>
+                            </div>
+                          </Section>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Contact Persons Multi-Card Management Workspace */}
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                          Reference / Contact Persons
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          Add primary organizational or personal references
+                          associated with this account lead.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddContactPerson}
+                        className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                          />
+                        </svg>
+                        Add Contact Person
+                      </button>
+                    </div>
+
+                    {contactPersons.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
+                        No contact persons added. Click the button above to add
+                        verification reference lines.
+                      </div>
+                    ) : (
+                      contactPersons.map((contact, index) => (
+                        <div key={index} className="relative group">
+                          <Section
+                            title={`Contact Person Reference ${index + 1}`}
+                          >
+                            <Field
+                              label="Reference Name *"
+                              name="name"
+                              value={contact.name}
+                              onChange={(e) =>
+                                handleContactPersonChange(index, e)
+                              }
+                              placeholder="Enter reference name"
+                              required
+                            />
+
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-semibold text-slate-700">
+                                Mobile Number *
+                              </label>
+                              <input
+                                name="mobile"
+                                value={contact.mobile}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                    .replace(/\D/g, "")
+                                    .slice(0, 10);
+                                  handleContactPersonChange(index, {
+                                    target: { name: "mobile", value: val },
+                                  });
+                                }}
+                                maxLength={10}
+                                inputMode="numeric"
+                                placeholder="Enter 10-digit mobile"
+                                required
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                              />
+                            </div>
+
+                            <Field label="Reference Type *">
+                              <Select
+                                name="referenceType"
+                                value={contact.referenceType || "Purchaser"}
+                                onChange={(e) =>
+                                  handleContactPersonChange(index, e)
+                                }
+                                placeholder="Select Reference Type"
+                              >
+                                {REFERENCE_TYPE_OPTIONS.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </Select>
+                            </Field>
+
+                            {/* Action Row containing layout removal button */}
+                            <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-3">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveContactPerson(index)}
+                                className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
+                              >
+                                <svg
+                                  className="h-3.5 w-3.5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2.5}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                Remove Reference
+                              </button>
+                            </div>
+                          </Section>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* 7. Family Details Multi-Card Management Workspace */}
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                          7. Family Details
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          Add family member details associated with the
+                          applicant.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddFamilyMember}
+                        className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 4.5v15m7.5-7.5h-15"
+                          />
+                        </svg>
+                        Add Family Member
+                      </button>
+                    </div>
+
+                    {familyMembers.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
+                        No family members added. Click the button above to add
+                        family details.
+                      </div>
+                    ) : (
+                      familyMembers.map((member, index) => (
+                        <div key={index} className="relative group">
+                          <Section title={`Family Member ${index + 1}`}>
+                            <Field
+                              label="Family Member Name *"
+                              name="name"
+                              value={member.name}
+                              onChange={(e) =>
+                                handleFamilyMemberChange(index, e)
+                              }
+                              placeholder="Enter family member name"
+                              required
+                            />
+
+                            <Field label="Relation *">
+                              <Select
+                                name="relation"
+                                value={member.relation || "Brother"}
+                                onChange={(e) =>
+                                  handleFamilyMemberChange(index, e)
+                                }
+                                placeholder="Select Relation"
+                              >
+                                {FAMILY_RELATION_OPTIONS.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </Select>
+                            </Field>
+
+                            <Field
+                              label="Age"
+                              name="age"
+                              type="number"
+                              min="0"
+                              max="120"
+                              value={member.age}
+                              onChange={(e) =>
+                                handleFamilyMemberChange(index, e)
+                              }
+                              placeholder="Enter age"
+                            />
+
+                            <Field
+                              label="Occupation"
+                              name="occupation"
+                              value={member.occupation}
+                              onChange={(e) =>
+                                handleFamilyMemberChange(index, e)
+                              }
+                              placeholder="Enter occupation"
+                            />
+
+                            <Field
+                              label="Income"
+                              name="income"
+                              type="number"
+                              min="0"
+                              value={member.income}
+                              onChange={(e) =>
+                                handleFamilyMemberChange(index, e)
+                              }
+                              placeholder="Enter income"
+                            />
+
+                            {/* Action Row containing layout removal button */}
+                            <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-1">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFamilyMember(index)}
+                                className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
+                              >
+                                <svg
+                                  className="h-3.5 w-3.5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2.5}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                Remove Family Member
+                              </button>
+                            </div>
+                          </Section>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-center gap-2 w-full sm:w-auto sm:min-w-[210px]">
-                <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 sm:py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors whitespace-nowrap">
-                  {customerPhotoFile ? "Change" : "Choose File"}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={handleCustomerPhotoChange}
-                  />
-                </label>
+              {/* STEP 4: COLLATERAL PROPERTY DETAILS */}
+              {currentStep === 4 && (
+                <div className="space-y-6">
+                  <Section title="8. Property Details (LAP / Mortgage)">
+                    <Field label="Property Owner Name">
+                      <input
+                        name="propertyOwnerName"
+                        value={formData.propertyOwnerName || ""}
+                        onChange={handleInputChange}
+                        placeholder="Enter property owner name"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </Field>
+
+                    <Field label="Relationship With Applicant">
+                      <Select
+                        name="relationshipWithApplicant"
+                        value={formData.relationshipWithApplicant || ""}
+                        onChange={handleInputChange}
+                        placeholder="Select relationship"
+                      >
+                        {PROPERTY_OWNER_RELATION_OPTIONS.map((rel) => (
+                          <option key={rel} value={rel}>
+                            {rel}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Field label="Plot Size">
+                      <input
+                        name="plotSize"
+                        value={formData.plotSize || ""}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 1200 sq yards / 30x40"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </Field>
+
+                    <Field label="Area Sq Ft">
+                      <input
+                        name="areaSqFt"
+                        value={formData.areaSqFt || ""}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 1500"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </Field>
+
+                    <Field
+                      label="Market Value *"
+                      name="propertyValue"
+                      type="number"
+                      min="0"
+                      value={formData.propertyValue}
+                      onChange={handleInputChange}
+                      placeholder="Enter market value"
+                    />
+
+                    <Field
+                      label="Government Value"
+                      name="governmentValue"
+                      type="number"
+                      min="0"
+                      value={formData.governmentValue || ""}
+                      onChange={handleInputChange}
+                      placeholder="Enter government value"
+                    />
+
+                    <Field label="Property Category">
+                      <Select
+                        name="propertyCategory"
+                        value={formData.propertyCategory}
+                        onChange={handleCategoryChange}
+                      >
+                        {PROPERTY_CATEGORY.map((category) => (
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Field label="Property Type *">
+                      <Select
+                        name="propertyType"
+                        value={formData.propertyType}
+                        onChange={handleInputChange}
+                      >
+                        {propertyTypeOptions.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Field label="9. Type of Structure">
+                      <Select
+                        name="typeOfStructure"
+                        value={formData.typeOfStructure || ""}
+                        onChange={handleInputChange}
+                        placeholder="Select structure type"
+                      >
+                        {STRUCTURE_TYPE_OPTIONS.map((struct) => (
+                          <option key={struct} value={struct}>
+                            {struct}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Field label="10. Plot Demarcated">
+                      <Select
+                        name="plotDemarcated"
+                        value={formData.plotDemarcated || ""}
+                        onChange={handleInputChange}
+                        placeholder="Select demarcation status"
+                      >
+                        {PLOT_DEMARCATED_OPTIONS.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Field label="11. Type of Usage of Entire Property">
+                      <Select
+                        name="propertyUsageType"
+                        value={formData.propertyUsageType || ""}
+                        onChange={handleInputChange}
+                        placeholder="Select property usage"
+                      >
+                        {PROPERTY_USAGE_TYPE_OPTIONS.map((usage) => (
+                          <option key={usage} value={usage}>
+                            {usage}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Field label="12. Type of Premises">
+                      <Select
+                        name="premisesType"
+                        value={formData.premisesType || ""}
+                        onChange={handleInputChange}
+                        placeholder="Select premises type"
+                      >
+                        {PREMISES_TYPE_OPTIONS.map((premise) => (
+                          <option key={premise} value={premise}>
+                            {premise}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Field label="13. Property Occupancy (Occupied By)">
+                      <input
+                        name="occupiedBy"
+                        value={formData.occupiedBy || ""}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Owner / Tenant Name / Vacant / Family Member"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </Field>
+
+                    <Field label="14. Construction Details (Construction Status)">
+                      <Select
+                        name="constructionStatus"
+                        value={formData.constructionStatus || ""}
+                        onChange={handleInputChange}
+                        placeholder="Select construction status"
+                      >
+                        {CONSTRUCTION_STATUS_OPTIONS.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <PropertyAddressAutocomplete
+                      propertyAddress={formData.propertyAddress}
+                      city={formData.city}
+                      state={formData.state}
+                      pinCode={formData.pinCode}
+                      onChange={(updatedFields) => {
+                        setFormData((previous) => ({
+                          ...previous,
+                          ...updatedFields,
+                        }));
+                      }}
+                    />
+                  </Section>
+                </div>
+              )}
+
+              {/* STEP 5: ATTACHMENTS & DOCUMENTS */}
+              {currentStep === 5 && (
+                <div className="space-y-6">
+                  <Section title="15. Property Documents">
+                    {/* 1. Sale Deed */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          1. Sale Deed
+                        </span>
+                        {isApplicantSaleDeedUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantSaleDeed}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleSaleDeedFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {saleDeedFile
+                              ? saleDeedFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !saleDeedFile ||
+                            uploadSaleDeedDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadSaleDeedDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadSaleDeedDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {saleDeedFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {saleDeedFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 2. Property Tax Receipt */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          2. Property Tax Receipt
+                        </span>
+                        {isApplicantPropertyTaxReceiptUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantPropertyTaxReceipt}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handlePropertyTaxReceiptFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {propertyTaxReceiptFile
+                              ? propertyTaxReceiptFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !propertyTaxReceiptFile ||
+                            uploadPropertyTaxReceiptDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadPropertyTaxReceiptDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadPropertyTaxReceiptDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {propertyTaxReceiptFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {propertyTaxReceiptFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 3. Khata Certificate */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          3. Khata Certificate
+                        </span>
+                        {isApplicantKhataCertificateUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantKhataCertificate}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleKhataCertificateFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {khataCertificateFile
+                              ? khataCertificateFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !khataCertificateFile ||
+                            uploadKhataCertificateDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadKhataCertificateDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadKhataCertificateDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {khataCertificateFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {khataCertificateFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 4. Survey Sketch */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          4. Survey Sketch
+                        </span>
+                        {isApplicantSurveySketchUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantSurveySketch}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleSurveySketchFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {surveySketchFile
+                              ? surveySketchFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !surveySketchFile ||
+                            uploadSurveySketchDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadSurveySketchDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadSurveySketchDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {surveySketchFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {surveySketchFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 5. EC Certificate */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          5. EC Certificate
+                        </span>
+                        {isApplicantEcCertificateUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantEcCertificate}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleEcCertificateFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {ecCertificateFile
+                              ? ecCertificateFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !ecCertificateFile ||
+                            uploadEcCertificateDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadEcCertificateDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadEcCertificateDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {ecCertificateFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {ecCertificateFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 6. Approval Plan */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          6. Approval Plan
+                        </span>
+                        {isApplicantApprovalPlanUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantApprovalPlan}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleApprovalPlanFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {approvalPlanFile
+                              ? approvalPlanFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !approvalPlanFile ||
+                            uploadApprovalPlanDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadApprovalPlanDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadApprovalPlanDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {approvalPlanFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {approvalPlanFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </Section>
+
+                  <Section title="16. KYC Documents">
+                    {/* 1. Address Proof (Upload) */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          1. Address Proof
+                        </span>
+                        {isApplicantAddressProofUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantAddressProof}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleAddressProofFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {addressProofFile
+                              ? addressProofFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !addressProofFile ||
+                            uploadAddressProofDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadAddressProofDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadAddressProofDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {addressProofFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {addressProofFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 2. Bank Statement (Upload) */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          2. Bank Statement
+                        </span>
+                        {isApplicantBankStatementUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantBankStatement}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleBankStatementFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {bankStatementFile
+                              ? bankStatementFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !bankStatementFile ||
+                            uploadBankStatementDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadBankStatementDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadBankStatementDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {bankStatementFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {bankStatementFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 3. Income Proof (Upload) */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          3. Income Proof
+                        </span>
+                        {isApplicantIncomeProofUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantIncomeProof}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleIncomeProofFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {incomeProofFile
+                              ? incomeProofFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !incomeProofFile ||
+                            uploadIncomeProofDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadIncomeProofDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadIncomeProofDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {incomeProofFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {incomeProofFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* 4. Business Proof (Upload) */}
+                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          4. Business Proof
+                        </span>
+                        {isApplicantBusinessProofUploaded && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
+                              Uploaded
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleViewApplicantBusinessProof}
+                              className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            onChange={handleBusinessProofFileChange}
+                          />
+                          <span className="truncate max-w-[200px]">
+                            {businessProofFile
+                              ? businessProofFile.name
+                              : "Choose File (PDF / Image)"}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          disabled={
+                            !businessProofFile ||
+                            uploadBusinessProofDocumentMutation.isPending
+                          }
+                          onClick={() =>
+                            uploadBusinessProofDocumentMutation.mutate()
+                          }
+                          className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                        >
+                          {uploadBusinessProofDocumentMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
+                        </button>
+                      </div>
+                      {businessProofFile && (
+                        <p className="text-[11px] font-medium text-slate-600 truncate">
+                          Selected:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {businessProofFile.name}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </Section>
+                </div>
+              )}
+
+              {/* STEP 6: REVIEW & FINAL SUBMISSION */}
+              {currentStep === 6 && (
+                <div className="space-y-6">
+                  {/* Verification Summary Banner */}
+                  <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-white p-5 sm:p-6 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 mb-2">
+                          <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+                          Lead Ready for Review
+                        </div>
+                        <h4 className="text-lg font-bold text-slate-900">
+                          {formData.customerName || "Applicant Name Pending"}
+                        </h4>
+                        <p className="text-xs text-slate-600 mt-0.5">
+                          Mobile:{" "}
+                          <span className="font-semibold">
+                            {formData.mobileNumber || "N/A"}
+                          </span>{" "}
+                          • Email:{" "}
+                          <span className="font-semibold">
+                            {formData.emailId || "N/A"}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <span className="text-xs text-slate-500 font-medium">
+                          Estimated Loan Stage
+                        </span>
+                        <div className="text-sm font-bold text-blue-700">
+                          Initial Verification
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lead Review Summary Grid */}
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {/* Card 1: Primary Applicant & KYC */}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-3xs space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="h-3.5 w-1.5 bg-blue-600 rounded-full" />
+                          <h5 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                            1. Applicant & KYC
+                          </h5>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(1)}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Full Name
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.customerName || "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Mobile Number
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.mobileNumber || "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            PAN Number
+                          </dt>
+                          <dd className="font-semibold text-slate-800 font-mono">
+                            {formData.panNumber || "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Aadhaar Number
+                          </dt>
+                          <dd className="font-semibold text-slate-800 font-mono">
+                            {formData.aadhaarNumber
+                              ? `•••• •••• ${formData.aadhaarNumber.slice(-4)}`
+                              : "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Date of Birth
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.dob || "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Gender / Marital
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.gender || "—"} /{" "}
+                            {formData.maritalStatus || "—"}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    {/* Card 2: Employment & Residence */}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-3xs space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="h-3.5 w-1.5 bg-blue-600 rounded-full" />
+                          <h5 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                            2. Employment & Residence
+                          </h5>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(2)}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Occupation
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.occupation || "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Business Name
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.businessName || "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Monthly Income
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.monthlyIncome
+                              ? `₹${Number(formData.monthlyIncome).toLocaleString("en-IN")}`
+                              : "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Residence Type
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.residenceType || "—"}
+                          </dd>
+                        </div>
+                        <div className="col-span-2">
+                          <dt className="text-slate-400 font-medium">
+                            Residence Address
+                          </dt>
+                          <dd className="font-semibold text-slate-800 truncate">
+                            {[
+                              formData.residenceAddressLine1,
+                              formData.residenceAddressLine2,
+                              formData.residenceCity,
+                              formData.residenceState,
+                              formData.residencePincode,
+                            ]
+                              .filter(Boolean)
+                              .join(", ") || "—"}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    {/* Card 3: Co-Applicants & Family */}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-3xs space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="h-3.5 w-1.5 bg-blue-600 rounded-full" />
+                          <h5 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                            3. Co-Applicants & Family
+                          </h5>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(3)}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 font-medium">
+                            Co-Applicants Added:
+                          </span>
+                          <span className="font-bold text-slate-800">
+                            {coApplicants.length} applicant(s)
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 font-medium">
+                            Reference Contacts:
+                          </span>
+                          <span className="font-bold text-slate-800">
+                            {contactPersons.length} contact(s)
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 font-medium">
+                            Family Members:
+                          </span>
+                          <span className="font-bold text-slate-800">
+                            {familyMembers.length} member(s)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 4: Collateral Property */}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-3xs space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="h-3.5 w-1.5 bg-blue-600 rounded-full" />
+                          <h5 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                            4. Collateral Property
+                          </h5>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(4)}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Owner Name
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.propertyOwnerName || "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Property Category
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.propertyCategory || "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Market Value
+                          </dt>
+                          <dd className="font-bold text-blue-600">
+                            {formData.propertyValue
+                              ? `₹${Number(formData.propertyValue).toLocaleString("en-IN")}`
+                              : "—"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400 font-medium">
+                            Area / Sq Ft
+                          </dt>
+                          <dd className="font-semibold text-slate-800">
+                            {formData.areaSqFt
+                              ? `${formData.areaSqFt} sq ft`
+                              : "—"}
+                          </dd>
+                        </div>
+                        <div className="col-span-2">
+                          <dt className="text-slate-400 font-medium">
+                            Property Address
+                          </dt>
+                          <dd className="font-semibold text-slate-800 truncate">
+                            {[
+                              formData.propertyAddress,
+                              formData.city,
+                              formData.state,
+                              formData.pinCode,
+                            ]
+                              .filter(Boolean)
+                              .join(", ") || "—"}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </div>
+
+                  {/* Card 5: Uploaded Documents Verification Checklist */}
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-3xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="h-3.5 w-1.5 bg-blue-600 rounded-full" />
+                        <h5 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                          5. Uploaded Documents Status
+                        </h5>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(5)}
+                        className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                      >
+                        Upload More
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 pt-1">
+                      {[
+                        { label: "PAN Card", ok: isApplicantPanUploaded },
+                        {
+                          label: "Aadhaar Card",
+                          ok: isApplicantAadhaarUploaded,
+                        },
+                        {
+                          label: "Customer Photo",
+                          ok: isApplicantPhotoUploaded,
+                        },
+                        { label: "Sale Deed", ok: isApplicantSaleDeedUploaded },
+                        {
+                          label: "Property Tax Receipt",
+                          ok: isApplicantPropertyTaxReceiptUploaded,
+                        },
+                        {
+                          label: "Khata Certificate",
+                          ok: isApplicantKhataCertificateUploaded,
+                        },
+                        {
+                          label: "Sanction Plan",
+                          ok: isApplicantApprovalPlanUploaded,
+                        },
+                        {
+                          label: "Survey Sketch",
+                          ok: isApplicantSurveySketchUploaded,
+                        },
+                        {
+                          label: "Encumbrance (EC)",
+                          ok: isApplicantEcCertificateUploaded,
+                        },
+                        {
+                          label: "Address Proof",
+                          ok: isApplicantAddressProofUploaded,
+                        },
+                        {
+                          label: "Bank Statement",
+                          ok: isApplicantBankStatementUploaded,
+                        },
+                        {
+                          label: "Income Proof",
+                          ok: isApplicantIncomeProofUploaded,
+                        },
+                        {
+                          label: "Business Proof",
+                          ok: isApplicantBusinessProofUploaded,
+                        },
+                        {
+                          label: "Udyam Certificate",
+                          ok: isApplicantUdyamUploaded,
+                        },
+                        {
+                          label: "Business License",
+                          ok: isApplicantBusinessLicenseUploaded,
+                        },
+                      ].map((doc, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs border ${
+                            doc.ok
+                              ? "bg-emerald-50/70 border-emerald-200 text-emerald-800 font-semibold"
+                              : "bg-slate-50 border-slate-200 text-slate-500 font-normal"
+                          }`}
+                        >
+                          <span className="truncate mr-1">{doc.label}</span>
+                          <span
+                            className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${doc.ok ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}
+                          >
+                            {doc.ok ? "✓" : "Pending"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Declaration & Submission Notice */}
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 text-xs text-blue-900 flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="lead-submit-consent"
+                      defaultChecked
+                      className="h-4 w-4 mt-0.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label
+                      htmlFor="lead-submit-consent"
+                      className="cursor-pointer text-slate-700 leading-relaxed"
+                    >
+                      I confirm that the information and documents provided
+                      above are accurate and verified directly with the
+                      applicant for underwriting loan processing.
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Fixed Bottom Action Footer Bar (Permanently docked at the bottom of the screen) */}
+            <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 border-t border-slate-200 bg-slate-50/90 z-20">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-98 cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={currentStep === 1}
+                  onClick={() => {
+                    setCurrentStep((prev) => Math.max(1, prev - 1));
+                    document
+                      .getElementById("create-lead-step-scroll-container")
+                      ?.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed transition-all active:scale-98 cursor-pointer"
+                >
+                  Previous
+                </button>
 
                 <button
                   type="button"
-                  disabled={
-                    !customerPhotoFile || uploadCustomerPhotoMutation.isPending
-                  }
-                  onClick={() => uploadCustomerPhotoMutation.mutate()}
-                  className="flex-1 rounded-xl bg-blue-600 px-3 py-2.5 sm:py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 transition-all active:scale-98 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 whitespace-nowrap"
+                  onClick={handleSaveDraft}
+                  disabled={isPending || (!isWorkStarted && !applicationId)}
+                  className="rounded-xl border border-blue-200 bg-blue-50/80 px-5 py-2.5 text-xs sm:text-sm font-semibold text-blue-700 shadow-2xs hover:bg-blue-100 disabled:opacity-50 transition-all active:scale-98 cursor-pointer"
                 >
-                  {uploadCustomerPhotoMutation.isPending
-                    ? "Uploading..."
-                    : "Upload"}
+                  {saveNewDraftMutation.isPending ||
+                  updateDraftMutation.isPending
+                    ? "Saving..."
+                    : "Save Draft"}
                 </button>
-              </div>
-            </div>
 
-            {customerPhotoFile && (
-              <div className="rounded-xl bg-blue-50/50 px-3 py-1.5 border border-blue-100 text-[11px] font-medium text-blue-700 truncate w-full sm:max-w-sm">
-                Staged:{" "}
-                <span className="font-bold">{customerPhotoFile.name}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Sub-Section 4: EMPLOYMENT & BUSINESS INFORMATION */}
-          <div className="col-span-full space-y-5 pt-3 border-t border-slate-100">
-            <div className="border-b border-slate-200 pb-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <span className="h-2 w-1 rounded-full bg-blue-600" />
-                Employment &amp; Business Information
-              </h4>
-            </div>
-
-            {/* Core Business & Profile Inputs */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="Occupation">
-                <Select
-                  name="occupation"
-                  value={formData.occupation || "SELF_EMPLOYED"}
-                  onChange={handleInputChange}
-                >
-                  <option value="SALARIED">Salaried</option>
-                  <option value="SELF_EMPLOYED">Self Employed</option>
-                  <option value="BUSINESS">Business</option>
-                  <option value="PROFESSIONAL">Professional</option>
-                  <option value="AGRICULTURE">Agriculture</option>
-                  <option value="RETIRED">Retired</option>
-                  <option value="OTHER">Others</option>
-                </Select>
-              </Field>
-
-              <Field label="Constitution">
-                <Select
-                  name="constitution"
-                  value={formData.constitution || "INDIVIDUAL"}
-                  onChange={handleInputChange}
-                >
-                  <option value="PROPRIETORSHIP">Proprietorship</option>
-                  <option value="PARTNERSHIP">Partnership</option>
-                  <option value="PVT_LTD">Pvt Ltd</option>
-                  <option value="LLP">LLP</option>
-                  <option value="INDIVIDUAL">Individual</option>
-                </Select>
-              </Field>
-
-              <Field
-                label="Employer / Business Name"
-                name="businessName"
-                value={formData.businessName}
-                onChange={handleInputChange}
-                placeholder="Enter employer or business name"
-              />
-
-              <Field label="Nature of Business">
-                <Select
-                  name="natureOfBusiness"
-                  value={formData.natureOfBusiness}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Nature of Business</option>
-                  {NATURE_OF_BUSINESS_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-
-              {formData.natureOfBusiness === "Other" && (
-                <Field
-                  label="Specify Nature of Business"
-                  name="otherNatureOfBusiness"
-                  value={formData.otherNatureOfBusiness}
-                  onChange={handleInputChange}
-                  placeholder="Enter specific business category"
-                />
-              )}
-
-              <Field
-                label="Business Vintage"
-                name="businessVintage"
-                value={formData.businessVintage}
-                onChange={handleInputChange}
-                placeholder="e.g. 5 Years"
-              />
-
-              <Field
-                label="UDYAM Number"
-                name="udyamNumber"
-                value={formData.udyamNumber}
-                onChange={handleInputChange}
-                placeholder="e.g. UDYAM-MH-01-0012345"
-                className="uppercase tracking-wider font-normal"
-              />
-
-              {/* GST Identification Block */}
-              <Field label="GST Number">
-                <input
-                  name="gstNumber"
-                  value={formData.gstNumber}
-                  onChange={handleInputChange}
-                  maxLength={15}
-                  placeholder="22AAAAA0000A1Z5"
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm uppercase tracking-wider text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                />
-              </Field>
-
-              <div className="sm:col-span-2 lg:col-span-3">
-                <Field
-                  label="Business Address"
-                  name="businessAddress"
-                  value={formData.businessAddress}
-                  onChange={handleInputChange}
-                  placeholder="Complete business or office address with landmark"
-                />
-              </div>
-            </div>
-
-            {/* Monthly Financials Section */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 space-y-3">
-              <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Monthly Financial Overview
-                </h5>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Field label="Monthly Income (₹)">
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                      ₹
-                    </span>
-                    <input
-                      type="number"
-                      name="monthlyIncome"
-                      value={formData.monthlyIncome}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-normal text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
-                </Field>
-
-                <Field label="Monthly Sales / Turnover (₹)">
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                      ₹
-                    </span>
-                    <input
-                      type="number"
-                      name="monthlySales"
-                      value={formData.monthlySales}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-normal text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
-                </Field>
-
-                <Field label="Monthly Profit (₹)">
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                      ₹
-                    </span>
-                    <input
-                      type="number"
-                      name="monthlyProfit"
-                      value={formData.monthlyProfit}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      className="w-full rounded-lg border border-slate-300 bg-white pl-7 pr-3.5 py-2.5 text-sm font-normal text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
-                </Field>
-              </div>
-            </div>
-
-            {/* Business Document Verification Cards */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {/* UDYAM Certificate Card */}
-              <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0">
-                      <h5 className="text-xs font-bold text-slate-900 truncate">
-                        UDYAM Certificate
-                      </h5>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        MSME / Udyam Registration (PDF or Image)
-                      </p>
-                    </div>
-                  </div>
-
-                  {isApplicantUdyamUploaded ? (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                        Uploaded
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleViewApplicantUdyam}
-                        className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                      >
-                        View
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
-                      Pending
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                      onChange={handleUdyamFileChange}
-                    />
-                    <span className="truncate max-w-[200px]">
-                      {udyamFile ? udyamFile.name : "Choose File (PDF / Image)"}
-                    </span>
-                  </label>
-
+                {currentStep < 6 ? (
                   <button
                     type="button"
-                    disabled={!udyamFile || uploadUdyamDocumentMutation.isPending}
-                    onClick={() => uploadUdyamDocumentMutation.mutate()}
-                    className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                    onClick={() => {
+                      setCurrentStep((prev) => Math.min(6, prev + 1));
+                      document
+                        .getElementById("create-lead-step-scroll-container")
+                        ?.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-98 cursor-pointer"
                   >
-                    {uploadUdyamDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                    <span>Next</span>
+                    <span className="text-sm">→</span>
                   </button>
-                </div>
-
-                {udyamFile && (
-                  <p className="text-[11px] font-medium text-slate-600 truncate">
-                    Selected: <span className="font-semibold text-slate-800">{udyamFile.name}</span>
-                  </p>
-                )}
-              </div>
-
-              {/* Business License Card */}
-              <div className="flex flex-col justify-between gap-3.5 rounded-2xl border border-slate-300 bg-white p-4 shadow-2xs">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0">
-                      <h5 className="text-xs font-bold text-slate-900 truncate">
-                        Business License / Shop Act
-                      </h5>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        Trade License, Gumasta, or MOA/AOA (PDF or Image)
-                      </p>
-                    </div>
-                  </div>
-
-                  {isApplicantBusinessLicenseUploaded ? (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                        Uploaded
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleViewApplicantBusinessLicense}
-                        className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                      >
-                        View
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-100">
-                      Pending
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                      onChange={handleBusinessLicenseFileChange}
-                    />
-                    <span className="truncate max-w-[200px]">
-                      {businessLicenseFile ? businessLicenseFile.name : "Choose File (PDF / Image)"}
-                    </span>
-                  </label>
-
+                ) : (
                   <button
                     type="button"
-                    disabled={!businessLicenseFile || uploadBusinessLicenseDocumentMutation.isPending}
-                    onClick={() => uploadBusinessLicenseDocumentMutation.mutate()}
-                    className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
+                    onClick={handleSubmitForReview}
+                    disabled={isPending || (!isWorkStarted && !applicationId)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-700 disabled:bg-slate-300 transition-all active:scale-98 cursor-pointer"
                   >
-                    {uploadBusinessLicenseDocumentMutation.isPending ? "Uploading..." : "Upload"}
+                    <span>
+                      {submitDraftMutation.isPending
+                        ? "Submitting..."
+                        : "Submit for Underwriting"}
+                    </span>
+                    <span>🚀</span>
                   </button>
-                </div>
-
-                {businessLicenseFile && (
-                  <p className="text-[11px] font-medium text-slate-600 truncate">
-                    Selected: <span className="font-semibold text-slate-800">{businessLicenseFile.name}</span>
-                  </p>
                 )}
               </div>
             </div>
           </div>
-
-          {/* Sub-Section 5: ADDRESS DETAILS - RESIDENCE ADDRESS */}
-          <div className="col-span-full space-y-4 pt-3 border-t border-slate-100">
-            <div className="border-b border-slate-200 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <span className="h-2 w-1 rounded-full bg-blue-600" />
-                5. Address Details
-              </h4>
-              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-100/80 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
-                Residence Address
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
-              <Field
-                containerClassName="md:col-span-2"
-                label="Address Line 1"
-                name="residenceAddressLine1"
-                value={formData.residenceAddressLine1 || ""}
-                onChange={handleInputChange}
-                placeholder="House / Flat No., Building Name, Street"
-              />
-
-              <Field
-                containerClassName="md:col-span-1"
-                label="Address Line 2"
-                name="residenceAddressLine2"
-                value={formData.residenceAddressLine2 || ""}
-                onChange={handleInputChange}
-                placeholder="Area, Sector, Locality"
-              />
-
-              <Field
-                containerClassName="md:col-span-1"
-                label="Landmark"
-                name="residenceLandmark"
-                value={formData.residenceLandmark || ""}
-                onChange={handleInputChange}
-                placeholder="Nearby Landmark"
-              />
-
-              <Field
-                containerClassName="md:col-span-1"
-                label="City"
-                name="residenceCity"
-                value={formData.residenceCity || ""}
-                onChange={handleInputChange}
-                placeholder="City"
-              />
-
-              <Field
-                containerClassName="md:col-span-1"
-                label="District"
-                name="residenceDistrict"
-                value={formData.residenceDistrict || ""}
-                onChange={handleInputChange}
-                placeholder="District"
-              />
-
-              <Field containerClassName="md:col-span-1" label="State">
-                <Select
-                  name="residenceState"
-                  value={formData.residenceState || ""}
-                  onChange={handleInputChange}
-                  placeholder="Select State"
-                >
-                  <option value="">Select State</option>
-                  {INDIAN_STATES.map((stateName) => (
-                    <option key={stateName} value={stateName}>
-                      {stateName}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-
-              <Field
-                containerClassName="md:col-span-1"
-                label="Pincode"
-                name="residencePincode"
-                value={formData.residencePincode || ""}
-                onChange={handleInputChange}
-                maxLength={6}
-                inputMode="numeric"
-                placeholder="6-digit Pincode"
-              />
-
-              <Field
-                containerClassName="md:col-span-1"
-                label="Gram Panchayat / Municipal Corporation"
-              >
-                <Select
-                  name="gramPanchayatCorporation"
-                  value={formData.gramPanchayatCorporation || ""}
-                  onChange={handleInputChange}
-                  placeholder="Select Option"
-                >
-                  <option value="">Select Option</option>
-                  {LOCAL_BODY_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-
-              <Field
-                containerClassName="md:col-span-1"
-                label="Residence Type"
-              >
-                <Select
-                  name="residenceType"
-                  value={formData.residenceType || ""}
-                  onChange={handleInputChange}
-                  placeholder="Select Residence Type"
-                >
-                  <option value="">Select Residence Type</option>
-                  {RESIDENCE_TYPE_OPTIONS.map((resType) => (
-                    <option key={resType} value={resType}>
-                      {resType}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          </div>
-        </Section>
-
-        {/* Co-Applicants Multi-Card Management Workspace */}
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
-            <div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
-                Co-Applicant Details
-              </h4>
-              <p className="text-xs text-slate-500">
-                Add up to 3 joint/co-signing applicants to distribute collateral
-                risk parameters.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleAddCoApplicant}
-              disabled={coApplicants.length >= 3}
-              className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.5v15m7.5-7.5h-15"
-                />
-              </svg>
-              Add Co-Applicant
-            </button>
-          </div>
-
-          {coApplicants.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
-              No co-applicants added. Click the button above to add financial
-              profile verification cards.
-            </div>
-          ) : (
-            coApplicants.map((coApp, index) => (
-              <div key={index} className="relative group">
-                <Section title={`Co-Applicant Details ${index + 1}`}>
-                  <Field
-                    label="Co-Applicant Name (from PAN) *"
-                    name="name"
-                    value={coApp.name}
-                    readOnly
-                    placeholder="Auto-filled after PAN scan"
-                    required
-                  />
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Mobile Number *
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        name="mobile"
-                        value={coApp.mobile}
-                        onChange={(e) => handleCoApplicantChange(index, e)}
-                        maxLength={10}
-                        inputMode="numeric"
-                        placeholder="10-digit mobile"
-                        required
-                        disabled={coApp.mobileVerified}
-                        className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleCoApplicantMobileOtp(index)}
-                        disabled={coApp.mobileVerified}
-                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
-                      >
-                        {coApp.mobileVerified
-                          ? "Verified"
-                          : coApp.mobileOtpSent
-                            ? "Resend"
-                            : "Send OTP"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Email Address *
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="email"
-                        name="email"
-                        value={coApp.email}
-                        onChange={(e) => handleCoApplicantChange(index, e)}
-                        placeholder="name@domain.com"
-                        disabled={coApp.emailVerified}
-                        className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3.5 py-2 text-sm disabled:bg-slate-50"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleCoApplicantEmailOtp(index)}
-                        disabled={coApp.emailVerified}
-                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
-                      >
-                        {coApp.emailVerified
-                          ? "Verified"
-                          : coApp.emailOtpSent
-                            ? "Resend"
-                            : "Send OTP"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      PAN Number
-                    </label>
-                    <input
-                      name="panNumber"
-                      value={coApp.panNumber}
-                      onChange={(e) => handleCoApplicantChange(index, e)}
-                      maxLength={10}
-                      placeholder="ABCDE1234F"
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm uppercase text-slate-900 shadow-xs outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                    />
-                    <span className="text-[11px] text-slate-500">
-                      Enter PAN manually or upload the card below. Format:
-                      ABCDE1234F.
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCoApplicantPanVerify(index)}
-                      disabled={coApp.panVerified}
-                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
-                    >
-                      {coApp.panVerified ? "PAN Verified" : "Verify PAN"}
-                    </button>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      PAN Card OCR *
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,application/pdf"
-                      onChange={(e) =>
-                        updateCoApplicant(index, {
-                          panFile: e.target.files?.[0] || null,
-                          panOcrError: "",
-                        })
-                      }
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleCoApplicantPanOcr(index)}
-                      disabled={coApp.panOcrLoading}
-                      className="rounded-lg border border-blue-600 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50"
-                    >
-                      {coApp.panOcrLoading
-                        ? "Reading PAN..."
-                        : "Extract PAN & Name"}
-                    </button>
-                    {coApp.panOcrError && (
-                      <span className="text-[11px] text-rose-600">
-                        {coApp.panOcrError}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-1.5 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Identity Verification
-                    </label>
-                    <p className="text-[11px] leading-relaxed text-slate-600">
-                      No Aadhaar number entry is required. A secure DigiLocker /
-                      offline XML verification link will be sent directly to the
-                      co-applicant.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => handleCoApplicantIdentityLink(index)}
-                      disabled={
-                        coApp.identityStatus === "INITIATED" ||
-                        coApp.identityStatus === "VERIFIED"
-                      }
-                      className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
-                    >
-                      {coApp.identityStatus === "VERIFIED"
-                        ? "Identity Verified"
-                        : coApp.identityStatus === "INITIATED"
-                          ? "Link Sent"
-                          : "Send Identity Link"}
-                    </button>
-                  </div>
-
-                  <Field label="Relationship Matrix *">
-                    <Select
-                      name="relationship"
-                      value={coApp.relationship}
-                      onChange={(e) => handleCoApplicantChange(index, e)}
-                    >
-                      <option value="SPOUSE">Spouse</option>
-                      <option value="FATHER">Father</option>
-                      <option value="MOTHER">Mother</option>
-                      <option value="SON">Son</option>
-                      <option value="SIBLING">Sibling</option>
-                    </Select>
-                  </Field>
-
-                  <Field label="Occupation Type">
-                    <Select
-                      name="occupation"
-                      value={coApp.occupation}
-                      onChange={(e) => handleCoApplicantChange(index, e)}
-                    >
-                      <option value="SELF_EMPLOYED">Self-employed</option>
-                      <option value="SALARIED">Salaried Sector</option>
-                      <option value="BUSINESS">Business</option>
-                      <option value="PROFESSIONAL">Professional</option>
-                      <option value="AGRICULTURE">Agriculture</option>
-                      <option value="OTHER">Others</option>
-                    </Select>
-                  </Field>
-
-                  <Field
-                    label="Verified Monthly Income"
-                    name="monthlyIncome"
-                    type="number"
-                    min="0"
-                    value={coApp.monthlyIncome}
-                    onChange={(e) => handleCoApplicantChange(index, e)}
-                    placeholder="e.g. 50000"
-                  />
-
-                  {/* Action Row containing structural removal handlers */}
-                  <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-2">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCoApplicant(index)}
-                      className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
-                    >
-                      <svg
-                        className="h-3.5 w-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2.5}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                      Remove CoApplicant: {index + 1}
-                    </button>
-                  </div>
-                </Section>
-              </div>
-            ))
-          )}
         </div>
-
-        {/* Contact Persons Multi-Card Management Workspace */}
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
-            <div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
-                Reference / Contact Persons
-              </h4>
-              <p className="text-xs text-slate-500">
-                Add primary organizational or personal references associated
-                with this account lead.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleAddContactPerson}
-              className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                />
-              </svg>
-              Add Contact Person
-            </button>
-          </div>
-
-          {contactPersons.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
-              No contact persons added. Click the button above to add
-              verification reference lines.
-            </div>
-          ) : (
-            contactPersons.map((contact, index) => (
-              <div key={index} className="relative group">
-                <Section title={`Contact Person Reference ${index + 1}`}>
-                  <Field
-                    label="Reference Name *"
-                    name="name"
-                    value={contact.name}
-                    onChange={(e) => handleContactPersonChange(index, e)}
-                    placeholder="Enter reference name"
-                    required
-                  />
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Mobile Number *
-                    </label>
-                    <input
-                      name="mobile"
-                      value={contact.mobile}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                        handleContactPersonChange(index, {
-                          target: { name: "mobile", value: val },
-                        });
-                      }}
-                      maxLength={10}
-                      inputMode="numeric"
-                      placeholder="Enter 10-digit mobile"
-                      required
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
-
-                  <Field label="Reference Type *">
-                    <Select
-                      name="referenceType"
-                      value={contact.referenceType || "Purchaser"}
-                      onChange={(e) => handleContactPersonChange(index, e)}
-                      placeholder="Select Reference Type"
-                    >
-                      {REFERENCE_TYPE_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-
-                  {/* Action Row containing layout removal button */}
-                  <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-3">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveContactPerson(index)}
-                      className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
-                    >
-                      <svg
-                        className="h-3.5 w-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2.5}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                      Remove Reference
-                    </button>
-                  </div>
-                </Section>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* 7. Family Details Multi-Card Management Workspace */}
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
-            <div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
-                7. Family Details
-              </h4>
-              <p className="text-xs text-slate-500">
-                Add family member details associated with the applicant.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleAddFamilyMember}
-              className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.5v15m7.5-7.5h-15"
-                />
-              </svg>
-              Add Family Member
-            </button>
-          </div>
-
-          {familyMembers.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
-              No family members added. Click the button above to add family details.
-            </div>
-          ) : (
-            familyMembers.map((member, index) => (
-              <div key={index} className="relative group">
-                <Section title={`Family Member ${index + 1}`}>
-                  <Field
-                    label="Family Member Name *"
-                    name="name"
-                    value={member.name}
-                    onChange={(e) => handleFamilyMemberChange(index, e)}
-                    placeholder="Enter family member name"
-                    required
-                  />
-
-                  <Field label="Relation *">
-                    <Select
-                      name="relation"
-                      value={member.relation || "Brother"}
-                      onChange={(e) => handleFamilyMemberChange(index, e)}
-                      placeholder="Select Relation"
-                    >
-                      {FAMILY_RELATION_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-
-                  <Field
-                    label="Age"
-                    name="age"
-                    type="number"
-                    min="0"
-                    max="120"
-                    value={member.age}
-                    onChange={(e) => handleFamilyMemberChange(index, e)}
-                    placeholder="Enter age"
-                  />
-
-                  <Field
-                    label="Occupation"
-                    name="occupation"
-                    value={member.occupation}
-                    onChange={(e) => handleFamilyMemberChange(index, e)}
-                    placeholder="Enter occupation"
-                  />
-
-                  <Field
-                    label="Income"
-                    name="income"
-                    type="number"
-                    min="0"
-                    value={member.income}
-                    onChange={(e) => handleFamilyMemberChange(index, e)}
-                    placeholder="Enter income"
-                  />
-
-                  {/* Action Row containing layout removal button */}
-                  <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-1">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFamilyMember(index)}
-                      className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
-                    >
-                      <svg
-                        className="h-3.5 w-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2.5}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                      Remove Family Member
-                    </button>
-                  </div>
-                </Section>
-              </div>
-            ))
-          )}
-        </div>
-
-        <Section title="8. Property Details (LAP / Mortgage)">
-          <Field label="Property Owner Name">
-            <input
-              name="propertyOwnerName"
-              value={formData.propertyOwnerName || ""}
-              onChange={handleInputChange}
-              placeholder="Enter property owner name"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-          </Field>
-
-          <Field label="Relationship With Applicant">
-            <Select
-              name="relationshipWithApplicant"
-              value={formData.relationshipWithApplicant || ""}
-              onChange={handleInputChange}
-              placeholder="Select relationship"
-            >
-              {PROPERTY_OWNER_RELATION_OPTIONS.map((rel) => (
-                <option key={rel} value={rel}>
-                  {rel}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="Plot Size">
-            <input
-              name="plotSize"
-              value={formData.plotSize || ""}
-              onChange={handleInputChange}
-              placeholder="e.g. 1200 sq yards / 30x40"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-          </Field>
-
-          <Field label="Area Sq Ft">
-            <input
-              name="areaSqFt"
-              value={formData.areaSqFt || ""}
-              onChange={handleInputChange}
-              placeholder="e.g. 1500"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-          </Field>
-
-          <Field
-            label="Market Value *"
-            name="propertyValue"
-            type="number"
-            min="0"
-            value={formData.propertyValue}
-            onChange={handleInputChange}
-            placeholder="Enter market value"
-          />
-
-          <Field
-            label="Government Value"
-            name="governmentValue"
-            type="number"
-            min="0"
-            value={formData.governmentValue || ""}
-            onChange={handleInputChange}
-            placeholder="Enter government value"
-          />
-
-          <Field label="Property Category">
-            <Select
-              name="propertyCategory"
-              value={formData.propertyCategory}
-              onChange={handleCategoryChange}
-            >
-              {PROPERTY_CATEGORY.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="Property Type *">
-            <Select
-              name="propertyType"
-              value={formData.propertyType}
-              onChange={handleInputChange}
-            >
-              {propertyTypeOptions.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="9. Type of Structure">
-            <Select
-              name="typeOfStructure"
-              value={formData.typeOfStructure || ""}
-              onChange={handleInputChange}
-              placeholder="Select structure type"
-            >
-              {STRUCTURE_TYPE_OPTIONS.map((struct) => (
-                <option key={struct} value={struct}>
-                  {struct}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="10. Plot Demarcated">
-            <Select
-              name="plotDemarcated"
-              value={formData.plotDemarcated || ""}
-              onChange={handleInputChange}
-              placeholder="Select demarcation status"
-            >
-              {PLOT_DEMARCATED_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="11. Type of Usage of Entire Property">
-            <Select
-              name="propertyUsageType"
-              value={formData.propertyUsageType || ""}
-              onChange={handleInputChange}
-              placeholder="Select property usage"
-            >
-              {PROPERTY_USAGE_TYPE_OPTIONS.map((usage) => (
-                <option key={usage} value={usage}>
-                  {usage}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="12. Type of Premises">
-            <Select
-              name="premisesType"
-              value={formData.premisesType || ""}
-              onChange={handleInputChange}
-              placeholder="Select premises type"
-            >
-              {PREMISES_TYPE_OPTIONS.map((premise) => (
-                <option key={premise} value={premise}>
-                  {premise}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="13. Property Occupancy (Occupied By)">
-            <input
-              name="occupiedBy"
-              value={formData.occupiedBy || ""}
-              onChange={handleInputChange}
-              placeholder="e.g. Owner / Tenant Name / Vacant / Family Member"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-          </Field>
-
-          <Field label="14. Construction Details (Construction Status)">
-            <Select
-              name="constructionStatus"
-              value={formData.constructionStatus || ""}
-              onChange={handleInputChange}
-              placeholder="Select construction status"
-            >
-              {CONSTRUCTION_STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <PropertyAddressAutocomplete
-            propertyAddress={formData.propertyAddress}
-            city={formData.city}
-            state={formData.state}
-            pinCode={formData.pinCode}
-            onChange={(updatedFields) => {
-              setFormData((previous) => ({
-                ...previous,
-                ...updatedFields,
-              }));
-            }}
-          />
-        </Section>
-
-        <Section title="15. Property Documents">
-          {/* 1. Sale Deed */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">1. Sale Deed</span>
-              {isApplicantSaleDeedUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantSaleDeed}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handleSaleDeedFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {saleDeedFile ? saleDeedFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!saleDeedFile || uploadSaleDeedDocumentMutation.isPending}
-                onClick={() => uploadSaleDeedDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadSaleDeedDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {saleDeedFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{saleDeedFile.name}</span>
-              </p>
-            )}
-          </div>
-
-          {/* 2. Property Tax Receipt */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">2. Property Tax Receipt</span>
-              {isApplicantPropertyTaxReceiptUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantPropertyTaxReceipt}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handlePropertyTaxReceiptFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {propertyTaxReceiptFile ? propertyTaxReceiptFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!propertyTaxReceiptFile || uploadPropertyTaxReceiptDocumentMutation.isPending}
-                onClick={() => uploadPropertyTaxReceiptDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadPropertyTaxReceiptDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {propertyTaxReceiptFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{propertyTaxReceiptFile.name}</span>
-              </p>
-            )}
-          </div>
-
-          {/* 3. Khata Certificate */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">3. Khata Certificate</span>
-              {isApplicantKhataCertificateUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantKhataCertificate}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handleKhataCertificateFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {khataCertificateFile ? khataCertificateFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!khataCertificateFile || uploadKhataCertificateDocumentMutation.isPending}
-                onClick={() => uploadKhataCertificateDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadKhataCertificateDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {khataCertificateFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{khataCertificateFile.name}</span>
-              </p>
-            )}
-          </div>
-
-          {/* 4. Survey Sketch */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">4. Survey Sketch</span>
-              {isApplicantSurveySketchUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantSurveySketch}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handleSurveySketchFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {surveySketchFile ? surveySketchFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!surveySketchFile || uploadSurveySketchDocumentMutation.isPending}
-                onClick={() => uploadSurveySketchDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadSurveySketchDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {surveySketchFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{surveySketchFile.name}</span>
-              </p>
-            )}
-          </div>
-
-          {/* 5. EC Certificate */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">5. EC Certificate</span>
-              {isApplicantEcCertificateUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantEcCertificate}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handleEcCertificateFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {ecCertificateFile ? ecCertificateFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!ecCertificateFile || uploadEcCertificateDocumentMutation.isPending}
-                onClick={() => uploadEcCertificateDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadEcCertificateDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {ecCertificateFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{ecCertificateFile.name}</span>
-              </p>
-            )}
-          </div>
-
-          {/* 6. Approval Plan */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">6. Approval Plan</span>
-              {isApplicantApprovalPlanUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantApprovalPlan}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handleApprovalPlanFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {approvalPlanFile ? approvalPlanFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!approvalPlanFile || uploadApprovalPlanDocumentMutation.isPending}
-                onClick={() => uploadApprovalPlanDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadApprovalPlanDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {approvalPlanFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{approvalPlanFile.name}</span>
-              </p>
-            )}
-          </div>
-        </Section>
-
-        <Section title="16. KYC Documents">
-          {/* 1. Address Proof (Upload) */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">1. Address Proof</span>
-              {isApplicantAddressProofUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantAddressProof}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handleAddressProofFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {addressProofFile ? addressProofFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!addressProofFile || uploadAddressProofDocumentMutation.isPending}
-                onClick={() => uploadAddressProofDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadAddressProofDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {addressProofFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{addressProofFile.name}</span>
-              </p>
-            )}
-          </div>
-
-          {/* 2. Bank Statement (Upload) */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">2. Bank Statement</span>
-              {isApplicantBankStatementUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantBankStatement}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handleBankStatementFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {bankStatementFile ? bankStatementFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!bankStatementFile || uploadBankStatementDocumentMutation.isPending}
-                onClick={() => uploadBankStatementDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadBankStatementDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {bankStatementFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{bankStatementFile.name}</span>
-              </p>
-            )}
-          </div>
-
-          {/* 3. Income Proof (Upload) */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">3. Income Proof</span>
-              {isApplicantIncomeProofUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantIncomeProof}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handleIncomeProofFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {incomeProofFile ? incomeProofFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!incomeProofFile || uploadIncomeProofDocumentMutation.isPending}
-                onClick={() => uploadIncomeProofDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadIncomeProofDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {incomeProofFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{incomeProofFile.name}</span>
-              </p>
-            )}
-          </div>
-
-          {/* 4. Business Proof (Upload) */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">4. Business Proof</span>
-              {isApplicantBusinessProofUploaded && (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-100">
-                    Uploaded
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleViewApplicantBusinessProof}
-                    className="text-[10px] font-bold text-blue-600 hover:underline transition-all"
-                  >
-                    View
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex-1 inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-3xs hover:bg-slate-50 transition-colors truncate">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={handleBusinessProofFileChange}
-                />
-                <span className="truncate max-w-[200px]">
-                  {businessProofFile ? businessProofFile.name : "Choose File (PDF / Image)"}
-                </span>
-              </label>
-              <button
-                type="button"
-                disabled={!businessProofFile || uploadBusinessProofDocumentMutation.isPending}
-                onClick={() => uploadBusinessProofDocumentMutation.mutate()}
-                className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-98"
-              >
-                {uploadBusinessProofDocumentMutation.isPending ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {businessProofFile && (
-              <p className="text-[11px] font-medium text-slate-600 truncate">
-                Selected: <span className="font-semibold text-slate-800">{businessProofFile.name}</span>
-              </p>
-            )}
-          </div>
-        </Section>
       </div>
     </div>
   );
