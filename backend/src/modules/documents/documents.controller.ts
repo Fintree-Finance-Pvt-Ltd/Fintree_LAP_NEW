@@ -140,18 +140,28 @@ export class DocumentsController {
       ) => {
         const allowedMimeTypes = [
           'application/pdf',
+          'application/x-pdf',
           'image/jpeg',
+          'image/jpg',
+          'image/pjpeg',
           'image/png',
+          'image/x-png',
+          'image/webp',
+          'application/octet-stream',
         ];
 
-        if (
-          !allowedMimeTypes.includes(
-            file.mimetype,
-          )
-        ) {
+        const ext = extname(file.originalname || '').toLowerCase();
+        const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
+
+        const isMimeAllowed = allowedMimeTypes.includes(
+          String(file.mimetype || '').toLowerCase(),
+        );
+        const isExtAllowed = allowedExtensions.includes(ext);
+
+        if (!isMimeAllowed && !isExtAllowed) {
           return callback(
             new BadRequestException(
-              'Only PDF, JPG, JPEG and PNG files are allowed',
+              'Only PDF, JPG, JPEG, PNG and WEBP files are allowed',
             ),
             false,
           );

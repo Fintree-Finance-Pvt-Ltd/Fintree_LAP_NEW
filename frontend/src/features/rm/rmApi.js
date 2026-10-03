@@ -177,6 +177,26 @@ verifyGst: (payload) =>
   deleteContactPerson: (id) =>
     apiClient.delete(`/contact-persons/${id}`),
 
+  // =========================
+  // FAMILY MEMBERS
+  // =========================
+  createFamilyMember: (payload) =>
+    apiClient.post("/family-members", payload),
+
+  getFamilyMembers: (applicationId) =>
+    apiClient.get(`/family-members/${applicationId}`),
+
+  updateFamilyMember: (id, payload) =>
+    apiClient.put(`/family-members/${id}`, payload),
+
+  deleteFamilyMember: (id) =>
+    apiClient.delete(`/family-members/${id}`),
+
+  saveFamilyMembersBulk: (applicationId, familyMembersArray) =>
+    apiClient.post(`/family-members/bulk/${applicationId}`, {
+      familyMembers: familyMembersArray,
+    }),
+
 
   // =========================
   // CO-APPLICANTS

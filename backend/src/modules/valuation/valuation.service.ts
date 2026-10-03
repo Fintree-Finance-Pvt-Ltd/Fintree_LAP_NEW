@@ -626,8 +626,7 @@ async debugValuationTransitions() {
 
     const marketValue =
       body?.marketValue ||
-      application?.marketValue ||
-      application?.propertyValue;
+      application?.customerProfile?.marketValue;
 
     const recommendedValue =
       body?.recommendedValue ||

@@ -96,6 +96,17 @@ const REFERENCE_TYPE_OPTIONS = [
   "Neighbour",
 ];
 
+const FAMILY_RELATION_OPTIONS = [
+  "Brother",
+  "Sister",
+  "Partner",
+  "Father",
+  "Mother",
+  "Spouse",
+  "Son",
+  "Daughter",
+];
+
 const emptyForm = {
   customerName: "",
   customerType: "INDIVIDUAL",
@@ -612,8 +623,9 @@ export default function CreateLead() {
       );
       return (
         documentName.includes("AADHAAR") ||
-        documentName.includes("UDYAM") ||
-        documentType.includes("AADHAAR")
+        documentName.includes("AADHAR") ||
+        documentType.includes("AADHAAR") ||
+        documentType.includes("AADHAR")
       );
     });
 
@@ -642,9 +654,10 @@ export default function CreateLead() {
         doc.documentType || doc.document_type,
       );
       return (
-        documentName.includes("UDYAM_CERTIFICATE") ||
-        documentType.includes("UDYAM_CERTIFICATE") ||
-        documentName.includes("UDYAM CERTIFICATE")
+        documentName.includes("UDYAM") ||
+        documentType.includes("UDYAM") ||
+        documentName.includes("MSME") ||
+        documentType.includes("MSME")
       );
     });
 
@@ -675,7 +688,18 @@ export default function CreateLead() {
       return (
         documentName.includes("BUSINESS_LICENSE") ||
         documentType.includes("BUSINESS_LICENSE") ||
-        documentName.includes("BUSINESS LICENSE")
+        documentName.includes("BUSINESS LICENSE") ||
+        documentName.includes("BUSINESS_LICENCE") ||
+        documentName.includes("BUSINESS LICENCE") ||
+        documentName.includes("TRADE_LICENSE") ||
+        documentName.includes("TRADE LICENSE") ||
+        documentName.includes("SHOP_ACT") ||
+        documentName.includes("SHOP ACT") ||
+        documentName.includes("GUMASTA") ||
+        documentName.includes("LICENSE") ||
+        documentName.includes("LICENCE") ||
+        documentType.includes("LICENSE") ||
+        documentType.includes("LICENCE")
       );
     });
 
@@ -787,6 +811,137 @@ export default function CreateLead() {
     };
   }, [aadhaarCooldownUntil, aadhaarCooldownKey]);
 
+  const propertyTypeOptions = PROPERTY_TYPE[formData.propertyCategory] || [];
+
+  const buildPayload = (isPatchUpdate = false, customFollowUp = null) => {
+    const activeFollowUp = customFollowUp || followUpData;
+    const basePayload = {
+      customerName: formData.customerName.trim() || undefined,
+      customerType: formData.customerType || undefined,
+      dob: formData.dob ? String(formData.dob).slice(0, 10) : undefined,
+      gender: formData.gender || undefined,
+      maritalStatus: formData.maritalStatus || undefined,
+      nationality: formData.nationality || undefined,
+      mobile: formData.mobileNumber.trim() || undefined,
+      email: formData.emailId.trim() || undefined,
+      pan: formData.panNumber.trim() || undefined,
+      aadhaarNumber: formData.aadhaarNumber.trim() || undefined,
+      occupationType: formData.occupation,
+      constitution: formData.constitution || undefined,
+      businessName: formData.businessName.trim() || undefined,
+      gstNumber: formData.gstNumber.trim() || undefined,
+      natureOfBusiness:
+        formData.natureOfBusiness === "Other"
+          ? formData.otherNatureOfBusiness?.trim() || "Other"
+          : formData.natureOfBusiness || undefined,
+      businessVintage: formData.businessVintage?.trim() || undefined,
+      businessAddress: formData.businessAddress?.trim() || undefined,
+      udyamNumber: formData.udyamNumber?.trim() || undefined,
+      monthlyIncome:
+        formData.monthlyIncome !== "" &&
+        formData.monthlyIncome !== null &&
+        formData.monthlyIncome !== undefined
+          ? Number(formData.monthlyIncome)
+          : undefined,
+      monthlySales:
+        formData.monthlySales !== "" &&
+        formData.monthlySales !== null &&
+        formData.monthlySales !== undefined
+          ? Number(formData.monthlySales)
+          : undefined,
+      monthlyProfit:
+        formData.monthlyProfit !== "" &&
+        formData.monthlyProfit !== null &&
+        formData.monthlyProfit !== undefined
+          ? Number(formData.monthlyProfit)
+          : undefined,
+      residenceAddressLine1: formData.residenceAddressLine1?.trim() || undefined,
+      residenceAddressLine2: formData.residenceAddressLine2?.trim() || undefined,
+      residenceLandmark: formData.residenceLandmark?.trim() || undefined,
+      residenceCity: formData.residenceCity?.trim() || undefined,
+      residenceDistrict: formData.residenceDistrict?.trim() || undefined,
+      residenceState: formData.residenceState?.trim() || undefined,
+      residencePincode: formData.residencePincode?.trim() || undefined,
+      gramPanchayatCorporation: formData.gramPanchayatCorporation || undefined,
+      gramPanchayatOrCorporation: formData.gramPanchayatCorporation || undefined,
+      residenceType: formData.residenceType || undefined,
+      propertyCategory: formData.propertyCategory || undefined,
+      propertyType: formData.propertyType
+        ? `${formData.propertyCategory} - ${formData.propertyType}`
+        : undefined,
+      requestedAmount: formData.propertyValue
+        ? String(formData.propertyValue)
+        : "0",
+      marketValue: formData.propertyValue
+        ? Number(formData.propertyValue)
+        : undefined,
+      propertyAddress: formData.propertyAddress.trim() || undefined,
+      propertyCity: formData.city.trim() || undefined,
+      propertyState: formData.state.trim() || undefined,
+      propertyPincode: formData.pinCode.trim() || undefined,
+      nextFollowUpDate: activeFollowUp?.nextFollowUpDate || undefined,
+      followUpTime: activeFollowUp?.followUpTime || undefined,
+      followUpNotes: activeFollowUp?.followUpNotes || undefined,
+      followUpStatus: activeFollowUp?.followUpStatus || undefined,
+    };
+
+    if (isPatchUpdate) {
+      const allowedPatchFields = [
+        "customerName",
+        "customerType",
+        "constitution",
+        "dob",
+        "gender",
+        "maritalStatus",
+        "nationality",
+        "mobile",
+        "email",
+        "pan",
+        "aadhaarNumber",
+        "occupationType",
+        "businessName",
+        "gstNumber",
+        "natureOfBusiness",
+        "businessVintage",
+        "businessAddress",
+        "udyamNumber",
+        "monthlyIncome",
+        "monthlySales",
+        "monthlyProfit",
+        "residenceAddressLine1",
+        "residenceAddressLine2",
+        "residenceLandmark",
+        "residenceCity",
+        "residenceDistrict",
+        "residenceState",
+        "residencePincode",
+        "gramPanchayatCorporation",
+        "gramPanchayatOrCorporation",
+        "residenceType",
+        "propertyCategory",
+        "propertyType",
+        "requestedAmount",
+        "marketValue",
+        "propertyAddress",
+        "propertyCity",
+        "propertyState",
+        "propertyPincode",
+        "nextFollowUpDate",
+        "followUpTime",
+        "followUpNotes",
+        "followUpStatus",
+      ];
+      const filteredPayload = {};
+      allowedPatchFields.forEach((field) => {
+        if (basePayload[field] !== undefined) {
+          filteredPayload[field] = basePayload[field];
+        }
+      });
+      return filteredPayload;
+    }
+    return basePayload;
+  };
+
   const uploadCustomerPhotoMutation = useMutation({
     mutationFn: async () => {
       let targetApplicationId = createdApplicationId ?? applicationId;
@@ -816,26 +971,28 @@ export default function CreateLead() {
       }
 
       const payload = new FormData();
-
       payload.append("applicationId", String(Number(targetApplicationId)));
       payload.append("documentType", "PHOTO");
       payload.append("documentName", "Applicant Photo");
       payload.append("documentSource", "RM_PORTAL");
       payload.append("file", customerPhotoFile);
 
-      return rmApi.uploadDocument(payload);
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
     },
 
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
       setMessageType("success");
       setMessage("Customer photo uploaded successfully.");
-
       setCustomerPhotoFile(null);
 
-      const targetId = createdApplicationId ?? applicationId;
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["rm-documents", targetId],
+          queryKey: ["rm-documents"],
         }),
         queryClient.invalidateQueries({
           queryKey: ["application", targetId],
@@ -917,17 +1074,21 @@ export default function CreateLead() {
       payload.append("documentSource", "RM_PORTAL");
       payload.append("file", panFile);
 
-      return rmApi.uploadDocument(payload);
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
       setMessageType("success");
       setMessage("PAN card uploaded successfully.");
       setPanFile(null);
 
-      const targetId = createdApplicationId ?? applicationId;
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["rm-documents", targetId],
+          queryKey: ["rm-documents"],
         }),
         queryClient.invalidateQueries({
           queryKey: ["application", targetId],
@@ -1018,17 +1179,21 @@ export default function CreateLead() {
       payload.append("documentSource", "RM_PORTAL");
       payload.append("file", aadhaarFile);
 
-      return rmApi.uploadDocument(payload);
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
       setMessageType("success");
       setMessage("Aadhaar / Udyam document uploaded successfully.");
       setAadhaarFile(null);
 
-      const targetId = createdApplicationId ?? applicationId;
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["rm-documents", targetId],
+          queryKey: ["rm-documents"],
         }),
         queryClient.invalidateQueries({
           queryKey: ["application", targetId],
@@ -1119,17 +1284,21 @@ export default function CreateLead() {
       payload.append("documentSource", "RM_PORTAL");
       payload.append("file", udyamFile);
 
-      return rmApi.uploadDocument(payload);
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
       setMessageType("success");
       setMessage("UDYAM Certificate uploaded successfully.");
       setUdyamFile(null);
 
-      const targetId = createdApplicationId ?? applicationId;
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["rm-documents", targetId],
+          queryKey: ["rm-documents"],
         }),
         queryClient.invalidateQueries({
           queryKey: ["application", targetId],
@@ -1220,17 +1389,21 @@ export default function CreateLead() {
       payload.append("documentSource", "RM_PORTAL");
       payload.append("file", businessLicenseFile);
 
-      return rmApi.uploadDocument(payload);
+      const res = await rmApi.uploadDocument(payload);
+      return { res, targetApplicationId: Number(targetApplicationId) };
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      const targetId = data?.targetApplicationId || createdApplicationId || applicationId;
+      if (targetId && !createdApplicationId) {
+        setCreatedApplicationId(Number(targetId));
+      }
       setMessageType("success");
       setMessage("Business License uploaded successfully.");
       setBusinessLicenseFile(null);
 
-      const targetId = createdApplicationId ?? applicationId;
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["rm-documents", targetId],
+          queryKey: ["rm-documents"],
         }),
         queryClient.invalidateQueries({
           queryKey: ["application", targetId],
@@ -1772,6 +1945,76 @@ export default function CreateLead() {
     setContactPersons((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  const [familyMembers, setFamilyMembers] = useState([]);
+
+  // Handler to update specific fields inside a specific family member's index
+  const handleFamilyMemberChange = (index, event) => {
+    const { name, value } = event.target;
+    setFamilyMembers((prev) =>
+      prev.map((member, idx) =>
+        idx === index ? { ...member, [name]: value } : member,
+      ),
+    );
+  };
+
+  const buildFamilyMembersPayload = (targetApplicationId) => {
+    return familyMembers
+      .filter((member) => {
+        return (
+          String(member.name || "").trim() ||
+          String(member.relation || "").trim() ||
+          String(member.age || "").trim() ||
+          String(member.occupation || "").trim() ||
+          String(member.income || "").trim()
+        );
+      })
+      .map((member) => ({
+        id: member.id || undefined,
+        applicationId: Number(targetApplicationId),
+        name: String(member.name || "").trim(),
+        relation: member.relation || "Brother",
+        age: member.age !== "" && member.age !== undefined && !isNaN(Number(member.age)) ? Number(member.age) : undefined,
+        occupation: member.occupation ? String(member.occupation).trim() : undefined,
+        income: member.income !== "" && member.income !== undefined && !isNaN(Number(member.income)) ? Number(member.income) : undefined,
+      }));
+  };
+
+  // Append a new empty family member structure to the array
+  const handleAddFamilyMember = () => {
+    setFamilyMembers((prev) => [
+      ...prev,
+      {
+        id: null,
+        name: "",
+        relation: "Brother",
+        age: "",
+        occupation: "",
+        income: "",
+      },
+    ]);
+  };
+
+  // Remove a specific family member card by index
+  const handleRemoveFamilyMember = async (index) => {
+    const member = familyMembers[index];
+
+    if (member?.id) {
+      try {
+        await rmApi.deleteFamilyMember(member.id);
+      } catch (error) {
+        setMessageType("error");
+        setMessage(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Unable to delete family member.",
+        );
+        return;
+      }
+    }
+
+    setFamilyMembers((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
   const applicationQuery = useQuery({
     queryKey: ["application", applicationId],
     queryFn: () => rmApi.getApplication(applicationId),
@@ -2190,6 +2433,36 @@ export default function CreateLead() {
     fetchExistingContactPersons();
   }, [applicationId]);
 
+  // Family Members: Automatically load family members for existing leads
+  useEffect(() => {
+    if (!applicationId) return;
+
+    const fetchExistingFamilyMembers = async () => {
+      try {
+        const response = await rmApi.getFamilyMembers(applicationId);
+        const result = unwrapResponse(response);
+        const rows = result?.data ?? result ?? [];
+
+        if (Array.isArray(rows)) {
+          setFamilyMembers(
+            rows.map((row) => ({
+              id: row.id,
+              name: row.name || "",
+              relation: row.relation || "Brother",
+              age: row.age !== null && row.age !== undefined ? String(row.age) : "",
+              occupation: row.occupation || "",
+              income: row.income !== null && row.income !== undefined ? String(row.income) : "",
+            })),
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load family members:", error);
+      }
+    };
+
+    fetchExistingFamilyMembers();
+  }, [applicationId]);
+
   const workflowQuery = useQuery({
     queryKey: ["rm-workflow", applicationId],
     queryFn: () => rmApi.workflowStatus(applicationId),
@@ -2201,137 +2474,6 @@ export default function CreateLead() {
     const response = unwrapResponse(workflowQuery.data);
     return buildWorkflowTimeline(response?.data ?? response ?? {});
   }, [workflowQuery.data]);
-
-  const propertyTypeOptions = PROPERTY_TYPE[formData.propertyCategory] || [];
-
-  const buildPayload = (isPatchUpdate = false, customFollowUp = null) => {
-    const activeFollowUp = customFollowUp || followUpData;
-    const basePayload = {
-      customerName: formData.customerName.trim() || undefined,
-      customerType: formData.customerType || undefined,
-      dob: formData.dob ? String(formData.dob).slice(0, 10) : undefined,
-      gender: formData.gender || undefined,
-      maritalStatus: formData.maritalStatus || undefined,
-      nationality: formData.nationality || undefined,
-      mobile: formData.mobileNumber.trim() || undefined,
-      email: formData.emailId.trim() || undefined,
-      pan: formData.panNumber.trim() || undefined,
-      aadhaarNumber: formData.aadhaarNumber.trim() || undefined,
-      occupationType: formData.occupation,
-      constitution: formData.constitution || undefined,
-      businessName: formData.businessName.trim() || undefined,
-      gstNumber: formData.gstNumber.trim() || undefined,
-      natureOfBusiness:
-        formData.natureOfBusiness === "Other"
-          ? formData.otherNatureOfBusiness?.trim() || "Other"
-          : formData.natureOfBusiness || undefined,
-      businessVintage: formData.businessVintage?.trim() || undefined,
-      businessAddress: formData.businessAddress?.trim() || undefined,
-      udyamNumber: formData.udyamNumber?.trim() || undefined,
-      monthlyIncome:
-        formData.monthlyIncome !== "" &&
-        formData.monthlyIncome !== null &&
-        formData.monthlyIncome !== undefined
-          ? Number(formData.monthlyIncome)
-          : undefined,
-      monthlySales:
-        formData.monthlySales !== "" &&
-        formData.monthlySales !== null &&
-        formData.monthlySales !== undefined
-          ? Number(formData.monthlySales)
-          : undefined,
-      monthlyProfit:
-        formData.monthlyProfit !== "" &&
-        formData.monthlyProfit !== null &&
-        formData.monthlyProfit !== undefined
-          ? Number(formData.monthlyProfit)
-          : undefined,
-      residenceAddressLine1: formData.residenceAddressLine1?.trim() || undefined,
-      residenceAddressLine2: formData.residenceAddressLine2?.trim() || undefined,
-      residenceLandmark: formData.residenceLandmark?.trim() || undefined,
-      residenceCity: formData.residenceCity?.trim() || undefined,
-      residenceDistrict: formData.residenceDistrict?.trim() || undefined,
-      residenceState: formData.residenceState?.trim() || undefined,
-      residencePincode: formData.residencePincode?.trim() || undefined,
-      gramPanchayatCorporation: formData.gramPanchayatCorporation || undefined,
-      gramPanchayatOrCorporation: formData.gramPanchayatCorporation || undefined,
-      residenceType: formData.residenceType || undefined,
-      propertyCategory: formData.propertyCategory || undefined,
-      propertyType: formData.propertyType
-        ? `${formData.propertyCategory} - ${formData.propertyType}`
-        : undefined,
-      requestedAmount: formData.propertyValue
-        ? String(formData.propertyValue)
-        : "0",
-      marketValue: formData.propertyValue
-        ? Number(formData.propertyValue)
-        : undefined,
-      propertyAddress: formData.propertyAddress.trim() || undefined,
-      propertyCity: formData.city.trim() || undefined,
-      propertyState: formData.state.trim() || undefined,
-      propertyPincode: formData.pinCode.trim() || undefined,
-      nextFollowUpDate: activeFollowUp?.nextFollowUpDate || undefined,
-      followUpTime: activeFollowUp?.followUpTime || undefined,
-      followUpNotes: activeFollowUp?.followUpNotes || undefined,
-      followUpStatus: activeFollowUp?.followUpStatus || undefined,
-    };
-
-    if (isPatchUpdate) {
-      const allowedPatchFields = [
-        "customerName",
-        "customerType",
-        "constitution",
-        "dob",
-        "gender",
-        "maritalStatus",
-        "nationality",
-        "mobile",
-        "email",
-        "pan",
-        "aadhaarNumber",
-        "occupationType",
-        "businessName",
-        "gstNumber",
-        "natureOfBusiness",
-        "businessVintage",
-        "businessAddress",
-        "udyamNumber",
-        "monthlyIncome",
-        "monthlySales",
-        "monthlyProfit",
-        "residenceAddressLine1",
-        "residenceAddressLine2",
-        "residenceLandmark",
-        "residenceCity",
-        "residenceDistrict",
-        "residenceState",
-        "residencePincode",
-        "gramPanchayatCorporation",
-        "gramPanchayatOrCorporation",
-        "residenceType",
-        "propertyCategory",
-        "propertyType",
-        "requestedAmount",
-        "marketValue",
-        "propertyAddress",
-        "propertyCity",
-        "propertyState",
-        "propertyPincode",
-        "nextFollowUpDate",
-        "followUpTime",
-        "followUpNotes",
-        "followUpStatus",
-      ];
-      const filteredPayload = {};
-      allowedPatchFields.forEach((field) => {
-        if (basePayload[field] !== undefined) {
-          filteredPayload[field] = basePayload[field];
-        }
-      });
-      return filteredPayload;
-    }
-    return basePayload;
-  };
 
   const validateFullSubmission = () => {
     const errors = [];
@@ -2382,6 +2524,31 @@ export default function CreateLead() {
     }
   };
 
+  const saveFamilyMembersForApplication = async (targetApplicationId) => {
+    if (!targetApplicationId) return;
+
+    const payload = buildFamilyMembersPayload(targetApplicationId);
+
+    for (const member of payload) {
+      if (!member.name) continue;
+
+      const finalPayload = {
+        applicationId: Number(targetApplicationId),
+        name: member.name,
+        relation: member.relation || "Brother",
+        age: member.age,
+        occupation: member.occupation,
+        income: member.income,
+      };
+
+      if (member.id) {
+        await rmApi.updateFamilyMember(member.id, finalPayload);
+      } else {
+        await rmApi.createFamilyMember(finalPayload);
+      }
+    }
+  };
+
   // =========================================================================
   // UPDATE 1: saveNewDraftMutation
   // =========================================================================
@@ -2412,9 +2579,10 @@ export default function CreateLead() {
             buildCoApplicantsPayload(),
           );
           await saveContactPersonsForApplication(targetId);
+          await saveFamilyMembersForApplication(targetId);
         } catch (err) {
           console.error(
-            "Co-applicant/contact person synchronization failed during creation:",
+            "Co-applicant/contact person/family member synchronization failed during creation:",
             err,
           );
         }
@@ -2469,9 +2637,10 @@ export default function CreateLead() {
             buildCoApplicantsPayload(),
           );
           await saveContactPersonsForApplication(targetId);
+          await saveFamilyMembersForApplication(targetId);
         } catch (err) {
           console.error(
-            "Co-applicant/contact person synchronization failed during update:",
+            "Co-applicant/contact person/family member synchronization failed during update:",
             err,
           );
         }
@@ -2504,7 +2673,7 @@ export default function CreateLead() {
     onSuccess: async () => {
       const idToInvalidate = createdApplicationId ?? applicationId;
 
-      // Save co-applicants + contact persons on final submit as well
+      // Save co-applicants + contact persons + family members on final submit as well
       try {
         if (idToInvalidate) {
           await rmApi.saveCoApplicantsBulk(
@@ -2512,10 +2681,11 @@ export default function CreateLead() {
             buildCoApplicantsPayload(),
           );
           await saveContactPersonsForApplication(idToInvalidate);
+          await saveFamilyMembersForApplication(idToInvalidate);
         }
       } catch (err) {
         console.error(
-          "Co-applicant/contact person sync failed during submitDraft:",
+          "Co-applicant/contact person/family member sync failed during submitDraft:",
           err,
         );
       }
@@ -4187,6 +4357,130 @@ export default function CreateLead() {
             ))
           )}
         </div>
+
+        {/* 7. Family Details Multi-Card Management Workspace */}
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mt-4">
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                7. Family Details
+              </h4>
+              <p className="text-xs text-slate-500">
+                Add family member details associated with the applicant.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddFamilyMember}
+              className="inline-flex self-start sm:self-auto items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition-all active:scale-[0.99]"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"
+                />
+              </svg>
+              Add Family Member
+            </button>
+          </div>
+
+          {familyMembers.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-500 font-medium">
+              No family members added. Click the button above to add family details.
+            </div>
+          ) : (
+            familyMembers.map((member, index) => (
+              <div key={index} className="relative group">
+                <Section title={`Family Member ${index + 1}`}>
+                  <Field
+                    label="Family Member Name *"
+                    name="name"
+                    value={member.name}
+                    onChange={(e) => handleFamilyMemberChange(index, e)}
+                    placeholder="Enter family member name"
+                    required
+                  />
+
+                  <Field label="Relation *">
+                    <Select
+                      name="relation"
+                      value={member.relation || "Brother"}
+                      onChange={(e) => handleFamilyMemberChange(index, e)}
+                      placeholder="Select Relation"
+                    >
+                      {FAMILY_RELATION_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field
+                    label="Age"
+                    name="age"
+                    type="number"
+                    min="0"
+                    max="120"
+                    value={member.age}
+                    onChange={(e) => handleFamilyMemberChange(index, e)}
+                    placeholder="Enter age"
+                  />
+
+                  <Field
+                    label="Occupation"
+                    name="occupation"
+                    value={member.occupation}
+                    onChange={(e) => handleFamilyMemberChange(index, e)}
+                    placeholder="Enter occupation"
+                  />
+
+                  <Field
+                    label="Income"
+                    name="income"
+                    type="number"
+                    min="0"
+                    value={member.income}
+                    onChange={(e) => handleFamilyMemberChange(index, e)}
+                    placeholder="Enter income"
+                  />
+
+                  {/* Action Row containing layout removal button */}
+                  <div className="flex items-end justify-end pt-1.5 sm:col-span-1 lg:col-span-1">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFamilyMember(index)}
+                      className="rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 transition-all flex items-center gap-1 shadow-2xs active:scale-[0.99]"
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                      Remove Family Member
+                    </button>
+                  </div>
+                </Section>
+              </div>
+            ))
+          )}
+        </div>
+
         <Section title="Collateral Property Information">
           <Field label="Property Category">
             <Select

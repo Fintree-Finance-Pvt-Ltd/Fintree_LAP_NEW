@@ -46,18 +46,17 @@ export class DocumentsService {
       throw new BadRequestException('Valid applicationId is required');
     }
 
-    const documentType = String(input.documentType || '')
+    let documentType = String(input.documentType || 'OTHER')
       .trim()
-      .toUpperCase();
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]/g, '_');
 
-    const allowedDocumentTypes = Object.values(DocumentType);
+    if (!documentType) {
+      documentType = 'OTHER';
+    }
 
-    if (!allowedDocumentTypes.includes(documentType as DocumentType)) {
-      await this.removeUploadedFile(file.path);
-
-      throw new BadRequestException(
-        `documentType must be one of: ${allowedDocumentTypes.join(', ')}`,
-      );
+    if (documentType.length > 60) {
+      documentType = documentType.substring(0, 60);
     }
 
     const applicationExists = await this.applications.exist({
@@ -79,7 +78,7 @@ export class DocumentsService {
 
       document.applicationId = applicationId;
 
-      document.documentType = documentType as DocumentType;
+      document.documentType = documentType;
 
       document.documentName = String(input.documentName || documentType).trim();
 

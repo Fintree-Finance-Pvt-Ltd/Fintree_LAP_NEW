@@ -660,7 +660,7 @@ export class VarificationService {
         : application.customerName || 'Customer';
 
     const mobile = profile?.mobile || application.mobile;
-    const email = profile?.email || application.email;
+    const email = profile?.email;
 
     if (!email) {
       throw new HttpException(

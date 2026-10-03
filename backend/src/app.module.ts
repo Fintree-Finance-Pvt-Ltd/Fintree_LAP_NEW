@@ -25,6 +25,7 @@ import { BmModule } from './modules/bm/bm.module';
 import { ChargesReceiptsModule } from './modules/charges-receipts/charges-receipts.module';
 import { CoApplicantsModule } from './modules/co-applicants/co-applicants.module';
 import { ContactPersonsModule } from './modules/contact-persons/contact-persons.module';
+import { FamilyMembersModule } from './modules/family-members/family-members.module';
 import { CustomerProfilesModule } from './modules/customer-profiles/customer-profiles.module';
 import { DashboardsModule } from './modules/dashboards/dashboards.module';
 import { DocumentsModule } from './modules/documents/documents.module';
@@ -81,6 +82,7 @@ import { ClaimsModule } from './modules/claims/claims.module';
     CreditModule,
     ContactPersonsModule,
     CoApplicantsModule,
+    FamilyMembersModule,
     DocumentsModule,
     WorkflowModule,
     NotificationsModule,

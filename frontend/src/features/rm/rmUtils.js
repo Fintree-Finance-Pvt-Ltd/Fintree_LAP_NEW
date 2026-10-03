@@ -1,8 +1,11 @@
-export const formatCurrency = (value) =>
-  new Intl.NumberFormat("en-IN", {
+export const formatCurrency = (value) => {
+  const num = Number(value);
+  return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-  }).format(value ?? 0);
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(num) ? num : 0);
+};
 
 export const requiredDocumentTypes = [
   "PAN",

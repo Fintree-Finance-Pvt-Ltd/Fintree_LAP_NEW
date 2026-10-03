@@ -448,58 +448,15 @@ export class ApplicationsService {
         if (!existing) throw new NotFoundException("Application not found");
 
         existing.customerName = dto.customerName.trim();
-        if (dto.dob !== undefined) {
-          existing.dob = dto.dob ? String(dto.dob).slice(0, 10) : undefined;
-        }
-
-        if (dto.gender !== undefined) {
-          existing.gender = dto.gender || undefined;
-        }
-
-        if (dto.customerType !== undefined) {
-          existing.customerType = dto.customerType || undefined;
-        }
-        if (dto.maritalStatus !== undefined) {
-          existing.maritalStatus = dto.maritalStatus || undefined;
-        }
-        if (dto.nationality !== undefined) {
-          existing.nationality = dto.nationality || undefined;
-        }
-
-        if (dto.residenceAddressLine1 !== undefined) {
-          existing.residenceAddressLine1 = dto.residenceAddressLine1 || undefined;
-        }
-        if (dto.residenceAddressLine2 !== undefined) {
-          existing.residenceAddressLine2 = dto.residenceAddressLine2 || undefined;
-        }
-        if (dto.residenceLandmark !== undefined) {
-          existing.residenceLandmark = dto.residenceLandmark || undefined;
-        }
-        if (dto.residenceCity !== undefined) {
-          existing.residenceCity = dto.residenceCity || undefined;
-        }
-        if (dto.residenceDistrict !== undefined) {
-          existing.residenceDistrict = dto.residenceDistrict || undefined;
-        }
-        if (dto.residenceState !== undefined) {
-          existing.residenceState = dto.residenceState || undefined;
-        }
-        if (dto.residencePincode !== undefined) {
-          existing.residencePincode = dto.residencePincode || undefined;
-        }
-        if (dto.gramPanchayatOrCorporation !== undefined || dto.gramPanchayatCorporation !== undefined) {
-          existing.gramPanchayatOrCorporation = dto.gramPanchayatOrCorporation || dto.gramPanchayatCorporation || undefined;
-        }
-        if (dto.residenceType !== undefined) {
-          existing.residenceType = dto.residenceType || undefined;
-        }
-
         existing.mobile = dto.mobile.trim();
         if (dto.pan !== undefined) {
           const nextPan = dto.pan?.trim();
           existing.panVerified =
             Boolean(existing.panVerified) && nextPan === existing.pan;
           existing.pan = nextPan;
+        }
+        if (dto.nextFollowUpDate !== undefined) {
+          existing.nextFollowUpDate = dto.nextFollowUpDate || undefined;
         }
         existing.requestedAmount = dto.requestedAmount || "0";
         existing.stage = ApplicationStage.RM;
@@ -546,28 +503,6 @@ export class ApplicationsService {
         existingDraft ??
         manager.create(Application, {
           customerName: dto.customerName.trim(),
-          dob: dto.dob ? String(dto.dob).slice(0, 10) : undefined,
-          gender: dto.gender || undefined,
-          customerType: dto.customerType || undefined,
-          constitution: dto.constitution || undefined,
-          natureOfBusiness: dto.natureOfBusiness || undefined,
-          businessVintage: dto.businessVintage || undefined,
-          businessAddress: dto.businessAddress || undefined,
-          udyamNumber: dto.udyamNumber || undefined,
-          monthlyIncome: dto.monthlyIncome !== undefined && dto.monthlyIncome !== "" ? String(dto.monthlyIncome) : undefined,
-          monthlySales: dto.monthlySales !== undefined && dto.monthlySales !== "" ? String(dto.monthlySales) : undefined,
-          monthlyProfit: dto.monthlyProfit !== undefined && dto.monthlyProfit !== "" ? String(dto.monthlyProfit) : undefined,
-          maritalStatus: dto.maritalStatus || undefined,
-          nationality: dto.nationality || undefined,
-          residenceAddressLine1: dto.residenceAddressLine1 || undefined,
-          residenceAddressLine2: dto.residenceAddressLine2 || undefined,
-          residenceLandmark: dto.residenceLandmark || undefined,
-          residenceCity: dto.residenceCity || undefined,
-          residenceDistrict: dto.residenceDistrict || undefined,
-          residenceState: dto.residenceState || undefined,
-          residencePincode: dto.residencePincode || undefined,
-          gramPanchayatOrCorporation: dto.gramPanchayatOrCorporation || dto.gramPanchayatCorporation || undefined,
-          residenceType: dto.residenceType || undefined,
           mobile: dto.mobile.trim(),
           pan: dto.pan?.trim(),
           requestedAmount: dto.requestedAmount || "0",
@@ -631,71 +566,11 @@ export class ApplicationsService {
       }
 
       // Update existing draft
-      if (dto.dob !== undefined) {
-        existingDraft.dob = dto.dob ? String(dto.dob).slice(0, 10) : undefined;
+      if (dto.customerName !== undefined) {
+        existingDraft.customerName = dto.customerName.trim();
       }
-      if (dto.gender !== undefined) {
-        existingDraft.gender = dto.gender || undefined;
-      }
-      if (dto.customerType !== undefined) {
-        existingDraft.customerType = dto.customerType || undefined;
-      }
-      if (dto.constitution !== undefined) {
-        existingDraft.constitution = dto.constitution || undefined;
-      }
-      if (dto.natureOfBusiness !== undefined) {
-        existingDraft.natureOfBusiness = dto.natureOfBusiness || undefined;
-      }
-      if (dto.businessVintage !== undefined) {
-        existingDraft.businessVintage = dto.businessVintage || undefined;
-      }
-      if (dto.businessAddress !== undefined) {
-        existingDraft.businessAddress = dto.businessAddress || undefined;
-      }
-      if (dto.udyamNumber !== undefined) {
-        existingDraft.udyamNumber = dto.udyamNumber || undefined;
-      }
-      if (dto.monthlyIncome !== undefined) {
-        existingDraft.monthlyIncome = dto.monthlyIncome !== "" ? String(dto.monthlyIncome) : undefined;
-      }
-      if (dto.monthlySales !== undefined) {
-        existingDraft.monthlySales = dto.monthlySales !== "" ? String(dto.monthlySales) : undefined;
-      }
-      if (dto.monthlyProfit !== undefined) {
-        existingDraft.monthlyProfit = dto.monthlyProfit !== "" ? String(dto.monthlyProfit) : undefined;
-      }
-      if (dto.maritalStatus !== undefined) {
-        existingDraft.maritalStatus = dto.maritalStatus || undefined;
-      }
-      if (dto.nationality !== undefined) {
-        existingDraft.nationality = dto.nationality || undefined;
-      }
-      if (dto.residenceAddressLine1 !== undefined) {
-        existingDraft.residenceAddressLine1 = dto.residenceAddressLine1 || undefined;
-      }
-      if (dto.residenceAddressLine2 !== undefined) {
-        existingDraft.residenceAddressLine2 = dto.residenceAddressLine2 || undefined;
-      }
-      if (dto.residenceLandmark !== undefined) {
-        existingDraft.residenceLandmark = dto.residenceLandmark || undefined;
-      }
-      if (dto.residenceCity !== undefined) {
-        existingDraft.residenceCity = dto.residenceCity || undefined;
-      }
-      if (dto.residenceDistrict !== undefined) {
-        existingDraft.residenceDistrict = dto.residenceDistrict || undefined;
-      }
-      if (dto.residenceState !== undefined) {
-        existingDraft.residenceState = dto.residenceState || undefined;
-      }
-      if (dto.residencePincode !== undefined) {
-        existingDraft.residencePincode = dto.residencePincode || undefined;
-      }
-      if (dto.gramPanchayatOrCorporation !== undefined || dto.gramPanchayatCorporation !== undefined) {
-        existingDraft.gramPanchayatOrCorporation = dto.gramPanchayatOrCorporation || dto.gramPanchayatCorporation || undefined;
-      }
-      if (dto.residenceType !== undefined) {
-        existingDraft.residenceType = dto.residenceType || undefined;
+      if (dto.mobile !== undefined) {
+        existingDraft.mobile = dto.mobile.trim();
       }
       if (dto.pan !== undefined) {
         const nextPan = dto.pan?.trim();
@@ -704,9 +579,11 @@ export class ApplicationsService {
         existingDraft.pan = nextPan;
       }
       if (dto.nextFollowUpDate !== undefined) {
-        existingDraft.nextFollowUpDate = dto.nextFollowUpDate;
+        existingDraft.nextFollowUpDate = dto.nextFollowUpDate || undefined;
       }
-      existingDraft.requestedAmount = dto.requestedAmount || "0";
+      if (dto.requestedAmount !== undefined) {
+        existingDraft.requestedAmount = dto.requestedAmount || "0";
+      }
       existingDraft.updatedBy = actor.id;
       existingDraft.stage = ApplicationStage.RM;
       existingDraft.status = ApplicationStatus.DRAFT;
@@ -752,78 +629,15 @@ export class ApplicationsService {
       // 1. PREPARING APPLICATION UPDATE PAYLOAD
       // ==========================================
       application.customerName = dto.customerName.trim();
-      if (dto.dob !== undefined) {
-        application.dob = dto.dob ? String(dto.dob).slice(0, 10) : undefined;
-      }
-      if (dto.gender !== undefined) {
-        application.gender = dto.gender || undefined;
-      }
-      if (dto.customerType !== undefined) {
-        application.customerType = dto.customerType || undefined;
-      }
-      if (dto.constitution !== undefined) {
-        application.constitution = dto.constitution || undefined;
-      }
-      if (dto.natureOfBusiness !== undefined) {
-        application.natureOfBusiness = dto.natureOfBusiness || undefined;
-      }
-      if (dto.businessVintage !== undefined) {
-        application.businessVintage = dto.businessVintage || undefined;
-      }
-      if (dto.businessAddress !== undefined) {
-        application.businessAddress = dto.businessAddress || undefined;
-      }
-      if (dto.udyamNumber !== undefined) {
-        application.udyamNumber = dto.udyamNumber || undefined;
-      }
-      if (dto.monthlyIncome !== undefined) {
-        application.monthlyIncome = dto.monthlyIncome !== "" ? String(dto.monthlyIncome) : undefined;
-      }
-      if (dto.monthlySales !== undefined) {
-        application.monthlySales = dto.monthlySales !== "" ? String(dto.monthlySales) : undefined;
-      }
-      if (dto.monthlyProfit !== undefined) {
-        application.monthlyProfit = dto.monthlyProfit !== "" ? String(dto.monthlyProfit) : undefined;
-      }
-      if (dto.maritalStatus !== undefined) {
-        application.maritalStatus = dto.maritalStatus || undefined;
-      }
-      if (dto.nationality !== undefined) {
-        application.nationality = dto.nationality || undefined;
-      }
-      if (dto.residenceAddressLine1 !== undefined) {
-        application.residenceAddressLine1 = dto.residenceAddressLine1 || undefined;
-      }
-      if (dto.residenceAddressLine2 !== undefined) {
-        application.residenceAddressLine2 = dto.residenceAddressLine2 || undefined;
-      }
-      if (dto.residenceLandmark !== undefined) {
-        application.residenceLandmark = dto.residenceLandmark || undefined;
-      }
-      if (dto.residenceCity !== undefined) {
-        application.residenceCity = dto.residenceCity || undefined;
-      }
-      if (dto.residenceDistrict !== undefined) {
-        application.residenceDistrict = dto.residenceDistrict || undefined;
-      }
-      if (dto.residenceState !== undefined) {
-        application.residenceState = dto.residenceState || undefined;
-      }
-      if (dto.residencePincode !== undefined) {
-        application.residencePincode = dto.residencePincode || undefined;
-      }
-      if (dto.gramPanchayatOrCorporation !== undefined || dto.gramPanchayatCorporation !== undefined) {
-        application.gramPanchayatOrCorporation = dto.gramPanchayatOrCorporation || dto.gramPanchayatCorporation || undefined;
-      }
-      if (dto.residenceType !== undefined) {
-        application.residenceType = dto.residenceType || undefined;
-      }
       application.mobile = dto.mobile.trim();
       if (dto.pan !== undefined) {
         const nextPan = dto.pan?.trim();
         application.panVerified =
           Boolean(application.panVerified) && nextPan === application.pan;
         application.pan = nextPan;
+      }
+      if (dto.nextFollowUpDate !== undefined) {
+        application.nextFollowUpDate = dto.nextFollowUpDate || undefined;
       }
       application.requestedAmount = dto.requestedAmount || "0";
       application.status = ApplicationStatus.LEAD_CREATED;
@@ -1589,18 +1403,15 @@ export class ApplicationsService {
 
         customerName: application.customerName,
 
-        dob: application.dob || customerProfile.dob,
+        dob: customerProfile.dob,
 
-        gender: application.gender || customerProfile.gender,
+        gender: customerProfile.gender,
 
-        customerType:
-          application.customerType || customerProfile.customerType,
+        customerType: customerProfile.customerType,
 
-        maritalStatus:
-          application.maritalStatus || customerProfile.maritalStatus,
+        maritalStatus: customerProfile.maritalStatus,
 
-        nationality:
-          application.nationality || customerProfile.nationality,
+        nationality: customerProfile.nationality,
 
         mobile: application.mobile || customerProfile.mobile,
 
@@ -1666,24 +1477,6 @@ export class ApplicationsService {
           throw new NotFoundException("Application not found");
         }
         application.customerName = dto.customerName ?? application.customerName;
-
-        if (dto.dob !== undefined) {
-          application.dob = dto.dob ? String(dto.dob).slice(0, 10) : undefined;
-        }
-
-        if (dto.gender !== undefined) {
-          application.gender = dto.gender || undefined;
-        }
-
-        if (dto.customerType !== undefined) {
-          application.customerType = dto.customerType || undefined;
-        }
-        if (dto.maritalStatus !== undefined) {
-          application.maritalStatus = dto.maritalStatus || undefined;
-        }
-        if (dto.nationality !== undefined) {
-          application.nationality = dto.nationality || undefined;
-        }
 
         application.mobile = dto.mobile ?? application.mobile;
         if (dto.pan !== undefined) {
