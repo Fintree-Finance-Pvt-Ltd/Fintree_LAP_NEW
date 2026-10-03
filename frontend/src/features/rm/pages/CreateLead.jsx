@@ -6241,7 +6241,7 @@ export default function CreateLead() {
                     title="1. Primary Applicant KYC Documents"
                   >
                     {/* PAN Card Upload */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           1. PAN Card
@@ -6299,7 +6299,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* Aadhaar / Udyam Aadhaar Upload */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           2. Aadhaar / Udyam Aadhaar
@@ -6358,7 +6358,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* Address Proof */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           3. Address Proof
@@ -6425,7 +6425,7 @@ export default function CreateLead() {
                     title="2. Employment & Business Documents"
                   >
                     {/* UDYAM Certificate */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           1. UDYAM Certificate
@@ -6483,7 +6483,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* Business License */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           2. Business License / Shop Act
@@ -6544,7 +6544,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* Bank Statement */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           3. Bank Statement
@@ -6605,7 +6605,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* Income Proof */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           4. Income Proof
@@ -6666,7 +6666,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* Business Proof */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           5. Business Proof
@@ -6730,7 +6730,7 @@ export default function CreateLead() {
                   {/* 3. Collateral Property Documents */}
                   <Section title="3. Collateral Property Documents">
                     {/* 1. Sale Deed */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           1. Sale Deed
@@ -6791,7 +6791,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* 2. Property Tax Receipt */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           2. Property Tax Receipt
@@ -6852,7 +6852,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* 3. Khata Certificate */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           3. Khata Certificate
@@ -6913,7 +6913,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* 4. Survey Sketch */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           4. Survey Sketch
@@ -6974,7 +6974,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* 5. EC Certificate */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           5. EC Certificate
@@ -7035,7 +7035,7 @@ export default function CreateLead() {
                     </div>
 
                     {/* 6. Approval Plan */}
-                    <div className="flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
+                    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-3xs">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800">
                           6. Approval Plan
