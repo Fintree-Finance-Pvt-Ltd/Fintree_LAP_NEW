@@ -156,21 +156,18 @@ const formatDateTime = (value) => {
 const getDocumentUrl = (document) => {
   if (!document) return "";
 
-  const directUrl =
-    document.fileUrl ||
-    document.file_url ||
-    document.documentUrl ||
-    document.url;
+  const rawPath =
+    typeof document === "string"
+      ? document
+      : document.fileUrl ||
+        document.file_url ||
+        document.documentUrl ||
+        document.filePath ||
+        document.file_path ||
+        document.url ||
+        "";
 
-  if (directUrl) return directUrl;
-
-  const filePath = document.filePath || document.file_path || "";
-
-  if (!filePath) return "";
-
-  if (String(filePath).startsWith("http")) {
-    return filePath;
-  }
+  if (!rawPath) return "";
 
   const apiBaseUrl =
     import.meta.env.VITE_API_BASE_URL ||
@@ -190,7 +187,26 @@ const getDocumentUrl = (document) => {
     uploadBaseUrl = window.location.origin;
   }
 
-  return `${uploadBaseUrl}/${String(filePath).replace(/^\/+/, "")}`;
+  const str = String(rawPath).trim();
+  if (
+    typeof window !== "undefined" &&
+    window.location?.hostname !== "localhost" &&
+    window.location?.hostname !== "127.0.0.1" &&
+    str.includes("localhost:")
+  ) {
+    try {
+      const parsed = new URL(str);
+      return `${uploadBaseUrl}${parsed.pathname}${parsed.search}`;
+    } catch {
+      // fallback
+    }
+  }
+
+  if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("blob:")) {
+    return str;
+  }
+
+  return `${uploadBaseUrl}/${str.replace(/^\/+/, "")}`;
 };
 
 function InfoTile({ label, value }) {

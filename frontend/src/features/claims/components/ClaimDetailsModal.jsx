@@ -27,14 +27,6 @@ import { CATEGORY_META } from "./ClaimApprovalsTable.jsx";
 function resolveReceiptUrl(rawUrl) {
   if (!rawUrl) return "";
   const str = String(rawUrl).trim();
-  if (
-    str.startsWith("http://") ||
-    str.startsWith("https://") ||
-    str.startsWith("blob:") ||
-    str.startsWith("data:")
-  ) {
-    return str;
-  }
   const apiBase =
     import.meta.env.VITE_API_BASE_URL ||
     import.meta.env.VITE_BACKEND_URL ||
@@ -50,6 +42,30 @@ function resolveReceiptUrl(rawUrl) {
   if (!host && typeof window !== "undefined" && window.location?.origin) {
     host = window.location.origin;
   }
+
+  if (
+    typeof window !== "undefined" &&
+    window.location?.hostname !== "localhost" &&
+    window.location?.hostname !== "127.0.0.1" &&
+    str.includes("localhost:")
+  ) {
+    try {
+      const parsed = new URL(str);
+      return `${host}${parsed.pathname}${parsed.search}`;
+    } catch {
+      // fallback
+    }
+  }
+
+  if (
+    str.startsWith("http://") ||
+    str.startsWith("https://") ||
+    str.startsWith("blob:") ||
+    str.startsWith("data:")
+  ) {
+    return str;
+  }
+
   const cleanPath = str.replace(/^\/+/, "");
   return `${host}/${cleanPath}`;
 }

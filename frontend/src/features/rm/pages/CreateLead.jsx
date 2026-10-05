@@ -782,13 +782,15 @@ export default function CreateLead() {
   const getDocumentImageUrl = (document) => {
     if (!document) return "";
 
-    const directUrl = document.fileUrl || document.documentUrl || document.url;
-
-    if (directUrl) {
-      return directUrl;
-    }
+    const rawDirectUrl =
+      document.fileUrl ||
+      document.file_url ||
+      document.documentUrl ||
+      document.document_url ||
+      document.url;
 
     const rawPath =
+      rawDirectUrl ||
       document.filePath ||
       document.file_path ||
       document.fileName ||
@@ -800,10 +802,6 @@ export default function CreateLead() {
     }
 
     const normalizedPath = String(rawPath).replace(/\\/g, "/");
-
-    if (normalizedPath.startsWith("http")) {
-      return normalizedPath;
-    }
 
     const apiBaseUrl =
       import.meta.env.VITE_API_BASE_URL ||
@@ -821,6 +819,23 @@ export default function CreateLead() {
 
     if (!uploadBaseUrl && typeof window !== "undefined" && window.location?.origin) {
       uploadBaseUrl = window.location.origin;
+    }
+
+    if (normalizedPath.startsWith("http://") || normalizedPath.startsWith("https://")) {
+      if (
+        typeof window !== "undefined" &&
+        window.location?.hostname !== "localhost" &&
+        window.location?.hostname !== "127.0.0.1" &&
+        normalizedPath.includes("localhost:")
+      ) {
+        try {
+          const parsed = new URL(normalizedPath);
+          return `${uploadBaseUrl}${parsed.pathname}${parsed.search}`;
+        } catch {
+          // fallback
+        }
+      }
+      return normalizedPath;
     }
 
     const uploadsIndex = normalizedPath.toLowerCase().indexOf("uploads/");

@@ -1001,11 +1001,25 @@ const getUploadedChecklistDocument = (
     document.url;
 
   if (directUrl) {
-    if (String(directUrl).startsWith("http")) {
-      return directUrl;
+    const directStr = String(directUrl).trim();
+    if (
+      typeof window !== "undefined" &&
+      window.location?.hostname !== "localhost" &&
+      window.location?.hostname !== "127.0.0.1" &&
+      directStr.includes("localhost:")
+    ) {
+      try {
+        const parsed = new URL(directStr);
+        return `${uploadBaseUrl}${parsed.pathname}${parsed.search}`;
+      } catch {
+        // fallback
+      }
+    }
+    if (directStr.startsWith("http://") || directStr.startsWith("https://") || directStr.startsWith("blob:")) {
+      return directStr;
     }
 
-    return `${uploadBaseUrl}/${String(directUrl).replace(/^\/+/, "")}`;
+    return `${uploadBaseUrl}/${directStr.replace(/^\/+/, "")}`;
   }
 
   const filePath =

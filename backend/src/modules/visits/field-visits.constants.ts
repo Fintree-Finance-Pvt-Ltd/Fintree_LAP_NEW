@@ -153,7 +153,9 @@ export const STORED_FORMAT = 'longtext' as const;
 
 export const UPLOAD_BASE_URL = (
   process.env.UPLOAD_BASE_URL ??
-  'http://localhost:9000'
+  process.env.PUBLIC_API_BASE_URL ??
+  process.env.BACKEND_URL ??
+  ''
 ).replace(/\/+$/, '');
 
 export const normalizePropertyCategory = (

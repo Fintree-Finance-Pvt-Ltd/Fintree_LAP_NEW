@@ -267,7 +267,12 @@ export class DocumentsService {
     const baseUrl =
       process.env.PUBLIC_API_BASE_URL ||
       process.env.BACKEND_URL ||
-      `http://localhost:${process.env.PORT || 9000}`;
+      process.env.UPLOAD_BASE_URL ||
+      '';
+
+    if (!baseUrl) {
+      return `/${normalizedPath.replace(/^\/+/, '')}`;
+    }
 
     return `${baseUrl.replace(/\/+$/, '')}/${normalizedPath.replace(/^\/+/, '')}`;
   }
