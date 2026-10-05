@@ -1,4 +1,4 @@
-import { getStepIcon } from "../ui/CreateLeadUI.jsx";
+import { getStepIcon, IndianFlag } from "../ui/CreateLeadUI.jsx";
 
 export default function Step6ReviewSubmit({
   formData,
@@ -38,11 +38,13 @@ export default function Step6ReviewSubmit({
             </h4>
             <p className="text-xs text-slate-600 mt-0.5">
               Mobile:{" "}
-              <span className="font-semibold">
-                {formData.mobileNumber || "N/A"}
+              <span className="font-semibold text-slate-800">
+                {formData.mobileNumber
+                  ? `+91 ${formData.mobileNumber}`
+                  : "N/A"}
               </span>{" "}
               • Email:{" "}
-              <span className="font-semibold">
+              <span className="font-semibold text-slate-800">
                 {formData.emailId || "N/A"}
               </span>
             </p>
@@ -88,8 +90,15 @@ export default function Step6ReviewSubmit({
             </div>
             <div>
               <dt className="text-slate-400 font-medium">Mobile Number</dt>
-              <dd className="font-semibold text-slate-800">
-                {formData.mobileNumber || "—"}
+              <dd className="font-semibold text-slate-800 flex items-center gap-1.5">
+                {formData.mobileNumber ? (
+                  <>
+                    {/* <IndianFlag className="h-3 w-4" /> */}
+                    <span>+91 {formData.mobileNumber}</span>
+                  </>
+                ) : (
+                  "—"
+                )}
               </dd>
             </div>
             <div>

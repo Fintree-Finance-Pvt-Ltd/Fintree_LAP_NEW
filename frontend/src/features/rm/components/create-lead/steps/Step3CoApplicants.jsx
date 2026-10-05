@@ -1,4 +1,4 @@
-import { Section, Field, Select } from "../ui/CreateLeadUI.jsx";
+import { Section, Field, PhoneField, Select } from "../ui/CreateLeadUI.jsx";
 import {
   REFERENCE_TYPE_OPTIONS,
   FAMILY_RELATION_OPTIONS,
@@ -79,40 +79,30 @@ export default function Step3CoApplicants({
                   required
                 />
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-700">
-                    Mobile Number *
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      name="mobile"
-                      value={coApp.mobile}
-                      onChange={(e) =>
-                        handleCoApplicantChange(index, e)
-                      }
-                      maxLength={10}
-                      inputMode="numeric"
-                      placeholder="10-digit mobile"
-                      required
-                      disabled={coApp.mobileVerified}
-                      className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
-                    />
+                <PhoneField
+                  label="Mobile Number"
+                  name="mobile"
+                  value={coApp.mobile}
+                  onChange={(e) => handleCoApplicantChange(index, e)}
+                  maxLength={10}
+                  placeholder="10-digit mobile"
+                  required
+                  disabled={coApp.mobileVerified}
+                  actionButton={
                     <button
                       type="button"
-                      onClick={() =>
-                        handleCoApplicantMobileOtp(index)
-                      }
+                      onClick={() => handleCoApplicantMobileOtp(index)}
                       disabled={coApp.mobileVerified}
-                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:bg-emerald-600"
+                      className="rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition-all hover:bg-blue-700 disabled:bg-emerald-600 disabled:cursor-not-allowed shrink-0"
                     >
                       {coApp.mobileVerified
-                        ? "Verified"
+                        ? "✓ Verified"
                         : coApp.mobileOtpSent
-                          ? "Resend"
+                          ? "Resend OTP"
                           : "Send OTP"}
                     </button>
-                  </div>
-                </div>
+                  }
+                />
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-slate-700">
@@ -375,28 +365,15 @@ export default function Step3CoApplicants({
                   required
                 />
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-700">
-                    Mobile Number *
-                  </label>
-                  <input
-                    name="mobile"
-                    value={contact.mobile}
-                    onChange={(e) => {
-                      const val = e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 10);
-                      handleContactPersonChange(index, {
-                        target: { name: "mobile", value: val },
-                      });
-                    }}
-                    maxLength={10}
-                    inputMode="numeric"
-                    placeholder="Enter 10-digit mobile"
-                    required
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs outline-none transition-all placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
+                <PhoneField
+                  label="Mobile Number"
+                  name="mobile"
+                  value={contact.mobile}
+                  onChange={(e) => handleContactPersonChange(index, e)}
+                  maxLength={10}
+                  placeholder="Enter 10-digit mobile"
+                  required
+                />
 
                 <Field label="Reference Type *">
                   <Select

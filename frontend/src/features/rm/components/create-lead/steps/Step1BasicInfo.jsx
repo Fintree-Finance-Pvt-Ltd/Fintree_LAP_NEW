@@ -1,4 +1,4 @@
-import { Section, Field, Select, getStepIcon } from "../ui/CreateLeadUI.jsx";
+import { Section, Field, PhoneField, Select, getStepIcon } from "../ui/CreateLeadUI.jsx";
 
 export default function Step1BasicInfo({
   formData,
@@ -126,19 +126,13 @@ export default function Step1BasicInfo({
         title="Contact Information"
         subtitle="Phone and email for verification & communication"
       >
-        <Field
+        <PhoneField
           containerClassName="md:col-span-1"
-          label={
-            <>
-              Mobile Number
-              <span className="text-red-600 font-bold"> *</span>
-            </>
-          }
+          label="Mobile Number"
           name="mobileNumber"
           value={formData.mobileNumber}
           onChange={handleInputChange}
           maxLength={10}
-          inputMode="numeric"
           required
           placeholder="Enter 10-digit number"
         />

@@ -176,6 +176,112 @@ export function Field({
   );
 }
 
+export function IndianFlag({ className = "h-3.5 w-5" }) {
+  return (
+    <svg
+      className={`inline-block overflow-hidden rounded-[2px] border border-slate-200/90 shrink-0 shadow-3xs ${className}`}
+      viewBox="0 0 24 16"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="Indian Flag"
+    >
+      {/* Top Saffron Band */}
+      <rect width="24" height="5.33" fill="#FF9933" />
+      {/* Middle White Band */}
+      <rect y="5.33" width="24" height="5.33" fill="#FFFFFF" />
+      {/* Bottom Green Band */}
+      <rect y="10.66" width="24" height="5.34" fill="#138808" />
+      {/* Ashoka Chakra */}
+      <circle cx="12" cy="8" r="2.2" fill="none" stroke="#000080" strokeWidth="0.45" />
+      <circle cx="12" cy="8" r="0.45" fill="#000080" />
+      {/* 24 Spokes (8 crossed lines) */}
+      <g stroke="#000080" strokeWidth="0.25" strokeLinecap="round">
+        <line x1="12" y1="5.8" x2="12" y2="10.2" />
+        <line x1="9.8" y1="8" x2="14.2" y2="8" />
+        <line x1="10.44" y1="6.44" x2="13.56" y2="9.56" />
+        <line x1="10.44" y1="9.56" x2="13.56" y2="6.44" />
+        <line x1="11.16" y1="5.95" x2="12.84" y2="10.05" />
+        <line x1="11.16" y1="10.05" x2="12.84" y2="5.95" />
+        <line x1="9.95" y1="7.16" x2="14.05" y2="8.84" />
+        <line x1="9.95" y1="8.84" x2="14.05" y2="7.16" />
+      </g>
+    </svg>
+  );
+}
+
+export function PhoneField({
+  label,
+  name = "mobileNumber",
+  value = "",
+  onChange,
+  containerClassName = "",
+  className = "",
+  placeholder = "Enter 10-digit number",
+  required = false,
+  disabled = false,
+  maxLength = 10,
+  actionButton = null,
+  ...props
+}) {
+  const handleChange = (e) => {
+    if (!onChange) return;
+    const cleanVal = (e.target.value || "").replace(/\D/g, "").slice(0, maxLength);
+    onChange({
+      ...e,
+      target: {
+        ...(e.target || {}),
+        name,
+        value: cleanVal,
+      },
+    });
+  };
+
+  return (
+    <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
+      {label && (
+        <label className="text-xs font-semibold text-slate-700">
+          {label}
+          {required && !String(label).includes("*") && (
+            <span className="text-red-600 font-bold"> *</span>
+          )}
+        </label>
+      )}
+      <div className="flex gap-2 items-stretch">
+        <div
+          className={`flex flex-1 items-center rounded-lg border bg-white shadow-2xs transition-all overflow-hidden ${
+            disabled
+              ? "border-slate-200 bg-slate-50 opacity-90 cursor-not-allowed"
+              : "border-slate-300 hover:border-slate-400 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-100"
+          }`}
+        >
+          {/* Flag & Prefix Badge */}
+          <div className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 border-r border-slate-200 text-slate-700 select-none shrink-0">
+            <IndianFlag className="h-3.5 w-5" />
+            <span className="text-xs font-bold text-slate-700 tracking-tight">
+              +91
+            </span>
+          </div>
+          <input
+            type="tel"
+            name={name}
+            value={value || ""}
+            onChange={handleChange}
+            maxLength={maxLength}
+            inputMode="numeric"
+            required={required}
+            disabled={disabled}
+            placeholder={placeholder}
+            className={`w-full bg-transparent px-3.5 py-2 text-sm font-medium tracking-wide text-slate-900 outline-none placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal disabled:cursor-not-allowed disabled:text-slate-500 ${className}`}
+            {...props}
+          />
+        </div>
+        {actionButton}
+      </div>
+    </div>
+  );
+}
+
+
 export function Select({
   name,
   value,
