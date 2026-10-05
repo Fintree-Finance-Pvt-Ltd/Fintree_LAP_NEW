@@ -6229,7 +6229,7 @@ export default function CreateLead() {
                           <span className="truncate max-w-[200px]">
                             {panFile
                               ? panFile.name
-                              : "Choose File (PDF / Image)"}
+                              : "Choose File (PDF)"}
                           </span>
                         </label>
                         <button
@@ -6287,7 +6287,7 @@ export default function CreateLead() {
                           <span className="truncate max-w-[200px]">
                             {aadhaarFile
                               ? aadhaarFile.name
-                              : "Choose File (PDF / Image)"}
+                              : "Choose File (PDF)"}
                           </span>
                         </label>
                         <button
