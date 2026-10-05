@@ -11,6 +11,7 @@ import { applicationsApi } from "../applicationsApi.js";
 import { rmApi } from "../../rm/rmApi.js";
 import { buildWorkflowTimeline } from "../../rm/rmUtils.js";
 import { useAuth } from "../../../hooks/useAuth.js";
+import { getDocumentUrl } from "../../../utils/fileUrl.js";
 
 const unwrapPayload = (response) => {
   if (response?.data?.data !== undefined) {
@@ -153,61 +154,7 @@ const formatDateTime = (value) => {
   });
 };
 
-const getDocumentUrl = (document) => {
-  if (!document) return "";
 
-  const rawPath =
-    typeof document === "string"
-      ? document
-      : document.fileUrl ||
-        document.file_url ||
-        document.documentUrl ||
-        document.filePath ||
-        document.file_path ||
-        document.url ||
-        "";
-
-  if (!rawPath) return "";
-
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL ||
-    import.meta.env.VITE_BACKEND_URL ||
-    "";
-  let uploadBaseUrl = "";
-
-  try {
-    if (apiBaseUrl) {
-      uploadBaseUrl = new URL(apiBaseUrl, window.location.origin).origin;
-    }
-  } catch {
-    uploadBaseUrl = "";
-  }
-
-  if (!uploadBaseUrl && typeof window !== "undefined" && window.location?.origin) {
-    uploadBaseUrl = window.location.origin;
-  }
-
-  const str = String(rawPath).trim();
-  if (
-    typeof window !== "undefined" &&
-    window.location?.hostname !== "localhost" &&
-    window.location?.hostname !== "127.0.0.1" &&
-    str.includes("localhost:")
-  ) {
-    try {
-      const parsed = new URL(str);
-      return `${uploadBaseUrl}${parsed.pathname}${parsed.search}`;
-    } catch {
-      // fallback
-    }
-  }
-
-  if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("blob:")) {
-    return str;
-  }
-
-  return `${uploadBaseUrl}/${str.replace(/^\/+/, "")}`;
-};
 
 function InfoTile({ label, value }) {
   return (

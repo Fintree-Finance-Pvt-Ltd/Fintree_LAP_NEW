@@ -10,6 +10,7 @@ import {
 import { useAttendance } from "../../../context/AttendanceContext.jsx";
 import ScheduleFollowUpModal from "../components/ScheduleFollowUpModal.jsx";
 import PropertyAddressAutocomplete from "../components/PropertyAddressAutocomplete.jsx";
+import { getDocumentUrl } from "../../../utils/fileUrl.js";
 
 const NATURE_OF_BUSINESS_OPTIONS = [
   "Trading",
@@ -780,71 +781,7 @@ export default function CreateLead() {
   }, [uploadedDocuments]);
 
   const getDocumentImageUrl = (document) => {
-    if (!document) return "";
-
-    const rawDirectUrl =
-      document.fileUrl ||
-      document.file_url ||
-      document.documentUrl ||
-      document.document_url ||
-      document.url;
-
-    const rawPath =
-      rawDirectUrl ||
-      document.filePath ||
-      document.file_path ||
-      document.fileName ||
-      document.file_name ||
-      "";
-
-    if (!rawPath) {
-      return "";
-    }
-
-    const normalizedPath = String(rawPath).replace(/\\/g, "/");
-
-    const apiBaseUrl =
-      import.meta.env.VITE_API_BASE_URL ||
-      import.meta.env.VITE_BACKEND_URL ||
-      "";
-    let uploadBaseUrl = "";
-
-    try {
-      if (apiBaseUrl) {
-        uploadBaseUrl = new URL(apiBaseUrl, window.location.origin).origin;
-      }
-    } catch {
-      uploadBaseUrl = "";
-    }
-
-    if (!uploadBaseUrl && typeof window !== "undefined" && window.location?.origin) {
-      uploadBaseUrl = window.location.origin;
-    }
-
-    if (normalizedPath.startsWith("http://") || normalizedPath.startsWith("https://")) {
-      if (
-        typeof window !== "undefined" &&
-        window.location?.hostname !== "localhost" &&
-        window.location?.hostname !== "127.0.0.1" &&
-        normalizedPath.includes("localhost:")
-      ) {
-        try {
-          const parsed = new URL(normalizedPath);
-          return `${uploadBaseUrl}${parsed.pathname}${parsed.search}`;
-        } catch {
-          // fallback
-        }
-      }
-      return normalizedPath;
-    }
-
-    const uploadsIndex = normalizedPath.toLowerCase().indexOf("uploads/");
-
-    if (uploadsIndex >= 0) {
-      return `${uploadBaseUrl}/${normalizedPath.slice(uploadsIndex)}`;
-    }
-
-    return `${uploadBaseUrl}/uploads/documents/${normalizedPath.replace(/^\/+/, "")}`;
+    return getDocumentUrl(document);
   };
 
   const applicantPhotoUrl = getDocumentImageUrl(applicantPhotoDocument);

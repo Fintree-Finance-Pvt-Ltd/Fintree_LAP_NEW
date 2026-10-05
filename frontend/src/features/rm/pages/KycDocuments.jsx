@@ -21,6 +21,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth.js";
 import { rmApi } from "../rmApi.js";
 import { requiredDocumentTypes } from "../rmUtils.js";
+import { getDocumentUrl } from "../../../utils/fileUrl.js";
 
 const documentLabels = {
   PAN: "PAN Card",
@@ -972,70 +973,8 @@ const getUploadedChecklistDocument = (
   // };
 
   const getUploadUrl = (document) => {
-  if (!document) return "";
-
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL ||
-    import.meta.env.VITE_BACKEND_URL ||
-    "";
-
-  let uploadBaseUrl = "";
-
-  try {
-    if (apiBaseUrl) {
-      uploadBaseUrl = new URL(apiBaseUrl, window.location.origin).origin;
-    }
-  } catch {
-    uploadBaseUrl = "";
-  }
-
-  if (!uploadBaseUrl && typeof window !== "undefined" && window.location?.origin) {
-    uploadBaseUrl = window.location.origin;
-  }
-
-  const directUrl =
-    document.fileUrl ||
-    document.file_url ||
-    document.documentUrl ||
-    document.document_url ||
-    document.url;
-
-  if (directUrl) {
-    const directStr = String(directUrl).trim();
-    if (
-      typeof window !== "undefined" &&
-      window.location?.hostname !== "localhost" &&
-      window.location?.hostname !== "127.0.0.1" &&
-      directStr.includes("localhost:")
-    ) {
-      try {
-        const parsed = new URL(directStr);
-        return `${uploadBaseUrl}${parsed.pathname}${parsed.search}`;
-      } catch {
-        // fallback
-      }
-    }
-    if (directStr.startsWith("http://") || directStr.startsWith("https://") || directStr.startsWith("blob:")) {
-      return directStr;
-    }
-
-    return `${uploadBaseUrl}/${directStr.replace(/^\/+/, "")}`;
-  }
-
-  const filePath =
-    document.filePath ||
-    document.file_path ||
-    document.path ||
-    "";
-
-  if (!filePath) return "";
-
-  const normalizedPath = String(filePath)
-    .replace(/^\/+/, "")
-    .replace(/^uploads\//, "");
-
-  return `${uploadBaseUrl}/uploads/${normalizedPath}`;
-};
+    return getDocumentUrl(document);
+  };
 
   const getDocumentMatchKeys = (document) => {
     const documentType = getDocumentType(document);
