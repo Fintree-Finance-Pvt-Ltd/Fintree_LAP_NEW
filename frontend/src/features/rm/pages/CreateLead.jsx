@@ -805,17 +805,22 @@ export default function CreateLead() {
       return normalizedPath;
     }
 
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+    const apiBaseUrl =
+      import.meta.env.VITE_API_BASE_URL ||
+      import.meta.env.VITE_BACKEND_URL ||
+      "";
     let uploadBaseUrl = "";
 
     try {
-      uploadBaseUrl = apiBaseUrl ? new URL(apiBaseUrl).origin : "";
+      if (apiBaseUrl) {
+        uploadBaseUrl = new URL(apiBaseUrl, window.location.origin).origin;
+      }
     } catch {
       uploadBaseUrl = "";
     }
 
-    if (!uploadBaseUrl) {
-      uploadBaseUrl = "http://localhost:9000";
+    if (!uploadBaseUrl && typeof window !== "undefined" && window.location?.origin) {
+      uploadBaseUrl = window.location.origin;
     }
 
     const uploadsIndex = normalizedPath.toLowerCase().indexOf("uploads/");

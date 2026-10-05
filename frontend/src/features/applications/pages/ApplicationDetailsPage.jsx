@@ -172,7 +172,25 @@ const getDocumentUrl = (document) => {
     return filePath;
   }
 
-  return `http://localhost:9000/${String(filePath).replace(/^\/+/, "")}`;
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_BACKEND_URL ||
+    "";
+  let uploadBaseUrl = "";
+
+  try {
+    if (apiBaseUrl) {
+      uploadBaseUrl = new URL(apiBaseUrl, window.location.origin).origin;
+    }
+  } catch {
+    uploadBaseUrl = "";
+  }
+
+  if (!uploadBaseUrl && typeof window !== "undefined" && window.location?.origin) {
+    uploadBaseUrl = window.location.origin;
+  }
+
+  return `${uploadBaseUrl}/${String(filePath).replace(/^\/+/, "")}`;
 };
 
 function InfoTile({ label, value }) {

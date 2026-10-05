@@ -62,6 +62,7 @@ import { ClaimsModule } from './modules/claims/claims.module';
       rootPath: join(process.cwd(), 'uploads'), // Resolves to C:/Fintree_LAP_NEW/backend/uploads
       serveRoot: '/uploads',
       serveStaticOptions: {
+        index: false,
         setHeaders: (res) => {
           res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
           res.setHeader('Access-Control-Allow-Origin', '*');

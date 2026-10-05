@@ -975,14 +975,22 @@ const getUploadedChecklistDocument = (
   if (!document) return "";
 
   const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:9000";
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_BACKEND_URL ||
+    "";
 
   let uploadBaseUrl = "";
 
   try {
-    uploadBaseUrl = new URL(apiBaseUrl).origin;
+    if (apiBaseUrl) {
+      uploadBaseUrl = new URL(apiBaseUrl, window.location.origin).origin;
+    }
   } catch {
-    uploadBaseUrl = "http://localhost:9000";
+    uploadBaseUrl = "";
+  }
+
+  if (!uploadBaseUrl && typeof window !== "undefined" && window.location?.origin) {
+    uploadBaseUrl = window.location.origin;
   }
 
   const directUrl =

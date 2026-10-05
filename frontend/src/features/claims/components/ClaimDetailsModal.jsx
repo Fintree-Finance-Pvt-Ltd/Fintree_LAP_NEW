@@ -35,14 +35,20 @@ function resolveReceiptUrl(rawUrl) {
   ) {
     return str;
   }
-  const apiBase = import.meta.env.VITE_API_BASE_URL || "";
-  let host = "http://localhost:9000";
+  const apiBase =
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_BACKEND_URL ||
+    "";
+  let host = "";
   if (apiBase) {
     try {
-      host = new URL(apiBase).origin;
+      host = new URL(apiBase, window.location.origin).origin;
     } catch {
-      host = "http://localhost:9000";
+      host = "";
     }
+  }
+  if (!host && typeof window !== "undefined" && window.location?.origin) {
+    host = window.location.origin;
   }
   const cleanPath = str.replace(/^\/+/, "");
   return `${host}/${cleanPath}`;
