@@ -100,19 +100,19 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 sm:p-4 backdrop-blur-xs animate-fadeIn">
+      <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all text-slate-800">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/50 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs">
               <FiCalendar className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-800">
+              <h2 className="text-base font-bold text-slate-900">
                 Apply for Leave
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 font-normal">
                 Submit a leave request for administrative review
               </p>
             </div>
@@ -120,14 +120,14 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-200/70 hover:text-slate-700 transition cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-700 transition cursor-pointer"
           >
             <FiX className="h-5 w-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           {errorMsg && (
             <div className="flex items-center gap-2 rounded-xl bg-rose-50 p-3 text-xs font-semibold text-rose-700 border border-rose-200">
               <FiAlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
@@ -137,13 +137,13 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
 
           {/* Leave Type Selector */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Leave Type <span className="text-rose-500">*</span>
             </label>
             <select
               value={leaveType}
               onChange={(e) => setLeaveType(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-semibold text-slate-800 shadow-2xs focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 cursor-pointer"
             >
               {LEAVE_TYPES.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -154,11 +154,11 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           {/* Half Day Option */}
-          <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3 border border-slate-200/80">
+          <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3.5 border border-slate-200/80">
             <div>
-              <div className="text-xs font-bold text-slate-700">Half Day Leave</div>
-              <div className="text-[11px] text-slate-500">
-                Check this if applying for only half a working shift
+              <div className="text-xs font-bold text-slate-800">Half Day Leave</div>
+              <div className="text-[11px] text-slate-500 font-normal">
+                Apply for half of the working shift
               </div>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
@@ -173,7 +173,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
                 }}
                 className="peer sr-only"
               />
-              <div className="peer h-6 w-11 rounded-full bg-slate-300 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
+              <div className="peer h-6 w-11 rounded-full bg-slate-300 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-focus:outline-none" />
             </label>
           </div>
 
@@ -182,9 +182,9 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={() => setHalfDayType("FIRST_HALF")}
-                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition cursor-pointer ${
                   halfDayType === "FIRST_HALF"
-                    ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20"
+                    ? "border-blue-600 bg-blue-50 text-blue-700"
                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >
@@ -194,9 +194,9 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={() => setHalfDayType("SECOND_HALF")}
-                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
+                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition cursor-pointer ${
                   halfDayType === "SECOND_HALF"
-                    ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20"
+                    ? "border-blue-600 bg-blue-50 text-blue-700"
                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >
@@ -209,7 +209,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
           {/* Date Pickers */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 From Date <span className="text-rose-500">*</span>
               </label>
               <input
@@ -221,14 +221,14 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
                     setEndDate(e.target.value);
                   }
                 }}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-semibold text-slate-800 shadow-2xs focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 cursor-pointer"
                 required
               />
             </div>
 
             {!isHalfDay && (
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   To Date <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -236,7 +236,7 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
                   min={startDate}
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-semibold text-slate-800 shadow-2xs focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 cursor-pointer"
                   required
                 />
               </div>
@@ -244,24 +244,24 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           {/* Summary Banner of Duration */}
-          <div className="flex items-center justify-between rounded-xl bg-blue-50/70 p-3 border border-blue-200/70 text-xs">
-            <div className="flex items-center gap-2 text-blue-900 font-semibold">
-              <FiClock className="h-4 w-4 text-blue-600 shrink-0" />
+          <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3.5 border border-slate-200 text-xs">
+            <div className="flex items-center gap-2 text-slate-700 font-medium">
+              <FiClock className="h-4 w-4 text-slate-500 shrink-0" />
               <span>
                 Total Duration:{" "}
-                <strong className="text-blue-950 font-bold">
+                <strong className="text-slate-900 font-bold font-mono text-sm">
                   {calculatedDays} {calculatedDays === 1 ? "Day" : "Days"}
                 </strong>
               </span>
             </div>
-            <span className="text-[11px] font-bold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-md">
+            <span className="text-[11px] font-semibold text-slate-700 bg-white px-2.5 py-0.5 rounded-md border border-slate-200">
               {isHalfDay ? "Half Day" : calculatedDays > 1 ? "Multi-Day" : "Single Day"}
             </span>
           </div>
 
           {/* Reason */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Reason for Leave <span className="text-rose-500">*</span>
             </label>
             <textarea
@@ -269,48 +269,45 @@ export default function ApplyLeaveModal({ isOpen, onClose, onSuccess }) {
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Please explain the reason for your leave..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 shadow-2xs focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100"
               required
             />
           </div>
 
           {/* Emergency Contact */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Emergency Contact Number (Optional)
             </label>
             <div className="relative">
-              <FiPhone className="absolute left-3.5 top-3 h-3.5 w-3.5 text-slate-400" />
+              <FiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="tel"
                 value={contactNumber}
                 onChange={(e) => setContactNumber(e.target.value)}
                 placeholder="e.g. +91 9876543210"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-9 pr-3.5 py-2.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 shadow-2xs focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3.5 py-2.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100"
               />
             </div>
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition cursor-pointer"
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || calculatedDays <= 0}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
-                <>
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  <span>Submitting...</span>
-                </>
+                <span>Submitting...</span>
               ) : (
                 <>
                   <FiCheckCircle className="h-4 w-4" />

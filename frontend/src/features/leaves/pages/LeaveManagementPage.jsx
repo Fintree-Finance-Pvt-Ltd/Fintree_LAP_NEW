@@ -9,7 +9,7 @@ import {
   FiRefreshCw,
   FiUserCheck,
   FiPieChart,
-  FiInfo,
+  FiTrendingUp,
 } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth.js";
 import ApplyLeaveModal from "../components/ApplyLeaveModal.jsx";
@@ -22,23 +22,14 @@ const ANNUAL_QUOTAS = {
   CASUAL: {
     label: "Casual Leave (CL)",
     total: 12,
-    color: "blue",
-    bg: "bg-blue-600",
-    light: "bg-blue-50 text-blue-800 border-blue-100",
   },
   SICK: {
     label: "Sick Leave (SL)",
     total: 10,
-    color: "rose",
-    bg: "bg-rose-600",
-    light: "bg-rose-50 text-rose-800 border-rose-100",
   },
   EARNED: {
     label: "Privilege Leave (EL)",
     total: 15,
-    color: "purple",
-    bg: "bg-purple-600",
-    light: "bg-purple-50 text-purple-800 border-purple-100",
   },
 };
 
@@ -200,146 +191,161 @@ export default function LeaveManagementPage() {
   }, [myLeaves]);
 
   return (
-    <div className="space-y-5 antialiased text-slate-800 animate-fadeIn">
-      {/* Top Header Card */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-            <FiCalendar className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+    <div className="space-y-6 animate-fadeIn pb-10">
+      {/* Top Corporate Header Card */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+              <span className="hover:text-slate-700 transition">Human Resources</span>
+              <span>/</span>
+              <span className="text-slate-800 font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/70">
                 Leave Management
-              </h1>
-              <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-100">
-                {isAdmin ? "Admin Portal" : "Employee Portal"}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Submit leave applications, track approval status, and manage team
-              coverage
-            </p>
+
+            <div className="flex items-center gap-3 pt-1">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-900 text-white shadow-xs">
+                <FiCalendar className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                  Leave Management & Time Off
+                </h1>
+                <p className="text-xs text-slate-500 font-normal">
+                  Submit leave applications, track approval statuses, and monitor annual balances.
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={loadData}
-            disabled={loading}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 active:scale-95 transition cursor-pointer"
-          >
-            <FiRefreshCw
-              className={`h-3.5 w-3.5 ${loading ? "animate-spin text-blue-600" : "text-slate-500"}`}
-            />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
+          {/* Header Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
+            <button
+              type="button"
+              onClick={loadData}
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition cursor-pointer"
+              title="Reload leave records"
+            >
+              <FiRefreshCw
+                className={`h-3.5 w-3.5 ${loading ? "animate-spin text-blue-600" : "text-slate-500"}`}
+              />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setIsApplyModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition cursor-pointer"
-          >
-            <FiPlus className="h-4 w-4" />
-            <span>Apply for Leave</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsApplyModalOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition cursor-pointer"
+            >
+              <FiPlus className="h-4 w-4" />
+              <span>Apply for Leave</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* KPI Cards - Unified Clean White Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Pending Requests */}
-        <div className="rounded-2xl border border-amber-200/90 bg-amber-50/60 p-4 shadow-2xs transition hover:shadow-xs">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
               {currentStats.isOrgLevel
                 ? "Pending Approvals"
-                : "My Pending Requests"}
+                : "Pending Requests"}
             </span>
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
+            <span className="rounded-md bg-amber-50 border border-amber-200/60 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+              {currentStats.pending} in queue
+            </span>
           </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-amber-950 font-mono">
+          <div className="mt-3 text-2xl font-bold text-slate-900 font-mono tracking-tight">
             {currentStats.pending}
           </div>
-          <p className="text-[11px] font-medium text-amber-700 mt-1">
+          <p className="text-[11px] text-slate-400 mt-1 font-normal">
             {currentStats.isOrgLevel
-              ? "Awaiting your review"
-              : "Under review by management"}
+              ? "Awaiting administrative review"
+              : "Under review by manager"}
           </p>
         </div>
 
         {/* Approved Leaves */}
-        <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-4 shadow-2xs transition hover:shadow-xs">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
               {currentStats.isOrgLevel
                 ? "Approved Leaves (Org)"
-                : "My Approved Leaves"}
+                : "Approved Leaves"}
             </span>
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <span className="rounded-md bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+              {currentStats.approved} items
+            </span>
           </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-emerald-950 font-mono">
+          <div className="mt-3 text-2xl font-bold text-slate-900 font-mono tracking-tight">
             {currentStats.approved}
           </div>
-          <p className="text-[11px] font-medium text-emerald-700 mt-1">
-            {currentStats.isOrgLevel
-              ? "Active across organization"
-              : "Reflected on Attendance Calendar"}
+          <p className="text-[11px] text-emerald-600 mt-1 font-medium flex items-center gap-1">
+            <FiTrendingUp className="h-3 w-3" />
+            <span>Active & attendance synced</span>
           </p>
         </div>
 
         {/* Total Days Taken */}
-        <div className="rounded-2xl border border-blue-200/90 bg-blue-50/60 p-4 shadow-2xs transition hover:shadow-xs">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+              <FiClock className="h-3.5 w-3.5 text-slate-400" />
               {currentStats.isOrgLevel
-                ? "Total Days (Org)"
-                : "My Approved Days"}
+                ? "Total Days Approved"
+                : "Total Days Taken"}
             </span>
-            <FiClock className="h-4 w-4 text-blue-600" />
+            <span className="rounded-md bg-slate-100 border border-slate-200/60 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              Days
+            </span>
           </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-blue-950 font-mono">
+          <div className="mt-3 text-2xl font-bold text-slate-900 font-mono tracking-tight">
             {currentStats.totalApprovedDays}{" "}
-            <span className="text-xs font-bold text-blue-700 font-sans">
+            <span className="text-sm font-semibold text-slate-500 font-sans">
               days
             </span>
           </div>
-          <p className="text-[11px] font-medium text-blue-700 mt-1">
+          <p className="text-[11px] text-slate-400 mt-1 font-normal">
             {currentStats.isOrgLevel
-              ? "Total employee days approved"
+              ? "Cumulative employee time off"
               : "Approved duration this year"}
           </p>
         </div>
 
-        {/* Rejected / Other */}
-        <div className="rounded-2xl border border-rose-200/90 bg-rose-50/60 p-4 shadow-2xs transition hover:shadow-xs">
+        {/* Rejected / Returned */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">
-              {currentStats.isOrgLevel
-                ? "Rejected Requests"
-                : "My Declined Requests"}
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-slate-400" />
+              Declined Requests
             </span>
-            <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+            <span className="rounded-md bg-rose-50 border border-rose-200/60 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+              {currentStats.rejected} items
+            </span>
           </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-rose-950 font-mono">
+          <div className="mt-3 text-2xl font-bold text-slate-900 font-mono tracking-tight">
             {currentStats.rejected}
           </div>
-          <p className="text-[11px] font-medium text-rose-700 mt-1">
-            {currentStats.isOrgLevel
-              ? "Declined across organization"
-              : "Unapproved leave requests"}
+          <p className="text-[11px] text-slate-400 mt-1 font-normal">
+            Unapproved or cancelled requests
           </p>
         </div>
       </div>
 
-      {/* Tabs (if Admin) */}
+      {/* Admin Tab Switcher */}
       {isAdmin && (
-        <div className="flex items-center gap-2 border-b border-slate-200/80 pb-1">
+        <div className="flex items-center gap-2 border-b border-slate-200">
           <button
             type="button"
             onClick={() => setActiveTab("approvals")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer ${
               activeTab === "approvals"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-slate-500 hover:text-slate-800"
@@ -348,7 +354,7 @@ export default function LeaveManagementPage() {
             <FiUserCheck className="h-4 w-4" />
             <span>Admin Approvals Queue</span>
             {pendingApprovalsCount > 0 && (
-              <span className="rounded-full bg-amber-500 px-2 py-0.2 text-[10px] font-black text-white">
+              <span className="rounded-full bg-amber-500 px-2 py-0.2 text-[10px] font-bold text-white shadow-2xs">
                 {pendingApprovalsCount}
               </span>
             )}
@@ -357,7 +363,7 @@ export default function LeaveManagementPage() {
           <button
             type="button"
             onClick={() => setActiveTab("my")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer ${
               activeTab === "my"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-slate-500 hover:text-slate-800"
@@ -365,32 +371,32 @@ export default function LeaveManagementPage() {
           >
             <FiFileText className="h-4 w-4" />
             <span>My Personal Leaves</span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.2 text-[10px] font-bold text-slate-600">
+            <span className="rounded-full bg-slate-100 px-2 py-0.2 text-[10px] font-semibold text-slate-600">
               {myLeaves.length}
             </span>
           </button>
         </div>
       )}
 
-      {/* Annual Leave Quotas & Balances (Shown only for Personal Leaves) */}
+      {/* Annual Leave Quotas & Balances (Shown for Personal Leaves) */}
       {(!isAdmin || activeTab === "my") && (
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
                 <FiPieChart className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="text-xs sm:text-sm font-black text-slate-900">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900">
                   Annual Leave Quotas & Balances ({currentYear})
                 </h3>
-                <p className="text-[11px] text-slate-500">
-                  Your annual paid leave entitlement and remaining available balance
+                <p className="text-[11px] text-slate-500 font-normal">
+                  Your paid leave entitlement and remaining available balance
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 self-start sm:self-auto">
-              Year: {currentYear} (Jan – Dec)
+            <span className="text-[11px] font-semibold text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200/60 self-start sm:self-auto">
+              Period: Jan – Dec {currentYear}
             </span>
           </div>
 
@@ -403,25 +409,24 @@ export default function LeaveManagementPage() {
               const percent = Math.min(100, Math.round((used / total) * 100));
 
               return (
-                <div className="rounded-xl border border-blue-100 bg-blue-50/30 p-3.5 transition hover:bg-blue-50/50">
+                <div className="rounded-xl border border-slate-200/70 bg-slate-50/50 p-4 transition hover:bg-slate-50 hover:border-slate-300">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-blue-950">
+                    <span className="text-xs font-bold text-slate-900">
                       Casual Leave (CL)
                     </span>
-                    <span className="text-xs font-black text-blue-700 font-mono">
+                    <span className="text-xs font-bold text-slate-900 font-mono">
                       {remaining} / {total} left
                     </span>
                   </div>
-                  <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-blue-200/60">
+                  <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                      className="h-full rounded-full bg-slate-900 transition-all duration-500"
                       style={{ width: `${percent}%` }}
                     />
                   </div>
                   <div className="mt-2 flex justify-between text-[11px] font-medium text-slate-500">
                     <span>
-                      Used:{" "}
-                      <strong className="text-slate-700">{used} days</strong>
+                      Used: <strong className="text-slate-800">{used} days</strong>
                     </span>
                     <span>{percent}% utilized</span>
                   </div>
@@ -437,25 +442,24 @@ export default function LeaveManagementPage() {
               const percent = Math.min(100, Math.round((used / total) * 100));
 
               return (
-                <div className="rounded-xl border border-rose-100 bg-rose-50/30 p-3.5 transition hover:bg-rose-50/50">
+                <div className="rounded-xl border border-slate-200/70 bg-slate-50/50 p-4 transition hover:bg-slate-50 hover:border-slate-300">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-rose-950">
+                    <span className="text-xs font-bold text-slate-900">
                       Sick Leave (SL)
                     </span>
-                    <span className="text-xs font-black text-rose-700 font-mono">
+                    <span className="text-xs font-bold text-slate-900 font-mono">
                       {remaining} / {total} left
                     </span>
                   </div>
-                  <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-rose-200/60">
+                  <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className="h-full rounded-full bg-rose-600 transition-all duration-500"
+                      className="h-full rounded-full bg-slate-900 transition-all duration-500"
                       style={{ width: `${percent}%` }}
                     />
                   </div>
                   <div className="mt-2 flex justify-between text-[11px] font-medium text-slate-500">
                     <span>
-                      Used:{" "}
-                      <strong className="text-slate-700">{used} days</strong>
+                      Used: <strong className="text-slate-800">{used} days</strong>
                     </span>
                     <span>{percent}% utilized</span>
                   </div>
@@ -471,25 +475,24 @@ export default function LeaveManagementPage() {
               const percent = Math.min(100, Math.round((used / total) * 100));
 
               return (
-                <div className="rounded-xl border border-purple-100 bg-purple-50/30 p-3.5 transition hover:bg-purple-50/50">
+                <div className="rounded-xl border border-slate-200/70 bg-slate-50/50 p-4 transition hover:bg-slate-50 hover:border-slate-300">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-purple-950">
+                    <span className="text-xs font-bold text-slate-900">
                       Privilege Leave (EL)
                     </span>
-                    <span className="text-xs font-black text-purple-700 font-mono">
+                    <span className="text-xs font-bold text-slate-900 font-mono">
                       {remaining} / {total} left
                     </span>
                   </div>
-                  <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-purple-200/60">
+                  <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className="h-full rounded-full bg-purple-600 transition-all duration-500"
+                      className="h-full rounded-full bg-slate-900 transition-all duration-500"
                       style={{ width: `${percent}%` }}
                     />
                   </div>
                   <div className="mt-2 flex justify-between text-[11px] font-medium text-slate-500">
                     <span>
-                      Used:{" "}
-                      <strong className="text-slate-700">{used} days</strong>
+                      Used: <strong className="text-slate-800">{used} days</strong>
                     </span>
                     <span>{percent}% utilized</span>
                   </div>
