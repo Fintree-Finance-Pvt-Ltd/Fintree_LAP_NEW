@@ -287,43 +287,38 @@ export default function ClaimsManagementPage() {
   return (
     <div className="space-y-6 animate-fadeIn pb-10">
       {/* Top Corporate Header Card */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/60 to-indigo-50/30 p-5 sm:p-7 shadow-sm">
-        {/* Subtle decorative background blur orb */}
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-48 w-48 rounded-full bg-blue-400/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-40 -mb-10 h-32 w-32 rounded-full bg-indigo-400/10 blur-2xl pointer-events-none" />
-
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1.5">
-            {/* Breadcrumb / Category Tag */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-              <span className="hover:text-blue-600 transition">Finance & HR</span>
+              <span className="hover:text-slate-700 transition">Finance & Accounts</span>
               <span>/</span>
-              <span className="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                Expense Claims & Reimbursements
+              <span className="text-slate-800 font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/70">
+                Expense Claims
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 ring-4 ring-blue-500/10">
-                <FiZap className="h-6 w-6" />
+            <div className="flex items-center gap-3 pt-1">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-900 text-white shadow-xs">
+                <FiFileText className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  Expense Claims Hub
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                  Expense Claims & Reimbursements
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                  Effortlessly submit bills with AI OCR, track reimbursements, and manage approvals.
+                <p className="text-xs text-slate-500 font-normal">
+                  Submit receipts, track approval statuses, and manage expense disbursements.
                 </p>
               </div>
             </div>
           </div>
 
           {/* Header Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5 pt-2 sm:pt-0">
+          <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
             <button
               type="button"
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 active:scale-95 transition cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition cursor-pointer"
               title="Export filtered records to CSV"
             >
               <FiDownload className="h-3.5 w-3.5 text-slate-500" />
@@ -334,7 +329,7 @@ export default function ClaimsManagementPage() {
               type="button"
               onClick={loadData}
               disabled={loading}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 active:scale-95 transition cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition cursor-pointer"
               title="Reload claim records"
             >
               <FiRefreshCw
@@ -346,10 +341,10 @@ export default function ClaimsManagementPage() {
             <button
               type="button"
               onClick={() => setIsApplyModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 active:scale-95 transition cursor-pointer ring-2 ring-blue-400/20"
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition cursor-pointer"
             >
               <FiPlus className="h-4 w-4" />
-              <span>Submit New Claim</span>
+              <span>Submit Claim</span>
             </button>
           </div>
         </div>
@@ -357,31 +352,25 @@ export default function ClaimsManagementPage() {
 
       {/* Monthly Period Filter & Toolbar */}
       <div className="rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Left: Current Active Filter Badge & Stepper */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-2.5 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
-                <FiCalendar className="h-3.5 w-3.5" />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-slate-700">
-                  Billing Period:
-                </span>
-                <span className="text-xs font-black text-blue-700 bg-blue-100/70 px-2.5 py-0.5 rounded-md border border-blue-200/60 font-mono">
-                  {formatMonthName(selectedMonth)}
-                </span>
-              </div>
+            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/70">
+              <FiCalendar className="h-3.5 w-3.5 text-slate-500" />
+              <span className="text-xs font-medium text-slate-500">Period:</span>
+              <span className="text-xs font-bold text-slate-800 bg-white px-2.5 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                {formatMonthName(selectedMonth)}
+              </span>
             </div>
 
             {/* Stepper buttons if specific month is active */}
             {selectedMonth !== "ALL" && (
-              <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200/70">
                 <button
                   type="button"
                   onClick={handlePrevMonth}
                   title="Previous Month"
-                  className="p-1.5 hover:bg-white text-slate-600 rounded-lg transition cursor-pointer shadow-2xs"
+                  className="p-1 hover:bg-white text-slate-600 rounded-lg transition cursor-pointer"
                 >
                   <FiChevronLeft className="h-3.5 w-3.5" />
                 </button>
@@ -389,7 +378,7 @@ export default function ClaimsManagementPage() {
                   type="button"
                   onClick={handleNextMonth}
                   title="Next Month"
-                  className="p-1.5 hover:bg-white text-slate-600 rounded-lg transition cursor-pointer shadow-2xs"
+                  className="p-1 hover:bg-white text-slate-600 rounded-lg transition cursor-pointer"
                 >
                   <FiChevronRight className="h-3.5 w-3.5" />
                 </button>
@@ -400,13 +389,13 @@ export default function ClaimsManagementPage() {
           {/* Right: Quick Month Pills & Month Picker Input */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Quick Pills */}
-            <div className="flex items-center bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 shadow-2xs">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/60">
               <button
                 type="button"
                 onClick={() => setSelectedMonth("ALL")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer ${
                   selectedMonth === "ALL"
-                    ? "bg-white text-blue-700 shadow-xs"
+                    ? "bg-white text-slate-900 font-bold shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -415,9 +404,9 @@ export default function ClaimsManagementPage() {
               <button
                 type="button"
                 onClick={handleSetThisMonth}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer ${
                   selectedMonth === getCurrentMonthKey()
-                    ? "bg-white text-blue-700 shadow-xs"
+                    ? "bg-white text-slate-900 font-bold shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -426,11 +415,11 @@ export default function ClaimsManagementPage() {
               <button
                 type="button"
                 onClick={handleSetLastMonth}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer ${
                   selectedMonth !== "ALL" &&
                   selectedMonth !== getCurrentMonthKey() &&
                   selectedMonth.startsWith(String(new Date().getFullYear()))
-                    ? "bg-white text-blue-700 shadow-xs"
+                    ? "bg-white text-slate-900 font-bold shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -439,15 +428,15 @@ export default function ClaimsManagementPage() {
             </div>
 
             {/* Native Month Picker */}
-            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Select Month:
+            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/70">
+              <span className="text-[11px] font-medium text-slate-500">
+                Month:
               </span>
               <input
                 type="month"
                 value={selectedMonth !== "ALL" ? selectedMonth : ""}
                 onChange={(e) => setSelectedMonth(e.target.value || "ALL")}
-                className="text-xs font-bold text-slate-800 bg-transparent border-none focus:outline-hidden cursor-pointer"
+                className="text-xs font-semibold text-slate-800 bg-transparent border-none focus:outline-hidden cursor-pointer"
               />
               {selectedMonth !== "ALL" && (
                 <button
@@ -464,93 +453,92 @@ export default function ClaimsManagementPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards - Unified, Clean Corporate White Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Reimbursements Requested */}
-        <div className="relative overflow-hidden rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-4 sm:p-5 shadow-xs transition hover:shadow-md">
+        {/* Card 1: Total Volume */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1.5">
-              <FiDollarSign className="h-4 w-4 text-blue-600" />
+            <span className="text-xs font-semibold text-slate-500">
               {currentStats.isOrgLevel ? "Total Claimed (Org)" : "My Total Claimed"}
             </span>
-            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-800">
-              {currentStats.total} Claims
+            <span className="rounded-md bg-slate-100 border border-slate-200/60 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              {currentStats.total} claims
             </span>
           </div>
-          <div className="mt-3 text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
+          <div className="mt-3 text-2xl font-bold text-slate-900 font-mono tracking-tight">
             ₹{Number(currentStats.totalClaimedAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </div>
-          <p className="text-xs font-medium text-slate-500 mt-1">
-            Total volume across all categories
+          <p className="text-[11px] text-slate-400 mt-1 font-normal">
+            Total expenses requested
           </p>
         </div>
 
-        {/* Card 2: Approved Claims */}
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-4 sm:p-5 shadow-xs transition hover:shadow-md">
+        {/* Card 2: Approved */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              {currentStats.isOrgLevel ? "Approved & Disbursed" : "My Approved Claims"}
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {currentStats.isOrgLevel ? "Approved & Disbursed" : "Approved"}
             </span>
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800">
+            <span className="rounded-md bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
               {currentStats.approved} items
             </span>
           </div>
-          <div className="mt-3 text-2xl sm:text-3xl font-black text-emerald-950 font-mono tracking-tight">
+          <div className="mt-3 text-2xl font-bold text-slate-900 font-mono tracking-tight">
             ₹{Number(currentStats.approvedAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-emerald-700">
-            <FiTrendingUp className="h-3.5 w-3.5" />
+          <p className="text-[11px] text-emerald-600 mt-1 font-medium flex items-center gap-1">
+            <FiTrendingUp className="h-3 w-3" />
             <span>{currentStats.approvedPct}% approval rate</span>
-          </div>
-        </div>
-
-        {/* Card 3: Pending Approvals */}
-        <div className="relative overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 p-4 sm:p-5 shadow-xs transition hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
-              <FiClock className="h-3.5 w-3.5 text-amber-600" />
-              {currentStats.isOrgLevel ? "Pending Approvals" : "My Pending Claims"}
-            </span>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
-              {currentStats.pending} in queue
-            </span>
-          </div>
-          <div className="mt-3 text-2xl sm:text-3xl font-black text-amber-950 font-mono tracking-tight">
-            ₹{Number(currentStats.pendingAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-          </div>
-          <p className="text-xs font-semibold text-amber-700 mt-1">
-            Awaiting manager / admin audit
           </p>
         </div>
 
-        {/* Card 4: Rejected Claims */}
-        <div className="relative overflow-hidden rounded-2xl border border-rose-200/80 bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-4 sm:p-5 shadow-xs transition hover:shadow-md">
+        {/* Card 3: Pending */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-rose-500" />
-              {currentStats.isOrgLevel ? "Rejected Claims" : "My Rejected Claims"}
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              {currentStats.isOrgLevel ? "Pending Approvals" : "Pending Review"}
             </span>
-            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-800">
+            <span className="rounded-md bg-amber-50 border border-amber-200/60 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+              {currentStats.pending} in queue
+            </span>
+          </div>
+          <div className="mt-3 text-2xl font-bold text-slate-900 font-mono tracking-tight">
+            ₹{Number(currentStats.pendingAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1 font-normal">
+            Awaiting verification & sign-off
+          </p>
+        </div>
+
+        {/* Card 4: Rejected */}
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-slate-400" />
+              Rejected Claims
+            </span>
+            <span className="rounded-md bg-rose-50 border border-rose-200/60 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
               {currentStats.rejected} items
             </span>
           </div>
-          <div className="mt-3 text-2xl sm:text-3xl font-black text-rose-950 font-mono tracking-tight">
+          <div className="mt-3 text-2xl font-bold text-slate-900 font-mono tracking-tight">
             ₹{Number(currentStats.rejectedAmount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </div>
-          <p className="text-xs font-semibold text-rose-700 mt-1">
-            Disallowed or flagged expenses
+          <p className="text-[11px] text-slate-400 mt-1 font-normal">
+            Disallowed or returned claims
           </p>
         </div>
       </div>
 
       {/* Admin Tab Switcher */}
       {isAdmin && (
-        <div className="flex items-center gap-2 border-b border-slate-200/80 pb-1">
+        <div className="flex items-center gap-2 border-b border-slate-200">
           <button
             type="button"
             onClick={() => setActiveTab("approvals")}
-            className={`flex items-center gap-2.5 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer ${
               activeTab === "approvals"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-slate-500 hover:text-slate-800"
@@ -559,8 +547,8 @@ export default function ClaimsManagementPage() {
             <FiUserCheck className="h-4 w-4" />
             <span>Admin Approvals Queue</span>
             {pendingApprovalsCount > 0 && (
-              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white shadow-2xs">
-                {pendingApprovalsCount} pending
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-2xs">
+                {pendingApprovalsCount}
               </span>
             )}
           </button>
@@ -568,7 +556,7 @@ export default function ClaimsManagementPage() {
           <button
             type="button"
             onClick={() => setActiveTab("my")}
-            className={`flex items-center gap-2.5 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer ${
               activeTab === "my"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-slate-500 hover:text-slate-800"
@@ -576,7 +564,7 @@ export default function ClaimsManagementPage() {
           >
             <FiFileText className="h-4 w-4" />
             <span>My Personal Claims</span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
               {monthFilteredMyClaims.length}
             </span>
           </button>

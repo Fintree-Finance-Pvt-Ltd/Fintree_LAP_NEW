@@ -31,47 +31,47 @@ export const CATEGORY_META = {
   TRAVEL: {
     icon: "🚕",
     label: "Travel & Commute",
-    color: "bg-blue-50 text-blue-700 border-blue-200",
+    color: "bg-slate-100 text-slate-700 border-slate-200/80",
   },
   FUEL: {
     icon: "⛽",
     label: "Fuel / Petrol",
-    color: "bg-amber-50 text-amber-700 border-amber-200",
+    color: "bg-slate-100 text-slate-700 border-slate-200/80",
   },
   FOOD: {
     icon: "🍔",
     label: "Food & Meals",
-    color: "bg-orange-50 text-orange-700 border-orange-200",
+    color: "bg-slate-100 text-slate-700 border-slate-200/80",
   },
   HOTEL: {
     icon: "🏨",
     label: "Hotel & Stay",
-    color: "bg-purple-50 text-purple-700 border-purple-200",
+    color: "bg-slate-100 text-slate-700 border-slate-200/80",
   },
   OFFICE_SUPPLIES: {
     icon: "📎",
     label: "Office Supplies",
-    color: "bg-slate-100 text-slate-700 border-slate-200",
+    color: "bg-slate-100 text-slate-700 border-slate-200/80",
   },
   CLIENT_ENTERTAINMENT: {
     icon: "🤝",
     label: "Client Meeting",
-    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    color: "bg-slate-100 text-slate-700 border-slate-200/80",
   },
   INTERNET_PHONE: {
     icon: "📱",
     label: "Telecom / Wifi",
-    color: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    color: "bg-slate-100 text-slate-700 border-slate-200/80",
   },
   MEDICAL: {
     icon: "💊",
     label: "Medical & Health",
-    color: "bg-rose-50 text-rose-700 border-rose-200",
+    color: "bg-slate-100 text-slate-700 border-slate-200/80",
   },
   OTHER: {
     icon: "📝",
     label: "Miscellaneous",
-    color: "bg-slate-100 text-slate-700 border-slate-200",
+    color: "bg-slate-100 text-slate-700 border-slate-200/80",
   },
 };
 
@@ -346,21 +346,21 @@ export default function ClaimApprovalsTable({
     switch (status) {
       case "APPROVED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/90 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 shadow-2xs whitespace-nowrap">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Approved
           </span>
         );
       case "REJECTED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/90 px-2.5 py-0.5 text-[11px] font-bold text-rose-700 shadow-2xs whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700 whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
             Rejected
           </span>
         );
       case "CANCELLED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-600 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
             Cancelled
           </span>
@@ -368,8 +368,8 @@ export default function ClaimApprovalsTable({
       case "PENDING":
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/90 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 shadow-2xs whitespace-nowrap">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
             Pending Review
           </span>
         );
@@ -380,20 +380,20 @@ export default function ClaimApprovalsTable({
     switch (status) {
       case "PAID":
         return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100/70 border border-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
-            ✓ Disbursed
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+            Disbursed
           </span>
         );
       case "IN_PROCESS":
         return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-700">
             Processing Payout
           </span>
         );
       case "UNPAID":
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 border border-slate-200/60 px-2 py-0.5 text-[10px] font-normal text-slate-500">
             Unpaid
           </span>
         );
@@ -412,7 +412,7 @@ export default function ClaimApprovalsTable({
   return (
     <div className="space-y-4">
       {/* Control Bar: Filters & Search */}
-      <div className="space-y-3 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs">
+      <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
@@ -422,7 +422,7 @@ export default function ClaimApprovalsTable({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search employee, claim ID, purpose, merchant, bill#..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-8 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-8 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
             />
             {search && (
               <button
@@ -442,9 +442,9 @@ export default function ClaimApprovalsTable({
                 key={st}
                 type="button"
                 onClick={() => setStatusFilter(st)}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                   statusFilter === st
-                    ? "bg-white text-blue-700 shadow-xs"
+                    ? "bg-white text-slate-900 font-bold shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >

@@ -109,30 +109,6 @@ export default function MyClaimsList({
     return result;
   }, [claims, statusFilter, activeCategory, search, sortBy]);
 
-  // Compute live expense metrics for currently filtered claims
-  const listMetrics = useMemo(() => {
-    const totalAmount = filteredAndSortedClaims
-      .filter((c) => c.status !== "CANCELLED")
-      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-    const approvedAmount = filteredAndSortedClaims
-      .filter((c) => c.status === "APPROVED")
-      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-    const pendingAmount = filteredAndSortedClaims
-      .filter((c) => c.status === "PENDING")
-      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-    const rejectedAmount = filteredAndSortedClaims
-      .filter((c) => c.status === "REJECTED")
-      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-
-    return {
-      count: filteredAndSortedClaims.length,
-      totalAmount: Math.round(totalAmount * 100) / 100,
-      approvedAmount: Math.round(approvedAmount * 100) / 100,
-      pendingAmount: Math.round(pendingAmount * 100) / 100,
-      rejectedAmount: Math.round(rejectedAmount * 100) / 100,
-    };
-  }, [filteredAndSortedClaims]);
-
   const handleCopyClaimNo = (claimNumber) => {
     if (!claimNumber) return;
     navigator.clipboard.writeText(claimNumber);
@@ -189,21 +165,21 @@ export default function MyClaimsList({
     switch (status) {
       case "APPROVED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/90 px-2.5 py-1 text-[11px] font-bold text-emerald-700 shadow-2xs whitespace-nowrap">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Approved
           </span>
         );
       case "REJECTED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/90 px-2.5 py-1 text-[11px] font-bold text-rose-700 shadow-2xs whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700 whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
             Rejected
           </span>
         );
       case "CANCELLED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
             Cancelled
           </span>
@@ -211,8 +187,8 @@ export default function MyClaimsList({
       case "PENDING":
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/90 px-2.5 py-1 text-[11px] font-bold text-amber-700 shadow-2xs whitespace-nowrap">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
             Pending Review
           </span>
         );
@@ -223,20 +199,20 @@ export default function MyClaimsList({
     switch (status) {
       case "PAID":
         return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100/70 border border-emerald-200 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
-            ✓ Disbursed
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+            Disbursed
           </span>
         );
       case "IN_PROCESS":
         return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-700">
             Processing Payout
           </span>
         );
       case "UNPAID":
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-50 border border-slate-200/60 px-2 py-0.5 text-[10px] font-normal text-slate-500">
             Unpaid
           </span>
         );
@@ -246,7 +222,7 @@ export default function MyClaimsList({
   return (
     <div className="space-y-4">
       {/* Search, Filter & Toolbar */}
-      <div className="space-y-3 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs">
+      <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
@@ -255,8 +231,8 @@ export default function MyClaimsList({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search claims, title, merchant, bill number..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-8 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
+              placeholder="Search claims by ID, title, merchant, bill#..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-8 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
             />
             {search && (
               <button
@@ -276,9 +252,9 @@ export default function MyClaimsList({
                 key={st}
                 type="button"
                 onClick={() => setStatusFilter(st)}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
                   statusFilter === st
-                    ? "bg-white text-blue-700 shadow-xs"
+                    ? "bg-white text-slate-900 font-bold shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -296,14 +272,14 @@ export default function MyClaimsList({
           </div>
 
           {/* View Toggle (Cards vs Table) */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/70 shrink-0">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/60 shrink-0">
             <button
               type="button"
               onClick={() => setViewMode("cards")}
               title="Card Grid View"
               className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 viewMode === "cards"
-                  ? "bg-white text-blue-700 shadow-2xs"
+                  ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -315,7 +291,7 @@ export default function MyClaimsList({
               title="Compact Table View"
               className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 viewMode === "table"
-                  ? "bg-white text-blue-700 shadow-2xs"
+                  ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -326,16 +302,16 @@ export default function MyClaimsList({
 
         {/* Secondary Filters Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* Category Dropdown */}
-            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/80">
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/70">
               <FiTag className="h-3.5 w-3.5 text-slate-500" />
               <select
                 value={activeCategory}
                 onChange={(e) => handleCategorySelect(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
+                className="bg-transparent border-none text-xs font-semibold text-slate-700 focus:outline-hidden cursor-pointer"
               >
-                <option value="ALL">All Expense Categories</option>
+                <option value="ALL">All Categories</option>
                 {Object.keys(CATEGORY_META).map((catKey) => (
                   <option key={catKey} value={catKey}>
                     {CATEGORY_META[catKey].icon} {CATEGORY_META[catKey].label}
@@ -345,12 +321,12 @@ export default function MyClaimsList({
             </div>
 
             {/* Sort Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/80">
-              <span className="text-[11px] font-bold text-slate-500">Sort:</span>
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/70">
+              <span className="text-[11px] font-medium text-slate-500">Sort:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-hidden cursor-pointer"
+                className="bg-transparent border-none text-xs font-semibold text-slate-700 focus:outline-hidden cursor-pointer"
               >
                 <option value="NEWEST">Newest Submitted</option>
                 <option value="DATE">Expense Date</option>
@@ -369,66 +345,48 @@ export default function MyClaimsList({
                   setStatusFilter("ALL");
                   handleCategorySelect("ALL");
                 }}
-                className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
               >
-                Reset All Filters
+                Reset Filters
               </button>
             )}
           </div>
 
-          {/* Right Metrics Strip */}
-          {/* <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="text-slate-500 font-medium">
-              Total:{" "}
-              <strong className="text-slate-900 font-mono">
-                ₹{listMetrics.totalAmount.toLocaleString("en-IN")}
-              </strong>
-            </span>
-            <span className="text-emerald-700 font-medium">
-              Approved:{" "}
-              <strong className="font-mono">
-                ₹{listMetrics.approvedAmount.toLocaleString("en-IN")}
-              </strong>
-            </span>
-            <span className="text-amber-700 font-medium">
-              Pending:{" "}
-              <strong className="font-mono">
-                ₹{listMetrics.pendingAmount.toLocaleString("en-IN")}
-              </strong>
-            </span>
-          </div> */}
+          <div className="text-xs font-medium text-slate-500">
+            Showing <strong className="text-slate-800 font-bold">{filteredAndSortedClaims.length}</strong> claims
+          </div>
         </div>
       </div>
 
       {/* Claims Content */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center p-16 rounded-3xl border border-slate-200/90 bg-white shadow-xs text-slate-400">
-          <FiLoader className="h-9 w-9 animate-spin text-blue-600" />
-          <p className="mt-3 text-xs font-bold text-slate-600">
-            Fetching your claims and expense vouchers...
+        <div className="flex flex-col items-center justify-center p-16 rounded-2xl border border-slate-200/80 bg-white shadow-xs text-slate-400">
+          <FiLoader className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="mt-3 text-xs font-semibold text-slate-600">
+            Loading expense claims...
           </p>
         </div>
       ) : filteredAndSortedClaims.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-16 rounded-3xl border border-slate-200/90 bg-white shadow-xs text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-50 text-blue-600 border border-blue-200/80 shadow-xs">
-            <FiFileText className="h-8 w-8" />
+        <div className="flex flex-col items-center justify-center p-16 rounded-2xl border border-slate-200/80 bg-white shadow-xs text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 border border-slate-200 shadow-xs">
+            <FiFileText className="h-7 w-7 text-slate-500" />
           </div>
-          <h3 className="mt-4 text-base font-black text-slate-900">
+          <h3 className="mt-4 text-base font-bold text-slate-900">
             No Claims Found
           </h3>
           <p className="mt-1 text-xs text-slate-500 max-w-sm">
             {search || statusFilter !== "ALL" || activeCategory !== "ALL"
-              ? "No expense claims match your search filters. Try clearing filters."
+              ? "No expense claims match your search filters. Try resetting filters."
               : "You haven't submitted any expense claims for this billing period."}
           </p>
           {onOpenApplyModal && (
             <button
               type="button"
               onClick={onOpenApplyModal}
-              className="mt-5 flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700 active:scale-95 transition cursor-pointer"
+              className="mt-5 flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition cursor-pointer"
             >
               <FiPlus className="h-4 w-4" />
-              <span>Submit Your First Claim</span>
+              <span>Submit Claim</span>
             </button>
           )}
         </div>
@@ -442,13 +400,13 @@ export default function MyClaimsList({
             return (
               <div
                 key={claim.id}
-                className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                className="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition"
               >
                 {/* Top Row: Category Icon & Title & Status */}
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl border border-slate-200/80 shadow-2xs">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-lg border border-slate-200/80 shadow-2xs">
                         {catMeta.icon}
                       </div>
                       <div>
@@ -456,19 +414,19 @@ export default function MyClaimsList({
                           <button
                             type="button"
                             onClick={() => handleCopyClaimNo(claim.claimNumber)}
-                            className="font-mono text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 group-hover:text-blue-700"
+                            className="font-mono text-xs font-bold text-slate-900 hover:text-blue-600 hover:underline flex items-center gap-1"
                             title="Click to copy Claim ID"
                           >
                             <span>{claim.claimNumber}</span>
-                            <FiCopy className="h-3 w-3 opacity-60" />
+                            <FiCopy className="h-3 w-3 text-slate-400" />
                           </button>
-                          <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${catMeta.color}`}>
+                          <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-200/60">
                             {catMeta.label}
                           </span>
                         </div>
                         <h4
                           onClick={() => setInspectingClaim(claim)}
-                          className="mt-0.5 text-sm font-bold text-slate-900 group-hover:text-blue-600 transition cursor-pointer line-clamp-1"
+                          className="mt-0.5 text-sm font-semibold text-slate-900 hover:text-blue-600 transition cursor-pointer line-clamp-1"
                         >
                           {claim.title}
                         </h4>
@@ -483,20 +441,20 @@ export default function MyClaimsList({
 
                   {/* Metadata Chips: Merchant, Bill#, Date */}
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 pt-1">
-                    <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 font-medium">
+                    <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/60 font-medium">
                       <FiCalendar className="h-3 w-3 text-slate-400" />
                       {claim.expenseDate}
                     </span>
 
                     {claim.merchantName && (
-                      <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 font-semibold text-slate-700">
+                      <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/60 font-medium text-slate-700">
                         <FiShoppingBag className="h-3 w-3 text-slate-400" />
                         {claim.merchantName}
                       </span>
                     )}
 
                     {claim.invoiceNumber && (
-                      <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 font-mono text-slate-600">
+                      <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/60 font-mono text-slate-600">
                         <FiHash className="h-3 w-3 text-slate-400" />
                         {claim.invoiceNumber}
                       </span>
@@ -508,8 +466,8 @@ export default function MyClaimsList({
                     <div
                       className={`text-xs p-3 rounded-xl border ${
                         claim.status === "REJECTED"
-                          ? "bg-rose-50/80 border-rose-200 text-rose-800"
-                          : "bg-emerald-50/80 border-emerald-200 text-emerald-800"
+                          ? "bg-rose-50/70 border-rose-200/80 text-rose-800"
+                          : "bg-slate-50 border-slate-200 text-slate-700"
                       }`}
                     >
                       <strong>
@@ -525,36 +483,36 @@ export default function MyClaimsList({
                 {/* Bottom Row: Amount & Actions */}
                 <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider block">
                       Total Amount
                     </span>
-                    <div className="text-lg sm:text-xl font-black text-slate-900 font-mono tracking-tight">
+                    <div className="text-lg font-bold text-slate-900 font-mono tracking-tight">
                       ₹{Number(claim.amount).toLocaleString("en-IN", {
                         minimumFractionDigits: 2,
                       })}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => setInspectingClaim(claim)}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition cursor-pointer"
-                      title="Inspect voucher breakdown"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs transition cursor-pointer"
+                      title="Inspect voucher details"
                     >
-                      <FiEye className="h-3.5 w-3.5 text-slate-500" />
-                      <span>Voucher</span>
+                      <FiEye className="h-3.5 w-3.5 text-slate-400" />
+                      <span>Details</span>
                     </button>
 
                     {hasReceipt && (
                       <button
                         type="button"
                         onClick={() => setSelectedReceiptClaim(claim)}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
                         title="Preview uploaded bill / receipt"
                       >
-                        <FiImage className="h-3.5 w-3.5" />
-                        <span>Bill</span>
+                        <FiImage className="h-3.5 w-3.5 text-slate-400" />
+                        <span>Receipt</span>
                       </button>
                     )}
 
@@ -565,13 +523,13 @@ export default function MyClaimsList({
                           handleCancelClaim(claim.id, claim.claimNumber)
                         }
                         disabled={cancellingId === claim.id}
-                        className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-100 transition cursor-pointer"
+                        className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
                         title="Cancel Pending Claim"
                       >
                         {cancellingId === claim.id ? (
                           <FiLoader className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <FiXCircle className="h-3.5 w-3.5" />
+                          <FiXCircle className="h-3.5 w-3.5 text-slate-400" />
                         )}
                         <span>Cancel</span>
                       </button>
@@ -584,8 +542,8 @@ export default function MyClaimsList({
                           handleDeleteClaim(claim.id, claim.claimNumber)
                         }
                         disabled={deletingId === claim.id}
-                        className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
-                        title="Delete Claim permanently"
+                        className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 hover:border-rose-200 transition cursor-pointer"
+                        title="Delete Claim"
                       >
                         {deletingId === claim.id ? (
                           <FiLoader className="h-3.5 w-3.5 animate-spin" />
@@ -602,11 +560,11 @@ export default function MyClaimsList({
         </div>
       ) : (
         /* COMPACT TABLE VIEW */
-        <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <tr className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                   <th className="px-4 py-3.5">Claim ID & Category</th>
                   <th className="px-4 py-3.5">Purpose & Merchant</th>
                   <th className="px-4 py-3.5">Expense Date</th>
@@ -633,11 +591,11 @@ export default function MyClaimsList({
                             <button
                               type="button"
                               onClick={() => setInspectingClaim(claim)}
-                              className="font-mono font-black text-blue-600 hover:underline block"
+                              className="font-mono font-bold text-slate-900 hover:text-blue-600 hover:underline block"
                             >
                               {claim.claimNumber}
                             </button>
-                            <span className="text-[10px] text-slate-500 font-semibold">
+                            <span className="text-[10px] text-slate-500 font-medium">
                               {catMeta.label}
                             </span>
                           </div>
@@ -647,7 +605,7 @@ export default function MyClaimsList({
                       <td className="px-4 py-3.5 max-w-xs">
                         <div
                           onClick={() => setInspectingClaim(claim)}
-                          className="font-bold text-slate-900 hover:text-blue-600 truncate cursor-pointer"
+                          className="font-semibold text-slate-900 hover:text-blue-600 truncate cursor-pointer"
                         >
                           {claim.title}
                         </div>
@@ -661,7 +619,7 @@ export default function MyClaimsList({
                       </td>
 
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className="font-mono font-black text-slate-900 text-sm">
+                        <span className="font-mono font-bold text-slate-900 text-sm">
                           ₹{Number(claim.amount).toLocaleString("en-IN", {
                             minimumFractionDigits: 2,
                           })}
@@ -673,9 +631,9 @@ export default function MyClaimsList({
                           <button
                             type="button"
                             onClick={() => setSelectedReceiptClaim(claim)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-blue-50 border border-blue-200 px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100 cursor-pointer"
+                            className="inline-flex items-center gap-1 rounded-lg bg-slate-100 border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200 cursor-pointer"
                           >
-                            <FiFileText className="h-3 w-3" />
+                            <FiFileText className="h-3 w-3 text-slate-500" />
                             <span>Bill</span>
                           </button>
                         ) : (
@@ -692,11 +650,11 @@ export default function MyClaimsList({
                       </td>
 
                       <td className="px-4 py-3.5 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
                             onClick={() => setInspectingClaim(claim)}
-                            className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
                             title="View Voucher"
                           >
                             <FiEye className="h-3.5 w-3.5" />
@@ -709,7 +667,7 @@ export default function MyClaimsList({
                                 handleCancelClaim(claim.id, claim.claimNumber)
                               }
                               disabled={cancellingId === claim.id}
-                              className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition cursor-pointer"
+                              className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-700 transition cursor-pointer"
                               title="Cancel Claim"
                             >
                               <FiXCircle className="h-3.5 w-3.5" />
@@ -723,7 +681,7 @@ export default function MyClaimsList({
                                 handleDeleteClaim(claim.id, claim.claimNumber)
                               }
                               disabled={deletingId === claim.id}
-                              className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                              className="p-1.5 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
                               title="Delete Claim"
                             >
                               <FiTrash2 className="h-3.5 w-3.5" />
