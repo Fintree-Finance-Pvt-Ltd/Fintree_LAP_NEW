@@ -769,8 +769,8 @@ export function calculateTravelCostEstimates(distanceKm = 0, trainTransit = null
   const bikeFuelCost = km <= 0 ? 0 : Math.max(20, Math.round(km * 4.0));
 
   // 2. Auto / Cab Fare (Standard tariff: ₹23 base + ~₹15.33/km)
-  const autoFare =
-    km <= 0 ? 0 : km <= 1.5 ? 23 : Math.round(23 + (km - 1.5) * 15.33);
+    const autoFare =
+    km <= 0 ? 0 : km <= 1.5 ? 27 : Math.round(27 + (km - 1.5) * 18.22);
   const cabFare = km <= 0 ? 0 : km <= 4 ? 100 : Math.round(100 + (km - 4) * 18.0);
 
   // 3. Local Train / Suburban Transit Cost Breakdown
