@@ -1,15 +1,12 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   FiCalendar,
-  FiCheckCircle,
-  FiClock,
   FiGrid,
   FiList,
   FiMessageSquare,
   FiPlus,
   FiSearch,
-  FiTrash2,
-  FiXCircle,
+  FiTrash2
 } from "react-icons/fi";
 import { leavesApi } from "../leavesApi.js";
 

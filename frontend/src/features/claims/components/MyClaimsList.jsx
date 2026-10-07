@@ -1,9 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   FiCalendar,
-  FiCheckCircle,
-  FiChevronDown,
-  FiClock,
   FiCopy,
   FiEye,
   FiFileText,
@@ -12,14 +9,13 @@ import {
   FiImage,
   FiList,
   FiLoader,
-  FiMapPin,
   FiPlus,
   FiSearch,
   FiShoppingBag,
   FiTag,
   FiTrash2,
   FiX,
-  FiXCircle,
+  FiXCircle
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";
@@ -29,11 +25,11 @@ import ReceiptViewerModal from "./ReceiptViewerModal.jsx";
 
 export default function MyClaimsList({
   claims = [],
-  allClaimsRaw = [],
-  selectedMonth = "ALL",
+  // allClaimsRaw = [],
+  // selectedMonth = "ALL",
   selectedCategory = "ALL",
   onCategoryChange,
-  onMonthChange,
+  // onMonthChange,
   isLoading,
   onRefresh,
   onOpenApplyModal,

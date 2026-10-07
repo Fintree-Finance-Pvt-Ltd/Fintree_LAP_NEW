@@ -1,17 +1,14 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   FiAlertCircle,
   FiCalendar,
   FiCheck,
   FiCheckCircle,
-  FiClock,
   FiGrid,
   FiList,
   FiMessageSquare,
   FiSearch,
-  FiX,
-  FiXCircle,
-  FiUser,
+  FiX
 } from "react-icons/fi";
 import { leavesApi } from "../leavesApi.js";
 import { LEAVE_TYPE_LABELS } from "./MyLeavesList.jsx";

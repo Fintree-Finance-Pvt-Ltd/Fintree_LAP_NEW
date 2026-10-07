@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FiCalendar,
   FiClock,
-  FiCheckCircle,
-  FiXCircle,
   FiFileText,
+  FiPieChart,
   FiPlus,
   FiRefreshCw,
-  FiUserCheck,
-  FiPieChart,
   FiTrendingUp,
+  FiUserCheck
 } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth.js";
 import ApplyLeaveModal from "../components/ApplyLeaveModal.jsx";

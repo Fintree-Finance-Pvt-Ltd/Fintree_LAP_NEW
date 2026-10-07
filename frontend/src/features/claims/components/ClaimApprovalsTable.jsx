@@ -1,26 +1,15 @@
 import { useMemo, useState } from "react";
 import {
-  FiAlertTriangle,
-  FiCalendar,
   FiCheck,
   FiCheckCircle,
-  FiClock,
-  FiCopy,
   FiCreditCard,
-  FiDollarSign,
-  FiDownload,
   FiEye,
   FiFileText,
-  FiFilter,
-  FiImage,
   FiLoader,
   FiSearch,
-  FiShoppingBag,
   FiTag,
-  FiTrash2,
   FiUser,
-  FiX,
-  FiXCircle,
+  FiX
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { claimsApi } from "../claimsApi.js";
@@ -77,11 +66,11 @@ export const CATEGORY_META = {
 
 export default function ClaimApprovalsTable({
   claims = [],
-  allClaimsRaw = [],
-  selectedMonth = "ALL",
+  // allClaimsRaw = [],
+  // selectedMonth = "ALL",
   selectedCategory = "ALL",
   onCategoryChange,
-  onMonthChange,
+  // onMonthChange,
   isLoading,
   onRefresh,
 }) {
@@ -336,11 +325,11 @@ export default function ClaimApprovalsTable({
     }
   };
 
-  const handleCopyClaimNo = (claimNumber) => {
-    if (!claimNumber) return;
-    navigator.clipboard.writeText(claimNumber);
-    toast.info(`Claim ID copied: ${claimNumber}`);
-  };
+  // const handleCopyClaimNo = (claimNumber) => {
+  //   if (!claimNumber) return;
+  //   navigator.clipboard.writeText(claimNumber);
+  //   toast.info(`Claim ID copied: ${claimNumber}`);
+  // };
 
   const getStatusBadge = (status) => {
     switch (status) {

@@ -3,16 +3,13 @@ import {
   FiCalendar,
   FiChevronLeft,
   FiChevronRight,
-  FiClock,
-  FiDollarSign,
   FiDownload,
   FiFileText,
   FiPlus,
   FiRefreshCw,
   FiTrendingUp,
   FiUserCheck,
-  FiX,
-  FiZap,
+  FiX
 } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth.js";
 import { claimsApi } from "../claimsApi.js";
