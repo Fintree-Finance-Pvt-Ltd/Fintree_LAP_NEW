@@ -42,7 +42,7 @@ export default function MyClaimsList({
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("NEWEST"); // NEWEST | OLDEST | AMOUNT_HIGH | AMOUNT_LOW | DATE
-  const [viewMode, setViewMode] = useState("cards"); // "cards" | "table"
+  const [viewMode, setViewMode] = useState("table"); // "cards" | "table"
   const [inspectingClaim, setInspectingClaim] = useState(null);
   const [selectedReceiptClaim, setSelectedReceiptClaim] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
